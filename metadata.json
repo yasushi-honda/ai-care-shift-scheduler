@@ -1,0 +1,5 @@
+{
+  "name": "シフト作成ツール",
+  "description": "An AI-powered web application for automatically generating optimal work schedules for care and welfare facilities. Administrators can set staff conditions and daily requirements, and the AI will create and display a monthly shift schedule.",
+  "requestFramePermissions": []
+}
