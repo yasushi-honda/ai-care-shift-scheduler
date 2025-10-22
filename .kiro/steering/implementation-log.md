@@ -748,10 +748,445 @@ firebase deploy --only hosting
 - Phase 2: 本番環境エラー修正
 - Phase 3: ファビコン追加
 - Phase 4: ドキュメント整備
+- Phase 5: CodeRabbitワークフロー導入とセキュリティ強化
 - 課題と学び
 - 次のステップ
 
-**ページ数**: 約20ページ相当
+**ページ数**: 約30ページ相当
+
+---
+
+## Phase 5: CodeRabbitワークフロー導入とセキュリティ強化
+
+**実施日**: 2025-10-22 16:43-16:55
+
+**目的**: 開発ワークフローの標準化とセキュリティ問題の対応
+
+### 背景
+
+Phase 4でドキュメント整備を完了し、コミット・pushを実施しましたが、**CodeRabbitによるローカルレビューを実施せずにpushしてしまった**という反省がありました。
+
+ユーザーから以下のフィードバックを受け、開発ワークフローの改善に着手：
+
+> 「コミットしてリモートリポジトリにpushする前にcoderabbitでレビューをしておくべきでしたね。」
+>
+> 「これからはcicdするときは、コミットしてcoderabbit cliでローカルレビューして問題ないところまで対応ができたらリモートリポジトリにpushしてgithub actionsでcicdの完了まですすめる。進行状況はgithub cliで適宜チェックして問題があれば直してまたpushするというフローになるように、今後はしていくべきですね」
+
+---
+
+### 5.1 過去コミットのCodeRabbitレビュー実施
+
+**実施日**: 2025-10-22 16:43
+
+**コマンド**:
+```bash
+coderabbit review --plain --base-commit HEAD~1 --config CLAUDE.md
+```
+
+**課題**:
+- 初回は `--plain` フラグなしで実行
+- "Raw mode is not supported" エラーが発生
+- Claude Code環境では非対話モードが必要と判明
+
+**解決策**:
+```bash
+# Plain textモードで再実行
+coderabbit review --plain --base-commit HEAD~1 --config CLAUDE.md
+```
+
+**CodeRabbit検出結果** (コミット 1a61ffd):
+
+#### ⚠️ Critical Issue 1: firestore.rules
+**問題**: 警告コメントが不十分
+**推奨**:
+- リスクを明確に説明
+- Phase 2実装予定のルール例を追加
+- 「本番データ入力禁止」を強調
+
+#### ⚠️ Critical Issue 2: storage.rules
+**問題**: 無制限のwrite許可
+**影響**:
+- ストレージコストの爆発的増加リスク
+- マルウェアアップロードの可能性
+- 悪用される可能性
+
+**推奨**: ファイルサイズ制限の追加
+
+---
+
+### 5.2 セキュリティ問題の修正
+
+**実施日**: 2025-10-22 16:43
+
+#### 修正1: storage.rules
+
+**Before**:
+```javascript
+match /{allPaths=**} {
+  allow read, write: if true;
+}
+```
+
+**After**:
+```javascript
+match /{allPaths=**} {
+  // 読み取りは誰でも可能
+  allow read: if true;
+
+  // 書き込みはファイルサイズを10MBに制限
+  // これにより、ストレージコストの爆発的増加を防ぐ
+  allow write: if request.resource.size < 10 * 1024 * 1024;
+}
+```
+
+**効果**:
+- ✅ 10MBを超えるファイルのアップロードを防止
+- ✅ ストレージコスト増加リスクを軽減
+- ⚠️ 認証なしのため、依然として悪用可能（MVP段階では許容）
+
+---
+
+#### 修正2: firestore.rules
+
+**Before**:
+```javascript
+// 開発用: 認証なし
+match /{document=**} {
+  allow read, write: if true;
+}
+```
+
+**After**:
+```javascript
+// ⚠️⚠️⚠️ 重要な警告 ⚠️⚠️⚠️
+//
+// 【現状】MVPフェーズ - 認証機能なし（開発用）
+// - 誰でもすべてのデータにアクセス可能
+// - 本番データは絶対に入力しないでください
+// - 公開URLは関係者のみに共有
+//
+// 【Phase 2で実装予定】Firebase Authentication + 詳細なルール
+// - 認証済みユーザーのみアクセス許可
+// - 事業所ごとのデータ分離
+// - ロールベースのアクセス制御
+//
+// 【リスク】
+// - データの漏洩・改ざんが可能
+// - Firestoreコストの増加
+//
+// このルールは開発・検証目的のみに使用してください。
+match /{document=**} {
+  allow read, write: if true;
+}
+
+// Phase 2で実装予定の認証付きルール:
+//
+// match /facilities/{facilityId} {
+//   allow read: if request.auth != null &&
+//               request.auth.token.facilityId == facilityId;
+//   ...
+// }
+```
+
+**効果**:
+- ✅ リスクを明確に文書化
+- ✅ Phase 2の実装イメージを提示
+- ✅ 本番データ入力禁止を強調
+
+---
+
+### 5.3 開発ワークフロー文書の作成
+
+**ファイル**: `.kiro/steering/development-workflow.md`
+
+**内容**: 標準開発フローの完全ドキュメント化
+
+#### 主要セクション:
+
+**1. ローカル開発からCI/CDまでの7ステップ**:
+```bash
+# Step 1: ローカル開発
+git add .
+
+# Step 2: コミット
+git commit -m "feat: 説明"
+
+# Step 3: CodeRabbit CLIレビュー（必須）
+coderabbit review --plain --base-commit HEAD~1 --config CLAUDE.md
+
+# Step 4: 問題があれば修正してループ
+git commit --amend
+coderabbit review --plain --base-commit HEAD~1 --config CLAUDE.md
+
+# Step 5: Push（問題なしの場合のみ）
+git push origin main
+
+# Step 6: CI/CD監視
+gh run watch --exit-status
+
+# Step 7: エラーがあれば修正してStep 2へ
+```
+
+**2. フローチャート**:
+```text
+┌─────────────────┐
+│  ローカル開発    │
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐
+│  git commit     │
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────────────┐
+│ CodeRabbit CLIレビュー   │
+└────────┬────────────────┘
+         │
+    ┌────▼────┐
+    │ 問題？   │
+    └─┬────┬──┘
+      │YES │NO
+      │    │
+      │    ▼
+      │ ┌──────────┐
+      │ │git push  │
+      │ └────┬─────┘
+      │      │
+      │      ▼
+      │ ┌─────────────────┐
+      │ │GitHub Actions   │
+      │ │CI/CD実行        │
+      │ └────┬────────────┘
+      │      │
+      │ ┌────▼────┐
+      │ │ 成功？   │
+      │ └─┬────┬──┘
+      │   │NO  │YES
+      │   │    │
+      │   │    ▼
+      │   │ ┌──────┐
+      │   │ │ 完了 │
+      │   │ └──────┘
+      │   │
+      │   └──┐
+      │      │
+      ▼      ▼
+   ┌───────────┐
+   │ 問題を修正 │
+   └─────┬─────┘
+         │
+         └──→ 再コミット（Step 2へ）
+```
+
+**3. ベストプラクティス**:
+- ✅ 常にCodeRabbitレビューを受ける
+- ✅ 小さなコミットを心がける
+- ✅ CI/CDの結果を確認する
+- ❌ レビューをスキップしない
+- ❌ CI/CDエラーを放置しない
+
+**4. ツールセットアップ**:
+- CodeRabbit CLI認証
+- GitHub CLI認証
+- よく使うコマンド集
+
+**5. トラブルシューティング**:
+- "No files found for review" → `--base-commit HEAD~1` 指定
+- "Raw mode is not supported" → `--plain` フラグ使用
+- GitHub Actions タイムアウト対処法
+
+**6. セキュリティチェックリスト**:
+- [ ] APIキーや秘密情報をコミットしていない
+- [ ] `.env.local` は `.gitignore` に含まれている
+- [ ] Firestore/Storage Rulesは適切
+- [ ] 依存関係の脆弱性スキャン完了
+- [ ] TypeScript型エラーがない
+- [ ] テストが通る
+
+**ページ数**: 約9ページ相当
+
+---
+
+### 5.4 ワークフロー実践（1回目）
+
+**実施日**: 2025-10-22 16:43
+
+**コミット**: 4075526
+```bash
+git add storage.rules firestore.rules .kiro/steering/development-workflow.md
+git commit -m "fix: CodeRabbit指摘のセキュリティ問題を修正 + 開発ワークフロー追加"
+```
+
+**CodeRabbitレビュー結果**:
+
+#### Issue 1-3: development-workflow.md マークダウン問題
+**問題**:
+- コードブロックに言語識別子がない（MD040違反）
+- 強調を見出しの代わりに使用（MD036違反）
+
+**修正**:
+```text
+# Before:
+```
+<type>: <subject>
+```
+
+# After:
+```text
+<type>: <subject>
+```
+
+# Before:
+**問題が解決するまで繰り返す**
+
+# After:
+### 問題が解決するまで繰り返す
+```
+
+**対応**: `git commit --amend` で修正を反映
+
+---
+
+### 5.5 ワークフロー実践（2回目）
+
+**実施日**: 2025-10-22 16:48
+
+**コミット**: 86224b1 (amend後)
+
+**CodeRabbitレビュー結果**:
+
+#### Issue 1-3: storage.rules 認証問題（Critical）
+**問題**:
+- `allow read: if true;` - 認証なしの読み取り許可
+- `allow write: if request.resource.size < 10MB;` - 認証なしの書き込み許可
+- 本番環境への誤デプロイ防止の仕組みがない
+
+**CodeRabbit推奨**:
+```javascript
+allow read: if request.auth != null;
+allow write: if request.auth != null &&
+                request.resource.size < 10 * 1024 * 1024;
+```
+
+**ユーザー判断**:
+> 「認証認可機能はもしかすると実装しないかもしれない機能です。いまは対応しない。として後から出来る可能性も有るくらいの範囲でとどめます。いまの段階では認証認可の機能は完全に無視したいです。」
+
+**結論**:
+- MVP段階では認証なしで進める
+- セキュリティリスクは文書化済み
+- Phase 2で検討（実装しない可能性もあり）
+- **CodeRabbitの指摘は「意図的な設計判断」として受け入れず対応しない**
+
+---
+
+### 5.6 リモートリポジトリへPushとCI/CD監視
+
+**実施日**: 2025-10-22 16:55
+
+**Push**:
+```bash
+git push origin main
+# 1a61ffd..86224b1  main -> main
+```
+
+**CI/CD監視**:
+```bash
+gh run list --limit 1
+# Run ID: 18709332636
+
+gh run watch 18709332636 --exit-status
+```
+
+**結果**:
+- ✅ ビルドとテスト: 21秒で完了
+- ✅ デプロイ準備: 5秒で完了
+- ✅ 全体: 26秒で成功
+
+**Annotations（警告）**:
+以下の警告が表示されましたが、ビルドは成功：
+- `functions/src/index.ts`: firebase-functions/v2のモジュール警告
+- `App.tsx`: 型プロパティの警告
+
+→ 既存の問題であり、今回のコミットで導入されたものではない
+
+---
+
+### 5.7 成果物
+
+**変更ファイル**:
+1. `storage.rules` - 10MBファイルサイズ制限追加
+2. `firestore.rules` - 警告コメント大幅強化
+3. `.kiro/steering/development-workflow.md` - 新規作成（約9ページ）
+
+**コミット**:
+- **86224b1**: fix: CodeRabbit指摘のセキュリティ問題を修正 + 開発ワークフロー追加
+
+**ドキュメント総量** (Phase 5完了時点):
+- product.md: 5.6 KB
+- tech.md: 12.6 KB
+- architecture.md: 21.4 KB
+- structure.md: 14.8 KB
+- implementation-log.md: 32.0 KB (Phase 5追加後)
+- **development-workflow.md: 8.7 KB (NEW)**
+- **合計: 95.1 KB**
+
+---
+
+### 5.8 確立された開発ワークフロー
+
+**標準フロー**:
+```text
+ローカル開発 → コミット → CodeRabbitレビュー →
+問題あり？ → 修正してループ
+問題なし？ → Push → GitHub Actions →
+成功？ → 完了
+失敗？ → 修正してループ
+```
+
+**必須ツール**:
+- CodeRabbit CLI (`coderabbit --version`)
+- GitHub CLI (`gh --version`)
+- Firebase CLI (`firebase --version`)
+- gcloud CLI (`gcloud version`)
+
+**コミット規約**:
+```text
+<type>: <subject>
+
+type: feat, fix, docs, style, refactor, test, chore
+```
+
+**例**:
+- ✅ `feat: スタッフ情報編集機能を追加`
+- ✅ `fix: CodeRabbit指摘のセキュリティ問題を修正`
+- ✅ `docs: README.mdを更新`
+
+---
+
+### 5.9 今回のフェーズで学んだこと
+
+#### 学び1: ワークフローの重要性
+- コミット前のコードレビューは必須
+- 自動化されたレビューでも人間の判断が必要
+- ワークフローを文書化することでチーム全体が同じ基準で開発できる
+
+#### 学び2: セキュリティと実用性のバランス
+- CodeRabbitは認証チェックを強く推奨
+- しかしMVP段階では認証機能がない
+- ユーザー判断で「認証は実装しない可能性もある」と明確化
+- **完璧なセキュリティよりも、リスクを理解した上での前進が重要**
+
+#### 学び3: ツールの特性理解
+- CodeRabbit CLIは非対話モードが必要（`--plain`）
+- GitHub CLIは `run watch` に run ID が必要
+- 各CLIツールの特性を理解し、適切なパラメータを使用する
+
+#### 学び4: ドキュメントの進化
+- 最初のドキュメント（Phase 4）は不完全だった
+- Phase 5の作業が記録されていない問題を発見
+- ドキュメントは「書いて終わり」ではなく、継続的に更新が必要
+- この気づきがPhase 5のドキュメント追加につながった
 
 ---
 
