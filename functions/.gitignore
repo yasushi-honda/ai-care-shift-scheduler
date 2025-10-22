@@ -3,6 +3,9 @@ lib/
 *.js
 *.js.map
 
+# Exceptions: Configuration files (keep in git)
+!jest.config.js
+
 # TypeScript cache
 *.tsbuildinfo
 
