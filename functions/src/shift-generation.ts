@@ -3,12 +3,14 @@ import { VertexAI } from '@google-cloud/vertexai';
 import * as admin from 'firebase-admin';
 import * as crypto from 'crypto';
 import type { Staff, ShiftRequirement, LeaveRequest } from './types';
+import { generateSkeleton, generateDetailedShifts } from './phased-generation';
 
 // Firebase Admin初期化（index.tsで行うため、ここでは不要）
 // admin.initializeApp();
 
 /**
- * Vertex AI モデル名（GA版、自動更新安定版エイリアス）
+ * Vertex AI モデル名（GA版、安定版）
+ * 注: -latestサフィックスは不安定なプレビュー版を指すため使用しない
  */
 const VERTEX_AI_MODEL = 'gemini-2.5-flash-lite';
 
@@ -182,47 +184,66 @@ export const generateShift = onRequest(
         return;
       }
 
-      const vertexAI = new VertexAI({
-        project: projectId,
-        location: 'us-central1', // 米国中部リージョン（gemini-2.5-flash-lite対応）
-      });
+      // スタッフ数に応じて生成方法を選択
+      let scheduleData: { schedule: any[] };
+      let tokensUsed = 0;
 
-      const model = vertexAI.getGenerativeModel({
-        model: VERTEX_AI_MODEL, // 最もコスト効率的なモデル（GA版）
-      });
+      if (staffList.length <= 10) {
+        // 10名以下：従来の一括生成（高速）
+        console.log(`📊 小規模シフト生成（${staffList.length}名）: 一括生成モード`);
 
-      // プロンプト生成
-      const prompt = buildShiftPrompt(staffList, requirements, leaveRequests);
-      console.log('📝 プロンプト生成完了');
+        const vertexAI = new VertexAI({
+          project: projectId,
+          location: 'us-central1',
+        });
 
-      // AIシフト生成実行
-      console.log('🤖 Vertex AI 呼び出し開始...');
-      const result = await model.generateContent({
-        contents: [{ role: 'user', parts: [{ text: prompt }] }],
-        generationConfig: {
-          responseMimeType: 'application/json',
-          responseSchema: getShiftSchema() as any, // 型定義の互換性のため
-          temperature: 0.5,
-          maxOutputTokens: 8192,
-        },
-      });
+        const model = vertexAI.getGenerativeModel({
+          model: VERTEX_AI_MODEL,
+        });
 
-      // レスポンステキストを取得
-      const candidates = result.response.candidates;
-      if (!candidates || candidates.length === 0) {
-        throw new Error('Vertex AI からレスポンスが返されませんでした');
+        const prompt = buildShiftPrompt(staffList, requirements, leaveRequests);
+        console.log('📝 プロンプト生成完了');
+
+        console.log('🤖 Vertex AI 呼び出し開始...');
+        const result = await model.generateContent({
+          contents: [{ role: 'user', parts: [{ text: prompt }] }],
+          generationConfig: {
+            responseMimeType: 'application/json',
+            responseSchema: getShiftSchema() as any,
+            temperature: 0.5,
+            maxOutputTokens: 8192,
+          },
+        });
+
+        const responseText = result.response.candidates?.[0]?.content?.parts?.[0]?.text || '';
+        scheduleData = JSON.parse(responseText);
+        tokensUsed = result.response.usageMetadata?.totalTokenCount || 0;
+        console.log('✅ 一括生成完了');
+
+      } else {
+        // 11名以上：段階的生成（骨子→詳細バッチ処理）
+        console.log(`📊 大規模シフト生成（${staffList.length}名）: 段階的生成モード`);
+
+        // Phase 1: 骨子生成
+        const skeleton = await generateSkeleton(
+          staffList,
+          requirements,
+          leaveRequests,
+          projectId
+        );
+
+        // Phase 2: 詳細生成（5名ずつバッチ）
+        const detailedSchedules = await generateDetailedShifts(
+          staffList,
+          skeleton,
+          requirements,
+          projectId
+        );
+
+        scheduleData = { schedule: detailedSchedules };
+        tokensUsed = 0; // 複数回呼び出しのため集計は省略
+        console.log('✅ 段階的生成完了');
       }
-
-      const parts = candidates[0].content?.parts;
-      if (!parts || parts.length === 0) {
-        throw new Error('Vertex AI レスポンスの形式が不正です');
-      }
-
-      const responseText = parts[0].text || '';
-      console.log('✅ Vertex AI レスポンス受信');
-
-      // JSON解析
-      const scheduleData = JSON.parse(responseText);
 
       // Firestoreに保存（冪等性ハッシュを含む）
       const docRef = await admin.firestore()
@@ -236,7 +257,7 @@ export const generateShift = onRequest(
           status: 'generated',
           metadata: {
             model: VERTEX_AI_MODEL,
-            tokensUsed: result.response.usageMetadata?.totalTokenCount || 0,
+            tokensUsed: tokensUsed,
           },
         });
 
@@ -250,7 +271,7 @@ export const generateShift = onRequest(
         metadata: {
           generatedAt: new Date().toISOString(),
           model: VERTEX_AI_MODEL,
-          tokensUsed: result.response.usageMetadata?.totalTokenCount || 0,
+          tokensUsed: tokensUsed,
         },
       });
 
@@ -275,7 +296,7 @@ function buildShiftPrompt(
   leaveRequests: LeaveRequest
 ): string {
   const [year, month] = requirements.targetMonth.split('-').map(Number);
-  const daysInMonth = new Date(year, month, 0).getDate();
+  const daysInMonth = requirements.daysToGenerate || new Date(year, month, 0).getDate();
 
   // 時間帯情報のフォーマット（サニタイズ済み）
   const timeSlotsInfo = (requirements.timeSlots || [])

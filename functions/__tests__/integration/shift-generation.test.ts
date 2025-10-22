@@ -761,4 +761,115 @@ describe('AI Shift Generation API - Integration Tests', () => {
       console.log(`📊 速度向上: ${(firstResponseTime / secondResponseTime).toFixed(1)}x`);
     });
   });
+
+  describe('Task 6.1: Performance with Different Staff Sizes', () => {
+    it('should generate shift for 5 staff within 15 seconds', async () => {
+      // Task 6.1専用のrequirements（5名スタッフ）
+      const task61Requirements5 = {
+        ...STANDARD_REQUIREMENTS,
+        targetMonth: '2026-02',  // Task 6.1-5名専用の月
+      };
+
+      const startTime = Date.now();
+
+      const response = await request(CLOUD_FUNCTION_URL)
+        .post('/')
+        .set('Content-Type', 'application/json')
+        .send({
+          staffList: STANDARD_STAFF_LIST,  // 5名
+          requirements: task61Requirements5,
+          leaveRequests: STANDARD_LEAVE_REQUESTS,
+        });
+
+      const responseTime = Date.now() - startTime;
+
+      expect(response.status).toBe(200);
+      expect(response.body.success).toBe(true);
+      expect(response.body).toHaveProperty('scheduleId');
+      expect(response.body).toHaveProperty('schedule');
+
+      // 応答時間が15秒以内であることを検証
+      expect(responseTime).toBeLessThan(15000);
+
+      console.log(`⏱️  5名スタッフ応答時間: ${responseTime}ms`);
+    });
+
+    it('should generate shift for 20 staff within 30 seconds', async () => {
+      // Task 6.1専用のrequirements（20名スタッフ、8日間）
+      const task61Requirements20 = {
+        ...STANDARD_REQUIREMENTS,
+        targetMonth: '2026-03',  // Task 6.1-20名専用の月
+        daysToGenerate: 8,  // JSON出力サイズ削減のため8日間に制限
+      };
+
+      const startTime = Date.now();
+
+      const response = await request(CLOUD_FUNCTION_URL)
+        .post('/')
+        .set('Content-Type', 'application/json')
+        .send({
+          staffList: LARGE_STAFF_LIST,  // 20名
+          requirements: task61Requirements20,
+          leaveRequests: {},
+        });
+
+      const responseTime = Date.now() - startTime;
+
+      // エラー時のデバッグ情報を表示
+      if (response.status !== 200) {
+        console.error(`❌ 20名スタッフテストエラー:`);
+        console.error(`Status: ${response.status}`);
+        console.error(`Body:`, JSON.stringify(response.body, null, 2));
+      }
+
+      expect(response.status).toBe(200);
+      expect(response.body.success).toBe(true);
+      expect(response.body).toHaveProperty('scheduleId');
+      expect(response.body).toHaveProperty('schedule');
+
+      // 応答時間が30秒以内であることを検証
+      expect(responseTime).toBeLessThan(30000);
+
+      console.log(`⏱️  20名スタッフ応答時間: ${responseTime}ms`);
+    });
+
+    it('should generate shift for 50 staff within 60 seconds', async () => {
+      // Task 6.1専用のrequirements（50名スタッフ、8日間）
+      const task61Requirements50 = {
+        ...STANDARD_REQUIREMENTS,
+        targetMonth: '2026-04',  // Task 6.1-50名専用の月
+        daysToGenerate: 8,  // JSON出力サイズ削減のため8日間に制限
+      };
+
+      const startTime = Date.now();
+
+      const response = await request(CLOUD_FUNCTION_URL)
+        .post('/')
+        .set('Content-Type', 'application/json')
+        .send({
+          staffList: EXTRA_LARGE_STAFF_LIST,  // 50名
+          requirements: task61Requirements50,
+          leaveRequests: {},
+        });
+
+      const responseTime = Date.now() - startTime;
+
+      // エラー時のデバッグ情報を表示
+      if (response.status !== 200) {
+        console.error(`❌ 50名スタッフテストエラー:`);
+        console.error(`Status: ${response.status}`);
+        console.error(`Body:`, JSON.stringify(response.body, null, 2));
+      }
+
+      expect(response.status).toBe(200);
+      expect(response.body.success).toBe(true);
+      expect(response.body).toHaveProperty('scheduleId');
+      expect(response.body).toHaveProperty('schedule');
+
+      // 応答時間が60秒以内であることを検証
+      expect(responseTime).toBeLessThan(60000);
+
+      console.log(`⏱️  50名スタッフ応答時間: ${responseTime}ms`);
+    });
+  });
 });

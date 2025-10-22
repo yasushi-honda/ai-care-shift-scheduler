@@ -66,6 +66,9 @@ export interface ShiftRequirement {
   targetMonth: string;
   timeSlots: ShiftTime[];
   requirements: Record<string, DailyRequirement>;
+  daysToGenerate?: number; // テスト用：生成する日数を制限（未指定の場合は月全体）
+  startDay?: number; // 生成開始日（1-31、未指定の場合は1日から）
+  endDay?: number; // 生成終了日（1-31、未指定の場合は月末まで）
 }
 
 export interface GeneratedShift {
@@ -77,4 +80,20 @@ export interface StaffSchedule {
   staffId: string;
   staffName: string;
   monthlyShifts: GeneratedShift[];
+}
+
+/**
+ * Phase 1: 骨子スケジュール（軽量版）
+ * 全スタッフの休日・夜勤パターンのみを決定
+ */
+export interface StaffScheduleSkeleton {
+  staffId: string;
+  staffName: string;
+  restDays: number[];  // 休日の日付リスト（1-31）
+  nightShiftDays: number[];  // 夜勤の日付リスト（1-31）
+  nightShiftFollowupDays: number[];  // 夜勤明け・公休の日付リスト（1-31）
+}
+
+export interface ScheduleSkeleton {
+  staffSchedules: StaffScheduleSkeleton[];
 }
