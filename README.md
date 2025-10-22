@@ -1,46 +1,323 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-</div>
-
-# Run and deploy your AI Studio app
+# AIシフト自動作成
 
 [![CI/CD Pipeline](https://github.com/yasushi-honda/ai-care-shift-scheduler/actions/workflows/ci.yml/badge.svg)](https://github.com/yasushi-honda/ai-care-shift-scheduler/actions/workflows/ci.yml)
+[![Firebase Hosting](https://img.shields.io/badge/Firebase-Hosting-orange)](https://ai-care-shift-scheduler.web.app)
+[![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-This contains everything you need to run your app locally.
+介護・福祉事業所向けのAIシフト自動作成システム
 
-View your app in AI Studio: https://ai.studio/apps/drive/1qWiD3dUgCc2z3AMHsQoV99fd4cyOWf5o
+## 🌟 概要
 
-## Run Locally
+**AIシフト自動作成**は、介護・福祉事業所のシフト作成業務を劇的に効率化するWebアプリケーションです。Google の最新AI「Gemini 2.5 Flash-Lite」を活用し、スタッフの資格・希望・労働基準法を考慮した最適なシフトを自動生成します。
 
-**Prerequisites:**  Node.js
+### 主な機能
 
+- ✅ **スタッフ情報管理**: 名前、役職、資格、勤務可否を一元管理
+- ✅ **シフト要件設定**: 時間帯別必要人員と資格要件を設定
+- ✅ **休暇申請管理**: スタッフの勤務不可日を簡単登録
+- ✅ **AIシフト自動生成**: Gemini AIによる最適化（Cloud Functions実装後）
+- ✅ **デモシフト生成**: ランダムシフトでUIを体験
+- ✅ **カレンダー表示**: 直感的なシフト確認
+- ✅ **CSV エクスポート**: 既存システムへの連携
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+## 🚀 デモ
 
-## CI/CD
+**本番環境**: https://ai-care-shift-scheduler.web.app
 
-このプロジェクトはGitHub Actionsを使用した自動CI/CDパイプラインを採用しています。
+> ⚠️ **注意**: 現在は認証機能がないため、誰でもアクセス可能です。本番データは入力しないでください。
 
-### 特徴
+## 📋 必要要件
 
-- ✅ **セキュア認証**: PAT不要、`GITHUB_TOKEN`による自動認証
-- ✅ **自動ビルド**: mainブランチへのpush/PRで自動実行
-- ✅ **TypeScript型チェック**: コード品質の自動検証
-- ✅ **ビルド成果物**: distフォルダを7日間保存
+- **Node.js**: 20.x LTS
+- **npm**: 10.x
+- **Firebase CLI**: 13.x（デプロイ時）
+- **gcloud CLI**: 最新版（GCP操作時）
+
+## 🛠️ セットアップ
+
+### 1. リポジトリのクローン
+
+```bash
+git clone https://github.com/yasushi-honda/ai-care-shift-scheduler.git
+cd ai-care-shift-scheduler
+```
+
+### 2. 依存関係のインストール
+
+```bash
+# ルートディレクトリ
+npm install
+
+# Cloud Functions（デプロイ時）
+cd functions
+npm install
+cd ..
+```
+
+### 3. 環境変数の設定
+
+`.env.local` ファイルを作成し、Firebase設定を追加：
+
+```bash
+# Firebase Configuration
+VITE_FIREBASE_API_KEY=your-api-key
+VITE_FIREBASE_AUTH_DOMAIN=your-project.firebaseapp.com
+VITE_FIREBASE_PROJECT_ID=your-project-id
+VITE_FIREBASE_STORAGE_BUCKET=your-project.firebasestorage.app
+VITE_FIREBASE_MESSAGING_SENDER_ID=your-sender-id
+VITE_FIREBASE_APP_ID=your-app-id
+VITE_FIREBASE_MEASUREMENT_ID=your-measurement-id
+
+# GCP Configuration
+VITE_GCP_PROJECT_ID=your-project-id
+VITE_GCP_PROJECT_NUMBER=your-project-number
+```
+
+> 📝 **Note**: Firebase Console で Web App を作成し、設定を取得してください。
+
+### 4. ローカル開発サーバー起動
+
+```bash
+npm run dev
+```
+
+ブラウザで http://localhost:5173 を開く
+
+### 5. ビルド
+
+```bash
+npm run build
+```
+
+成果物は `dist/` ディレクトリに生成されます。
+
+## 🌐 デプロイ
+
+### Firebase Hosting へのデプロイ
+
+```bash
+# ビルド
+npm run build
+
+# デプロイ
+firebase deploy --only hosting
+```
+
+### Cloud Functions のデプロイ（将来実装）
+
+```bash
+cd functions
+npm run build
+cd ..
+firebase deploy --only functions
+```
+
+## 📁 プロジェクト構造
+
+```
+ai-care-shift-scheduler/
+├── .github/              # GitHub Actions CI/CD
+├── .kiro/                # Spec-Driven Development
+│   ├── steering/         # プロジェクト方針
+│   │   ├── product.md
+│   │   ├── tech.md
+│   │   ├── architecture.md
+│   │   ├── structure.md
+│   │   └── implementation-log.md
+│   └── specs/            # 機能仕様（将来使用）
+├── components/           # Reactコンポーネント
+├── services/             # ビジネスロジック
+├── functions/            # Cloud Functions
+├── public/               # 静的ファイル
+├── App.tsx               # ルートコンポーネント
+├── types.ts              # TypeScript型定義
+├── firebase.json         # Firebase設定
+└── README.md             # 本ファイル
+```
+
+詳細は [.kiro/steering/structure.md](.kiro/steering/structure.md) を参照してください。
+
+## 🏗️ アーキテクチャ
+
+```
+┌─────────────┐
+│   Users     │
+└──────┬──────┘
+       │ HTTPS
+       ▼
+┌──────────────────────────┐
+│  Firebase Hosting (CDN)  │
+│  React + TypeScript      │
+└──────────┬───────────────┘
+           │
+           ▼
+┌──────────────────────────┐
+│  Cloud Functions         │
+│  - healthCheck           │
+│  - generateShift (未実装)│
+└───┬──────────────────┬───┘
+    │                  │
+    ▼                  ▼
+┌─────────┐      ┌──────────┐
+│Firestore│      │Vertex AI │
+│         │      │ Gemini   │
+└─────────┘      └──────────┘
+```
+
+詳細は [.kiro/steering/architecture.md](.kiro/steering/architecture.md) を参照してください。
+
+## 🔧 技術スタック
+
+### フロントエンド
+- **React** 19.x - UIライブラリ
+- **TypeScript** 5.8.x - 型安全な開発
+- **Vite** 6.x - 高速ビルドツール
+- **Tailwind CSS** 3.x - ユーティリティファーストCSS
+
+### バックエンド
+- **Cloud Functions** (Gen 2) - サーバーレスAPI
+- **Vertex AI** - Gemini 2.5 Flash-Lite（最新版）
+- **Firestore** - NoSQLデータベース
+- **Cloud Storage** - ファイルストレージ
+
+### インフラ
+- **Firebase Hosting** - 静的サイトホスティング
+- **GCP** - Google Cloud Platform
+- **GitHub Actions** - CI/CDパイプライン
+
+詳細は [.kiro/steering/tech.md](.kiro/steering/tech.md) を参照してください。
+
+## 📖 ドキュメント
+
+### Steering（プロジェクト方針）
+- [product.md](.kiro/steering/product.md) - プロダクトコンテキストとビジネス目標
+- [tech.md](.kiro/steering/tech.md) - 技術スタックと技術的決定
+- [architecture.md](.kiro/steering/architecture.md) - システムアーキテクチャ
+- [structure.md](.kiro/steering/structure.md) - ファイル構成とコードパターン
+- [implementation-log.md](.kiro/steering/implementation-log.md) - 実装ログ
+
+### その他
+- [CLAUDE.md](CLAUDE.md) - Claude Code用プロジェクト説明
+
+## 🚦 CI/CD
+
+このプロジェクトはGitHub Actionsによる自動CI/CDパイプラインを採用しています。
 
 ### ワークフロー
 
-1. **トリガー**: `main`または`develop`ブランチへのpush/PR
-2. **ビルドとテスト**: 依存関係のインストール、型チェック、ビルド
-3. **デプロイ準備**: mainブランチのみ、成果物の検証
+```yaml
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  build:
+    - 依存関係のインストール
+    - TypeScript型チェック
+    - ビルド実行
+    - 成果物のアップロード（7日間保存）
+```
 
 ### 手動実行
 
-GitHub ActionsのUIから手動でワークフローを実行することもできます：
 1. リポジトリの "Actions" タブを開く
 2. "CI/CD Pipeline" を選択
 3. "Run workflow" をクリック
+
+## 🔐 セキュリティ
+
+### 現状（MVP）
+- ⚠️ **認証なし**: 誰でもアクセス可能
+- ⚠️ **Firestore全開放**: セキュリティルールは開発モード
+- ✅ **HTTPS通信**: すべての通信は暗号化
+- ✅ **APIキー非公開**: Cloud Functions経由でVertex AIを呼び出し（実装後）
+
+### Phase 2（予定）
+- ✅ Firebase Authentication導入
+- ✅ Firestore Security Rules強化
+- ✅ 事業所ごとのデータ分離
+
+## 🐛 既知の問題
+
+1. **AIシフト生成機能が未実装**
+   - Cloud Functions実装後に利用可能
+   - 現在は「デモシフト作成」ボタンで代替
+
+2. **認証機能がない**
+   - Phase 2で Firebase Authentication 導入予定
+
+3. **テストがない**
+   - Phase 2でJest、Playwright導入予定
+
+## 🗓️ ロードマップ
+
+### Phase 1: MVP（現在） - 2025年Q4
+- ✅ 基本的なシフト作成機能
+- ✅ Firebase Hostingデプロイ
+- ⏳ Cloud Functions実装（進行中）
+
+### Phase 2: 認証とマルチテナント - 2026年Q1
+- Firebase Authentication導入
+- 事業所ごとのデータ分離
+- 管理者権限管理
+
+### Phase 3: 高度な最適化 - 2026年Q2
+- 過去データからの学習
+- スタッフ希望の自動考慮
+- 公平性スコアの可視化
+
+### Phase 4: エンタープライズ機能 - 2026年Q3-Q4
+- 複数事業所一括管理
+- モバイルアプリ（スタッフ用）
+- 給与システム連携API
+
+詳細は [.kiro/steering/product.md](.kiro/steering/product.md) を参照してください。
+
+## 🤝 コントリビューション
+
+コントリビューションを歓迎します！以下の手順でお願いします：
+
+1. このリポジトリをフォーク
+2. フィーチャーブランチを作成 (`git checkout -b feature/amazing-feature`)
+3. 変更をコミット (`git commit -m 'feat: Add amazing feature'`)
+4. ブランチにプッシュ (`git push origin feature/amazing-feature`)
+5. プルリクエストを作成
+
+### コミットメッセージ規約
+
+```
+<type>: <subject>
+
+type: feat, fix, docs, style, refactor, test, chore
+```
+
+例:
+- `feat: スタッフ情報編集機能を追加`
+- `fix: カレンダー表示のバグを修正`
+- `docs: README.mdを更新`
+
+## 📄 ライセンス
+
+このプロジェクトは [MIT License](LICENSE) の下で公開されています。
+
+## 👨‍💻 開発者
+
+**Yasushi Honda**
+- Email: admin@fuku-no-tane.com
+- GitHub: [@yasushi-honda](https://github.com/yasushi-honda)
+
+## 🙏 謝辞
+
+- **Google Cloud Platform** - インフラとAIサービス
+- **Firebase** - ホスティングとバックエンドサービス
+- **React** - UIライブラリ
+- **Tailwind CSS** - スタイリング
+- **Claude Code** - AI支援開発環境
+
+---
+
+**本番環境**: https://ai-care-shift-scheduler.web.app
+
+**問い合わせ**: [Issues](https://github.com/yasushi-honda/ai-care-shift-scheduler/issues)

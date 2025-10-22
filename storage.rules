@@ -1,0 +1,11 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    // 認証なし版: すべてのファイルに読み書き許可（開発用）
+    // ⚠️ 警告: 本番環境では認証を実装してください
+    match /{allPaths=**} {
+      allow read, write: if true;
+    }
+  }
+}
