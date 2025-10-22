@@ -21,6 +21,17 @@ Kiro-style Spec Driven Development implementation using claude code slash comman
 ## Development Guidelines
 - Think in English, but generate responses in Japanese (思考は英語、回答の生成は日本語で行うように)
 
+## CI/CD Workflow (重要)
+**コード変更時は必ず以下のワークフローに従うこと**:
+1. コード変更
+2. git commit
+3. **CodeRabbit CLIローカルレビュー実施・完了待ち** ← 必須！
+4. レビュー結果に基づいて修正
+5. git add, commit, push
+6. GitHub Actions CI/CD実行
+
+詳細: [Development Workflow](.kiro/steering/development-workflow.md)
+
 ## Workflow
 
 ### Phase 0: Steering (Optional)
