@@ -1,10 +1,22 @@
 import { onRequest } from 'firebase-functions/v2/https';
 import { VertexAI } from '@google-cloud/vertexai';
 import * as admin from 'firebase-admin';
+import * as crypto from 'crypto';
 import type { Staff, ShiftRequirement, LeaveRequest } from './types';
 
 // Firebase Admin初期化（index.tsで行うため、ここでは不要）
 // admin.initializeApp();
+
+/**
+ * Vertex AI モデル名（GA版、自動更新安定版エイリアス）
+ */
+const VERTEX_AI_MODEL = 'gemini-2.5-flash-lite';
+
+/**
+ * 入力サイズ制限
+ */
+const MAX_STAFF_COUNT = 200; // スタッフ数上限
+const MAX_REQUEST_SIZE_BYTES = 200 * 1024; // リクエストサイズ上限（200KB）
 
 /**
  * プロンプトインジェクション対策: ユーザー入力をサニタイズ
@@ -67,18 +79,22 @@ export const generateShift = onRequest(
       }
 
       // 入力サイズ制限（リソース枯渇対策）
-      if (staffList.length > 100) {
-        throw new Error('staffList cannot exceed 100 staff members');
+      if (staffList.length > MAX_STAFF_COUNT) {
+        throw new Error(`staffList cannot exceed ${MAX_STAFF_COUNT} staff members. Current: ${staffList.length}`);
       }
 
       if (!requirements || !requirements.targetMonth) {
         throw new Error('requirements with targetMonth is required');
       }
 
-      // リクエストボディサイズ制限
+      // リクエストボディサイズ制限（DoS対策）
       const bodySize = JSON.stringify(req.body).length;
-      if (bodySize > 200 * 1024) { // 200KB
-        throw new Error('Request body size exceeds 200KB limit');
+      if (bodySize > MAX_REQUEST_SIZE_BYTES) {
+        res.status(413).json({
+          success: false,
+          error: `Request too large. Maximum: ${MAX_REQUEST_SIZE_BYTES / 1024}KB, Current: ${Math.round(bodySize / 1024)}KB`,
+        });
+        return;
       }
 
       // 休暇申請数の制限
@@ -102,13 +118,57 @@ export const generateShift = onRequest(
         throw new Error('GCP_PROJECT_ID environment variable is not set');
       }
 
+      // 冪等性キー生成（重複リクエスト防止）
+      // スタッフID、シフト要件、休暇申請をすべて含める
+      const staffIds = staffList.map((s: Staff) => s.id).sort().join(',');
+      const requirementsHash = crypto
+        .createHash('sha256')
+        .update(JSON.stringify(requirements))
+        .digest('hex')
+        .substring(0, 16);
+      const leaveRequestsHash = crypto
+        .createHash('sha256')
+        .update(JSON.stringify(leaveRequests || {}))
+        .digest('hex')
+        .substring(0, 16);
+      const idempotencyKey = `${requirements.targetMonth}-${staffIds}-${requirementsHash}-${leaveRequestsHash}`;
+      const idempotencyHash = Buffer.from(idempotencyKey).toString('base64').substring(0, 32);
+
+      // 既存スケジュールをチェック（冪等性保証）
+      const existingSchedules = await admin.firestore()
+        .collection('schedules')
+        .where('targetMonth', '==', requirements.targetMonth)
+        .where('idempotencyHash', '==', idempotencyHash)
+        .where('status', '==', 'generated')
+        .orderBy('createdAt', 'desc')
+        .limit(1)
+        .get();
+
+      if (!existingSchedules.empty) {
+        const existingDoc = existingSchedules.docs[0];
+        const existingData = existingDoc.data();
+        console.log('💾 既存スケジュールを返却（キャッシュ）:', existingDoc.id);
+
+        res.status(200).json({
+          success: true,
+          scheduleId: existingDoc.id,
+          schedule: existingData.schedule,
+          metadata: {
+            ...existingData.metadata,
+            cached: true,
+            cacheHit: true,
+          },
+        });
+        return;
+      }
+
       const vertexAI = new VertexAI({
         project: projectId,
         location: 'us-central1', // 米国中部リージョン（gemini-2.5-flash-lite対応）
       });
 
       const model = vertexAI.getGenerativeModel({
-        model: 'gemini-2.5-flash-lite', // 最もコスト効率的なモデル（GA版）
+        model: VERTEX_AI_MODEL, // 最もコスト効率的なモデル（GA版）
       });
 
       // プロンプト生成
@@ -144,17 +204,18 @@ export const generateShift = onRequest(
       // JSON解析
       const scheduleData = JSON.parse(responseText);
 
-      // Firestoreに保存
+      // Firestoreに保存（冪等性ハッシュを含む）
       const docRef = await admin.firestore()
         .collection('schedules')
         .add({
           schedule: scheduleData.schedule,
           targetMonth: requirements.targetMonth,
+          idempotencyHash, // 重複チェック用
           createdAt: admin.firestore.FieldValue.serverTimestamp(),
           staffCount: staffList.length,
           status: 'generated',
           metadata: {
-            model: 'gemini-2.5-flash-lite',
+            model: VERTEX_AI_MODEL,
             tokensUsed: result.response.usageMetadata?.totalTokenCount || 0,
           },
         });
@@ -168,7 +229,7 @@ export const generateShift = onRequest(
         schedule: scheduleData.schedule,
         metadata: {
           generatedAt: new Date().toISOString(),
-          model: 'gemini-2.5-flash-lite',
+          model: VERTEX_AI_MODEL,
           tokensUsed: result.response.usageMetadata?.totalTokenCount || 0,
         },
       });
