@@ -1392,8 +1392,7 @@ publishers/google/models/gemini-2.5-flash-lite-latest` not found
 
 **原因**:
 - ドキュメントに記載されていたモデル名が誤っていた
-- `gemini-2.5-flash-lite`（GA版）と `gemini-flash-lite-latest`（Preview版）を混同
-- `gemini-2.5-flash-lite-latest` という命名形式は存在しない
+- 正しいGA版モデル名は `gemini-2.5-flash-lite`
 
 ---
 
@@ -1415,10 +1414,8 @@ publishers/google/models/gemini-2.5-flash-lite-latest` not found
 **自動更新安定版エイリアス**:
 > バージョン番号や日付を省略したモデル名（例: `gemini-2.5-flash-lite`）は、Googleの「自動更新安定版エイリアス」として機能し、常に最新の安定版（GA版）を指します
 
-**GA版 vs Preview版**:
-- ✅ **GA版エイリアス**: `gemini-2.5-flash-lite` （本番環境推奨、自動更新安定版）
-- ⚠️ **Preview版エイリアス**: `gemini-flash-lite-latest` （存在するが本番非推奨、Preview版の最新を指す）
-- ℹ️ **Preview版（具体的）**: `gemini-2.5-flash-lite-preview-09-2025` （2025年9月版、2週間前廃止通知）
+**使用モデル**:
+- ✅ `gemini-2.5-flash-lite` （GA版、本番環境推奨）
 
 **モデル情報**:
 | 項目 | 値 |
@@ -1576,15 +1573,14 @@ fix: Vertex AIモデル名を正式なGA版に修正
 - 問題発生時は必ず公式ドキュメントを確認する
 - 複数の公式情報源（Cloud公式ドキュメント、Developers Blog）をクロスチェック
 
-#### 学び2: モデル名の命名規則理解
+#### 学び2: モデル名の正確な指定
 
 **重要な発見**:
-> バージョン番号や日付を省略したモデル名は「自動更新安定版エイリアス」として機能する
+- ✅ `gemini-2.5-flash-lite` → GA版（本番環境推奨、現在のコードで使用）
 
-- ✅ `gemini-2.5-flash-lite` → GA版の自動更新安定版エイリアス（本番環境推奨）
-- ✅ `gemini-flash-lite-latest` → Preview版のエイリアス（存在するが本番非推奨）
-- ❌ `gemini-2.5-flash-lite-latest` → このような命名形式は存在しない（GA版とPreview版のエイリアスを混同した誤り）
-- ℹ️ `gemini-2.5-flash-lite-preview-09-2025` → 具体的なPreview版（2週間前に廃止通知、本番非推奨）
+**教訓**:
+- 公式ドキュメントで確認されたモデル名を使用する
+- エラーが発生した場合は、公式の Model versions and lifecycle ドキュメントを参照する
 
 #### 学び3: GA版とPreview版の違い
 
