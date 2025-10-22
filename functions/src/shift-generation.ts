@@ -23,7 +23,7 @@ function sanitizeForPrompt(input: string): string {
  * AIによるシフト自動生成エンドポイント
  *
  * @description
- * Vertex AI (Gemini 2.5 Flash-Lite-Latest) を使用して、
+ * Vertex AI (Gemini 2.5 Flash-Lite) を使用して、
  * 介護施設のシフト表を自動生成します。
  *
  * @endpoint POST /generateShift
@@ -104,11 +104,11 @@ export const generateShift = onRequest(
 
       const vertexAI = new VertexAI({
         project: projectId,
-        location: 'us-central1', // Geminiモデルは us-central1 で利用可能
+        location: 'asia-northeast1', // 東京リージョン（全Geminiモデル対応）
       });
 
       const model = vertexAI.getGenerativeModel({
-        model: 'gemini-pro', // Gemini 1.0 Pro（安定版）
+        model: 'gemini-2.5-flash-lite', // 最もコスト効率的なモデル（GA版）
       });
 
       // プロンプト生成
@@ -154,7 +154,7 @@ export const generateShift = onRequest(
           staffCount: staffList.length,
           status: 'generated',
           metadata: {
-            model: 'gemini-pro',
+            model: 'gemini-2.5-flash-lite',
             tokensUsed: result.response.usageMetadata?.totalTokenCount || 0,
           },
         });
@@ -168,7 +168,7 @@ export const generateShift = onRequest(
         schedule: scheduleData.schedule,
         metadata: {
           generatedAt: new Date().toISOString(),
-          model: 'gemini-pro',
+          model: 'gemini-2.5-flash-lite',
           tokensUsed: result.response.usageMetadata?.totalTokenCount || 0,
         },
       });
