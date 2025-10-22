@@ -32,7 +32,7 @@ function sanitizeForPrompt(input: string): string {
  */
 export const generateShift = onRequest(
   {
-    region: 'asia-northeast1',
+    region: 'us-central1', // Vertex AI Gemini 2.5 Flash-Lite対応リージョン
     cors: true,
     memory: '1GiB', // Vertex AI使用のためメモリ増量
     timeoutSeconds: 120, // AI生成時間を考慮
@@ -104,7 +104,7 @@ export const generateShift = onRequest(
 
       const vertexAI = new VertexAI({
         project: projectId,
-        location: 'asia-northeast1', // 東京リージョン（全Geminiモデル対応）
+        location: 'us-central1', // 米国中部リージョン（gemini-2.5-flash-lite対応）
       });
 
       const model = vertexAI.getGenerativeModel({

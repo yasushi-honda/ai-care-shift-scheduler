@@ -156,7 +156,7 @@ export default {
 **グローバル設定** (`functions/src/index.ts`):
 ```typescript
 setGlobalOptions({
-  region: 'asia-northeast1',  // 東京リージョン
+  region: 'us-central1',  // 米国中部リージョン（全関数統一、コスト最適化）
   memory: '512MiB',
   timeoutSeconds: 60,
   minInstances: 0,
@@ -164,9 +164,8 @@ setGlobalOptions({
 });
 ```
 
-**現在実装されているエンドポイント**:
-- `healthCheck`: ヘルスチェック用エンドポイント
-- `generateShift`: （未実装）AIシフト生成API
+**現在実装されているエンドポイント** (us-central1):
+- `generateShift`: AIシフト生成API（Gemini 2.5 Flash-Lite使用）
 
 **セキュリティ設定**:
 - CORS: すべてのオリジンを許可（開発段階）
@@ -185,13 +184,23 @@ setGlobalOptions({
 - **サポート期限**: 2026年7月22日
 - **バージョン管理**: バージョン番号や日付を省略したモデル名は、Googleの「自動更新安定版エイリアス」として機能し、常に最新の安定版を指します
 
+**利用可能リージョン**（GA版）:
+- **米国**: us-central1, us-east1, us-east4, us-east5, us-south1, us-west1, us-west4
+- **ヨーロッパ**: europe-central2, europe-north1, europe-southwest1, europe-west1, europe-west4, europe-west8, europe-west9
+- **グローバル**: global
+- ⚠️ **重要**: アジアリージョン（asia-northeast1など）では利用不可
+
+**本プロジェクトでの使用リージョン**: `us-central1` （米国中部）
+
 **使用方針**:
 - モデル名: `gemini-2.5-flash-lite` （GA版）
+- リージョン: `us-central1` （Gemini 2.5 Flash-Lite対応リージョン）
 - 本番環境対応: GA版のため、本番環境での使用に適している
 - バージョン管理: バージョン番号や日付を省略したモデル名は、自動的に最新の安定版を使用
 - フォールバック: なし（失敗時はエラーを返す）
 
 **参考ドキュメント**:
+- [Gemini 2.5 Flash-Lite 公式ドキュメント](https://cloud.google.com/vertex-ai/generative-ai/docs/models/gemini/2-5-flash-lite) - 利用可能リージョンの公式情報
 - [Model versions and lifecycle](https://cloud.google.com/vertex-ai/generative-ai/docs/learn/model-versions)
 - [Gemini 2.5 Updates](https://developers.googleblog.com/en/continuing-to-bring-you-our-latest-models-with-an-improved-gemini-2-5-flash-and-flash-lite-release/)
 

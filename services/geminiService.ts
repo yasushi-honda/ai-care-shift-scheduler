@@ -22,7 +22,7 @@ const getCloudFunctionUrl = (): string => {
         'Please set VITE_CLOUD_FUNCTION_URL in .env.local'
       );
     }
-    return `https://asia-northeast1-${projectId}.cloudfunctions.net/generateShift`;
+    return `https://us-central1-${projectId}.cloudfunctions.net/generateShift`;
   }
 
   return url;

@@ -1624,3 +1624,443 @@ fix: Vertex AIモデル名を正式なGA版に修正
 - 解決策: GCPコンソールで手動有効化が必要
 
 ---
+
+## Phase 7: Vertex AI リージョン設定の修正（2025-10-22）
+
+### 7.1 問題の発見
+
+**問題**: Cloud Functions実装完了後、本番環境での動作テストで404エラーが発生
+
+```json
+{
+  "success": false,
+  "error": "Publisher Model `projects/ai-care-shift-scheduler/locations/asia-northeast1/publishers/google/models/gemini-2.5-flash-lite` not found."
+}
+```
+
+### 7.2 根本原因の調査
+
+**ユーザーからの重要な情報**:
+> 「米国（マルチリージョン）とヨーロッパ（マルチリージョン）のみしか使えないようでした」
+
+**公式ドキュメントでの確認**:
+- WebSearch と WebFetch を使用して公式ドキュメントを調査
+- 出典: [Gemini 2.5 Flash-Lite 公式ドキュメント](https://cloud.google.com/vertex-ai/generative-ai/docs/models/gemini/2-5-flash-lite)
+
+**確認結果**:
+```
+GA版の gemini-2.5-flash-lite 利用可能リージョン:
+- 米国: us-central1, us-east1, us-east4, us-east5, us-south1, us-west1, us-west4
+- ヨーロッパ: europe-central2, europe-north1, europe-southwest1, europe-west1, 
+              europe-west4, europe-west8, europe-west9
+- グローバル: global
+
+⚠️ アジアリージョン（asia-northeast1など）では利用不可
+```
+
+**誤解の原因**:
+- Phase 6で「asia-northeast1で全Geminiモデル対応」と記載したが、これは一般的なGeminiモデルの情報
+- `gemini-2.5-flash-lite` (GA版) 特有のリージョン制限を見落としていた
+- 一般的な locations ページと、モデル固有のドキュメントを混同
+
+### 7.3 修正内容
+
+#### 7.3.1 コード修正
+
+**functions/src/shift-generation.ts**:
+```typescript
+// 修正前
+export const generateShift = onRequest(
+  {
+    region: 'asia-northeast1', // ❌ gemini-2.5-flash-lite非対応
+    // ...
+  },
+  async (req, res) => {
+    const vertexAI = new VertexAI({
+      project: projectId,
+      location: 'asia-northeast1', // ❌
+    });
+    
+    const model = vertexAI.getGenerativeModel({
+      model: 'gemini-2.5-flash-lite',
+    });
+    // ...
+  }
+);
+
+// 修正後
+export const generateShift = onRequest(
+  {
+    region: 'us-central1', // ✅ Gemini 2.5 Flash-Lite対応リージョン
+    // ...
+  },
+  async (req, res) => {
+    const vertexAI = new VertexAI({
+      project: projectId,
+      location: 'us-central1', // ✅ 米国中部リージョン
+    });
+    
+    const model = vertexAI.getGenerativeModel({
+      model: 'gemini-2.5-flash-lite', // ✅ GA版
+    });
+    // ...
+  }
+);
+```
+
+**functions/src/index.ts**:
+```typescript
+// グローバル設定（healthCheckなど汎用エンドポイント用）
+setGlobalOptions({
+  region: 'asia-northeast1',  // 東京リージョン（デフォルト、個別関数で上書き可能）
+  memory: '512MiB',
+  timeoutSeconds: 60,
+  minInstances: 0,
+  maxInstances: 10,
+});
+
+// 注: generateShift は個別に us-central1 を指定
+```
+
+#### 7.3.2 ドキュメント修正
+
+**修正対象ファイル**:
+1. `.kiro/steering/tech.md`
+2. `.kiro/steering/architecture.md`
+3. `.kiro/steering/implementation-log.md` (本ファイル)
+
+**tech.md の修正内容**:
+- 利用可能リージョンセクションを追加
+- 本プロジェクトでの使用リージョン明記: `us-central1`
+- 公式ドキュメントへのリンク追加
+- ⚠️ アジアリージョン非対応を明記
+
+**architecture.md の修正内容**:
+- アーキテクチャ図を更新（マルチリージョン対応を明示）
+- プロジェクト詳細にVertex AIリージョンを追加
+- 全ての `asia-northeast1` コメントを更新
+- 利用可能リージョンセクションを追加（出典明記）
+
+### 7.4 レイテンシーへの影響
+
+**検討事項**:
+- Cloud Functions: 東京 → 米国中部への変更
+- 予想レイテンシー増加: 約100〜200ms
+
+**緩和策**:
+1. Cloud Functions は依然として東京リージョンからデプロイ可能（グローバル設定はasia-northeast1）
+2. generateShift のみ us-central1 で実行
+3. Gemini APIコール自体が主なレイテンシー（数秒）なので、リージョン間レイテンシーの影響は相対的に小さい
+
+**将来の対応**:
+- アジアリージョンで gemini-2.5-flash-lite がサポートされた場合、リージョンを東京に戻す
+- または、別のGeminiモデル（asia-northeast1対応）への切り替えを検討
+
+### 7.5 実施手順
+
+```bash
+# 1. コード修正
+vim functions/src/shift-generation.ts
+vim functions/src/index.ts
+
+# 2. ビルド確認
+cd functions && npm run build
+
+# 3. デプロイ
+firebase deploy --only functions:generateShift --project ai-care-shift-scheduler
+
+# 4. テスト実行
+curl -X POST "https://us-central1-ai-care-shift-scheduler.cloudfunctions.net/generateShift" \
+  -H "Content-Type: application/json" \
+  -d '{ ... test data ... }'
+```
+
+### 7.6 学んだこと
+
+#### 学び1: モデル固有のドキュメントを確認する
+
+- 一般的な「Vertex AI locations」ドキュメントではなく、**特定モデルの公式ページ**を確認する
+- URL形式: `https://cloud.google.com/vertex-ai/generative-ai/docs/models/gemini/{model-name}`
+- 例: gemini-2.5-flash-lite, gemini-2.5-flash, gemini-1.5-flash など
+
+#### 学び2: ユーザーからのフィードバックを最優先する
+
+- ユーザーが「使えない」と報告した場合、必ず公式情報で再確認
+- ドキュメントに書いてあっても、実際の制約が異なる場合がある
+- 「絶対に〜で進めてください」という指示は重要な意味を持つ
+
+#### 学び3: リージョン制限の種類
+
+**3種類のリージョン制限**:
+1. **API自体の制限**: `aiplatform.googleapis.com` が対応しているリージョン
+2. **モデル固有の制限**: 特定モデルが動作するリージョン（← 今回のケース）
+3. **機能固有の制限**: Provisioned Throughput など特定機能の制限
+
+#### 学び4: マルチリージョンアーキテクチャ
+
+**設計方針**:
+- グローバル設定: `asia-northeast1` （汎用エンドポイント、Firestoreなど）
+- Vertex AI専用: `us-central1` （Gemini 2.5 Flash-Lite使用）
+- 各関数が個別にリージョンを指定可能な柔軟な設計
+
+### 7.7 今後の監視ポイント
+
+**定期確認事項**:
+1. Gemini 2.5 Flash-Lite のアジアリージョン対応状況
+2. 新しいGeminiモデルのリリースとリージョン対応
+3. us-central1 でのレイテンシー測定
+
+**ドキュメント更新タイミング**:
+- 新モデルリリース時
+- リージョン対応変更時
+- パフォーマンス問題発生時
+
+---
+
+## Phase 7 完了 ✅
+
+**変更ファイル**:
+- `functions/src/shift-generation.ts` (2箇所修正)
+- `functions/src/index.ts` (コメント追加)
+- `.kiro/steering/tech.md` (リージョン情報追加)
+- `.kiro/steering/architecture.md` (5箇所修正)
+- `.kiro/steering/implementation-log.md` (Phase 7追加)
+
+**次のステップ** (Phase 8):
+1. Cloud Functions再デプロイ（us-central1リージョンで）
+2. 本番環境での動作確認
+3. レイテンシー測定
+4. パフォーマンスチューニング
+
+---
+
+## Phase 8: Cloud Functions リージョン統一とコスト最適化（2025-10-22）
+
+### 8.1 背景と課題
+
+Phase 7後の状態：
+- `generateShift`: us-central1
+- `healthCheck`: asia-northeast1
+
+課題：
+- 2リージョンでArtifact Registry維持（ストレージコスト）
+- 管理の複雑化
+
+### 8.2 実施内容
+
+#### リージョン統一
+すべての関数を `us-central1` に統一：
+
+```typescript
+// functions/src/index.ts
+setGlobalOptions({
+  region: 'us-central1', // 全関数統一
+});
+
+export const healthCheck = onRequest(
+  { region: 'us-central1', cors: true },
+  // ...
+);
+```
+
+#### Artifact Registry クリーンアップポリシー
+両リージョンで最新2バージョンのみ保持：
+
+```bash
+gcloud artifacts repositories set-cleanup-policies gcf-artifacts \
+  --location=us-central1 \
+  --policy=/tmp/cleanup-policy.json
+```
+
+### 8.3 結果
+
+**デプロイ後の構成** (すべて us-central1):
+- healthCheck: 512MB
+- generateShift: 1GB
+
+**コスト削減**:
+- Artifact Registryストレージ: 60-70%削減見込み
+- 管理の簡素化
+
+**動作確認**:
+```bash
+$ curl https://us-central1-ai-care-shift-scheduler.cloudfunctions.net/healthCheck
+{"status":"ok","project":"ai-care-shift-scheduler","timestamp":"2025-10-22T10:34:09.623Z"}
+```
+
+### 8.4 ドキュメント更新
+
+- functions/src/index.ts
+- .kiro/steering/tech.md
+- .kiro/steering/architecture.md
+- .kiro/steering/implementation-log.md
+
+### 8.5 学んだこと
+
+- コスト最適化は小額でも積み重ねが重要
+- 監視エンドポイントはコストと管理を優先
+- リージョン統一で Artifact Registry を1箇所に集約
+
+---
+
+## Phase 8 完了 ✅
+
+次のステップ: フロントエンド統合、Firebase Hosting デプロイ
+
+---
+
+## Phase 9: healthCheck関数削除（2025-10-22）
+
+### 9.1 背景
+
+Phase 8でリージョン統一しましたが、`healthCheck` 関数の使用状況を調査した結果：
+
+**確認結果**:
+- Cloud Scheduler: 未設定（API自体が無効）
+- 外部監視サービス: 未設定
+- CI/CD パイプライン: 未構築
+- **結論**: 使用されていない
+
+### 9.2 実施内容
+
+#### コード削除
+
+```typescript
+// functions/src/index.ts
+
+// 削除前
+import { onRequest } from 'firebase-functions/v2/https';
+
+export const healthCheck = onRequest(
+  { region: 'us-central1', cors: true },
+  async (req, res) => { /* ... */ }
+);
+
+// 削除後
+// healthCheck関数を完全削除
+```
+
+#### 関数削除
+
+```bash
+firebase functions:delete healthCheck --region us-central1 --force
+```
+
+### 9.3 結果
+
+**現在の構成** (us-central1):
+- `generateShift`: AIシフト生成のみ
+
+**削減効果**:
+- 不要な関数の削除でシンプルな構成
+- 管理コスト削減
+- コールドスタート時のメモリ使用量削減
+
+### 9.4 ドキュメント更新
+
+- functions/src/index.ts: healthCheck削除、不要なimport削除
+- .kiro/steering/tech.md: エンドポイント情報更新
+- .kiro/steering/architecture.md: アーキテクチャ図とエンドポイント説明更新
+
+### 9.5 将来の再追加
+
+必要になった場合（本番運用開始時など）、以下で簡単に再追加可能：
+
+```typescript
+export const healthCheck = onRequest(
+  { region: 'us-central1', cors: true },
+  async (req, res) => {
+    res.set('Access-Control-Allow-Origin', '*');
+    res.status(200).json({
+      status: 'ok',
+      project: 'ai-care-shift-scheduler',
+      timestamp: new Date().toISOString(),
+    });
+  }
+);
+```
+
+---
+
+## Phase 9 完了 ✅
+
+**最終構成**:
+- Cloud Functions: `generateShift` のみ（us-central1）
+- シンプルで管理しやすい構成
+
+---
+
+## Phase 10: 不要なArtifact Registry削除（2025-10-22）
+
+### 10.1 背景
+
+Phase 9でhealthCheck関数を削除し、すべてのCloud Functionsを `us-central1` に統一しました。
+しかし、`asia-northeast1` のArtifact Registry（gcf-artifacts）が153.6MB残っており、不要なストレージコストが発生していました。
+
+### 10.2 削除前の状態確認
+
+```bash
+# Cloud Functions確認
+firebase functions:list --project ai-care-shift-scheduler
+# 結果: generateShift (us-central1) のみ
+
+# Artifact Registry確認
+gcloud artifacts repositories list --project=ai-care-shift-scheduler
+# 結果:
+# - asia-northeast1: 153.609 MB （不要）
+# - us-central1:      95.970 MB （使用中）
+```
+
+**判断**: asia-northeast1には何もデプロイされていないため、安全に削除可能
+
+### 10.3 実施内容
+
+```bash
+gcloud artifacts repositories delete gcf-artifacts \
+  --location=asia-northeast1 \
+  --project=ai-care-shift-scheduler \
+  --quiet
+```
+
+**結果**: ✅ 削除成功
+
+### 10.4 削除後の状態
+
+```bash
+# Artifact Registry確認
+gcloud artifacts repositories list --project=ai-care-shift-scheduler
+# 結果: us-central1 (95.970 MB) のみ
+```
+
+### 10.5 コスト削減効果
+
+| 項目 | 削減前 | 削減後 | 削減量 |
+|------|--------|--------|--------|
+| asia-northeast1 | 153.6 MB | 0 MB | 153.6 MB |
+| us-central1 | 96.0 MB | 96.0 MB | - |
+| **合計** | **249.6 MB** | **96.0 MB** | **153.6 MB (-61.5%)** |
+
+**月額コスト削減**: 約$0.015/月
+
+小額ですが、**無駄なリソースをゼロにした**ことが重要です。
+
+### 10.6 変更ファイル
+
+- `.kiro/steering/implementation-log.md` (Phase 10追加)
+
+### 10.7 学んだこと
+
+- **リソースの棚卸しが重要**: 関数削除後もArtifact Registryは自動削除されない
+- **小さなコスト削減の積み重ね**: 月$0.015でも年間$0.18、積み重ねが大切
+- **クリーンアップの徹底**: 不要なリソースは即座に削除する習慣
+
+---
+
+## Phase 10 完了 ✅
+
+**次のステップ**:
+1. フロントエンドからCloud Functions呼び出しテスト
+2. 本番環境での動作確認
+3. パフォーマンス測定
+
+---

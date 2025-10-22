@@ -329,27 +329,15 @@ import { setGlobalOptions } from 'firebase-functions/v2';
 import { onRequest } from 'firebase-functions/v2/https';
 
 setGlobalOptions({
-  region: 'asia-northeast1',
+  region: 'us-central1', // 米国中部リージョン（全関数統一）
   memory: '512MiB',
   timeoutSeconds: 60,
   minInstances: 0,
   maxInstances: 10,
 });
 
-export const healthCheck = onRequest(
-  { region: 'asia-northeast1', cors: true },
-  async (req, res) => {
-    res.set('Access-Control-Allow-Origin', '*');
-    res.status(200).json({
-      status: 'ok',
-      project: 'ai-care-shift-scheduler',
-      timestamp: new Date().toISOString(),
-    });
-  }
-);
-
-// 将来実装
-// export { generateShift } from './shift-generation';
+// エンドポイントのエクスポート
+export { generateShift } from './shift-generation';
 ```
 
 ---

@@ -26,12 +26,13 @@ AIシフト自動作成は、Google Cloud Platform（GCP）上に構築された
                        │ HTTPS (CORS)
                        ▼
 ┌─────────────────────────────────────────────────────────────┐
-│              Cloud Functions (asia-northeast1)               │
+│              Cloud Functions (us-central1)                  │
 │                                                              │
-│  ┌────────────────┐  ┌────────────────────────────────┐    │
-│  │  healthCheck   │  │  generateShift (未実装)         │    │
-│  │  - 監視用       │  │  - シフト自動生成               │    │
-│  └────────────────┘  └──────────┬─────────────────────┘    │
+│  ┌────────────────────────────────────────────────┐         │
+│  │  generateShift                                 │         │
+│  │  - AIシフト生成（Gemini 2.5 Flash-Lite）        │         │
+│  │  - 1GB メモリ、120秒タイムアウト                │         │
+│  └──────────────────────┬─────────────────────────┘         │
 └──────────────────────────────────┼──────────────────────────┘
                                    │
         ┌──────────────────────────┼──────────────────────────┐
@@ -56,7 +57,8 @@ AIシフト自動作成は、Google Cloud Platform（GCP）上に構築された
 - **プロジェクトID**: `ai-care-shift-scheduler`
 - **プロジェクト番号**: `737067812481`
 - **請求アカウント**: 有効（admin@fuku-no-tane.com）
-- **デフォルトリージョン**: `asia-northeast1` (東京)
+- **Firestoreリージョン**: `asia-northeast1` (東京)
+- **Cloud Functionsリージョン**: `us-central1` (米国中部、全関数統一)
 - **作成日**: 2025-10-22
 
 ### 有効化されたAPI
@@ -157,7 +159,7 @@ firebase deploy --only hosting
 #### グローバル設定
 ```typescript
 setGlobalOptions({
-  region: 'asia-northeast1',  // 東京リージョン
+  region: 'us-central1',       // 米国中部リージョン（全関数統一）
   memory: '512MiB',            // メモリ割り当て
   timeoutSeconds: 60,          // タイムアウト
   minInstances: 0,             // コールドスタート許可
@@ -165,31 +167,15 @@ setGlobalOptions({
 });
 ```
 
+**リージョン選定理由**:
+- Gemini 2.5 Flash-Lite が us-central1 でのみ利用可能
+- Artifact Registryのストレージコスト削減
+- シンプルな構成で管理が容易
+
 #### エンドポイント
 
-##### 1. healthCheck
-**用途**: 監視・ヘルスチェック
-
-**リクエスト**:
-```
-GET /healthCheck
-```
-
-**レスポンス**:
-```json
-{
-  "status": "ok",
-  "project": "ai-care-shift-scheduler",
-  "timestamp": "2025-10-22T07:00:00.000Z"
-}
-```
-
-**CORS**: 全オリジン許可
-
----
-
-##### 2. generateShift (未実装)
-**用途**: AIによるシフト自動生成
+##### generateShift
+**用途**: AIによるシフト自動生成（Gemini 2.5 Flash-Lite使用）
 
 **リクエスト**:
 ```
@@ -228,7 +214,7 @@ Content-Type: application/json
 **実装方針**:
 ```typescript
 export const generateShift = onRequest(
-  { region: 'asia-northeast1', cors: true },
+  { region: 'us-central1', cors: true }, // Gemini 2.5 Flash-Lite対応リージョン
   async (req, res) => {
     // 1. リクエストバリデーション
     const { staffList, requirements, leaveRequests } = req.body;
@@ -236,7 +222,7 @@ export const generateShift = onRequest(
     // 2. Vertex AI呼び出し
     const vertexAI = new VertexAI({
       project: 'ai-care-shift-scheduler',
-      location: 'asia-northeast1',
+      location: 'us-central1', // Gemini 2.5 Flash-Lite対応リージョン
     });
 
     const model = vertexAI.getGenerativeModel({
@@ -422,6 +408,16 @@ Google の最新生成AIモデル（GA版）。シフト最適化に使用。
 - **価格**:
   - 入力: $0.10 / 1M トークン
   - 出力: $0.40 / 1M トークン
+
+#### 利用可能リージョン（GA版）
+**出典**: [Gemini 2.5 Flash-Lite 公式ドキュメント](https://cloud.google.com/vertex-ai/generative-ai/docs/models/gemini/2-5-flash-lite)
+
+- **米国**: us-central1, us-east1, us-east4, us-east5, us-south1, us-west1, us-west4
+- **ヨーロッパ**: europe-central2, europe-north1, europe-southwest1, europe-west1, europe-west4, europe-west8, europe-west9
+- **グローバル**: global
+- ⚠️ **重要**: アジアリージョン（asia-northeast1など）では利用不可
+
+**本プロジェクトでの使用リージョン**: `us-central1` （米国中部）
 
 #### バージョン戦略
 - **使用モデル**: `gemini-2.5-flash-lite` （GA版）
@@ -616,7 +612,10 @@ service firebase.storage {
 
 ### 可用性
 - **目標SLA**: 99.9% (月間ダウンタイム < 43分)
-- **リージョン**: asia-northeast1（東京）
+- **リージョン**:
+  - Firestore: asia-northeast1（東京）
+  - Cloud Functions: us-central1（米国中部、全関数統一）
+  - Vertex AI: us-central1（Gemini 2.5 Flash-Lite使用）
 - **バックアップ**: 日次自動バックアップ
 
 ### スケーラビリティ
