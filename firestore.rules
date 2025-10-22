@@ -1,10 +1,47 @@
 rules_version = '2';
+
 service cloud.firestore {
   match /databases/{database}/documents {
-    // 認証なし版: すべてのドキュメントに読み書き許可（開発用）
-    // ⚠️ 警告: 本番環境では認証を実装してください
+    // ⚠️⚠️⚠️ 重要な警告 ⚠️⚠️⚠️
+    //
+    // 【現状】MVPフェーズ - 認証機能なし（開発用）
+    // - 誰でもすべてのデータにアクセス可能
+    // - 本番データは絶対に入力しないでください
+    // - 公開URLは関係者のみに共有
+    //
+    // 【Phase 2で実装予定】Firebase Authentication + 詳細なルール
+    // - 認証済みユーザーのみアクセス許可
+    // - 事業所ごとのデータ分離
+    // - ロールベースのアクセス制御
+    //
+    // 【リスク】
+    // - データの漏洩・改ざんが可能
+    // - Firestoreコストの増加
+    //
+    // このルールは開発・検証目的のみに使用してください。
     match /{document=**} {
       allow read, write: if true;
     }
   }
 }
+
+// Phase 2で実装予定の認証付きルール:
+//
+// match /facilities/{facilityId} {
+//   allow read: if request.auth != null &&
+//               request.auth.token.facilityId == facilityId;
+//   allow write: if request.auth != null &&
+//                request.auth.token.role in ['admin', 'manager'];
+//
+//   match /staff/{staffId} {
+//     allow read, write: if request.auth != null &&
+//                          request.auth.token.facilityId == facilityId;
+//   }
+//
+//   match /schedules/{scheduleId} {
+//     allow read: if request.auth != null &&
+//                   request.auth.token.facilityId == facilityId;
+//     allow write: if request.auth != null &&
+//                    request.auth.token.role in ['admin', 'manager'];
+//   }
+// }

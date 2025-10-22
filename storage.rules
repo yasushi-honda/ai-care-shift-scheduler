@@ -2,10 +2,23 @@ rules_version = '2';
 
 service firebase.storage {
   match /b/{bucket}/o {
-    // 認証なし版: すべてのファイルに読み書き許可（開発用）
-    // ⚠️ 警告: 本番環境では認証を実装してください
+    // 開発用: 基本的な制約付きアクセス
+    // ⚠️ 警告: Phase 2で認証を実装予定
     match /{allPaths=**} {
-      allow read, write: if true;
+      // 読み取りは誰でも可能
+      allow read: if true;
+
+      // 書き込みはファイルサイズを10MBに制限
+      // これにより、ストレージコストの爆発的増加を防ぐ
+      allow write: if request.resource.size < 10 * 1024 * 1024;
     }
   }
 }
+
+// Phase 2で実装予定の認証付きルール:
+// match /exports/{facilityId}/{filename} {
+//   allow read: if request.auth != null &&
+//               request.auth.token.facilityId == facilityId;
+//   allow write: if request.auth != null &&
+//                request.auth.token.role == 'admin';
+// }
