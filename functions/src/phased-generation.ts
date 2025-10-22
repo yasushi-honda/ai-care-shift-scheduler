@@ -15,7 +15,7 @@ import type {
 } from './types';
 
 const VERTEX_AI_MODEL = 'gemini-2.5-flash-lite';
-const BATCH_SIZE = 5; // 詳細生成時のバッチサイズ
+const BATCH_SIZE = 10; // 詳細生成時のバッチサイズ（10名 × 30日 = 300セル）
 
 /**
  * Phase 1: 骨子生成用スキーマ

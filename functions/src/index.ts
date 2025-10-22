@@ -8,7 +8,7 @@ admin.initializeApp();
 setGlobalOptions({
   region: 'us-central1', // 米国中部リージョン（全関数統一）
   memory: '512MiB',
-  timeoutSeconds: 60,
+  timeoutSeconds: 120, // 大規模シフト生成（50名×1ヶ月）に対応
   minInstances: 0,
   maxInstances: 10,
 });

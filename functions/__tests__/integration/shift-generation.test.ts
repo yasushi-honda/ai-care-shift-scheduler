@@ -795,11 +795,11 @@ describe('AI Shift Generation API - Integration Tests', () => {
     });
 
     it('should generate shift for 20 staff within 30 seconds', async () => {
-      // Task 6.1専用のrequirements（20名スタッフ、8日間）
+      // Task 6.1専用のrequirements（20名スタッフ、フル1ヶ月）
       const task61Requirements20 = {
         ...STANDARD_REQUIREMENTS,
-        targetMonth: '2026-03',  // Task 6.1-20名専用の月
-        daysToGenerate: 8,  // JSON出力サイズ削減のため8日間に制限
+        targetMonth: '2026-03',  // Task 6.1-20名専用の月（31日間）
+        // daysToGenerate: フル1ヶ月分で検証
       };
 
       const startTime = Date.now();
@@ -831,14 +831,14 @@ describe('AI Shift Generation API - Integration Tests', () => {
       expect(responseTime).toBeLessThan(30000);
 
       console.log(`⏱️  20名スタッフ応答時間: ${responseTime}ms`);
-    });
+    }, 90000);  // 90秒タイムアウト（20名×1ヶ月の生成に対応）
 
     it('should generate shift for 50 staff within 60 seconds', async () => {
-      // Task 6.1専用のrequirements（50名スタッフ、8日間）
+      // Task 6.1専用のrequirements（50名スタッフ、フル1ヶ月）
       const task61Requirements50 = {
         ...STANDARD_REQUIREMENTS,
-        targetMonth: '2026-04',  // Task 6.1-50名専用の月
-        daysToGenerate: 8,  // JSON出力サイズ削減のため8日間に制限
+        targetMonth: '2026-04',  // Task 6.1-50名専用の月（30日間）
+        // daysToGenerate: フル1ヶ月分で検証
       };
 
       const startTime = Date.now();
@@ -870,6 +870,6 @@ describe('AI Shift Generation API - Integration Tests', () => {
       expect(responseTime).toBeLessThan(60000);
 
       console.log(`⏱️  50名スタッフ応答時間: ${responseTime}ms`);
-    });
+    }, 150000);  // 150秒タイムアウト（50名×1ヶ月の生成に対応）
   });
 });
