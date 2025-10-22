@@ -126,9 +126,24 @@ export const generateShift = onRequest(
         .update(JSON.stringify(requirements))
         .digest('hex')
         .substring(0, 16);
+
+      // leaveRequestsを決定論的にハッシュ化（プロパティ順序を保証）
+      const sortedLeaveRequests = Object.keys(leaveRequests || {})
+        .sort()
+        .reduce((result: Record<string, any>, staffId) => {
+          const leaves = leaveRequests![staffId];
+          result[staffId] = Object.keys(leaves)
+            .sort()
+            .reduce((dateResult: Record<string, any>, date) => {
+              dateResult[date] = leaves[date];
+              return dateResult;
+            }, {});
+          return result;
+        }, {});
+
       const leaveRequestsHash = crypto
         .createHash('sha256')
-        .update(JSON.stringify(leaveRequests || {}))
+        .update(JSON.stringify(sortedLeaveRequests))
         .digest('hex')
         .substring(0, 16);
       const idempotencyKey = `${requirements.targetMonth}-${staffIds}-${requirementsHash}-${leaveRequestsHash}`;
