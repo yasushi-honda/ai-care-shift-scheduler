@@ -404,4 +404,97 @@ describe('AI Shift Generation API - Integration Tests', () => {
       expect(response.body.error).not.toMatch(/\w+Error:/); // "TypeError:", "ReferenceError:"などが含まれない
     });
   });
+
+  /**
+   * Task 4.1: 同一入力での冪等性をテストする
+   * 同じリクエストを2回送信し、2回目がキャッシュから返されることを検証
+   */
+  describe('Task 4.1: Idempotency with Same Input', () => {
+    it('should return cached result for identical second request', async () => {
+      // 1回目のリクエスト（新規生成）
+      const firstResponse = await request(CLOUD_FUNCTION_URL)
+        .post('/')
+        .set('Content-Type', 'application/json')
+        .send({
+          staffList: STANDARD_STAFF_LIST,
+          requirements: STANDARD_REQUIREMENTS,
+          leaveRequests: STANDARD_LEAVE_REQUESTS,
+        });
+
+      expect(firstResponse.status).toBe(200);
+      expect(firstResponse.body.success).toBe(true);
+      const firstScheduleId = firstResponse.body.scheduleId;
+
+      // 2回目のリクエスト（同じ内容：キャッシュヒット期待）
+      const secondResponse = await request(CLOUD_FUNCTION_URL)
+        .post('/')
+        .set('Content-Type', 'application/json')
+        .send({
+          staffList: STANDARD_STAFF_LIST,
+          requirements: STANDARD_REQUIREMENTS,
+          leaveRequests: STANDARD_LEAVE_REQUESTS,
+        });
+
+      // 同じscheduleIdが返されることを確認
+      expect(secondResponse.status).toBe(200);
+      expect(secondResponse.body.success).toBe(true);
+      expect(secondResponse.body.scheduleId).toBe(firstScheduleId);
+    });
+
+    it('should include metadata.cached: true for cached response', async () => {
+      // 1回目のリクエスト
+      await request(CLOUD_FUNCTION_URL)
+        .post('/')
+        .set('Content-Type', 'application/json')
+        .send({
+          staffList: STANDARD_STAFF_LIST,
+          requirements: STANDARD_REQUIREMENTS,
+          leaveRequests: STANDARD_LEAVE_REQUESTS,
+        });
+
+      // 2回目のリクエスト（キャッシュヒット）
+      const secondResponse = await request(CLOUD_FUNCTION_URL)
+        .post('/')
+        .set('Content-Type', 'application/json')
+        .send({
+          staffList: STANDARD_STAFF_LIST,
+          requirements: STANDARD_REQUIREMENTS,
+          leaveRequests: STANDARD_LEAVE_REQUESTS,
+        });
+
+      // キャッシュヒットのメタデータを確認
+      expect(secondResponse.body.metadata).toBeDefined();
+      expect(secondResponse.body.metadata.cached).toBe(true);
+      expect(secondResponse.body.metadata.cacheHit).toBe(true);
+    });
+
+    it('should return exactly same schedule data for cached request', async () => {
+      // 1回目のリクエスト
+      const firstResponse = await request(CLOUD_FUNCTION_URL)
+        .post('/')
+        .set('Content-Type', 'application/json')
+        .send({
+          staffList: STANDARD_STAFF_LIST,
+          requirements: STANDARD_REQUIREMENTS,
+          leaveRequests: STANDARD_LEAVE_REQUESTS,
+        });
+
+      const firstSchedule = firstResponse.body.schedule;
+
+      // 2回目のリクエスト（キャッシュヒット）
+      const secondResponse = await request(CLOUD_FUNCTION_URL)
+        .post('/')
+        .set('Content-Type', 'application/json')
+        .send({
+          staffList: STANDARD_STAFF_LIST,
+          requirements: STANDARD_REQUIREMENTS,
+          leaveRequests: STANDARD_LEAVE_REQUESTS,
+        });
+
+      const secondSchedule = secondResponse.body.schedule;
+
+      // scheduleデータが完全に一致することを確認
+      expect(secondSchedule).toEqual(firstSchedule);
+    });
+  });
 });
