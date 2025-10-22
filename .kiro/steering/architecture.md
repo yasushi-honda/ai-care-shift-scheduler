@@ -39,8 +39,8 @@ AIシフト自動作成は、Google Cloud Platform（GCP）上に構築された
         ▼                          ▼                          ▼
 ┌───────────────┐      ┌──────────────────────┐   ┌──────────────────┐
 │   Firestore   │      │    Vertex AI         │   │ Cloud Storage    │
-│  (Database)   │      │  Gemini 2.5 Flash    │   │  (File Storage)  │
-│               │      │  Lite-Latest         │   │                  │
+│  (Database)   │      │  Gemini 2.5          │   │  (File Storage)  │
+│               │      │  Flash-Lite (GA)     │   │                  │
 │ - スタッフ情報 │      │                      │   │ - エクスポート   │
 │ - シフトデータ │      │ - シフト最適化AI     │   │ - バックアップ   │
 │ - 休暇申請    │      │ - 制約条件考慮       │   │                  │
@@ -219,7 +219,7 @@ Content-Type: application/json
   ],
   "metadata": {
     "generatedAt": "2025-10-22T07:00:00.000Z",
-    "model": "gemini-2.5-flash-lite-latest",
+    "model": "gemini-2.5-flash-lite",
     "tokensUsed": 15234
   }
 }
@@ -240,7 +240,7 @@ export const generateShift = onRequest(
     });
 
     const model = vertexAI.getGenerativeModel({
-      model: 'gemini-2.5-flash-lite-latest',
+      model: 'gemini-2.5-flash-lite', // 自動更新安定版エイリアス
     });
 
     // 3. プロンプト構築
@@ -411,20 +411,27 @@ service cloud.firestore {
 ### 4. Vertex AI (Gemini 2.5 Flash-Lite)
 
 #### 概要
-Google の最新生成AIモデル。シフト最適化に使用。
+Google の最新生成AIモデル（GA版）。シフト最適化に使用。
 
-#### モデル仕様
-- **モデルID**: `gemini-2.5-flash-lite-latest`
+#### モデル仕様（2025年10月時点）
+- **モデル名**: `gemini-2.5-flash-lite` （自動更新安定版エイリアス）
+- **リリース日**: 2025年7月22日
+- **サポート期限**: 2026年7月22日
 - **コンテキストウィンドウ**: 100万トークン
-- **生成速度**: 887 tokens/sec
+- **特徴**: 最もコスト効率的、高スループット対応（出力トークン50%削減）
 - **価格**:
   - 入力: $0.10 / 1M トークン
   - 出力: $0.40 / 1M トークン
 
 #### バージョン戦略
-- **`-latest`サフィックス**: 常に最新版を自動使用
-- **理由**: モデルの継続的な改善を享受
+- **自動更新安定版エイリアス**: バージョン番号や日付を省略したモデル名（`gemini-2.5-flash-lite`）は、Googleの「自動更新安定版エイリアス」として機能し、常に最新の安定版（GA版）を指します
+- **理由**: モデルの継続的な改善を享受しつつ、本番環境での安定性を確保
+- **Preview版との違い**: `gemini-2.5-flash-lite-preview-09-2025` のようなPreview版は使用せず、GA版を使用
 - **リスク**: 出力フォーマットの変更可能性（パース処理で対応）
+
+#### 参考ドキュメント
+- [Model versions and lifecycle](https://cloud.google.com/vertex-ai/generative-ai/docs/learn/model-versions)
+- [Gemini 2.5 Updates](https://developers.googleblog.com/en/continuing-to-bring-you-our-latest-models-with-an-improved-gemini-2-5-flash-and-flash-lite-release/)
 
 #### プロンプトエンジニアリング
 

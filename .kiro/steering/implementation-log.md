@@ -1292,3 +1292,336 @@ type: feat, fix, docs, style, refactor, test, chore
 ✅ **MVP完成**: 認証なしだが動作する最小限のプロダクト
 
 次のフェーズでは、Cloud Functions実装と認証機能追加により、より安全で実用的なシステムへと進化させていきます。
+
+---
+
+## Phase 6: Cloud Functions実装とVertex AIモデル検証
+
+**実施日**: 2025-10-22 17:00-18:30
+
+**目的**: AIシフト生成機能の実装とVertex AIモデルの公式情報検証
+
+### 背景
+
+Phase 5でセキュリティ強化とワークフロー確立が完了し、いよいよCloud Functions によるAIシフト生成機能の実装に着手しました。
+
+ユーザーからの要望：
+> 「AIシフト生成機能は現在実装中です。Cloud Functions によるシフト生成APIを実装予定です。ここについて対応を進める必要があります。」
+
+---
+
+### 6.1 Cloud Functions実装
+
+**実施日**: 2025-10-22 17:05
+
+#### 実装ファイル
+
+1. **`functions/src/shift-generation.ts`** (新規作成)
+   - Vertex AI (Gemini) を使用したAIシフト生成
+   - セキュリティ対策実装済み
+   - 約370行
+
+2. **`functions/src/types.ts`** (新規作成)
+   - フロントエンドと一致する型定義
+   - 約80行
+
+3. **`functions/src/index.ts`** (更新)
+   - `generateShift` エンドポイントのエクスポート
+   - Firebase Admin初期化
+
+4. **`services/geminiService.ts`** (全面書き換え)
+   - Cloud Functions呼び出しクライアント
+   - タイムアウト処理（60秒）
+   - レスポンス検証
+
+#### セキュリティ対策（CodeRabbit指摘対応）
+
+**CodeRabbitレビュー結果**: 6件のCritical Issue検出
+
+1. **プロンプトインジェクション対策**
+   ```typescript
+   function sanitizeForPrompt(input: string): string {
+     return input
+       .replace(/[\n\r]/g, ' ')
+       .replace(/[{}]/g, '')
+       .trim()
+       .substring(0, 200);
+   }
+   ```
+
+2. **リソース枯渇対策**
+   - スタッフ数: 100人まで
+   - リクエストボディ: 200KBまで
+   - 休暇申請: 500件まで
+
+3. **エラー処理改善**
+   - スタックトレースの非表示
+   - ユーザーフレンドリーなエラーメッセージ
+
+4. **タイムアウト処理**
+   ```typescript
+   const controller = new AbortController();
+   const timeoutId = setTimeout(() => controller.abort(), 60000);
+   ```
+
+5. **レスポンス検証**
+   ```typescript
+   if (!Array.isArray(result.schedule)) {
+     throw new Error('Invalid response: schedule must be an array');
+   }
+   ```
+
+---
+
+### 6.2 初回デプロイとモデル名問題の発見
+
+**実施日**: 2025-10-22 17:30
+
+#### 問題1: 不正なモデル名
+
+**初期実装**:
+```typescript
+model: 'gemini-2.5-flash-lite-latest'
+```
+
+**エラー**:
+```
+Publisher Model `projects/ai-care-shift-scheduler/locations/asia-northeast1/
+publishers/google/models/gemini-2.5-flash-lite-latest` not found
+```
+
+**原因**:
+- ドキュメントに記載されていたモデル名が誤っていた
+- `-latest` サフィックスは存在しない
+
+---
+
+### 6.3 公式ドキュメント調査とモデル名検証
+
+**実施日**: 2025-10-22 17:45
+
+#### 調査した公式情報源
+
+1. **Google Cloud公式ドキュメント**
+   - [Model versions and lifecycle](https://cloud.google.com/vertex-ai/generative-ai/docs/learn/model-versions)
+   - [Deployments and endpoints](https://cloud.google.com/vertex-ai/generative-ai/docs/learn/locations)
+
+2. **Google Developers Blog**
+   - [Gemini 2.5 Flash and Flash-Lite release](https://developers.googleblog.com/en/continuing-to-bring-you-our-latest-models-with-an-improved-gemini-2-5-flash-and-flash-lite-release/)
+
+#### 判明した重要事実
+
+**自動更新安定版エイリアス**:
+> バージョン番号や日付を省略したモデル名（例: `gemini-2.5-flash-lite`）は、Googleの「自動更新安定版エイリアス」として機能し、常に最新の安定版（GA版）を指します
+
+**GA版 vs Preview版**:
+- ✅ **GA版**: `gemini-2.5-flash-lite` （本番環境推奨）
+- ❌ **Preview版**: `gemini-2.5-flash-lite-preview-09-2025` （本番非推奨）
+
+**モデル情報**:
+| 項目 | 値 |
+|------|-----|
+| モデル名 | `gemini-2.5-flash-lite` |
+| リリース日 | 2025年7月22日 |
+| サポート期限 | 2026年7月22日 |
+| 状態 | GA（Generally Available） |
+| 特徴 | 最もコスト効率的、出力トークン50%削減 |
+
+**リージョン対応状況**:
+- ✅ `asia-northeast1` (東京): 全Geminiモデル対応確認
+- ✅ `us-central1`: 全Geminiモデル対応確認
+- ❌ 誤解: 「Asia regionではGeminiが使えない」は誤り
+
+---
+
+### 6.4 モデル名修正とドキュメント更新
+
+**実施日**: 2025-10-22 18:00
+
+#### コード修正
+
+**修正内容**:
+```typescript
+// Before (誤り)
+model: 'gemini-2.5-flash-lite-latest'
+location: 'us-central1' // 不要な変更
+
+// After (正しい)
+model: 'gemini-2.5-flash-lite' // 自動更新安定版エイリアス
+location: 'asia-northeast1' // 東京リージョン（全Gemini対応）
+```
+
+#### ドキュメント修正
+
+**修正ファイル**:
+1. **`.kiro/steering/tech.md`**
+   - Vertex AIセクション全面書き換え
+   - 「自動更新安定版エイリアス」の説明追加
+   - GA版とPreview版の違いを明記
+   - 公式ドキュメントへの参照追加
+
+2. **`.kiro/steering/architecture.md`**
+   - モデル名を `gemini-2.5-flash-lite` に統一
+   - バージョン戦略の説明を正確に修正
+   - 図のモデル名表記を修正
+
+**修正前の問題点**:
+- ❌ `gemini-2.5-flash-lite-latest` という存在しないモデル名
+- ❌ `-latest` サフィックスについての誤った説明
+- ❌ リージョン対応状況の記載なし
+- ❌ GA版とPreview版の違いが不明確
+
+**修正後**:
+- ✅ `gemini-2.5-flash-lite` （正しいGA版モデル名）
+- ✅ 「自動更新安定版エイリアス」の正確な説明
+- ✅ asia-northeast1での対応確認を明記
+- ✅ GA版とPreview版の明確な区別
+- ✅ 公式ドキュメントへの参照
+
+---
+
+### 6.5 デプロイと今後の課題
+
+**デプロイ状況**:
+- ✅ Cloud Functions デプロイ完了
+- ✅ `generateShift` エンドポイント作成完了
+- ✅ `healthCheck` エンドポイント動作確認済み
+- ⏳ Vertex AI API有効化 **（GCPコンソールで手動操作が必要）**
+
+**残りのタスク**:
+1. **GCPコンソールでVertex AI Generative AIを有効化** （手動）
+   - URL: https://console.cloud.google.com/vertex-ai/generative/language?project=ai-care-shift-scheduler
+   - 「ENABLE」ボタンをクリック
+   - 利用規約に同意
+
+2. **動作確認テスト**
+   - Cloud Functionsログ確認
+   - エンドツーエンドテスト
+
+---
+
+### 6.6 コミット履歴
+
+**コミット1**: `07c7d85`
+```
+feat: Cloud Functions経由のAIシフト生成機能を実装
+
+- functions/src/shift-generation.ts: Vertex AI統合
+- functions/src/types.ts: 型定義
+- functions/src/index.ts: エンドポイントエクスポート
+- services/geminiService.ts: Cloud Functions呼び出し
+
+セキュリティ対策:
+- プロンプトインジェクション対策（入力サニタイズ）
+- リソース枯渇対策（サイズ制限）
+- タイムアウト処理（60秒）
+- レスポンス検証
+```
+
+**コミット2**: `27c262e`
+```
+fix: Vertex AIのモデル名とロケーションを修正
+
+- モデル名を gemini-pro に変更（利用可能なモデル）
+- ロケーションを us-central1 に変更（Gemini対応リージョン）
+```
+
+**コミット3**: `9e0c59c`
+```
+fix: Vertex AIモデル名を正式なGA版に修正
+
+- モデル名を gemini-2.5-flash-lite に変更（公式GA版）
+- リージョンを asia-northeast1 に戻す（全Geminiモデル対応確認済み）
+- 参考: 公式ドキュメント
+
+【モデル情報】
+- gemini-2.5-flash-lite: GA版（2025-07-22リリース、2026-07-22廃止予定）
+- 最もコスト効率的、高スループット対応
+- asia-northeast1で利用可能
+```
+
+---
+
+### 6.7 成果物
+
+**新規追加ファイル**:
+1. `functions/src/shift-generation.ts` (370行)
+2. `functions/src/types.ts` (80行)
+3. `services/geminiService.ts` (全面書き換え, 135行)
+
+**更新ファイル**:
+1. `functions/src/index.ts`
+2. `.kiro/steering/tech.md`
+3. `.kiro/steering/architecture.md`
+4. `.kiro/steering/implementation-log.md` (本ファイル)
+
+**ドキュメント総量** (Phase 6完了時点):
+- product.md: 5.6 KB
+- tech.md: 14.1 KB (+1.5 KB)
+- architecture.md: 23.2 KB (+1.8 KB)
+- structure.md: 14.8 KB
+- implementation-log.md: 39.5 KB (+7.5 KB)
+- development-workflow.md: 8.7 KB
+- **合計: 105.9 KB (+10.8 KB)**
+
+---
+
+### 6.8 今回のフェーズで学んだこと
+
+#### 学び1: 公式ドキュメントの重要性
+
+- 初期実装時は古い情報や誤った情報に基づいていた
+- 問題発生時は必ず公式ドキュメントを確認する
+- 複数の公式情報源（Cloud公式ドキュメント、Developers Blog）をクロスチェック
+
+#### 学び2: モデル名の命名規則理解
+
+**重要な発見**:
+> バージョン番号や日付を省略したモデル名は「自動更新安定版エイリアス」として機能する
+
+- ✅ `gemini-2.5-flash-lite` → 自動的に最新の安定版を使用
+- ❌ `gemini-2.5-flash-lite-latest` → 存在しない
+- ❌ `gemini-2.5-flash-lite-preview-09-2025` → Preview版（本番非推奨）
+
+#### 学び3: GA版とPreview版の違い
+
+| 種類 | 用途 | 安定性 | 廃止通知 |
+|------|------|--------|---------|
+| GA版 | 本番環境 | 高い | 1年前 |
+| Preview版 | 実験・評価 | 低い | 2週間前 |
+
+#### 学び4: リージョン対応の調査方法
+
+- 誤解: 「Asia regionではGeminiが使えない」
+- 真実: `asia-northeast1`で全Geminiモデルが利用可能
+- 公式の「Deployments and endpoints」ドキュメントで確認必須
+
+#### 学び5: ドキュメントの継続的メンテナンス
+
+- ドキュメントは「書いたら終わり」ではない
+- 技術の進化に合わせて継続的に更新が必要
+- 誤った情報は速やかに修正し、影響範囲を特定する
+
+---
+
+### 6.9 次のフェーズへの引き継ぎ事項
+
+**完了した作業**:
+- ✅ Cloud Functions実装完了
+- ✅ セキュリティ対策実装完了
+- ✅ モデル名検証と修正完了
+- ✅ ドキュメント更新完了
+- ✅ GitHubへPush完了
+
+**未完了（Phase 7で実施）**:
+1. **GCPコンソールでVertex AI有効化** （手動操作）
+2. **本番環境での動作確認テスト**
+3. **エラーハンドリングの実地検証**
+4. **パフォーマンス測定**
+
+**技術的課題**:
+- Vertex AI APIへのアクセス権がプロジェクトに付与されていない
+- 原因: プロジェクトでGenerative AI APIの利用規約に未同意
+- 解決策: GCPコンソールで手動有効化が必要
+
+---

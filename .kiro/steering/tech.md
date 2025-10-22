@@ -172,17 +172,28 @@ setGlobalOptions({
 - CORS: すべてのオリジンを許可（開発段階）
 - 認証: なし（将来実装予定）
 
-#### Vertex AI - Gemini 2.5 Flash-Lite (Latest)
+#### Vertex AI - Gemini 2.5 Flash-Lite (GA版)
 **選定理由**:
-- **コスト効率**: $0.10/1M入力トークン、$0.40/1M出力トークン
-- **高速**: 887 tokens/sec の生成速度
-- **最新モデル**: `-latest`サフィックスで常に最新版を使用
+- **コスト効率**: 最もコスト効率的なGeminiモデル
+- **高速**: 高スループット対応（出力トークン50%削減）
+- **安定版**: GA（Generally Available）で本番環境に適合
 - **文脈理解**: 100万トークンのコンテキストウィンドウ
 
+**モデル情報**（2025年10月時点）:
+- **モデル名**: `gemini-2.5-flash-lite` （自動更新安定版エイリアス）
+- **リリース日**: 2025年7月22日
+- **サポート期限**: 2026年7月22日
+- **バージョン管理**: バージョン番号や日付を省略したモデル名は、Googleの「自動更新安定版エイリアス」として機能し、常に最新の安定版を指します
+
 **使用方針**:
-- バージョン固定なし: `gemini-2.5-flash-lite-latest`
-- 自動更新: Googleが新しいモデルをリリースしたら自動的に使用
+- バージョン固定なし: `gemini-2.5-flash-lite` は自動的に最新の安定版を使用
+- 本番環境対応: GA版のため、本番環境での使用に適している
+- Preview版との違い: `gemini-2.5-flash-lite-preview-09-2025` のようなPreview版は使用せず、安定版を使用
 - フォールバック: なし（失敗時はエラーを返す）
+
+**参考ドキュメント**:
+- [Model versions and lifecycle](https://cloud.google.com/vertex-ai/generative-ai/docs/learn/model-versions)
+- [Gemini 2.5 Updates](https://developers.googleblog.com/en/continuing-to-bring-you-our-latest-models-with-an-improved-gemini-2-5-flash-and-flash-lite-release/)
 
 **プロンプト設計**:
 ```
