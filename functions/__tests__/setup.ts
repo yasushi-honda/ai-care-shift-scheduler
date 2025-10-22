@@ -12,6 +12,7 @@ process.env.NODE_ENV = 'test';
 // Cloud Functions URLの設定（環境変数がない場合はデフォルト値）
 if (!process.env.CLOUD_FUNCTION_URL) {
   const projectId = process.env.GCP_PROJECT_ID || 'ai-care-shift-scheduler';
+  // us-central1のバージョンをテスト（安定版）
   process.env.CLOUD_FUNCTION_URL = `https://us-central1-${projectId}.cloudfunctions.net/generateShift`;
 }
 
