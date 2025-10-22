@@ -104,11 +104,11 @@ export const generateShift = onRequest(
 
       const vertexAI = new VertexAI({
         project: projectId,
-        location: 'asia-northeast1', // 東京リージョン
+        location: 'us-central1', // Geminiモデルは us-central1 で利用可能
       });
 
       const model = vertexAI.getGenerativeModel({
-        model: 'gemini-2.5-flash-lite-latest', // 最新版を自動使用
+        model: 'gemini-pro', // Gemini 1.0 Pro（安定版）
       });
 
       // プロンプト生成
@@ -154,7 +154,7 @@ export const generateShift = onRequest(
           staffCount: staffList.length,
           status: 'generated',
           metadata: {
-            model: 'gemini-2.5-flash-lite-latest',
+            model: 'gemini-pro',
             tokensUsed: result.response.usageMetadata?.totalTokenCount || 0,
           },
         });
@@ -168,7 +168,7 @@ export const generateShift = onRequest(
         schedule: scheduleData.schedule,
         metadata: {
           generatedAt: new Date().toISOString(),
-          model: 'gemini-2.5-flash-lite-latest',
+          model: 'gemini-pro',
           tokensUsed: result.response.usageMetadata?.totalTokenCount || 0,
         },
       });
