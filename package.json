@@ -7,7 +7,11 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "test": "echo 'テストはまだ実装されていません' && exit 0"
+    "test": "playwright test",
+    "test:ui": "playwright test --ui",
+    "test:headed": "playwright test --headed",
+    "test:debug": "playwright test --debug",
+    "test:report": "playwright show-report"
   },
   "dependencies": {
     "@google/genai": "^1.22.0",
@@ -15,7 +19,8 @@
     "react-dom": "^19.2.0"
   },
   "devDependencies": {
-    "@types/node": "^22.14.0",
+    "@playwright/test": "^1.56.1",
+    "@types/node": "^22.18.12",
     "@vitejs/plugin-react": "^5.0.0",
     "autoprefixer": "^10.4.21",
     "postcss": "^8.5.6",
