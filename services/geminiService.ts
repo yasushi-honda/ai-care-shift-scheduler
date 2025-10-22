@@ -1,32 +1,31 @@
-
-// import { GoogleGenAI, Type } from "@google/genai";
 import type { Staff, ShiftRequirement, StaffSchedule, LeaveRequest } from '../types';
 
-// ⚠️ 注意: ブラウザから直接 Gemini API を呼び出すのはセキュリティリスクです
-// 本番環境では Cloud Functions 経由で呼び出します
-// const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+/**
+ * Cloud Functions 経由でAIシフトを生成
+ *
+ * @description
+ * セキュリティのため、ブラウザから直接Gemini APIを呼び出さず、
+ * Cloud Functions経由でVertex AIを使用します。
+ */
 
-const formatLeaveRequestsForPrompt = (leaveRequests: LeaveRequest, staffList: Staff[]): string => {
-  const staffMap = new Map(staffList.map(s => [s.id, s.name]));
-  const requestsByStaff: { [staffName: string]: string[] } = {};
+// Cloud Functions エンドポイントURL
+// 環境変数から取得（必須）
+const getCloudFunctionUrl = (): string => {
+  const url = import.meta.env.VITE_CLOUD_FUNCTION_URL;
 
-  for (const staffId in leaveRequests) {
-    const staffName = staffMap.get(staffId);
-    if (!staffName) continue;
-
-    if (!requestsByStaff[staffName]) {
-      requestsByStaff[staffName] = [];
+  if (!url) {
+    // フォールバック: GCPプロジェクトIDから構築
+    const projectId = import.meta.env.VITE_GCP_PROJECT_ID;
+    if (!projectId) {
+      throw new Error(
+        'VITE_CLOUD_FUNCTION_URL or VITE_GCP_PROJECT_ID environment variable must be set.\n' +
+        'Please set VITE_CLOUD_FUNCTION_URL in .env.local'
+      );
     }
-
-    const requests = leaveRequests[staffId];
-    for (const date in requests) {
-      requestsByStaff[staffName].push(`${date} (${requests[date]})`);
-    }
+    return `https://asia-northeast1-${projectId}.cloudfunctions.net/generateShift`;
   }
 
-  return Object.entries(requestsByStaff)
-    .map(([staffName, dates]) => `- ${staffName}: ${dates.join(', ')}`)
-    .join('\n');
+  return url;
 };
 
 export const generateShiftSchedule = async (
@@ -34,18 +33,104 @@ export const generateShiftSchedule = async (
   requirements: ShiftRequirement,
   leaveRequests: LeaveRequest
 ): Promise<StaffSchedule[]> => {
-  // ⚠️ 現在、AIシフト生成機能は Cloud Functions 未実装のため利用できません
-  // 代わりに「デモシフト作成」ボタンをご利用ください
+  const CLOUD_FUNCTION_URL = getCloudFunctionUrl();
 
-  throw new Error(
-    "AIシフト生成機能は現在実装中です。\n\n" +
-    "【理由】\n" +
-    "- セキュリティのため、Gemini API は Cloud Functions 経由で呼び出す必要があります\n" +
-    "- ブラウザから直接 API を呼び出すと、APIキーが露出してしまいます\n\n" +
-    "【代替手段】\n" +
-    "画面下部の「デモシフト作成」ボタンをご利用ください。\n" +
-    "ランダムなシフトが生成され、機能をお試しいただけます。\n\n" +
-    "【今後の実装予定】\n" +
-    "Cloud Functions によるシフト生成APIを実装予定です。"
-  );
+  try {
+    console.log('🚀 Cloud Functions経由でシフト生成開始...', {
+      url: CLOUD_FUNCTION_URL,
+      staffCount: staffList.length,
+      targetMonth: requirements.targetMonth,
+    });
+
+    // タイムアウト設定（60秒）
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 60000);
+
+    // Cloud Functions に POST リクエスト
+    const response = await fetch(CLOUD_FUNCTION_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        staffList,
+        requirements,
+        leaveRequests,
+      }),
+      signal: controller.signal,
+    });
+
+    clearTimeout(timeoutId);
+
+    // HTTPエラーチェック
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      console.error('❌ Cloud Functions エラー:', {
+        status: response.status,
+        statusText: response.statusText,
+        error: errorData,
+      });
+
+      throw new Error(
+        errorData.error ||
+        `Cloud Functions エラー: ${response.status} ${response.statusText}`
+      );
+    }
+
+    // レスポンスのJSON解析
+    const result = await response.json();
+
+    if (!result.success) {
+      throw new Error(result.error || 'シフト生成に失敗しました');
+    }
+
+    // レスポンスバリデーション
+    if (!Array.isArray(result.schedule)) {
+      throw new Error('Invalid response: schedule must be an array');
+    }
+
+    if (result.schedule.length === 0) {
+      throw new Error('Empty schedule returned from Cloud Function');
+    }
+
+    // 最初の要素の構造チェック
+    const firstSchedule = result.schedule[0];
+    if (!firstSchedule?.staffId || !firstSchedule?.staffName || !Array.isArray(firstSchedule?.monthlyShifts)) {
+      throw new Error('Invalid schedule format in response');
+    }
+
+    console.log('✅ シフト生成成功:', {
+      scheduleId: result.scheduleId,
+      staffCount: result.schedule.length,
+      tokensUsed: result.metadata?.tokensUsed || 0,
+    });
+
+    return result.schedule as StaffSchedule[];
+
+  } catch (error) {
+    console.error('❌ generateShiftSchedule エラー:', error);
+
+    // タイムアウトエラーの場合
+    if (error instanceof Error && error.name === 'AbortError') {
+      throw new Error(
+        'リクエストがタイムアウトしました。\n' +
+        'シフト生成に時間がかかっています。もう一度お試しください。'
+      );
+    }
+
+    // ネットワークエラーの場合
+    if (error instanceof TypeError && error.message.includes('fetch')) {
+      throw new Error(
+        'ネットワークエラー: Cloud Functionsに接続できません。\n' +
+        'インターネット接続を確認してください。'
+      );
+    }
+
+    // その他のエラー
+    if (error instanceof Error) {
+      throw error;
+    }
+
+    throw new Error('シフト生成中に予期しないエラーが発生しました');
+  }
 };

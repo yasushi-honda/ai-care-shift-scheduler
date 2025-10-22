@@ -1,4 +1,9 @@
 import { setGlobalOptions } from 'firebase-functions/v2';
+import { onRequest } from 'firebase-functions/v2/https';
+import * as admin from 'firebase-admin';
+
+// Firebase Admin初期化
+admin.initializeApp();
 
 // グローバル設定
 setGlobalOptions({
@@ -9,14 +14,10 @@ setGlobalOptions({
   maxInstances: 10,
 });
 
-// 将来実装するエンドポイント
-// export { generateShift } from './shift-generation';
-// export { updateStaff } from './staff-management';
-// export { exportPDF } from './export-service';
+// エンドポイントのエクスポート
+export { generateShift } from './shift-generation';
 
-// 仮のヘルスチェックエンドポイント
-import { onRequest } from 'firebase-functions/v2/https';
-
+// ヘルスチェックエンドポイント
 export const healthCheck = onRequest(
   {
     region: 'asia-northeast1',
