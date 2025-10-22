@@ -497,4 +497,129 @@ describe('AI Shift Generation API - Integration Tests', () => {
       expect(secondSchedule).toEqual(firstSchedule);
     });
   });
+
+  describe('Task 4.2: Cache Invalidation with Different Input', () => {
+    it('should generate new shift for different leaveRequests (cache miss)', async () => {
+      // 1回目: 標準のleaveRequests
+      const firstResponse = await request(CLOUD_FUNCTION_URL)
+        .post('/')
+        .set('Content-Type', 'application/json')
+        .send({
+          staffList: STANDARD_STAFF_LIST,
+          requirements: STANDARD_REQUIREMENTS,
+          leaveRequests: STANDARD_LEAVE_REQUESTS,
+        });
+
+      expect(firstResponse.status).toBe(200);
+      expect(firstResponse.body.success).toBe(true);
+      const firstScheduleId = firstResponse.body.scheduleId;
+
+      // 2回目: 異なるleaveRequests（test-staff-003に休暇追加）
+      const differentLeaveRequests = {
+        ...STANDARD_LEAVE_REQUESTS,
+        'test-staff-003': {
+          '2025-11-20': 'Hope' as const,
+        },
+      };
+
+      const secondResponse = await request(CLOUD_FUNCTION_URL)
+        .post('/')
+        .set('Content-Type', 'application/json')
+        .send({
+          staffList: STANDARD_STAFF_LIST,
+          requirements: STANDARD_REQUIREMENTS,
+          leaveRequests: differentLeaveRequests,
+        });
+
+      expect(secondResponse.status).toBe(200);
+      expect(secondResponse.body.success).toBe(true);
+
+      // 異なるscheduleIdが返される（キャッシュミス）
+      expect(secondResponse.body.scheduleId).not.toBe(firstScheduleId);
+
+      // キャッシュフラグがfalseまたは未定義
+      if (secondResponse.body.metadata?.cached !== undefined) {
+        expect(secondResponse.body.metadata.cached).toBe(false);
+      }
+      if (secondResponse.body.metadata?.cacheHit !== undefined) {
+        expect(secondResponse.body.metadata.cacheHit).toBe(false);
+      }
+    });
+
+    it('should generate new shift for different requirements (cache miss)', async () => {
+      // 1回目: 標準のrequirements
+      const firstResponse = await request(CLOUD_FUNCTION_URL)
+        .post('/')
+        .set('Content-Type', 'application/json')
+        .send({
+          staffList: STANDARD_STAFF_LIST,
+          requirements: STANDARD_REQUIREMENTS,
+          leaveRequests: STANDARD_LEAVE_REQUESTS,
+        });
+
+      expect(firstResponse.status).toBe(200);
+      expect(firstResponse.body.success).toBe(true);
+      const firstScheduleId = firstResponse.body.scheduleId;
+
+      // 2回目: 異なるrequirements（日勤の人数を変更）
+      const differentRequirements = {
+        ...STANDARD_REQUIREMENTS,
+        requirements: {
+          ...STANDARD_REQUIREMENTS.requirements,
+          日勤: {
+            totalStaff: 4, // 3から4に変更
+            requiredQualifications: [],
+            requiredRoles: [{ role: 'Nurse' as const, count: 1 }],
+          },
+        },
+      };
+
+      const secondResponse = await request(CLOUD_FUNCTION_URL)
+        .post('/')
+        .set('Content-Type', 'application/json')
+        .send({
+          staffList: STANDARD_STAFF_LIST,
+          requirements: differentRequirements,
+          leaveRequests: STANDARD_LEAVE_REQUESTS,
+        });
+
+      expect(secondResponse.status).toBe(200);
+      expect(secondResponse.body.success).toBe(true);
+
+      // 異なるscheduleIdが返される（キャッシュミス）
+      expect(secondResponse.body.scheduleId).not.toBe(firstScheduleId);
+
+      // キャッシュフラグがfalseまたは未定義
+      if (secondResponse.body.metadata?.cached !== undefined) {
+        expect(secondResponse.body.metadata.cached).toBe(false);
+      }
+      if (secondResponse.body.metadata?.cacheHit !== undefined) {
+        expect(secondResponse.body.metadata.cacheHit).toBe(false);
+      }
+    });
+
+    it('should invoke Vertex AI on cache miss', async () => {
+      // 1回目: 新しいシフト生成（必ずVertex AI呼び出し）
+      const firstResponse = await request(CLOUD_FUNCTION_URL)
+        .post('/')
+        .set('Content-Type', 'application/json')
+        .send({
+          staffList: STANDARD_STAFF_LIST,
+          requirements: STANDARD_REQUIREMENTS,
+          leaveRequests: STANDARD_LEAVE_REQUESTS,
+        });
+
+      expect(firstResponse.status).toBe(200);
+      expect(firstResponse.body.success).toBe(true);
+
+      // metadata.modelが含まれている（Vertex AI呼び出しの証拠）
+      expect(firstResponse.body.metadata).toBeDefined();
+      expect(firstResponse.body.metadata.model).toBeDefined();
+      expect(firstResponse.body.metadata.model).toContain('gemini');
+
+      // tokensUsedが含まれている（AI処理の証拠）
+      expect(firstResponse.body.metadata.tokensUsed).toBeDefined();
+      expect(firstResponse.body.metadata.tokensUsed).toBeGreaterThan(0);
+    });
+  });
 });

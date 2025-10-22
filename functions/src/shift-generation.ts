@@ -132,7 +132,12 @@ export const generateShift = onRequest(
         .digest('hex')
         .substring(0, 16);
       const idempotencyKey = `${requirements.targetMonth}-${staffIds}-${requirementsHash}-${leaveRequestsHash}`;
-      const idempotencyHash = Buffer.from(idempotencyKey).toString('base64').substring(0, 32);
+      // 全体をハッシュ化して一意性を保証
+      const idempotencyHash = crypto
+        .createHash('sha256')
+        .update(idempotencyKey)
+        .digest('hex')
+        .substring(0, 32);
 
       // 既存スケジュールをチェック（冪等性保証）
       const existingSchedules = await admin.firestore()
