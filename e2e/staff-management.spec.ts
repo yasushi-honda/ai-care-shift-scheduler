@@ -93,11 +93,11 @@ test.describe('スタッフ管理機能', () => {
   });
 
   test('全スタッフが一覧表示される', async ({ page }) => {
-    // 初期スタッフ5人が表示されることを確認
-    await expect(page.getByText('田中 愛')).toBeVisible();
-    await expect(page.getByText('鈴木 太郎')).toBeVisible();
-    await expect(page.getByText('佐藤 花子')).toBeVisible();
-    await expect(page.getByText('高橋 健太')).toBeVisible();
-    await expect(page.getByText('渡辺 久美子')).toBeVisible();
+    // 初期スタッフ5人がスタッフカード内に表示されることを確認
+    await expect(page.locator('.bg-white.rounded-lg.border').filter({ hasText: '田中 愛' })).toBeVisible();
+    await expect(page.locator('.bg-white.rounded-lg.border').filter({ hasText: '鈴木 太郎' })).toBeVisible();
+    await expect(page.locator('.bg-white.rounded-lg.border').filter({ hasText: '佐藤 花子' })).toBeVisible();
+    await expect(page.locator('.bg-white.rounded-lg.border').filter({ hasText: '高橋 健太' })).toBeVisible();
+    await expect(page.locator('.bg-white.rounded-lg.border').filter({ hasText: '渡辺 久美子' })).toBeVisible();
   });
 });

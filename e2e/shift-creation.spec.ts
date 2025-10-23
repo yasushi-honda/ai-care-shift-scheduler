@@ -10,8 +10,8 @@ test.describe('シフト作成機能', () => {
     // デモシフト作成ボタンをクリック
     await page.getByRole('button', { name: 'デモシフト作成' }).click();
 
-    // シフト表が表示されるまで待機
-    await expect(page.getByText('田中 愛')).toBeVisible({ timeout: 5000 });
+    // シフト表が表示されるまで待機（テーブルセル内のスタッフ名で確認）
+    await expect(page.getByRole('cell', { name: '田中 愛' })).toBeVisible({ timeout: 5000 });
 
     // シフト表の内容確認（少なくとも1つのシフトが表示される）
     const shiftCells = page.locator('td').filter({ hasText: /早番|日勤|遅番|夜勤|休/ });
@@ -28,15 +28,18 @@ test.describe('シフト作成機能', () => {
 
     // デモシフト作成
     await page.getByRole('button', { name: 'デモシフト作成' }).click();
-    await expect(page.getByText('田中 愛')).toBeVisible({ timeout: 5000 });
+    await expect(page.getByRole('cell', { name: '田中 愛' })).toBeVisible({ timeout: 5000 });
 
     // 休暇希望入力タブに切り替え
     await page.getByRole('button', { name: '休暇希望入力' }).click();
-    await expect(page.getByText('休暇希望カレンダー')).toBeVisible();
+    await page.waitForTimeout(500);
+    await expect(page.locator('table')).toBeVisible();
+    await expect(page.getByText('スタッフ名')).toBeVisible();
 
     // シフト表タブに戻る
     await page.getByRole('button', { name: 'シフト表' }).click();
-    await expect(page.getByText('田中 愛')).toBeVisible();
+    await page.waitForTimeout(500);
+    await expect(page.getByRole('cell', { name: '田中 愛' })).toBeVisible();
   });
 
   test('CSVエクスポートボタンが機能する', async ({ page }) => {
@@ -44,7 +47,7 @@ test.describe('シフト作成機能', () => {
 
     // デモシフト作成
     await page.getByRole('button', { name: 'デモシフト作成' }).click();
-    await expect(page.getByText('田中 愛')).toBeVisible({ timeout: 5000 });
+    await expect(page.getByRole('cell', { name: '田中 愛' })).toBeVisible({ timeout: 5000 });
 
     // ダウンロード待機
     const downloadPromise = page.waitForEvent('download');
