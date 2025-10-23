@@ -562,38 +562,144 @@ type Result<T, E> = { success: true; data: T } | { success: false; error: E };
 
 ```typescript
 interface ScheduleService {
+  // スケジュール購読（リアルタイム更新）
   subscribeToSchedules(
     facilityId: string,
     targetMonth: string,
     callback: (schedules: StaffSchedule[]) => void
   ): Unsubscribe;
 
+  // 新規作成（初回保存）
   saveSchedule(
     facilityId: string,
     schedule: Omit<Schedule, 'id' | 'createdAt'>
   ): Promise<Result<string, ScheduleError>>;
 
+  // 下書き保存（status: 'draft'、バージョン作成なし）
+  saveDraft(
+    facilityId: string,
+    scheduleId: string,
+    updates: Partial<Schedule>
+  ): Promise<Result<void, ScheduleError>>;
+
+  // 確定保存（status: 'confirmed'、バージョン履歴作成）
+  confirmSchedule(
+    facilityId: string,
+    scheduleId: string,
+    updates: Partial<Schedule>,
+    changeDescription?: string
+  ): Promise<Result<void, ScheduleError>>;
+
+  // 更新（一般的な更新操作）
   updateSchedule(
     facilityId: string,
     scheduleId: string,
     updates: Partial<Schedule>
   ): Promise<Result<void, ScheduleError>>;
 
+  // 削除（論理削除: status: 'archived'）
   deleteSchedule(
     facilityId: string,
     scheduleId: string
+  ): Promise<Result<void, ScheduleError>>;
+
+  // バージョン履歴取得
+  getVersionHistory(
+    facilityId: string,
+    scheduleId: string
+  ): Promise<Result<ScheduleVersion[], ScheduleError>>;
+
+  // 過去バージョンへの復元
+  restoreVersion(
+    facilityId: string,
+    scheduleId: string,
+    versionNumber: number
   ): Promise<Result<void, ScheduleError>>;
 }
 
 interface Schedule {
   id: string;
   facilityId: string;
-  targetMonth: string; // 'YYYY-MM'
+  targetMonth: string;     // 'YYYY-MM'
+  staffSchedules: StaffSchedule[];
+  createdAt: Timestamp;    // 初回作成日時
+  createdBy: string;       // 初回作成者UID
+  updatedAt: Timestamp;    // 最終更新日時
+  updatedBy: string;       // 最終更新者UID
+  version: number;         // バージョン番号（1から開始）
+  status: 'draft' | 'confirmed' | 'archived';
+}
+
+interface ScheduleVersion {
+  id: string;
+  versionNumber: number;
+  targetMonth: string;
   staffSchedules: StaffSchedule[];
   createdAt: Timestamp;
   createdBy: string;
-  version: number;
-  status: 'draft' | 'confirmed' | 'archived';
+  changeDescription: string;
+  previousVersion: number;
+}
+
+type ScheduleError =
+  | { type: 'permission_denied'; message: string }
+  | { type: 'not_found'; message: string }
+  | { type: 'conflict'; message: string; currentVersion: number }
+  | { type: 'network_error'; message: string };
+```
+
+**バージョン管理実装詳細**:
+
+```typescript
+// confirmSchedule() の実装イメージ
+async confirmSchedule(
+  facilityId: string,
+  scheduleId: string,
+  updates: Partial<Schedule>,
+  changeDescription?: string
+): Promise<Result<void, ScheduleError>> {
+  try {
+    await runTransaction(db, async (transaction) => {
+      // 1. 現在のスケジュールを取得
+      const scheduleRef = doc(db, `facilities/${facilityId}/schedules/${scheduleId}`);
+      const scheduleSnap = await transaction.get(scheduleRef);
+
+      if (!scheduleSnap.exists()) {
+        throw new Error('Schedule not found');
+      }
+
+      const currentSchedule = scheduleSnap.data() as Schedule;
+      const currentVersion = currentSchedule.version;
+      const nextVersion = currentVersion + 1;
+
+      // 2. 現在のバージョンをversionsサブコレクションに保存
+      const versionRef = doc(
+        db,
+        `facilities/${facilityId}/schedules/${scheduleId}/versions/${currentVersion}`
+      );
+      transaction.set(versionRef, {
+        versionNumber: currentVersion,
+        targetMonth: currentSchedule.targetMonth,
+        staffSchedules: currentSchedule.staffSchedules,
+        createdAt: serverTimestamp(),
+        createdBy: currentSchedule.updatedBy || currentSchedule.createdBy,
+        changeDescription: changeDescription || '確定',
+        previousVersion: currentVersion - 1,
+      });
+
+      // 3. スケジュール本体を新しいバージョンで更新
+      transaction.update(scheduleRef, {
+        ...updates,
+        version: nextVersion,
+        status: 'confirmed',
+        updatedAt: serverTimestamp(),
+      });
+    });
+
+    return { ok: true, value: undefined };
+  } catch (error) {
+    return { ok: false, error: { type: 'network_error', message: error.message } };
+  }
 }
 ```
 
@@ -827,11 +933,20 @@ single field: { name: ASC }
 
 #### /facilities/{fid}/schedules サブコレクション
 
+**説明**: 施設ごとのシフトスケジュールを管理。各スケジュールは対象月、スタッフごとのシフト配置、バージョン番号、ステータスを持つ。
+
+**バージョン管理方針**: フル履歴管理（全バージョンを保存）。変更履歴の監査、労務管理の厳格性、過去バージョンへの復元を実現する。
+
+**一時保存方針**: ハイブリッドアプローチ
+- **ローカル自動保存**: LocalStorageに3秒ごとに自動保存（データ損失防止、コストゼロ）
+- **Firestore手動保存**: ユーザーが明示的に「下書き保存」ボタンを押した際に `status: 'draft'` で保存
+- **確定保存**: ユーザーが「確定」ボタンを押した際に `status: 'confirmed'` で保存し、バージョン番号をインクリメント
+
 ```typescript
 /facilities/{facilityId}/schedules/{scheduleId}
 {
   id: string;
-  targetMonth: string;       // 'YYYY-MM'
+  targetMonth: string;       // 'YYYY-MM' (例: '2025-10')
   staffSchedules: [
     {
       staffId: string;
@@ -844,15 +959,63 @@ single field: { name: ASC }
       ];
     }
   ];
-  createdAt: Timestamp;
-  createdBy: string;
-  version: number;
+  createdAt: Timestamp;      // 初回作成日時
+  createdBy: string;         // 初回作成者のUID
+  updatedAt: Timestamp;      // 最終更新日時
+  updatedBy: string;         // 最終更新者のUID
+  version: number;           // バージョン番号（1から開始、確定時にインクリメント）
   status: 'draft' | 'confirmed' | 'archived';
+  // 'draft': 下書き（編集中）
+  // 'confirmed': 確定（公開済み）
+  // 'archived': アーカイブ（過去の確定版）
 }
 
 // インデックス
 composite index: { targetMonth: DESC, createdAt: DESC }
+composite index: { status: ASC, targetMonth: DESC }
 ```
+
+#### /facilities/{fid}/schedules/{sid}/versions サブコレクション
+
+**説明**: スケジュールの変更履歴を保存。各確定時（`status: 'confirmed'`）にスナップショットを作成し、完全な監査証跡を提供する。
+
+```typescript
+/facilities/{facilityId}/schedules/{scheduleId}/versions/{versionId}
+{
+  id: string;                // バージョンID（自動生成）
+  versionNumber: number;     // バージョン番号（親ドキュメントのversionと同期）
+  targetMonth: string;       // 'YYYY-MM'
+  staffSchedules: [
+    // 親ドキュメントと同じ構造（その時点のスナップショット）
+    {
+      staffId: string;
+      staffName: string;
+      monthlyShifts: [
+        {
+          date: string;
+          shiftType: string;
+        }
+      ];
+    }
+  ];
+  createdAt: Timestamp;      // このバージョンの作成日時
+  createdBy: string;         // このバージョンの作成者UID
+  changeDescription: string; // オプション: 変更内容の説明（例: "早番スタッフを2名から3名に変更"）
+  previousVersion: number;   // 前バージョン番号（復元時の参照用）
+}
+
+// インデックス
+single field: { versionNumber: DESC }
+composite index: { createdAt: DESC }
+```
+
+**バージョン作成フロー**:
+1. ユーザーがシフトを編集し「確定」ボタンをクリック
+2. 現在の `version` 番号を取得（例: 3）
+3. 次のバージョン番号を計算（例: 4）
+4. `versions` サブコレクションに現在のデータをスナップショット保存（`versionNumber: 3`）
+5. 親ドキュメントを新しいデータで更新（`version: 4`, `status: 'confirmed'`）
+6. トランザクションで原子性を保証
 
 #### /facilities/{fid}/leaveRequests サブコレクション
 
@@ -1209,6 +1372,13 @@ service cloud.firestore {
       match /schedules/{scheduleId} {
         allow read: if isAuthenticated() && hasRole(facilityId, 'viewer');
         allow write: if isAuthenticated() && hasRole(facilityId, 'editor');
+
+        // versions subcollection (scheduleの変更履歴)
+        match /versions/{versionId} {
+          allow read: if isAuthenticated() && hasRole(facilityId, 'viewer');
+          allow create: if isAuthenticated() && hasRole(facilityId, 'editor');
+          allow update, delete: if false; // 履歴は不変（作成のみ、更新・削除不可）
+        }
       }
 
       // leaveRequests subcollection
