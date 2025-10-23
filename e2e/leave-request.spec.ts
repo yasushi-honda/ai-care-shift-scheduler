@@ -13,8 +13,9 @@ test.describe('休暇希望入力機能', () => {
   });
 
   test('休暇希望カレンダーが表示される', async ({ page }) => {
-    // カレンダータイトルの確認（heading要素で特定）
-    await expect(page.getByRole('heading', { name: '休暇希望カレンダー' })).toBeVisible();
+    // カレンダーテーブルが表示されることを確認
+    await expect(page.locator('table')).toBeVisible();
+    await expect(page.getByText('スタッフ名')).toBeVisible();
 
     // 全スタッフが表示されることを確認
     await expect(page.getByText('田中 愛')).toBeVisible();
@@ -67,23 +68,33 @@ test.describe('休暇希望入力機能', () => {
     // 現在の月を確認（heading要素で特定）
     await expect(page.getByRole('heading', { name: /2025年 11月/ })).toBeVisible();
 
-    // 月を進める
-    const nextButton = page.locator('button').filter({ hasText: '▶' });
-    await nextButton.click();
+    // 事業所のシフト要件設定を開いて、MonthNavigatorを表示
+    await page.getByText('事業所のシフト要件設定').click();
+    await page.waitForTimeout(300);
 
-    // 12月に変更されたことを確認（heading要素で特定）
-    await expect(page.getByRole('heading', { name: /2025年 12月/ })).toBeVisible();
+    // 月を進める（aria-labelを使用）
+    await page.getByRole('button', { name: '次の月へ' }).click();
+    await page.waitForTimeout(300);
 
-    // カレンダーが再レンダリングされることを確認
-    await expect(page.locator('td').first()).toBeVisible();
+    // 12月に変更されたことを確認
+    await expect(page.locator('text=/2025年 12月/')).toBeVisible();
+
+    // 月を戻す
+    await page.getByRole('button', { name: '前の月へ' }).click();
+    await page.waitForTimeout(300);
+
+    // 11月に戻ったことを確認
+    await expect(page.locator('text=/2025年 11月/')).toBeVisible();
   });
 
   test('シフト表タブに戻れる', async ({ page }) => {
-    // 休暇希望カレンダーが表示されていることを確認（heading要素で特定）
-    await expect(page.getByRole('heading', { name: '休暇希望カレンダー' })).toBeVisible();
+    // 休暇希望カレンダーテーブルが表示されていることを確認
+    await expect(page.locator('table')).toBeVisible();
+    await expect(page.getByText('スタッフ名')).toBeVisible();
 
     // シフト表タブに切り替え
     await page.getByRole('button', { name: 'シフト表' }).click();
+    await page.waitForTimeout(500);
 
     // デモシフト作成ボタンが表示されることを確認
     await expect(page.getByRole('button', { name: 'デモシフト作成' })).toBeVisible();
