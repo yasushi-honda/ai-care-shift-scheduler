@@ -93,9 +93,9 @@ jobs:
           echo "🔗 リポジトリ: ${{ github.repository }}" >> $GITHUB_STEP_SUMMARY
           echo "🌿 ブランチ: ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
 
-  # デプロイ準備（mainブランチのみ）
-  prepare-deploy:
-    name: デプロイ準備
+  # Firebase Hostingにデプロイ（mainブランチのみ）
+  deploy:
+    name: Firebase Hostingにデプロイ
     needs: build-and-test
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     runs-on: ubuntu-latest
@@ -104,17 +104,26 @@ jobs:
       contents: read
 
     steps:
+      - name: チェックアウト
+        uses: actions/checkout@v4
+
       - name: ビルド成果物をダウンロード
         uses: actions/download-artifact@v4
         with:
           name: build-artifacts
           path: dist/
 
-      - name: デプロイ準備完了
+      - name: Firebase Hostingにデプロイ
+        uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          repoToken: ${{ secrets.GITHUB_TOKEN }}
+          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          channelId: live
+          projectId: ai-care-shift-scheduler
+
+      - name: デプロイ完了
         run: |
-          echo "## デプロイ準備完了 🚀" >> $GITHUB_STEP_SUMMARY
-          echo "✅ ビルド成果物の検証完了" >> $GITHUB_STEP_SUMMARY
+          echo "## デプロイ完了 🚀" >> $GITHUB_STEP_SUMMARY
+          echo "✅ Firebase Hostingへのデプロイ完了" >> $GITHUB_STEP_SUMMARY
+          echo "🔗 本番環境: https://ai-care-shift-scheduler.web.app" >> $GITHUB_STEP_SUMMARY
           echo "📁 ファイル数: $(find dist -type f | wc -l)" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### 次のステップ" >> $GITHUB_STEP_SUMMARY
-          echo "- GitHub Pagesやその他のホスティングサービスへのデプロイを設定できます" >> $GITHUB_STEP_SUMMARY
