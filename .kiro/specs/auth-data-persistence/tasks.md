@@ -54,18 +54,20 @@
   - _Requirements: 1.5, 1.6, 1.9_
   - **実装**: `src/services/userService.ts` - createOrUpdateUser、フィールド検証
 
-- [ ] 2.2 システム初回ユーザーへのsuper-admin権限自動付与
+- [x] 2.2 システム初回ユーザーへのsuper-admin権限自動付与
   - システム内のユーザー数をカウントする機能
   - 初回ユーザー（1人目）をsuper-admin権限で作成
   - デフォルト施設の自動作成とadmin権限の付与
   - super-admin付与のCloud Function実装
   - _Requirements: 1.7, 12.1_
+  - **実装**: `functions/src/auth-onCreate.ts` - assignSuperAdminOnFirstUser trigger、トランザクションでレースコンディション防止、/system/configでfirst userフラグ管理
 
-- [ ] 2.3 アクセス権限なしユーザーの処理と案内画面
+- [x] 2.3 アクセス権限なしユーザーの処理と案内画面
   - 2人目以降のユーザーを権限なし（facilities: []）で作成
   - 「アクセス権限がありません。管理者に連絡してください」画面の実装
   - 管理者への連絡方法の案内表示
   - _Requirements: 1.8, 2.3_
+  - **実装**: `src/components/NoAccessPage.tsx` - アクセス権限なし画面、`src/components/ProtectedRoute.tsx` - facilities配列チェック追加
 
 ---
 
