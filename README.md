@@ -239,13 +239,148 @@ jobs:
 - ✅ Firestore Security Rules強化
 - ✅ 事業所ごとのデータ分離
 
+## 🧪 テスト
+
+本プロジェクトは包括的なテストスイートを備えています。
+
+### 統合テスト（Jest）
+
+Cloud Functions APIの動作を検証する統合テストです。
+
+```bash
+# functionsディレクトリに移動
+cd functions
+
+# 統合テスト実行（本番Cloud Functions APIを使用）
+npm run test:integration
+
+# 環境変数の設定（オプション）
+export CLOUD_FUNCTION_URL=https://us-central1-ai-care-shift-scheduler.cloudfunctions.net/generateShift
+export SKIP_AI_TESTS=false  # trueにするとAI呼び出しをモック化（CI/CD用）
+```
+
+**テストカバレッジ**:
+- ✅ 基本的なシフト生成（5名スタッフ）
+- ✅ Firestoreへのデータ保存検証
+- ✅ 入力バリデーション（空配列、未定義フィールド、サイズ制限）
+- ✅ キャッシュ機能（冪等性）検証
+- ✅ パフォーマンステスト（5名/20名/50名スタッフ）
+
+**実行結果**: 37/37 テスト成功（100%成功率）
+
+### E2Eテスト（Playwright）
+
+ブラウザ上でのユーザーシナリオを検証するE2Eテストです。
+
+```bash
+# ルートディレクトリで実行
+
+# ローカル環境でE2Eテスト実行（開発サーバー起動）
+npm run test
+
+# 本番環境でAI生成E2Eテスト実行（実際のVertex AI呼び出しあり、課金注意）
+PLAYWRIGHT_BASE_URL=https://ai-care-shift-scheduler.web.app npx playwright test e2e/ai-shift-generation.spec.ts
+
+# UIモードで対話的にテスト実行
+npm run test:ui
+```
+
+**テストカバレッジ**:
+- ✅ デモシフト作成フロー
+- ✅ AIシフト生成UIフロー（ローディング → 生成中メッセージ → シフト表示）
+- ✅ エラーメッセージ表示
+- ✅ CSVエクスポート
+
+**CI/CD環境での動作**:
+- AI生成テストは自動的にスキップされます（コスト削減のため）
+- デモシフトテストのみ実行されます
+
+### テストデータ
+
+統合テストで使用する標準テストデータ:
+- 5名の標準スタッフ
+- 4つの時間帯（早番、日勤、遅番、夜勤）
+- サンプル休暇申請データ
+- パフォーマンステスト用: 20名、50名のスタッフリスト
+
+### トラブルシューティング
+
+#### 統合テストのエラー
+
+**問題**: `CLOUD_FUNCTION_URL environment variable must be set`
+```bash
+# 解決策: Cloud Function URLを設定
+export CLOUD_FUNCTION_URL=https://us-central1-ai-care-shift-scheduler.cloudfunctions.net/generateShift
+```
+
+**問題**: `Request failed with status code 401`
+```bash
+# 原因: GCP認証が必要な場合
+gcloud auth application-default login
+```
+
+**問題**: キャッシュテストが失敗する
+```bash
+# 原因: Firestoreインデックスが未作成
+cd functions
+firebase deploy --only firestore:indexes
+```
+
+#### E2Eテストのエラー
+
+**問題**: `Timed out waiting 120000ms from config.webServer`
+```bash
+# 原因: 開発サーバー起動に失敗
+# 解決策1: ポート5173が使用されていないか確認
+lsof -ti:5173 | xargs kill -9
+
+# 解決策2: 本番環境でテスト実行
+PLAYWRIGHT_BASE_URL=https://ai-care-shift-scheduler.web.app npm run test
+```
+
+**問題**: AI生成テストがタイムアウトする（90秒超過）
+```bash
+# 原因: Cloud Functionsのコールドスタート + 大規模シフト生成
+# 解決策: テストを再実行（2回目以降はキャッシュで高速化）
+```
+
+#### Vertex AIエラー
+
+**問題**: `Vertex AI API has not been enabled`
+```bash
+# 解決策: Vertex AI APIを有効化
+gcloud services enable aiplatform.googleapis.com --project=ai-care-shift-scheduler
+```
+
+**問題**: `Model gemini-2.5-flash-lite not found`
+```bash
+# 原因: モデル名が間違っている、またはリージョンが間違っている
+# 確認: functions/src/shift-generation.ts で以下を確認
+# - モデル名: gemini-2.5-flash-lite（-latestなし、GA安定版）
+# - リージョン: us-central1（このモデルが利用可能な唯一のリージョン）
+```
+
+**問題**: `Quota exceeded for quota metric 'aiplatform.googleapis.com/generate_content_requests'`
+```bash
+# 原因: Vertex AI APIのクォータ超過
+# 解決策: GCP Consoleでクォータ増加をリクエスト
+```
+
+#### Firestoreエラー
+
+**問題**: `Missing or insufficient permissions`
+```bash
+# 原因: Firestoreセキュリティルールが厳しすぎる（本番環境）
+# 解決策: firebase.jsonで開発モードのルールを確認
+# 注意: MVPでは認証なしのため、本番環境でも全開放状態
+```
+
+詳細なトラブルシューティングは [.kiro/specs/ai-shift-integration-test/tasks.md](.kiro/specs/ai-shift-integration-test/tasks.md) を参照してください。
+
 ## 🐛 既知の問題
 
 1. **認証機能がない**
    - Phase 2で Firebase Authentication 導入予定
-
-2. **テストがない**
-   - Phase 2でJest、Playwright導入予定
 
 ## 🗓️ ロードマップ
 
