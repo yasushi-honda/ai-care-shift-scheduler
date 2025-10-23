@@ -220,7 +220,9 @@ ai-care-shift-scheduler/
 
 このプロジェクトはGitHub Actionsによる自動CI/CDパイプラインを採用しています。
 
-### ワークフロー
+### ワークフロー（概要）
+
+以下は簡略化された概要です。詳細は [`.github/workflows/ci.yml`](.github/workflows/ci.yml) を参照してください。
 
 ```yaml
 on:
@@ -230,18 +232,51 @@ on:
     branches: [ main, develop ]
 
 jobs:
-  build:
+  build-and-test:
+    # Node.js 20, npm ci
     - 依存関係のインストール
-    - TypeScript型チェック
-    - ビルド実行
+    - TypeScript型チェック（npx tsc --noEmit）
+    - ビルド実行（npm run build）
     - 成果物のアップロード（7日間保存）
+
+  deploy:
+    # mainブランチへのpush時のみ実行
+    - ビルド成果物をダウンロード
+    - Firebase Hostingへ自動デプロイ（FirebaseExtended/action-hosting-deploy@v0）
+    - 本番環境: https://ai-care-shift-scheduler.web.app
 ```
+
+### 自動デプロイ
+
+mainブランチへのpush時、GitHub Actionsが自動的にFirebase Hostingへデプロイします。
+
+**必要な設定**:
+- `FIREBASE_SERVICE_ACCOUNT` シークレットがGitHubリポジトリに設定済み
+- Firebase Hosting設定が `firebase.json` で定義済み
+
+**デプロイフロー**:
+1. コード変更をcommit & push to main
+2. GitHub Actionsがビルドとテストを実行
+3. テスト成功後、自動的にFirebase Hostingへデプロイ
+4. 本番環境が即座に更新される
 
 ### 手動実行
 
 1. リポジトリの "Actions" タブを開く
 2. "CI/CD Pipeline" を選択
 3. "Run workflow" をクリック
+
+### ローカルからのデプロイ
+
+CI/CDを経由せず、ローカルから直接デプロイすることも可能です:
+
+```bash
+# ビルド
+npm run build
+
+# Firebase Hostingへデプロイ
+firebase deploy --only hosting
+```
 
 ## 🔐 セキュリティ
 
