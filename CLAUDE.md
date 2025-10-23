@@ -15,7 +15,8 @@ Kiro-style Spec Driven Development implementation using claude code slash comman
 **Specs** (`.kiro/specs/`) - Formalize development process for individual features
 
 ### Active Specifications
-- **ai-shift-integration-test**: AI自動シフト生成機能の統合テストと検証（TDD）
+- **ai-shift-integration-test**: AI自動シフト生成機能の統合テストと検証（TDD） - ✅ 完了
+- **auth-data-persistence**: 認証・データ永続化機能（事業所単位マルチテナント設計） - 📝 仕様策定中
 - Use `/kiro:spec-status [feature-name]` to check progress
 
 ## Development Guidelines
