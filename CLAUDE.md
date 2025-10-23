@@ -22,6 +22,64 @@ Kiro-style Spec Driven Development implementation using claude code slash comman
 ## Development Guidelines
 - Think in English, but generate responses in Japanese (思考は英語、回答の生成は日本語で行うように)
 
+## Git Workflow - GitHub Flow
+
+このプロジェクトは **GitHub Flow** を採用しています。
+
+### 基本原則
+1. **mainブランチは常に安定・デプロイ可能な状態を維持**
+   - 本番環境（Firebase Hosting）に直結
+   - 破壊的変更は厳禁
+
+2. **すべての新機能・修正はfeatureブランチで開発**
+   - ブランチ命名規則: `feature/<feature-name>`, `bugfix/<issue-description>`
+   - mainから分岐、mainにマージ
+
+3. **Pull Request（PR）ベースのマージ**
+   - コードレビューを経てマージ
+   - CI/CDパイプラインが自動実行
+   - マージ後は自動デプロイ
+
+4. **マージ後はfeatureブランチ削除**
+   - クリーンな状態を保つ
+   - 履歴はGitHub上に残る
+
+### ワークフロー
+
+```
+1. 新機能開発開始
+   git checkout main
+   git pull origin main
+   git checkout -b feature/new-feature
+
+2. 開発・コミット
+   [コード変更]
+   git add .
+   git commit -m "feat: 新機能実装"
+
+3. CodeRabbitローカルレビュー（後述のCI/CD Workflowを参照）
+   coderabbit review --plain --base-commit HEAD~1 --config CLAUDE.md
+
+4. Push
+   git push origin feature/new-feature
+
+5. GitHub上でPR作成
+   gh pr create --title "新機能: ..." --body "..."
+
+6. レビュー・CI/CD通過後、mainにマージ
+   gh pr merge --squash
+
+7. featureブランチ削除
+   git checkout main
+   git pull origin main
+   git branch -d feature/new-feature
+```
+
+### ブランチ保護ルール（推奨）
+- mainブランチへの直接pushは禁止
+- PRマージ前にCI/CD成功を必須とする
+- 最低1名のレビュー承認を推奨
+
 ## CI/CD Workflow (重要)
 **コード変更時は必ず以下のワークフローに従うこと**:
 1. コード変更
