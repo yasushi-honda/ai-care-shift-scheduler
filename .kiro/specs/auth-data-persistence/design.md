@@ -562,27 +562,65 @@ type Result<T, E> = { success: true; data: T } | { success: false; error: E };
 
 ```typescript
 interface ScheduleService {
-  // スケジュール購読（リアルタイム更新）
+  /**
+   * スケジュールのリアルタイム購読
+   *
+   * @description 指定した施設・月のスケジュールをリアルタイムで監視
+   * @param facilityId 施設ID
+   * @param targetMonth 対象月 ('YYYY-MM')
+   * @param callback データ変更時のコールバック
+   * @returns 購読解除関数
+   */
   subscribeToSchedules(
     facilityId: string,
     targetMonth: string,
     callback: (schedules: StaffSchedule[]) => void
   ): Unsubscribe;
 
-  // 新規作成（初回保存）
+  /**
+   * 新規スケジュール作成（初回保存）
+   *
+   * @description 新しいスケジュールを作成。初期status='draft', version=1
+   * @precondition ユーザーがeditor以上の権限を持つ
+   * @param facilityId 施設ID
+   * @param schedule スケジュールデータ（id, createdAtは自動生成）
+   * @returns 作成されたスケジュールID
+   */
   saveSchedule(
     facilityId: string,
-    schedule: Omit<Schedule, 'id' | 'createdAt'>
+    schedule: Omit<Schedule, 'id' | 'createdAt' | 'createdBy' | 'updatedAt' | 'updatedBy'>
   ): Promise<Result<string, ScheduleError>>;
 
-  // 下書き保存（status: 'draft'、バージョン作成なし）
+  /**
+   * 下書き保存（バージョン作成なし）
+   *
+   * @description 編集中のスケジュールを保存。status='draft'のまま、バージョン履歴は作成しない
+   * @precondition スケジュールが存在し、status='draft'
+   * @use_case ローカル自動保存、手動下書き保存
+   * @param facilityId 施設ID
+   * @param scheduleId スケジュールID
+   * @param updates 更新内容（部分更新）
+   * @returns void
+   */
   saveDraft(
     facilityId: string,
     scheduleId: string,
     updates: Partial<Schedule>
   ): Promise<Result<void, ScheduleError>>;
 
-  // 確定保存（status: 'confirmed'、バージョン履歴作成）
+  /**
+   * スケジュール確定（バージョン履歴作成）
+   *
+   * @description status='draft'→'confirmed'に変更し、変更履歴をversionsサブコレクションに保存
+   * @precondition スケジュールが存在し、status='draft'
+   * @state_transition draft → confirmed
+   * @side_effect versionsサブコレクションに新規ドキュメント作成、versionインクリメント
+   * @param facilityId 施設ID
+   * @param scheduleId スケジュールID
+   * @param updates 更新内容（部分更新）
+   * @param changeDescription 変更内容の説明（監査ログ用、オプション）
+   * @returns void
+   */
   confirmSchedule(
     facilityId: string,
     scheduleId: string,
@@ -590,26 +628,45 @@ interface ScheduleService {
     changeDescription?: string
   ): Promise<Result<void, ScheduleError>>;
 
-  // 更新（一般的な更新操作）
-  updateSchedule(
-    facilityId: string,
-    scheduleId: string,
-    updates: Partial<Schedule>
-  ): Promise<Result<void, ScheduleError>>;
-
-  // 削除（論理削除: status: 'archived'）
+  /**
+   * スケジュール削除（論理削除）
+   *
+   * @description status='confirmed'→'archived'に変更（物理削除は行わない）
+   * @precondition スケジュールが存在し、status='confirmed'
+   * @state_transition confirmed → archived
+   * @param facilityId 施設ID
+   * @param scheduleId スケジュールID
+   * @returns void
+   */
   deleteSchedule(
     facilityId: string,
     scheduleId: string
   ): Promise<Result<void, ScheduleError>>;
 
-  // バージョン履歴取得
+  /**
+   * バージョン履歴取得
+   *
+   * @description スケジュールの全バージョン履歴を取得（新しい順）
+   * @param facilityId 施設ID
+   * @param scheduleId スケジュールID
+   * @returns バージョン履歴の配列
+   */
   getVersionHistory(
     facilityId: string,
     scheduleId: string
   ): Promise<Result<ScheduleVersion[], ScheduleError>>;
 
-  // 過去バージョンへの復元
+  /**
+   * 過去バージョンへの復元
+   *
+   * @description 指定したバージョンのデータを現在のスケジュールに復元
+   * @precondition 指定したバージョンが存在する
+   * @side_effect 新しいバージョンとして復元データを保存、versionインクリメント
+   * @param facilityId 施設ID
+   * @param scheduleId スケジュールID
+   * @param versionNumber 復元するバージョン番号
+   * @returns void
+   */
   restoreVersion(
     facilityId: string,
     scheduleId: string,
@@ -658,6 +715,14 @@ async confirmSchedule(
   updates: Partial<Schedule>,
   changeDescription?: string
 ): Promise<Result<void, ScheduleError>> {
+  const currentUserId = auth.currentUser?.uid;
+  if (!currentUserId) {
+    return {
+      success: false,
+      error: { type: 'permission_denied', message: 'User not authenticated' }
+    };
+  }
+
   try {
     await runTransaction(db, async (transaction) => {
       // 1. 現在のスケジュールを取得
@@ -669,36 +734,66 @@ async confirmSchedule(
       }
 
       const currentSchedule = scheduleSnap.data() as Schedule;
+
+      // 2. 前提条件チェック: status === 'draft'
+      if (currentSchedule.status !== 'draft') {
+        throw new Error(
+          `Cannot confirm: schedule status is '${currentSchedule.status}', expected 'draft'`
+        );
+      }
+
+      // 3. バージョン番号計算
       const currentVersion = currentSchedule.version;
       const nextVersion = currentVersion + 1;
 
-      // 2. 現在のバージョンをversionsサブコレクションに保存
+      // 4. 現在のバージョンをversionsサブコレクションに保存
       const versionRef = doc(
         db,
         `facilities/${facilityId}/schedules/${scheduleId}/versions/${currentVersion}`
       );
+
+      // 5. 作成者の決定（nullチェック）
+      const versionCreatedBy = currentSchedule.updatedBy || currentSchedule.createdBy;
+      if (!versionCreatedBy) {
+        throw new Error('Schedule has no valid author (createdBy or updatedBy)');
+      }
+
       transaction.set(versionRef, {
         versionNumber: currentVersion,
         targetMonth: currentSchedule.targetMonth,
         staffSchedules: currentSchedule.staffSchedules,
         createdAt: serverTimestamp(),
-        createdBy: currentSchedule.updatedBy || currentSchedule.createdBy,
+        createdBy: versionCreatedBy,
         changeDescription: changeDescription || '確定',
         previousVersion: currentVersion - 1,
       });
 
-      // 3. スケジュール本体を新しいバージョンで更新
+      // 6. スケジュール本体を新しいバージョンで更新
       transaction.update(scheduleRef, {
         ...updates,
         version: nextVersion,
         status: 'confirmed',
         updatedAt: serverTimestamp(),
+        updatedBy: currentUserId,
       });
     });
 
-    return { ok: true, value: undefined };
+    return { success: true, data: undefined };
   } catch (error) {
-    return { ok: false, error: { type: 'network_error', message: error.message } };
+    const message = error instanceof Error ? error.message : 'Unknown error';
+
+    // エラータイプの判定
+    if (message.includes('not found')) {
+      return { success: false, error: { type: 'not_found', message } };
+    }
+    if (message.includes('Cannot confirm')) {
+      return { success: false, error: { type: 'conflict', message, currentVersion: 0 } };
+    }
+    if (message.includes('permission') || message.includes('authenticated')) {
+      return { success: false, error: { type: 'permission_denied', message } };
+    }
+
+    return { success: false, error: { type: 'network_error', message } };
   }
 }
 ```
