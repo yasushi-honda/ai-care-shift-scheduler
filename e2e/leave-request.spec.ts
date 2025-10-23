@@ -17,12 +17,12 @@ test.describe('休暇希望入力機能', () => {
     await expect(page.locator('table')).toBeVisible();
     await expect(page.getByText('スタッフ名')).toBeVisible();
 
-    // 全スタッフが表示されることを確認
-    await expect(page.getByText('田中 愛')).toBeVisible();
-    await expect(page.getByText('鈴木 太郎')).toBeVisible();
-    await expect(page.getByText('佐藤 花子')).toBeVisible();
-    await expect(page.getByText('高橋 健太')).toBeVisible();
-    await expect(page.getByText('渡辺 久美子')).toBeVisible();
+    // 全スタッフがテーブル内に表示されることを確認（cellロールで特定）
+    await expect(page.getByRole('cell', { name: '田中 愛' })).toBeVisible();
+    await expect(page.getByRole('cell', { name: '鈴木 太郎' })).toBeVisible();
+    await expect(page.getByRole('cell', { name: '佐藤 花子' })).toBeVisible();
+    await expect(page.getByRole('cell', { name: '高橋 健太' })).toBeVisible();
+    await expect(page.getByRole('cell', { name: '渡辺 久美子' })).toBeVisible();
   });
 
   test('カレンダーに日付が表示される', async ({ page }) => {
