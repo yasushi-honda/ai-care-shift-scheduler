@@ -6,48 +6,53 @@
 
 ---
 
-## Phase 1: 認証基盤の構築
+## Phase 1: 認証基盤の構築 ✅ 完了
 
-- [ ] 1. Firebase Authentication統合とテスト環境の準備
-- [ ] 1.1 Firebase認証SDKの統合とGoogle OAuthプロバイダーの設定
+- [x] 1. Firebase Authentication統合とテスト環境の準備
+- [x] 1.1 Firebase認証SDKの統合とGoogle OAuthプロバイダーの設定
   - Firebase Authentication SDKをプロジェクトに追加
   - Google OAuthプロバイダーの設定とテスト
   - 認証状態の永続化設定（ブラウザセッション）
   - 認証エラーハンドリングの基本構造
   - _Requirements: 1.1, 1.2, 1.3, 1.4, 1.13_
+  - **実装**: `firebase.ts` - Firebase初期化、Google OAuthプロバイダー設定、永続化設定
 
-- [ ] 1.2 認証状態管理とコンテキストプロバイダーの実装
+- [x] 1.2 認証状態管理とコンテキストプロバイダーの実装
   - 認証状態を管理するグローバルコンテキストの作成
   - 現在のユーザー情報を保持する状態管理
   - 認証状態の変更を監視するリスナーの実装
   - ログイン・ログアウト機能の提供
   - _Requirements: 1.1, 1.9, 1.13_
+  - **実装**: `src/contexts/AuthContext.tsx` - AuthProvider, useAuth, onAuthStateChanged
 
-- [ ] 1.3 ログイン画面とGoogle OAuth認証フローの実装
+- [x] 1.3 ログイン画面とGoogle OAuth認証フローの実装
   - 未認証ユーザー向けのログイン画面UI
   - 「Googleでログイン」ボタンと認証フロー
   - 認証成功後のリダイレクト処理
   - 認証失敗時のエラーメッセージ表示
   - _Requirements: 1.1, 1.2, 1.3, 1.4, 1.10, 1.11_
+  - **実装**: `src/components/LoginPage.tsx` - ログインUI、signInWithGoogle、エラーハンドリング
 
-- [ ] 1.4 保護されたルートと認証チェック機能の実装
+- [x] 1.4 保護されたルートと認証チェック機能の実装
   - 未認証ユーザーをログイン画面にリダイレクトする仕組み
   - 認証済みユーザーのみアクセス可能なルート保護
   - 認証状態に基づくナビゲーション制御
   - ログアウト機能とセッション終了処理
   - _Requirements: 1.1, 1.12, 7.3_
+  - **実装**: `src/components/ProtectedRoute.tsx`, `index.tsx` - ルート保護、AuthProvider統合
 
 ---
 
 ## Phase 2: ユーザー登録とアクセス権限管理
 
 - [ ] 2. 初回ユーザー登録とsuper-admin自動付与
-- [ ] 2.1 初回ログイン時のユーザードキュメント自動作成機能
+- [x] 2.1 初回ログイン時のユーザードキュメント自動作成機能
   - Google OAuthから取得したユーザー情報をFirestoreに保存
   - ユーザードキュメントの構造（userId, email, name, photoURL, facilities配列）
   - 初回作成時と既存ユーザーログイン時の判定ロジック
   - lastLoginAtタイムスタンプの更新処理
   - _Requirements: 1.5, 1.6, 1.9_
+  - **実装**: `src/services/userService.ts` - createOrUpdateUser、フィールド検証
 
 - [ ] 2.2 システム初回ユーザーへのsuper-admin権限自動付与
   - システム内のユーザー数をカウントする機能
