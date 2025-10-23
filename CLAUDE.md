@@ -24,11 +24,21 @@ Kiro-style Spec Driven Development implementation using claude code slash comman
 ## CI/CD Workflow (重要)
 **コード変更時は必ず以下のワークフローに従うこと**:
 1. コード変更
-2. git commit
+2. `git add .` → `git commit -m "..."`
 3. **CodeRabbit CLIローカルレビュー実施・完了待ち** ← 必須！
-4. レビュー結果に基づいて修正
-5. git add, commit, push
-6. GitHub Actions CI/CD実行
+   ```bash
+   coderabbit review --plain --base-commit HEAD~1 --config CLAUDE.md
+   ```
+4. レビュー結果に基づいて修正（問題がある場合）
+   - 修正後: `git add .` → `git commit --amend --no-edit` または新規コミット
+   - 再レビュー: 再度Step 3を実行
+5. レビューOK後に `git push`
+6. GitHub Actions CI/CD実行を監視
+   ```bash
+   gh run list --limit 1
+   ```
+
+**重要**: pushする前に必ずCodeRabbitレビューを実行すること。スキップ禁止。
 
 詳細: [Development Workflow](.kiro/steering/development-workflow.md)
 
