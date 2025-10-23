@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import type { Staff } from '../types';
 import { Role, Qualification, TimeSlotPreference } from '../types';
 import { ROLES, QUALIFICATIONS, TIME_SLOT_PREFERENCES } from '../constants';
@@ -11,6 +11,8 @@ interface StaffSettingsProps {
   onAddNewStaff: () => void;
   onDeleteStaff: (staffId: string) => void;
   targetMonth: string;
+  openStaffId: string | null;
+  onOpenStaffChange: (staffId: string | null) => void;
 }
 
 const PlusIcon = () => (
@@ -25,17 +27,42 @@ const TrashIcon = () => (
     </svg>
 );
 
-const StaffSettings: React.FC<StaffSettingsProps> = ({ staffList, onStaffChange, onAddNewStaff, onDeleteStaff, targetMonth }) => {
-  const [openStaffId, setOpenStaffId] = useState<string | null>(staffList.length > 0 ? staffList[0].id : null);
+const StaffSettings: React.FC<StaffSettingsProps> = ({
+  staffList,
+  onStaffChange,
+  onAddNewStaff,
+  onDeleteStaff,
+  targetMonth,
+  openStaffId,
+  onOpenStaffChange
+}) => {
   const [editingCalendarFor, setEditingCalendarFor] = useState<string | null>(null);
+  const staffRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
 
   const handleToggle = (id: string) => {
-    setOpenStaffId(openStaffId === id ? null : id);
+    onOpenStaffChange(openStaffId === id ? null : id);
   };
-  
+
   const handleDateChange = (staff: Staff, dates: string[]) => {
     onStaffChange({ ...staff, unavailableDates: dates.sort() });
   };
+
+  // 新規追加されたスタッフまでスクロール & 名前入力欄にフォーカス
+  useEffect(() => {
+    if (openStaffId && staffRefs.current[openStaffId]) {
+      const element = staffRefs.current[openStaffId];
+      element.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+      // 少し遅延させて名前入力欄にフォーカス
+      setTimeout(() => {
+        const nameInput = element.querySelector('input[type="text"]') as HTMLInputElement;
+        if (nameInput) {
+          nameInput.focus();
+          nameInput.select(); // テキストを全選択
+        }
+      }, 300);
+    }
+  }, [openStaffId]);
   
   return (
     <div className="space-y-2">
@@ -49,7 +76,11 @@ const StaffSettings: React.FC<StaffSettingsProps> = ({ staffList, onStaffChange,
         </button>
       </div>
       {staffList.map(staff => (
-        <div key={staff.id} className="bg-white rounded-lg border border-slate-200">
+        <div
+          key={staff.id}
+          ref={(el) => (staffRefs.current[staff.id] = el)}
+          className="bg-white rounded-lg border border-slate-200"
+        >
           <button
             onClick={() => handleToggle(staff.id)}
             className="w-full flex justify-between items-center p-3 text-left font-medium text-slate-700 hover:bg-slate-50"

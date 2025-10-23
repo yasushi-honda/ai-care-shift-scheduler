@@ -52,6 +52,7 @@ const App: React.FC = () => {
     }
   });
   const [staffToDelete, setStaffToDelete] = useState<Staff | null>(null);
+  const [openStaffId, setOpenStaffId] = useState<string | null>(null);
 
   const handleStaffChange = useCallback((updatedStaff: Staff) => {
     setStaffList(prevList =>
@@ -74,7 +75,8 @@ const App: React.FC = () => {
       isNightShiftOnly: false,
     };
     setStaffList(prevList => [...prevList, newStaff]);
-    alert('「新規スタッフ」がリストの末尾に追加されました。詳細を編集してください。');
+    // 新規追加されたスタッフを自動的に展開状態にする
+    setOpenStaffId(newStaffId);
   }, []);
 
   const handleDeleteStaff = useCallback((staffId: string) => {
@@ -215,12 +217,14 @@ const App: React.FC = () => {
         </header>
         <div className="flex-grow overflow-y-auto">
           <Accordion title="スタッフ情報設定" icon={<UserGroupIcon/>}>
-            <StaffSettings 
-              staffList={staffList} 
-              onStaffChange={handleStaffChange} 
+            <StaffSettings
+              staffList={staffList}
+              onStaffChange={handleStaffChange}
               onAddNewStaff={handleAddNewStaff}
               onDeleteStaff={handleDeleteStaff}
-              targetMonth={requirements.targetMonth} 
+              targetMonth={requirements.targetMonth}
+              openStaffId={openStaffId}
+              onOpenStaffChange={setOpenStaffId}
             />
           </Accordion>
           <Accordion title="事業所のシフト要件設定" icon={<ClipboardIcon/>}>
