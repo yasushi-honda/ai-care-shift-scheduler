@@ -63,22 +63,22 @@ test.describe('シフト作成機能', () => {
     // シフト要件設定を開く
     await page.getByText('事業所のシフト要件設定').click();
 
-    // 現在の月を確認
-    await expect(page.getByText('2025年 11月')).toBeVisible();
+    // 現在の月を確認（heading要素で特定）
+    await expect(page.getByRole('heading', { name: /2025年 11月/ })).toBeVisible();
 
     // 月を進める（次月ボタンをクリック）
     const nextButton = page.locator('button').filter({ hasText: '▶' });
     await nextButton.click();
 
-    // 12月に変更されたことを確認
-    await expect(page.getByText('2025年 12月')).toBeVisible();
+    // 12月に変更されたことを確認（heading要素で特定）
+    await expect(page.getByRole('heading', { name: /2025年 12月/ })).toBeVisible();
 
     // 月を戻す（前月ボタンをクリック）
     const prevButton = page.locator('button').filter({ hasText: '◀' });
     await prevButton.click();
 
-    // 11月に戻ったことを確認
-    await expect(page.getByText('2025年 11月')).toBeVisible();
+    // 11月に戻ったことを確認（heading要素で特定）
+    await expect(page.getByRole('heading', { name: /2025年 11月/ })).toBeVisible();
   });
 
   // AI シフト作成テスト（本番環境のみ実行）

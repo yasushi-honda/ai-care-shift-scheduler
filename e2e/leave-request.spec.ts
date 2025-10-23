@@ -8,11 +8,13 @@ test.describe('休暇希望入力機能', () => {
     await page.goto('/');
     // 休暇希望入力タブに切り替え
     await page.getByRole('button', { name: '休暇希望入力' }).click();
+    // タブ切り替え後の待機
+    await page.waitForTimeout(500);
   });
 
   test('休暇希望カレンダーが表示される', async ({ page }) => {
-    // カレンダータイトルの確認
-    await expect(page.getByText('休暇希望カレンダー')).toBeVisible();
+    // カレンダータイトルの確認（heading要素で特定）
+    await expect(page.getByRole('heading', { name: '休暇希望カレンダー' })).toBeVisible();
 
     // 全スタッフが表示されることを確認
     await expect(page.getByText('田中 愛')).toBeVisible();
@@ -62,23 +64,23 @@ test.describe('休暇希望入力機能', () => {
   });
 
   test('月を変更するとカレンダーも更新される', async ({ page }) => {
-    // 現在の月を確認
-    await expect(page.getByText('2025年 11月')).toBeVisible();
+    // 現在の月を確認（heading要素で特定）
+    await expect(page.getByRole('heading', { name: /2025年 11月/ })).toBeVisible();
 
     // 月を進める
     const nextButton = page.locator('button').filter({ hasText: '▶' });
     await nextButton.click();
 
-    // 12月に変更されたことを確認
-    await expect(page.getByText('2025年 12月')).toBeVisible();
+    // 12月に変更されたことを確認（heading要素で特定）
+    await expect(page.getByRole('heading', { name: /2025年 12月/ })).toBeVisible();
 
     // カレンダーが再レンダリングされることを確認
     await expect(page.locator('td').first()).toBeVisible();
   });
 
   test('シフト表タブに戻れる', async ({ page }) => {
-    // 休暇希望カレンダーが表示されていることを確認
-    await expect(page.getByText('休暇希望カレンダー')).toBeVisible();
+    // 休暇希望カレンダーが表示されていることを確認（heading要素で特定）
+    await expect(page.getByRole('heading', { name: '休暇希望カレンダー' })).toBeVisible();
 
     // シフト表タブに切り替え
     await page.getByRole('button', { name: 'シフト表' }).click();

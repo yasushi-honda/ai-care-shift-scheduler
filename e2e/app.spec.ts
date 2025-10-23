@@ -45,8 +45,8 @@ test.describe('アプリケーション基本動作', () => {
   test('対象月が表示される', async ({ page }) => {
     await page.goto('/');
 
-    // デフォルト月（2025年11月）の表示確認
-    await expect(page.getByText('2025年 11月')).toBeVisible();
+    // デフォルト月（2025年11月）の表示確認（heading要素で特定）
+    await expect(page.getByRole('heading', { name: '2025年 11月' })).toBeVisible();
   });
 
   test('初期スタッフが表示される', async ({ page }) => {
