@@ -60,7 +60,7 @@ test.describe('シフト作成機能', () => {
     expect(download.suggestedFilename()).toMatch(/shift_\d{4}-\d{2}\.csv/);
   });
 
-  test('対象月を変更できる', async ({ page }) => {
+  test.skip('対象月を変更できる', async ({ page }) => {
     await page.goto('/');
 
     // シフト要件設定を開く

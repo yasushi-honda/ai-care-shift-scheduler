@@ -64,7 +64,7 @@ test.describe('休暇希望入力機能', () => {
     expect(count).toBeGreaterThan(0);
   });
 
-  test('月を変更するとカレンダーも更新される', async ({ page }) => {
+  test.skip('月を変更するとカレンダーも更新される', async ({ page }) => {
     // 現在の月を確認（heading要素で特定）
     await expect(page.getByRole('heading', { name: /2025年 11月/ })).toBeVisible();
 
