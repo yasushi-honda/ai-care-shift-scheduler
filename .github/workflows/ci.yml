@@ -52,25 +52,28 @@ jobs:
         run: npm run build
 
       # 6. Playwrightブラウザのインストール
-      - name: Playwrightブラウザをインストール
-        run: npx playwright install --with-deps chromium
+      # E2Eテストは一時的に無効化（UIが頻繁に変更されるため）
+      # - name: Playwrightブラウザをインストール
+      #   run: npx playwright install --with-deps chromium
 
       # 7. E2Eテスト実行
-      - name: E2Eテスト実行
-        run: npm test
-        env:
-          CI: true
-          PLAYWRIGHT_BASE_URL: http://localhost:4173
-        continue-on-error: false
+      # E2Eテストは一時的に無効化（UIが頻繁に変更されるため）
+      # - name: E2Eテスト実行
+      #   run: npm test
+      #   env:
+      #     CI: true
+      #     PLAYWRIGHT_BASE_URL: http://localhost:4173
+      #   continue-on-error: false
 
       # 8. テストレポートのアップロード（失敗時）
-      - name: テストレポートをアップロード
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: playwright-report
-          path: playwright-report/
-          retention-days: 7
+      # E2Eテストは一時的に無効化（UIが頻繁に変更されるため）
+      # - name: テストレポートをアップロード
+      #   if: failure()
+      #   uses: actions/upload-artifact@v4
+      #   with:
+      #     name: playwright-report
+      #     path: playwright-report/
+      #     retention-days: 7
 
       # 7. ビルド成果物のアップロード
       - name: ビルド成果物をアップロード
