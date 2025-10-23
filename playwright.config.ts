@@ -64,7 +64,10 @@ export default defineConfig({
   ],
 
   // 開発サーバーの起動設定
-  webServer: process.env.CI
+  // 本番環境URL（PLAYWRIGHT_BASE_URL）が設定されている場合はwebServerをスキップ
+  webServer: process.env.PLAYWRIGHT_BASE_URL && !process.env.PLAYWRIGHT_BASE_URL.includes('localhost')
+    ? undefined
+    : process.env.CI
     ? {
         // CI環境: ビルド後のプレビューサーバーを使用
         command: 'npm run preview',
