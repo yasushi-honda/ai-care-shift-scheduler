@@ -12,10 +12,14 @@ export function LoginPage() {
 
     try {
       const result = await signInWithGoogle();
-      if (!result.success) {
-        setError(result.error?.message || '認証に失敗しました');
+      if (result.success) {
+        // 成功時はAuthContextが自動的に状態を更新し、リダイレクトされる
+        return;
       }
-      // 成功時はAuthContextが自動的に状態を更新し、リダイレクトされる
+      // 失敗時のエラーメッセージ表示
+      // 型ガードが機能しないため、型アサーションを使用
+      const failureResult = result as { success: false; error: { code: string; message: string } };
+      setError(failureResult.error.message || '認証に失敗しました');
     } catch (err) {
       setError('予期しないエラーが発生しました');
     } finally {

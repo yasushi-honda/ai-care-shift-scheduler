@@ -3,6 +3,7 @@ import { User as FirebaseUser, onAuthStateChanged, signInWithPopup, signOut as f
 import { doc, getDoc } from 'firebase/firestore';
 import { auth, googleProvider, db, authReady } from '../../firebase';
 import { User, AuthError, Result } from '../../types';
+import { createOrUpdateUser } from '../services/userService';
 
 // AuthContext の型定義
 interface AuthContextType {
@@ -65,7 +66,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Google OAuth ログイン
   const signInWithGoogle = async (): Promise<Result<void, AuthError>> => {
     try {
-      await signInWithPopup(auth, googleProvider);
+      const result = await signInWithPopup(auth, googleProvider);
+      const firebaseUser = result.user;
+
+      // ユーザードキュメントの作成または更新
+      const userResult = await createOrUpdateUser(firebaseUser);
+
+      if (!userResult.success) {
+        // ユーザードキュメント作成失敗時はエラーを返す
+        // TypeScriptの型narrowingが機能しないため、明示的に型アサーション
+        const failureResult = userResult as { success: false; error: AuthError };
+        return {
+          success: false,
+          error: failureResult.error
+        };
+      }
+
+      // ユーザードキュメント作成成功
+      // ユーザープロファイルを即座に設定（race condition回避）
+      setUserProfile(userResult.data);
       return { success: true, data: undefined };
     } catch (error: any) {
       console.error('Sign in error:', error);
