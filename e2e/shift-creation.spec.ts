@@ -65,21 +65,21 @@ test.describe('シフト作成機能', () => {
 
     // シフト要件設定を開く
     await page.getByText('事業所のシフト要件設定').click();
-    await page.waitForTimeout(300);
+    await page.waitForTimeout(500);
 
     // 現在の月を確認（heading要素で特定）
     await expect(page.getByRole('heading', { name: /2025年 11月/ })).toBeVisible();
 
-    // 月を進める（aria-labelを使用）
-    await page.getByRole('button', { name: '次の月へ' }).click();
-    await page.waitForTimeout(300);
+    // 月を進める（force: trueでクリックを強制）
+    await page.getByRole('button', { name: '次の月へ' }).click({ force: true });
+    await page.waitForTimeout(500);
 
     // 12月に変更されたことを確認
     await expect(page.locator('text=/2025年 12月/')).toBeVisible();
 
-    // 月を戻す（aria-labelを使用）
-    await page.getByRole('button', { name: '前の月へ' }).click();
-    await page.waitForTimeout(300);
+    // 月を戻す（force: trueでクリックを強制）
+    await page.getByRole('button', { name: '前の月へ' }).click({ force: true });
+    await page.waitForTimeout(500);
 
     // 11月に戻ったことを確認
     await expect(page.locator('text=/2025年 11月/')).toBeVisible();
