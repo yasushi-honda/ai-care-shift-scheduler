@@ -1,3 +1,4 @@
+import { Timestamp } from 'firebase/firestore';
 
 export enum Role {
   Admin = "管理者",
@@ -85,4 +86,64 @@ export interface WorkLogs {
   [date: string]: { // YYYY-MM-DD
     [staffId: string]: WorkLogDetails;
   };
+}
+
+// ==================== 認証・データ永続化関連の型定義 ====================
+
+// Result型パターン（型安全なエラーハンドリング）
+export type Result<T, E> =
+  | { success: true; data: T }
+  | { success: false; error: E };
+
+// 認証エラー型
+export type AuthError =
+  | { code: 'AUTH_FAILED'; message: string }
+  | { code: 'PERMISSION_DENIED'; message: string }
+  | { code: 'USER_NOT_FOUND'; message: string }
+  | { code: 'NETWORK_ERROR'; message: string }
+  | { code: 'UNKNOWN_ERROR'; message: string };
+
+// ロール（RBAC）
+export enum FacilityRole {
+  SuperAdmin = 'super-admin',
+  Admin = 'admin',
+  Editor = 'editor',
+  Viewer = 'viewer',
+}
+
+// 施設アクセス権限
+export interface FacilityAccess {
+  facilityId: string;
+  role: FacilityRole;
+  grantedAt: Timestamp;
+  grantedBy: string; // UID
+}
+
+// ユーザー情報（Firestore users コレクション）
+export interface User {
+  userId: string; // Firebase Auth UID
+  email: string;
+  name: string;
+  photoURL: string;
+  provider: 'google';
+  facilities: FacilityAccess[]; // アクセス可能な施設リスト
+  createdAt: Timestamp;
+  lastLoginAt: Timestamp;
+}
+
+// 施設情報（Firestore facilities コレクション）
+export interface Facility {
+  facilityId: string;
+  name: string;
+  createdAt: Timestamp;
+  createdBy: string; // super-admin UID
+  members: FacilityMember[]; // 非正規化（パフォーマンス最適化）
+}
+
+// 施設メンバー（非正規化）
+export interface FacilityMember {
+  userId: string;
+  email: string;
+  name: string;
+  role: FacilityRole;
 }
