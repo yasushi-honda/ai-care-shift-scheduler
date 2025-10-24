@@ -42,7 +42,7 @@ export const assignSuperAdminOnFirstUser = onDocumentCreated(
       const configRef = db.collection('system').doc('config');
       let isSuperAdmin = false;
 
-      await db.runTransaction(async (transaction) => {
+      await db.runTransaction(async (transaction: admin.firestore.Transaction) => {
         const configDoc = await transaction.get(configRef);
 
         if (!configDoc.exists || !configDoc.data()?.firstUserProcessed) {
@@ -73,7 +73,8 @@ export const assignSuperAdminOnFirstUser = onDocumentCreated(
             }],
           });
 
-          // ユーザードキュメントを更新（super-admin + admin権限を付与）
+          // ユーザードキュメントを更新（super-admin権限を付与）
+          // Note: super-adminは全権限を含むため、admin権限を別途付与する必要はない
           const userRef = db.collection('users').doc(uid);
           transaction.update(userRef, {
             facilities: [
@@ -82,12 +83,6 @@ export const assignSuperAdminOnFirstUser = onDocumentCreated(
                 role: 'super-admin',
                 grantedAt: now,
                 grantedBy: uid, // 自動付与
-              },
-              {
-                facilityId: defaultFacilityId,
-                role: 'admin',
-                grantedAt: now,
-                grantedBy: uid,
               },
             ],
           });
