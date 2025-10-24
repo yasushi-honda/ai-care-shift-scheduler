@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { User as FirebaseUser, onAuthStateChanged, signInWithPopup, signOut as firebaseSignOut } from 'firebase/auth';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, Timestamp } from 'firebase/firestore';
 import { auth, googleProvider, db, authReady } from '../../firebase';
 import { User, AuthError, Result, FacilityRole } from '../../types';
 import { createOrUpdateUser } from '../services/userService';
@@ -20,6 +20,58 @@ interface AuthContextType {
 
 // Context の作成
 const AuthContext = createContext<AuthContextType | null>(null);
+
+/**
+ * Cloud Function の facilities 付与完了を待機
+ * 新規ユーザーの場合、Cloud Function が非同期で facilities を設定するため、
+ * 最大10秒間ポーリングして facilities の更新を待つ
+ */
+async function waitForFacilities(userId: string, maxWaitSeconds: number = 10): Promise<User | null> {
+  const startTime = Date.now();
+  const pollInterval = 1000; // 1秒ごとにチェック
+
+  while (Date.now() - startTime < maxWaitSeconds * 1000) {
+    try {
+      const userDoc = await getDoc(doc(db, 'users', userId));
+      if (userDoc.exists()) {
+        const profile = userDoc.data() as User;
+
+        // facilities が設定されていればそのまま返す
+        if (profile.facilities && profile.facilities.length > 0) {
+          console.log('✅ Cloud Function completed: facilities assigned', {
+            userId,
+            facilities: profile.facilities.length,
+            waitedMs: Date.now() - startTime
+          });
+          return profile;
+        }
+      }
+    } catch (error) {
+      console.error('Error polling for facilities:', error);
+    }
+
+    // 1秒待機
+    await new Promise(resolve => setTimeout(resolve, pollInterval));
+  }
+
+  // タイムアウト: facilities が設定されなかった
+  console.warn('⏱️ Timeout waiting for facilities assignment', {
+    userId,
+    waitedSeconds: maxWaitSeconds
+  });
+
+  // 最終的なプロファイルを取得して返す
+  try {
+    const userDoc = await getDoc(doc(db, 'users', userId));
+    if (userDoc.exists()) {
+      return userDoc.data() as User;
+    }
+  } catch (error) {
+    console.error('Error fetching final profile:', error);
+  }
+
+  return null;
+}
 
 // AuthProvider コンポーネント
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -41,7 +93,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           try {
             const userDoc = await getDoc(doc(db, 'users', user.uid));
             if (userDoc.exists()) {
-              const profile = userDoc.data() as User;
+              let profile = userDoc.data() as User;
+
+              // 新規ユーザー（facilities が空）の場合、Cloud Function 完了を待機
+              if (!profile.facilities || profile.facilities.length === 0) {
+                // createdAt が最近（30秒以内）の場合のみポーリング
+                const createdAt = profile.createdAt;
+                const now = Date.now();
+                const isRecentlyCreated = createdAt &&
+                  createdAt instanceof Timestamp &&
+                  (now - createdAt.toMillis()) < 30000; // 30秒以内
+
+                if (isRecentlyCreated) {
+                  console.log('🔄 New user detected, waiting for Cloud Function to assign facilities...');
+                  const updatedProfile = await waitForFacilities(user.uid, 10);
+                  if (updatedProfile) {
+                    profile = updatedProfile;
+                  }
+                }
+              }
+
               setUserProfile(profile);
 
               // 施設の自動選択ロジック
