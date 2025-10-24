@@ -36,6 +36,17 @@ export const ScheduleService = {
     targetMonth: string,
     callback: (schedules: Schedule[], error?: Error) => void
   ): Unsubscribe {
+    // Validate parameters
+    if (!facilityId || facilityId.trim() === '') {
+      callback([], new Error('facilityId is required'));
+      return () => {}; // Return no-op unsubscribe
+    }
+
+    if (!targetMonth || targetMonth.trim() === '') {
+      callback([], new Error('targetMonth is required'));
+      return () => {};
+    }
+
     const schedulesCollectionRef = collection(db, `facilities/${facilityId}/schedules`);
     const q = query(
       schedulesCollectionRef,
@@ -126,6 +137,27 @@ export const ScheduleService = {
           error: {
             code: 'VALIDATION_ERROR',
             message: '対象月のフォーマットが不正です（YYYY-MM形式で指定してください）',
+          },
+        };
+      }
+
+      // Validate staffSchedules
+      if (!schedule.staffSchedules || !Array.isArray(schedule.staffSchedules)) {
+        return {
+          success: false,
+          error: {
+            code: 'VALIDATION_ERROR',
+            message: 'スタッフスケジュールは必須です',
+          },
+        };
+      }
+
+      if (schedule.staffSchedules.length === 0) {
+        return {
+          success: false,
+          error: {
+            code: 'VALIDATION_ERROR',
+            message: 'スタッフスケジュールが空です',
           },
         };
       }
