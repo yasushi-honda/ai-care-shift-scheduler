@@ -38,12 +38,12 @@ export const ScheduleService = {
   ): Unsubscribe {
     // Validate parameters
     if (!facilityId || facilityId.trim() === '') {
-      callback([], new Error('facilityId is required'));
+      callback([], new Error('施設IDは必須です'));
       return () => {}; // Return no-op unsubscribe
     }
 
     if (!targetMonth || targetMonth.trim() === '') {
-      callback([], new Error('targetMonth is required'));
+      callback([], new Error('対象月は必須です'));
       return () => {};
     }
 
