@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { User as FirebaseUser, onAuthStateChanged, signInWithPopup, signOut as firebaseSignOut } from 'firebase/auth';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, Timestamp } from 'firebase/firestore';
 import { auth, googleProvider, db, authReady } from '../../firebase';
 import { User, AuthError, Result, FacilityRole } from '../../types';
 import { createOrUpdateUser } from '../services/userService';
@@ -101,7 +101,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 const createdAt = profile.createdAt;
                 const now = Date.now();
                 const isRecentlyCreated = createdAt &&
-                  (now - (createdAt as any).toMillis()) < 30000; // 30秒以内
+                  createdAt instanceof Timestamp &&
+                  (now - createdAt.toMillis()) < 30000; // 30秒以内
 
                 if (isRecentlyCreated) {
                   console.log('🔄 New user detected, waiting for Cloud Function to assign facilities...');
