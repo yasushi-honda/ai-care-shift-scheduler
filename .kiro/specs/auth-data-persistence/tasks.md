@@ -147,12 +147,15 @@ Phase 1-3のすべての機能が本番環境にデプロイされ、動作確�
 ## Phase 5: データ永続化 - シフトデータ
 
 - [ ] 5. シフトデータの永続化機能
-- [ ] 5.1 シフトデータのCRUD操作とFirestore連携の実装
+- [x] 5.1 シフトデータのCRUD操作とFirestore連携の実装
   - シフトスケジュールの作成・読取・更新機能
   - Firestoreサブコレクション（facilities/{facilityId}/schedules）の操作
   - 対象月（targetMonth）別のシフト管理
   - 生成者情報（generatedBy）とバージョン番号の記録
   - _Requirements: 4.1, 4.2, 4.3_
+  - **実装**: `src/services/scheduleService.ts` - ScheduleService（CRUD操作、リアルタイムリスナー）
+  - **テスト**: `src/services/__tests__/scheduleService.test.ts` - TDDアプローチで実装
+  - **型定義**: `types.ts` - Schedule, ScheduleVersion, ScheduleError型を追加
 
 - [ ] 5.2 対象月別のシフト取得と表示機能の実装
   - ユーザーが選択した対象月のシフトデータ取得
