@@ -47,9 +47,17 @@ jobs:
         run: npx tsc --noEmit
         continue-on-error: true # 型エラーがあっても続行
 
-      # 5. ビルド
+      # 5. ビルド（環境変数付き）
       - name: プロダクションビルド
         run: npm run build
+        env:
+          VITE_FIREBASE_API_KEY: ${{ secrets.VITE_FIREBASE_API_KEY }}
+          VITE_FIREBASE_AUTH_DOMAIN: ${{ secrets.VITE_FIREBASE_AUTH_DOMAIN }}
+          VITE_FIREBASE_PROJECT_ID: ${{ secrets.VITE_FIREBASE_PROJECT_ID }}
+          VITE_FIREBASE_STORAGE_BUCKET: ${{ secrets.VITE_FIREBASE_STORAGE_BUCKET }}
+          VITE_FIREBASE_MESSAGING_SENDER_ID: ${{ secrets.VITE_FIREBASE_MESSAGING_SENDER_ID }}
+          VITE_FIREBASE_APP_ID: ${{ secrets.VITE_FIREBASE_APP_ID }}
+          VITE_FIREBASE_MEASUREMENT_ID: ${{ secrets.VITE_FIREBASE_MEASUREMENT_ID }}
 
       # 6. Playwrightブラウザのインストール
       # E2Eテストは一時的に無効化（UIが頻繁に変更されるため）
@@ -75,15 +83,7 @@ jobs:
       #     path: playwright-report/
       #     retention-days: 7
 
-      # 7. ビルド成果物のアップロード
-      - name: ビルド成果物をアップロード
-        uses: actions/upload-artifact@v4
-        with:
-          name: build-artifacts
-          path: dist/
-          retention-days: 7
-
-      # 8. ビルド結果のサマリー表示
+      # 7. ビルド結果のサマリー表示
       - name: ビルド結果サマリー
         if: always()
         run: |
@@ -119,11 +119,16 @@ jobs:
       - name: Cloud Functions依存関係をインストール
         run: npm ci --prefix functions
 
-      - name: ビルド成果物をダウンロード
-        uses: actions/download-artifact@v4
-        with:
-          name: build-artifacts
-          path: dist/
+      - name: プロダクションビルド（Firebase環境変数付き）
+        run: npm run build
+        env:
+          VITE_FIREBASE_API_KEY: ${{ secrets.VITE_FIREBASE_API_KEY }}
+          VITE_FIREBASE_AUTH_DOMAIN: ${{ secrets.VITE_FIREBASE_AUTH_DOMAIN }}
+          VITE_FIREBASE_PROJECT_ID: ${{ secrets.VITE_FIREBASE_PROJECT_ID }}
+          VITE_FIREBASE_STORAGE_BUCKET: ${{ secrets.VITE_FIREBASE_STORAGE_BUCKET }}
+          VITE_FIREBASE_MESSAGING_SENDER_ID: ${{ secrets.VITE_FIREBASE_MESSAGING_SENDER_ID }}
+          VITE_FIREBASE_APP_ID: ${{ secrets.VITE_FIREBASE_APP_ID }}
+          VITE_FIREBASE_MEASUREMENT_ID: ${{ secrets.VITE_FIREBASE_MEASUREMENT_ID }}
 
       - name: Firebase CLIをインストール
         run: npm install -g firebase-tools
