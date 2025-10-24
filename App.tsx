@@ -245,7 +245,11 @@ const App: React.FC = () => {
       if (saved) {
         const { schedule: draftSchedule, savedAt } = JSON.parse(saved);
         console.log(`Draft loaded from LocalStorage (saved at ${savedAt})`);
-        // Note: This will be overridden by Firestore real-time listener if data exists
+        // Apply draft only if no schedule exists yet
+        // Note: Firestore real-time listener will override this if Firestore has data
+        if (schedule.length === 0 && Array.isArray(draftSchedule)) {
+          setSchedule(draftSchedule);
+        }
       }
     } catch (err) {
       console.error('Failed to load draft from LocalStorage:', err);
