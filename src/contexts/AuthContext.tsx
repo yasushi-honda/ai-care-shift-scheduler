@@ -2,15 +2,20 @@ import React, { createContext, useContext, useEffect, useState, ReactNode } from
 import { User as FirebaseUser, onAuthStateChanged, signInWithPopup, signOut as firebaseSignOut } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
 import { auth, googleProvider, db, authReady } from '../../firebase';
-import { User, AuthError, Result } from '../../types';
+import { User, AuthError, Result, FacilityRole } from '../../types';
+import { createOrUpdateUser } from '../services/userService';
 
 // AuthContext の型定義
 interface AuthContextType {
   currentUser: FirebaseUser | null;
   userProfile: User | null;
+  selectedFacilityId: string | null;
   loading: boolean;
   signInWithGoogle: () => Promise<Result<void, AuthError>>;
   signOut: () => Promise<Result<void, AuthError>>;
+  selectFacility: (facilityId: string) => void;
+  hasRole: (facilityId: string, role: FacilityRole) => boolean;
+  isSuperAdmin: () => boolean;
 }
 
 // Context の作成
@@ -20,6 +25,7 @@ const AuthContext = createContext<AuthContextType | null>(null);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [currentUser, setCurrentUser] = useState<FirebaseUser | null>(null);
   const [userProfile, setUserProfile] = useState<User | null>(null);
+  const [selectedFacilityId, setSelectedFacilityId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -35,17 +41,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           try {
             const userDoc = await getDoc(doc(db, 'users', user.uid));
             if (userDoc.exists()) {
-              setUserProfile(userDoc.data() as User);
+              const profile = userDoc.data() as User;
+              setUserProfile(profile);
+
+              // 施設の自動選択ロジック
+              // 権限がある施設が1つなら自動選択、複数または0の場合はnull
+              if (profile.facilities && profile.facilities.length === 1) {
+                setSelectedFacilityId(profile.facilities[0].facilityId);
+              } else {
+                setSelectedFacilityId(null);
+              }
             } else {
               // ユーザードキュメントが存在しない場合はnull
               setUserProfile(null);
+              setSelectedFacilityId(null);
             }
           } catch (error) {
             console.error('Failed to fetch user profile:', error);
             setUserProfile(null);
+            setSelectedFacilityId(null);
           }
         } else {
           setUserProfile(null);
+          setSelectedFacilityId(null);
         }
 
         setLoading(false);
@@ -65,7 +83,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Google OAuth ログイン
   const signInWithGoogle = async (): Promise<Result<void, AuthError>> => {
     try {
-      await signInWithPopup(auth, googleProvider);
+      const result = await signInWithPopup(auth, googleProvider);
+      const firebaseUser = result.user;
+
+      // ユーザードキュメントの作成または更新
+      const userResult = await createOrUpdateUser(firebaseUser);
+
+      if (!userResult.success) {
+        // ユーザードキュメント作成失敗時はエラーを返す
+        // TypeScriptの型narrowingが機能しないため、明示的に型アサーション
+        const failureResult = userResult as { success: false; error: AuthError };
+        return {
+          success: false,
+          error: failureResult.error
+        };
+      }
+
+      // ユーザードキュメント作成成功
+      // ユーザープロファイルを即座に設定（race condition回避）
+      setUserProfile(userResult.data);
       return { success: true, data: undefined };
     } catch (error: any) {
       console.error('Sign in error:', error);
@@ -105,12 +141,78 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  // 施設選択
+  const selectFacility = (facilityId: string) => {
+    if (!userProfile || !userProfile.facilities) {
+      console.error('Cannot select facility: User profile not loaded');
+      return;
+    }
+
+    // ユーザーが指定施設へのアクセス権限を持っているか確認
+    const hasAccess = userProfile.facilities.some(
+      (f) => f.facilityId === facilityId
+    );
+
+    if (!hasAccess) {
+      console.error(`User does not have access to facility: ${facilityId}`);
+      return;
+    }
+
+    setSelectedFacilityId(facilityId);
+  };
+
+  // ロール判定（指定施設に対して指定ロール以上の権限を持つか）
+  const hasRole = (facilityId: string, role: FacilityRole): boolean => {
+    if (!userProfile || !userProfile.facilities) {
+      return false;
+    }
+
+    // 指定施設へのアクセス権限を取得
+    const facilityAccess = userProfile.facilities.find(
+      (f) => f.facilityId === facilityId
+    );
+
+    if (!facilityAccess) {
+      return false;
+    }
+
+    // super-adminは全権限を持つ
+    if (facilityAccess.role === FacilityRole.SuperAdmin) {
+      return true;
+    }
+
+    // ロール階層チェック
+    const roleHierarchy: Record<FacilityRole, number> = {
+      [FacilityRole.SuperAdmin]: 4,
+      [FacilityRole.Admin]: 3,
+      [FacilityRole.Editor]: 2,
+      [FacilityRole.Viewer]: 1,
+    };
+
+    return roleHierarchy[facilityAccess.role] >= roleHierarchy[role];
+  };
+
+  // super-admin判定
+  const isSuperAdmin = (): boolean => {
+    if (!userProfile || !userProfile.facilities) {
+      return false;
+    }
+
+    return userProfile.facilities.some(
+      (f) => f.role === FacilityRole.SuperAdmin
+    );
+  };
+
   const value: AuthContextType = {
     currentUser,
     userProfile,
+    selectedFacilityId,
     loading,
     signInWithGoogle,
     signOut,
+    selectFacility,
+    hasRole,
+    isSuperAdmin,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

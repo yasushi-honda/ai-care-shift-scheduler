@@ -6,86 +6,96 @@
 
 ---
 
-## Phase 1: 認証基盤の構築
+## Phase 1: 認証基盤の構築 ✅ 完了
 
-- [ ] 1. Firebase Authentication統合とテスト環境の準備
-- [ ] 1.1 Firebase認証SDKの統合とGoogle OAuthプロバイダーの設定
+- [x] 1. Firebase Authentication統合とテスト環境の準備
+- [x] 1.1 Firebase認証SDKの統合とGoogle OAuthプロバイダーの設定
   - Firebase Authentication SDKをプロジェクトに追加
   - Google OAuthプロバイダーの設定とテスト
   - 認証状態の永続化設定（ブラウザセッション）
   - 認証エラーハンドリングの基本構造
   - _Requirements: 1.1, 1.2, 1.3, 1.4, 1.13_
+  - **実装**: `firebase.ts` - Firebase初期化、Google OAuthプロバイダー設定、永続化設定
 
-- [ ] 1.2 認証状態管理とコンテキストプロバイダーの実装
+- [x] 1.2 認証状態管理とコンテキストプロバイダーの実装
   - 認証状態を管理するグローバルコンテキストの作成
   - 現在のユーザー情報を保持する状態管理
   - 認証状態の変更を監視するリスナーの実装
   - ログイン・ログアウト機能の提供
   - _Requirements: 1.1, 1.9, 1.13_
+  - **実装**: `src/contexts/AuthContext.tsx` - AuthProvider, useAuth, onAuthStateChanged
 
-- [ ] 1.3 ログイン画面とGoogle OAuth認証フローの実装
+- [x] 1.3 ログイン画面とGoogle OAuth認証フローの実装
   - 未認証ユーザー向けのログイン画面UI
   - 「Googleでログイン」ボタンと認証フロー
   - 認証成功後のリダイレクト処理
   - 認証失敗時のエラーメッセージ表示
   - _Requirements: 1.1, 1.2, 1.3, 1.4, 1.10, 1.11_
+  - **実装**: `src/components/LoginPage.tsx` - ログインUI、signInWithGoogle、エラーハンドリング
 
-- [ ] 1.4 保護されたルートと認証チェック機能の実装
+- [x] 1.4 保護されたルートと認証チェック機能の実装
   - 未認証ユーザーをログイン画面にリダイレクトする仕組み
   - 認証済みユーザーのみアクセス可能なルート保護
   - 認証状態に基づくナビゲーション制御
   - ログアウト機能とセッション終了処理
   - _Requirements: 1.1, 1.12, 7.3_
+  - **実装**: `src/components/ProtectedRoute.tsx`, `index.tsx` - ルート保護、AuthProvider統合
 
 ---
 
 ## Phase 2: ユーザー登録とアクセス権限管理
 
 - [ ] 2. 初回ユーザー登録とsuper-admin自動付与
-- [ ] 2.1 初回ログイン時のユーザードキュメント自動作成機能
+- [x] 2.1 初回ログイン時のユーザードキュメント自動作成機能
   - Google OAuthから取得したユーザー情報をFirestoreに保存
   - ユーザードキュメントの構造（userId, email, name, photoURL, facilities配列）
   - 初回作成時と既存ユーザーログイン時の判定ロジック
   - lastLoginAtタイムスタンプの更新処理
   - _Requirements: 1.5, 1.6, 1.9_
+  - **実装**: `src/services/userService.ts` - createOrUpdateUser、フィールド検証
 
-- [ ] 2.2 システム初回ユーザーへのsuper-admin権限自動付与
+- [x] 2.2 システム初回ユーザーへのsuper-admin権限自動付与
   - システム内のユーザー数をカウントする機能
   - 初回ユーザー（1人目）をsuper-admin権限で作成
   - デフォルト施設の自動作成とadmin権限の付与
   - super-admin付与のCloud Function実装
   - _Requirements: 1.7, 12.1_
+  - **実装**: `functions/src/auth-onCreate.ts` - assignSuperAdminOnFirstUser trigger、トランザクションでレースコンディション防止、/system/configでfirst userフラグ管理
 
-- [ ] 2.3 アクセス権限なしユーザーの処理と案内画面
+- [x] 2.3 アクセス権限なしユーザーの処理と案内画面
   - 2人目以降のユーザーを権限なし（facilities: []）で作成
   - 「アクセス権限がありません。管理者に連絡してください」画面の実装
   - 管理者への連絡方法の案内表示
   - _Requirements: 1.8, 2.3_
+  - **実装**: `src/components/NoAccessPage.tsx` - アクセス権限なし画面、`src/components/ProtectedRoute.tsx` - facilities配列チェック追加
 
 ---
 
-## Phase 3: 事業所管理とロールベースアクセス制御
+## Phase 3: 事業所管理とロールベースアクセス制御 ✅ 完了
 
-- [ ] 3. 事業所管理とRBACの基盤実装
-- [ ] 3.1 事業所データモデルとFirestore統合の実装
+- [x] 3. 事業所管理とRBACの基盤実装
+- [x] 3.1 事業所データモデルとFirestore統合の実装
   - 事業所（facility）コレクションの作成と構造定義
   - 事業所メタデータ（名前、作成日、メンバーリスト）の管理
   - 事業所データの作成・読取・更新機能
   - _Requirements: 2.1, 2.2_
+  - **実装**: `firestore.rules` - RBAC実装のSecurity Rules、hasRole()、isSuperAdmin()関数
 
-- [ ] 3.2 ユーザーのロール判定と権限チェック機能の実装
+- [x] 3.2 ユーザーのロール判定と権限チェック機能の実装
   - ユーザーの所属施設とロール情報の読み込み
   - ロール別の権限判定ロジック（super-admin, admin, editor, viewer）
   - 権限がない操作の拒否とエラーメッセージ表示
   - 他の施設データへのアクセス制限
   - _Requirements: 2.4, 2.5, 2.6, 2.7, 2.8, 2.9, 2.10, 2.11, 2.12, 2.13, 2.14_
+  - **実装**: `src/contexts/AuthContext.tsx` - hasRole(), isSuperAdmin(), selectFacility()追加、selectedFacilityId状態管理
 
-- [ ] 3.3 施設選択UIと複数施設対応の実装
+- [x] 3.3 施設選択UIと複数施設対応の実装
   - 1つの施設のみの場合は自動選択してメイン画面表示
   - 複数施設に所属する場合の施設選択UI
   - 施設切り替え時のデータロードとメモリクリア
   - 現在選択中の施設IDとロールの保持
   - _Requirements: 2.4, 2.5, 2.6, 2.15_
+  - **実装**: `src/components/FacilitySelectorPage.tsx` - 施設選択画面、`src/components/ProtectedRoute.tsx` - 施設選択ロジック追加
 
 ---
 

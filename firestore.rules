@@ -2,46 +2,125 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    // ⚠️⚠️⚠️ 重要な警告 ⚠️⚠️⚠️
-    //
-    // 【現状】MVPフェーズ - 認証機能なし（開発用）
-    // - 誰でもすべてのデータにアクセス可能
-    // - 本番データは絶対に入力しないでください
-    // - 公開URLは関係者のみに共有
-    //
-    // 【Phase 2で実装予定】Firebase Authentication + 詳細なルール
-    // - 認証済みユーザーのみアクセス許可
-    // - 事業所ごとのデータ分離
-    // - ロールベースのアクセス制御
-    //
-    // 【リスク】
-    // - データの漏洩・改ざんが可能
-    // - Firestoreコストの増加
-    //
-    // このルールは開発・検証目的のみに使用してください。
+
+    // ==================== Helper Functions ====================
+
+    // 認証済みユーザーかチェック
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // ユーザープロファイルを取得
+    function getUserProfile() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    // 指定施設に対して指定ロール以上の権限を持つかチェック
+    function hasRole(facilityId, requiredRole) {
+      let userProfile = getUserProfile();
+      let facility = userProfile.facilities.where(f, f.facilityId == facilityId)[0];
+
+      if (facility == null) {
+        return false;
+      }
+
+      // super-adminは全権限を持つ
+      if (facility.role == 'super-admin') {
+        return true;
+      }
+
+      // ロール階層チェック
+      if (requiredRole == 'admin') {
+        return facility.role == 'admin';
+      }
+
+      if (requiredRole == 'editor') {
+        return facility.role in ['admin', 'editor'];
+      }
+
+      if (requiredRole == 'viewer') {
+        return facility.role in ['admin', 'editor', 'viewer'];
+      }
+
+      return false;
+    }
+
+    // super-admin権限を持つかチェック
+    function isSuperAdmin() {
+      let userProfile = getUserProfile();
+      return userProfile.facilities.where(f, f.role == 'super-admin').size() > 0;
+    }
+
+    // ==================== Collections ====================
+
+    // system collection (super-admin only, Cloud Functionからの書き込みのみ)
+    match /system/{document} {
+      allow read: if isSuperAdmin();
+      allow write: if false; // Cloud Functionのみ
+    }
+
+    // users collection
+    match /users/{userId} {
+      // 自分のドキュメントのみ読み取り可能
+      allow read: if isAuthenticated() && request.auth.uid == userId;
+      // 書き込みはCloud Functionのみ
+      allow write: if false;
+    }
+
+    // facilities collection
+    match /facilities/{facilityId} {
+      // viewer以上の権限で読み取り可能
+      allow read: if isAuthenticated() && hasRole(facilityId, 'viewer');
+      // super-adminのみ作成・削除可能
+      allow create, delete: if isAuthenticated() && isSuperAdmin();
+      // admin権限で更新可能
+      allow update: if isAuthenticated() && hasRole(facilityId, 'admin');
+
+      // staff subcollection
+      match /staff/{staffId} {
+        // viewer以上で読み取り、editor以上で書き込み
+        allow read: if isAuthenticated() && hasRole(facilityId, 'viewer');
+        allow write: if isAuthenticated() && hasRole(facilityId, 'editor');
+      }
+
+      // schedules subcollection
+      match /schedules/{scheduleId} {
+        // viewer以上で読み取り、editor以上で書き込み
+        allow read: if isAuthenticated() && hasRole(facilityId, 'viewer');
+        allow write: if isAuthenticated() && hasRole(facilityId, 'editor');
+      }
+
+      // leaveRequests subcollection
+      match /leaveRequests/{requestId} {
+        // viewer以上で読み取り、editor以上で書き込み
+        allow read: if isAuthenticated() && hasRole(facilityId, 'viewer');
+        allow write: if isAuthenticated() && hasRole(facilityId, 'editor');
+      }
+
+      // requirements subcollection
+      match /requirements/{requirementId} {
+        // viewer以上で読み取り、admin以上で書き込み
+        allow read: if isAuthenticated() && hasRole(facilityId, 'viewer');
+        allow write: if isAuthenticated() && hasRole(facilityId, 'admin');
+      }
+
+      // invitations subcollection (Phase 2-3で実装予定)
+      match /invitations/{invitationId} {
+        // admin以上で読み取り・作成、更新・削除はCloud Functionのみ
+        allow read, create: if isAuthenticated() && hasRole(facilityId, 'admin');
+        allow update, delete: if false; // Cloud Functionのみ
+      }
+    }
+
+    // auditLogs collection (super-admin only, Phase 2-4で実装予定)
+    match /auditLogs/{logId} {
+      allow read: if isAuthenticated() && isSuperAdmin();
+      allow write: if false; // Cloud Functionのみ
+    }
+
+    // デフォルトルール: 上記以外のコレクションはアクセス拒否
     match /{document=**} {
-      allow read, write: if true;
+      allow read, write: if false;
     }
   }
 }
-
-// Phase 2で実装予定の認証付きルール:
-//
-// match /facilities/{facilityId} {
-//   allow read: if request.auth != null &&
-//               request.auth.token.facilityId == facilityId;
-//   allow write: if request.auth != null &&
-//                request.auth.token.role in ['admin', 'manager'];
-//
-//   match /staff/{staffId} {
-//     allow read, write: if request.auth != null &&
-//                          request.auth.token.facilityId == facilityId;
-//   }
-//
-//   match /schedules/{scheduleId} {
-//     allow read: if request.auth != null &&
-//                   request.auth.token.facilityId == facilityId;
-//     allow write: if request.auth != null &&
-//                    request.auth.token.role in ['admin', 'manager'];
-//   }
-// }

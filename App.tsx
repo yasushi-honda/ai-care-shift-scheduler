@@ -239,11 +239,11 @@ const App: React.FC = () => {
               <div>
                  <h4 className="text-md font-bold text-slate-700 mb-2">時間帯別 必要人員</h4>
                  <div className="space-y-2 text-sm">
-                    {Object.entries(requirements.requirements).map(([shiftName, req]) => (
+                    {Object.entries(requirements.requirements).map(([shiftName, req]: [string, any]) => (
                         <div key={shiftName} className="p-3 bg-white rounded-lg border border-slate-200">
                            <span className="font-semibold">{shiftName}:</span> 合計 {req.totalStaff}人
-                           {req.requiredRoles.length > 0 && `, (内 ${req.requiredRoles.map(r => `${r.role} ${r.count}人`).join(', ')})`}
-                           {req.requiredQualifications.length > 0 && `, (内 ${req.requiredQualifications.map(q => `${q.qualification} ${q.count}人`).join(', ')})`}
+                           {req.requiredRoles.length > 0 && `, (内 ${req.requiredRoles.map((r: any) => `${r.role} ${r.count}人`).join(', ')})`}
+                           {req.requiredQualifications.length > 0 && `, (内 ${req.requiredQualifications.map((q: any) => `${q.qualification} ${q.count}人`).join(', ')})`}
                         </div>
                     ))}
                  </div>

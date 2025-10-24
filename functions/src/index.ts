@@ -15,3 +15,4 @@ setGlobalOptions({
 
 // エンドポイントのエクスポート
 export { generateShift } from './shift-generation';
+export { assignSuperAdminOnFirstUser, updateLastLogin } from './auth-onCreate';
