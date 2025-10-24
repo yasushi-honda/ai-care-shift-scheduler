@@ -199,4 +199,100 @@ export const ScheduleService = {
       };
     }
   },
+
+  /**
+   * 既存のスケジュールを更新（下書き保存）
+   *
+   * @param facilityId 施設ID
+   * @param scheduleId スケジュールID
+   * @param userId ユーザーID（更新者）
+   * @param updates 更新するフィールド
+   * @returns 更新結果
+   */
+  async updateSchedule(
+    facilityId: string,
+    scheduleId: string,
+    userId: string,
+    updates: Partial<Omit<Schedule, 'id' | 'createdAt' | 'createdBy'>>
+  ): Promise<Result<void, ScheduleError>> {
+    try {
+      // バリデーション
+      if (!facilityId || facilityId.trim() === '') {
+        return {
+          success: false,
+          error: {
+            code: 'VALIDATION_ERROR',
+            message: '施設IDは必須です',
+          },
+        };
+      }
+
+      if (!scheduleId || scheduleId.trim() === '') {
+        return {
+          success: false,
+          error: {
+            code: 'VALIDATION_ERROR',
+            message: 'スケジュールIDは必須です',
+          },
+        };
+      }
+
+      if (!userId || userId.trim() === '') {
+        return {
+          success: false,
+          error: {
+            code: 'VALIDATION_ERROR',
+            message: 'ユーザーIDは必須です',
+          },
+        };
+      }
+
+      // Firestoreで更新
+      const scheduleRef = doc(db, `facilities/${facilityId}/schedules/${scheduleId}`);
+
+      // ドキュメントの存在確認
+      const docSnap = await getDoc(scheduleRef);
+      if (!docSnap.exists()) {
+        return {
+          success: false,
+          error: {
+            code: 'NOT_FOUND',
+            message: 'スケジュールが見つかりません',
+          },
+        };
+      }
+
+      await updateDoc(scheduleRef, {
+        ...updates,
+        updatedAt: serverTimestamp(),
+        updatedBy: userId,
+      });
+
+      return {
+        success: true,
+        data: undefined,
+      };
+    } catch (error: any) {
+      console.error('Failed to update schedule:', error);
+
+      // 権限エラーの処理
+      if (error.code === 'permission-denied') {
+        return {
+          success: false,
+          error: {
+            code: 'PERMISSION_DENIED',
+            message: 'スケジュールを更新する権限がありません',
+          },
+        };
+      }
+
+      return {
+        success: false,
+        error: {
+          code: 'FIRESTORE_ERROR',
+          message: error.message || 'スケジュールの更新に失敗しました',
+        },
+      };
+    }
+  },
 };
