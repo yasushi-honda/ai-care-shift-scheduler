@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import {
   Role, Qualification, TimeSlotPreference, LeaveType,
   type Staff, type ShiftRequirement, type StaffSchedule, type GeneratedShift, type LeaveRequest, type WorkLogs, type WorkLogDetails
@@ -6,6 +6,8 @@ import {
 import { DEFAULT_TIME_SLOTS } from './constants';
 import { generateShiftSchedule } from './services/geminiService';
 import { exportToCSV } from './services/exportService';
+import { StaffService } from './src/services/staffService';
+import { useAuth } from './src/contexts/AuthContext';
 import ShiftTable from './components/ShiftTable';
 import Accordion from './components/Accordion';
 import MonthNavigator from './components/MonthNavigator';
@@ -13,18 +15,12 @@ import StaffSettings from './components/StaffSettings';
 import LeaveRequestCalendar from './components/LeaveRequestCalendar';
 import ConfirmModal from './components/ConfirmModal';
 
-const initialStaff: Staff[] = [
-  { id: 's001', name: '田中 愛', role: Role.Nurse, qualifications: [Qualification.RegisteredNurse, Qualification.DriversLicense], weeklyWorkCount: { hope: 4, must: 4 }, maxConsecutiveWorkDays: 5, availableWeekdays: [1,2,3,4,5], unavailableDates: ['2025-11-10', '2025-11-22'], timeSlotPreference: TimeSlotPreference.Any, isNightShiftOnly: false },
-  { id: 's002', name: '鈴木 太郎', role: Role.CareWorker, qualifications: [Qualification.CertifiedCareWorker, Qualification.DriversLicense], weeklyWorkCount: { hope: 5, must: 5 }, maxConsecutiveWorkDays: 4, availableWeekdays: [0,1,2,5,6], unavailableDates: [], timeSlotPreference: TimeSlotPreference.DayOnly, isNightShiftOnly: false },
-  { id: 's003', name: '佐藤 花子', role: Role.CareWorker, qualifications: [Qualification.CertifiedCareWorker], weeklyWorkCount: { hope: 3, must: 3 }, maxConsecutiveWorkDays: 5, availableWeekdays: [1,2,3,4,5,6], unavailableDates: [], timeSlotPreference: TimeSlotPreference.Any, isNightShiftOnly: false },
-  { id: 's004', name: '高橋 健太', role: Role.CareWorker, qualifications: [], weeklyWorkCount: { hope: 5, must: 4 }, maxConsecutiveWorkDays: 5, availableWeekdays: [0,1,2,3,4,5,6], unavailableDates: [], timeSlotPreference: TimeSlotPreference.NightOnly, isNightShiftOnly: true },
-  { id: 's005', name: '渡辺 久美子', role: Role.Nurse, qualifications: [Qualification.LicensedPracticalNurse], weeklyWorkCount: { hope: 4, must: 0 }, maxConsecutiveWorkDays: 3, availableWeekdays: [2,3,4], unavailableDates: ['2025-11-15'], timeSlotPreference: TimeSlotPreference.DayOnly, isNightShiftOnly: false },
-];
-
 type ViewMode = 'shift' | 'leaveRequest';
 
 const App: React.FC = () => {
-  const [staffList, setStaffList] = useState<Staff[]>(initialStaff);
+  const { selectedFacilityId } = useAuth();
+  const [staffList, setStaffList] = useState<Staff[]>([]);
+  const [loadingStaff, setLoadingStaff] = useState(true);
   const [requirements, setRequirements] = useState<ShiftRequirement>({
     targetMonth: '2025-11',
     timeSlots: DEFAULT_TIME_SLOTS,
@@ -54,16 +50,63 @@ const App: React.FC = () => {
   const [staffToDelete, setStaffToDelete] = useState<Staff | null>(null);
   const [openStaffId, setOpenStaffId] = useState<string | null>(null);
 
-  const handleStaffChange = useCallback((updatedStaff: Staff) => {
+  // Firestoreからスタッフデータをリアルタイムで購読
+  useEffect(() => {
+    if (!selectedFacilityId) {
+      setStaffList([]);
+      setLoadingStaff(false);
+      return;
+    }
+
+    setLoadingStaff(true);
+    try {
+      const unsubscribe = StaffService.subscribeToStaffList(
+        selectedFacilityId,
+        (staffList) => {
+          setStaffList(staffList);
+          setLoadingStaff(false);
+          // リスト取得成功時にエラーをクリア
+          if (error) setError(null);
+        }
+      );
+
+      return () => unsubscribe();
+    } catch (err) {
+      console.error('Failed to setup staff subscription:', err);
+      setError('スタッフ情報の購読設定に失敗しました');
+      setLoadingStaff(false);
+      setStaffList([]);
+    }
+  }, [selectedFacilityId]);
+
+  const handleStaffChange = useCallback(async (updatedStaff: Staff) => {
+    if (!selectedFacilityId) return;
+
+    // 楽観的UIアップデート用に現在のリストを保存
+    const previousStaffList = staffList;
     setStaffList(prevList =>
       prevList.map(staff => (staff.id === updatedStaff.id ? updatedStaff : staff))
     );
-  }, []);
+
+    // Firestoreに保存
+    const result = await StaffService.updateStaff(
+      selectedFacilityId,
+      updatedStaff.id,
+      updatedStaff
+    );
+
+    if (!result.success) {
+      console.error('Failed to update staff:', result.error);
+      // 楽観的アップデートをrevert
+      setStaffList(previousStaffList);
+      setError(`スタッフ情報の更新に失敗しました: ${result.error.message}`);
+    }
+  }, [selectedFacilityId, staffList]);
   
-  const handleAddNewStaff = useCallback(() => {
-    const newStaffId = 's' + Date.now();
-    const newStaff: Staff = {
-      id: newStaffId,
+  const handleAddNewStaff = useCallback(async () => {
+    if (!selectedFacilityId) return;
+
+    const newStaff = {
       name: '新規スタッフ',
       role: Role.CareWorker,
       qualifications: [],
@@ -74,10 +117,18 @@ const App: React.FC = () => {
       timeSlotPreference: TimeSlotPreference.Any,
       isNightShiftOnly: false,
     };
-    setStaffList(prevList => [...prevList, newStaff]);
-    // 新規追加されたスタッフを自動的に展開状態にする
-    setOpenStaffId(newStaffId);
-  }, []);
+
+    // Firestoreに作成
+    const result = await StaffService.createStaff(selectedFacilityId, newStaff);
+
+    if (result.success) {
+      // 新規追加されたスタッフを自動的に展開状態にする
+      setOpenStaffId(result.data);
+    } else {
+      console.error('Failed to create staff:', result.error);
+      setError(`スタッフの追加に失敗しました: ${result.error.message}`);
+    }
+  }, [selectedFacilityId]);
 
   const handleDeleteStaff = useCallback((staffId: string) => {
     const staff = staffList.find(s => s.id === staffId);
@@ -86,34 +137,42 @@ const App: React.FC = () => {
     }
   }, [staffList]);
 
-  const executeDeleteStaff = useCallback(() => {
-    if (!staffToDelete) return;
+  const executeDeleteStaff = useCallback(async () => {
+    if (!staffToDelete || !selectedFacilityId) return;
 
     const staffId = staffToDelete.id;
 
-    setStaffList(prevList => prevList.filter(staff => staff.id !== staffId));
-    
-    setLeaveRequests(prev => {
+    // Firestoreから削除
+    const result = await StaffService.deleteStaff(selectedFacilityId, staffId);
+
+    if (result.success) {
+      // 関連データのクリーンアップ
+      setLeaveRequests(prev => {
         const newRequests = { ...prev };
         delete newRequests[staffId];
         return newRequests;
-    });
+      });
 
-    setWorkLogs(prev => {
+      setWorkLogs(prev => {
         const newLogs = JSON.parse(JSON.stringify(prev));
         for (const date in newLogs) {
-            if (newLogs[date][staffId]) {
-                delete newLogs[date][staffId];
-                if (Object.keys(newLogs[date]).length === 0) {
-                    delete newLogs[date];
-                }
+          if (newLogs[date][staffId]) {
+            delete newLogs[date][staffId];
+            if (Object.keys(newLogs[date]).length === 0) {
+              delete newLogs[date];
             }
+          }
         }
         return newLogs;
-    });
+      });
 
-    setStaffToDelete(null);
-  }, [staffToDelete]);
+      setStaffToDelete(null);
+    } else {
+      console.error('Failed to delete staff:', result.error);
+      setError(`スタッフの削除に失敗しました: ${result.error.message}`);
+      setStaffToDelete(null);
+    }
+  }, [staffToDelete, selectedFacilityId]);
 
   const handleLeaveRequestChange = useCallback((staffId: string, date: string, leaveType: LeaveType | null) => {
     setLeaveRequests(prev => {
@@ -217,15 +276,22 @@ const App: React.FC = () => {
         </header>
         <div className="flex-grow overflow-y-auto">
           <Accordion title="スタッフ情報設定" icon={<UserGroupIcon/>}>
-            <StaffSettings
-              staffList={staffList}
-              onStaffChange={handleStaffChange}
-              onAddNewStaff={handleAddNewStaff}
-              onDeleteStaff={handleDeleteStaff}
-              targetMonth={requirements.targetMonth}
-              openStaffId={openStaffId}
-              onOpenStaffChange={setOpenStaffId}
-            />
+            {loadingStaff ? (
+              <div className="p-8 text-center">
+                <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-care-secondary"></div>
+                <p className="mt-2 text-sm text-slate-600">スタッフ情報を読み込み中...</p>
+              </div>
+            ) : (
+              <StaffSettings
+                staffList={staffList}
+                onStaffChange={handleStaffChange}
+                onAddNewStaff={handleAddNewStaff}
+                onDeleteStaff={handleDeleteStaff}
+                targetMonth={requirements.targetMonth}
+                openStaffId={openStaffId}
+                onOpenStaffChange={setOpenStaffId}
+              />
+            )}
           </Accordion>
           <Accordion title="事業所のシフト要件設定" icon={<ClipboardIcon/>}>
             <div className="space-y-6">
