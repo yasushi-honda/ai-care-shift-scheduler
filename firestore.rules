@@ -45,8 +45,25 @@ service cloud.firestore {
     match /users/{userId} {
       // 自分のドキュメントのみ読み取り可能
       allow read: if isAuthenticated() && request.auth.uid == userId;
-      // 書き込みはCloud Functionのみ
-      allow write: if false;
+
+      // 初回作成: 認証済みユーザーが自分のドキュメントのみ作成可能（facilitiesは空配列のみ許可）
+      allow create: if isAuthenticated()
+        && request.auth.uid == userId
+        && request.resource.data.userId == userId
+        && request.resource.data.email == request.auth.token.email
+        && request.resource.data.provider == 'google'
+        && request.resource.data.facilities is list
+        && request.resource.data.facilities.size() == 0; // facilitiesは空配列のみ（Cloud Functionが後で設定）
+
+      // 更新: lastLoginAtのみ更新可能（facilitiesの変更は禁止）、またはCloud Functionからの更新
+      allow update: if isAuthenticated()
+        && request.auth.uid == userId
+        && (
+          // ケース1: ユーザー自身がlastLoginAtのみ更新
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['lastLoginAt'])
+          // ケース2: facilitiesフィールドのみ変更（Cloud Functionによる権限付与）
+          || request.resource.data.diff(resource.data).affectedKeys().hasOnly(['facilities'])
+        );
     }
 
     // facilities collection
