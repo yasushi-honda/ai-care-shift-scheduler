@@ -18,8 +18,13 @@ import ConfirmModal from './components/ConfirmModal';
 
 type ViewMode = 'shift' | 'leaveRequest';
 
+type ToastMessage = {
+  message: string;
+  type: 'success' | 'error';
+} | null;
+
 const App: React.FC = () => {
-  const { selectedFacilityId } = useAuth();
+  const { selectedFacilityId, currentUser } = useAuth();
   const [staffList, setStaffList] = useState<Staff[]>([]);
   const [loadingStaff, setLoadingStaff] = useState(true);
   const [staffError, setStaffError] = useState<string | null>(null);
@@ -27,6 +32,7 @@ const App: React.FC = () => {
   const [loadingSchedule, setLoadingSchedule] = useState(false);
   const [scheduleError, setScheduleError] = useState<string | null>(null);
   const [scheduleRetryTrigger, setScheduleRetryTrigger] = useState(0);
+  const [toast, setToast] = useState<ToastMessage>(null);
   const [requirements, setRequirements] = useState<ShiftRequirement>({
     targetMonth: '2025-11',
     timeSlots: DEFAULT_TIME_SLOTS,
@@ -187,6 +193,21 @@ const App: React.FC = () => {
     setScheduleRetryTrigger(prev => prev + 1);
   }, []);
 
+  // Toast notification helper
+  const showToast = useCallback((message: string, type: 'success' | 'error') => {
+    setToast({ message, type });
+  }, []);
+
+  // Auto-hide toast after 3 seconds
+  useEffect(() => {
+    if (toast) {
+      const timer = setTimeout(() => {
+        setToast(null);
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [toast]);
+
   const handleAddNewStaff = useCallback(async () => {
     if (!selectedFacilityId) return;
 
@@ -292,21 +313,47 @@ const App: React.FC = () => {
   }, []);
 
   const handleGenerateClick = useCallback(async () => {
+    if (!selectedFacilityId || !currentUser) {
+      showToast('施設またはユーザー情報が取得できません', 'error');
+      return;
+    }
+
     setIsLoading(true);
     setGeneratingSchedule(true);
     setError(null);
-    setSchedule([]);
+
     try {
+      // AI生成
       const result = await generateShiftSchedule(staffList, requirements, leaveRequests);
-      setSchedule(result);
-      setViewMode('shift');
+
+      // Firestoreに自動保存（保存成功後、リアルタイムリスナーが自動的にUIを更新）
+      const saveResult = await ScheduleService.saveSchedule(
+        selectedFacilityId,
+        currentUser.uid,
+        {
+          targetMonth: requirements.targetMonth,
+          staffSchedules: result,
+          version: 1,
+          status: 'draft',
+        }
+      );
+
+      if (saveResult.success) {
+        showToast('シフトを生成し、保存しました', 'success');
+        setViewMode('shift');
+      } else {
+        showToast(`保存に失敗しました: ${saveResult.error.message}`, 'error');
+        setError(`保存に失敗しました: ${saveResult.error.message}`);
+      }
     } catch (err) {
-      setError(err instanceof Error ? err.message : '不明なエラーが発生しました。');
+      const errorMessage = err instanceof Error ? err.message : '不明なエラーが発生しました。';
+      setError(errorMessage);
+      showToast(errorMessage, 'error');
     } finally {
       setIsLoading(false);
       setGeneratingSchedule(false);
     }
-  }, [staffList, requirements, leaveRequests]);
+  }, [staffList, requirements, leaveRequests, selectedFacilityId, currentUser, showToast]);
 
   const handleExportCSV = () => {
     if (schedule.length > 0) {
@@ -316,8 +363,15 @@ const App: React.FC = () => {
     }
   };
 
-  const handleGenerateDemo = () => {
+  const handleGenerateDemo = useCallback(async () => {
+    if (!selectedFacilityId || !currentUser) {
+      showToast('施設またはユーザー情報が取得できません', 'error');
+      return;
+    }
+
     setGeneratingSchedule(true);
+    setError(null);
+
     const [year, month] = requirements.targetMonth.split('-').map(Number);
     const daysInMonth = new Date(year, month, 0).getDate();
     const shiftTypes = [...requirements.timeSlots.map(ts => ts.name), '休', '休', '休'];
@@ -332,11 +386,34 @@ const App: React.FC = () => {
       return { staffId: staff.id, staffName: staff.name, monthlyShifts };
     });
 
-    setError(null);
-    setSchedule(demoSchedule);
-    setViewMode('shift');
-    setGeneratingSchedule(false);
-  };
+    // Firestoreに自動保存（保存成功後、リアルタイムリスナーが自動的にUIを更新）
+    try {
+      const saveResult = await ScheduleService.saveSchedule(
+        selectedFacilityId,
+        currentUser.uid,
+        {
+          targetMonth: requirements.targetMonth,
+          staffSchedules: demoSchedule,
+          version: 1,
+          status: 'draft',
+        }
+      );
+
+      if (saveResult.success) {
+        showToast('デモシフトを生成し、保存しました', 'success');
+        setViewMode('shift');
+      } else {
+        showToast(`保存に失敗しました: ${saveResult.error.message}`, 'error');
+        setError(`保存に失敗しました: ${saveResult.error.message}`);
+      }
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : '保存時にエラーが発生しました';
+      showToast(errorMessage, 'error');
+      setError(errorMessage);
+    } finally {
+      setGeneratingSchedule(false);
+    }
+  }, [requirements, staffList, selectedFacilityId, currentUser, showToast]);
 
   const ViewSwitcher = () => (
     <div className="flex border-b border-slate-300">
@@ -508,6 +585,50 @@ const App: React.FC = () => {
         confirmText="削除する"
         confirmButtonClass="bg-red-600 hover:bg-red-700 focus:ring-red-500"
       />
+
+      {/* Toast Notification */}
+      {toast && (
+        <div className="fixed top-4 right-4 z-50 animate-slide-in">
+          <div
+            className={`px-6 py-4 rounded-lg shadow-lg flex items-center gap-3 min-w-[300px] ${
+              toast.type === 'success'
+                ? 'bg-green-50 border border-green-200 text-green-800'
+                : 'bg-red-50 border border-red-200 text-red-800'
+            }`}
+          >
+            {toast.type === 'success' ? (
+              <svg className="w-6 h-6 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                <path
+                  fillRule="evenodd"
+                  d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                  clipRule="evenodd"
+                />
+              </svg>
+            ) : (
+              <svg className="w-6 h-6 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                <path
+                  fillRule="evenodd"
+                  d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                  clipRule="evenodd"
+                />
+              </svg>
+            )}
+            <p className="font-medium">{toast.message}</p>
+            <button
+              onClick={() => setToast(null)}
+              className="ml-auto p-1 rounded-md hover:bg-white/50 transition-colors"
+            >
+              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                <path
+                  fillRule="evenodd"
+                  d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+                  clipRule="evenodd"
+                />
+              </svg>
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
