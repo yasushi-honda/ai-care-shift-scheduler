@@ -39,6 +39,7 @@ const App: React.FC = () => {
   });
   const [schedule, setSchedule] = useState<StaffSchedule[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [generatingSchedule, setGeneratingSchedule] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>('shift');
   const [leaveRequests, setLeaveRequests] = useState<LeaveRequest>({
@@ -101,6 +102,11 @@ const App: React.FC = () => {
 
   // Firestoreからスケジュールデータをリアルタイムで購読
   useEffect(() => {
+    // 手動生成中は購読をスキップ
+    if (generatingSchedule) {
+      return;
+    }
+
     if (!selectedFacilityId || !requirements.targetMonth) {
       setSchedule([]);
       setLoadingSchedule(false);
@@ -147,7 +153,7 @@ const App: React.FC = () => {
       setLoadingSchedule(false);
       setSchedule([]);
     }
-  }, [selectedFacilityId, requirements.targetMonth, scheduleRetryTrigger]);
+  }, [selectedFacilityId, requirements.targetMonth, scheduleRetryTrigger, generatingSchedule]);
 
   const handleStaffChange = useCallback(async (updatedStaff: Staff) => {
     if (!selectedFacilityId) return;
@@ -287,6 +293,7 @@ const App: React.FC = () => {
 
   const handleGenerateClick = useCallback(async () => {
     setIsLoading(true);
+    setGeneratingSchedule(true);
     setError(null);
     setSchedule([]);
     try {
@@ -297,6 +304,7 @@ const App: React.FC = () => {
       setError(err instanceof Error ? err.message : '不明なエラーが発生しました。');
     } finally {
       setIsLoading(false);
+      setGeneratingSchedule(false);
     }
   }, [staffList, requirements, leaveRequests]);
 
@@ -309,6 +317,7 @@ const App: React.FC = () => {
   };
 
   const handleGenerateDemo = () => {
+    setGeneratingSchedule(true);
     const [year, month] = requirements.targetMonth.split('-').map(Number);
     const daysInMonth = new Date(year, month, 0).getDate();
     const shiftTypes = [...requirements.timeSlots.map(ts => ts.name), '休', '休', '休'];
@@ -322,10 +331,11 @@ const App: React.FC = () => {
       }
       return { staffId: staff.id, staffName: staff.name, monthlyShifts };
     });
-    
+
     setError(null);
     setSchedule(demoSchedule);
     setViewMode('shift');
+    setGeneratingSchedule(false);
   };
 
   const ViewSwitcher = () => (
