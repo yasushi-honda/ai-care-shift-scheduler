@@ -44,6 +44,7 @@ const App: React.FC = () => {
     }
   });
   const [schedule, setSchedule] = useState<StaffSchedule[]>([]);
+  const [currentScheduleId, setCurrentScheduleId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [generatingSchedule, setGeneratingSchedule] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -141,9 +142,11 @@ const App: React.FC = () => {
           if (schedules.length > 0) {
             // 最新のスケジュール（最初の要素）を使用
             setSchedule(schedules[0].staffSchedules);
+            setCurrentScheduleId(schedules[0].id);
           } else {
             // シフトが存在しない場合は空の配列
             setSchedule([]);
+            setCurrentScheduleId(null);
           }
           setLoadingSchedule(false);
           setScheduleError(null);
@@ -207,6 +210,51 @@ const App: React.FC = () => {
       return () => clearTimeout(timer);
     }
   }, [toast]);
+
+  // LocalStorage auto-save: save schedule draft every 3 seconds after edit
+  useEffect(() => {
+    if (!selectedFacilityId || schedule.length === 0) {
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      const key = `draft-schedule-${selectedFacilityId}-${requirements.targetMonth}`;
+      try {
+        localStorage.setItem(key, JSON.stringify({
+          schedule,
+          savedAt: new Date().toISOString(),
+        }));
+        console.log('Draft auto-saved to LocalStorage');
+      } catch (err) {
+        console.error('Failed to save draft to LocalStorage:', err);
+      }
+    }, 3000);
+
+    return () => clearTimeout(timer);
+  }, [schedule, selectedFacilityId, requirements.targetMonth]);
+
+  // Load draft from LocalStorage on mount
+  useEffect(() => {
+    if (!selectedFacilityId || !requirements.targetMonth) {
+      return;
+    }
+
+    const key = `draft-schedule-${selectedFacilityId}-${requirements.targetMonth}`;
+    try {
+      const saved = localStorage.getItem(key);
+      if (saved) {
+        const { schedule: draftSchedule, savedAt } = JSON.parse(saved);
+        console.log(`Draft loaded from LocalStorage (saved at ${savedAt})`);
+        // Apply draft only if no schedule exists yet
+        // Note: Firestore real-time listener will override this if Firestore has data
+        if (schedule.length === 0 && Array.isArray(draftSchedule)) {
+          setSchedule(draftSchedule);
+        }
+      }
+    } catch (err) {
+      console.error('Failed to load draft from LocalStorage:', err);
+    }
+  }, [selectedFacilityId, requirements.targetMonth]);
 
   const handleAddNewStaff = useCallback(async () => {
     if (!selectedFacilityId) return;
@@ -312,6 +360,25 @@ const App: React.FC = () => {
     });
   }, []);
 
+  const handleShiftChange = useCallback((staffId: string, date: string, newShiftType: string) => {
+    setSchedule(prev => {
+      return prev.map(staff => {
+        if (staff.staffId === staffId) {
+          return {
+            ...staff,
+            monthlyShifts: staff.monthlyShifts.map(shift => {
+              if (shift.date === date) {
+                return { ...shift, shiftType: newShiftType };
+              }
+              return shift;
+            }),
+          };
+        }
+        return staff;
+      });
+    });
+  }, []);
+
   const handleGenerateClick = useCallback(async () => {
     if (!selectedFacilityId || !currentUser) {
       showToast('施設またはユーザー情報が取得できません', 'error');
@@ -362,6 +429,46 @@ const App: React.FC = () => {
       alert("エクスポートするシフトデータがありません。");
     }
   };
+
+  const handleSaveDraft = useCallback(async () => {
+    if (!selectedFacilityId || !currentUser || !currentScheduleId) {
+      showToast('保存に必要な情報が不足しています', 'error');
+      return;
+    }
+
+    if (schedule.length === 0) {
+      showToast('保存するシフトがありません', 'error');
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      const result = await ScheduleService.updateSchedule(
+        selectedFacilityId,
+        currentScheduleId,
+        currentUser.uid,
+        {
+          staffSchedules: schedule,
+          status: 'draft',
+        }
+      );
+
+      if (result.success) {
+        showToast('下書きを保存しました', 'success');
+        // LocalStorageの下書きを削除
+        const key = `draft-schedule-${selectedFacilityId}-${requirements.targetMonth}`;
+        localStorage.removeItem(key);
+      } else {
+        showToast(`保存に失敗しました: ${result.error.message}`, 'error');
+      }
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : '保存時にエラーが発生しました';
+      showToast(errorMessage, 'error');
+    } finally {
+      setIsLoading(false);
+    }
+  }, [selectedFacilityId, currentUser, currentScheduleId, schedule, requirements.targetMonth, showToast]);
 
   const handleGenerateDemo = useCallback(async () => {
     if (!selectedFacilityId || !currentUser) {
@@ -526,6 +633,16 @@ const App: React.FC = () => {
               <SparklesIcon/>
               <span className="ml-2">デモシフト作成</span>
             </button>
+            <button
+              onClick={handleSaveDraft}
+              disabled={isLoading || !currentScheduleId || schedule.length === 0}
+              className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg shadow-sm text-sm inline-flex items-center transition-colors duration-200 disabled:bg-slate-400 disabled:cursor-not-allowed"
+            >
+              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
+              </svg>
+              <span className="ml-2">下書き保存</span>
+            </button>
             <button onClick={handleExportCSV} className="bg-white hover:bg-slate-50 text-slate-700 font-semibold py-2 px-4 border border-slate-300 rounded-lg shadow-sm text-sm inline-flex items-center transition-colors duration-200">
               <DownloadIcon/>
               <span className="ml-2">CSV形式でダウンロード</span>
@@ -558,6 +675,7 @@ const App: React.FC = () => {
                 targetMonth={requirements.targetMonth}
                 workLogs={workLogs}
                 onWorkLogChange={handleWorkLogChange}
+                onShiftChange={handleShiftChange}
               />
             )
           ) : (

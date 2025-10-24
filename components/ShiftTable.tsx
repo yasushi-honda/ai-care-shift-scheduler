@@ -9,6 +9,7 @@ interface ShiftTableProps {
   targetMonth: string;
   workLogs: WorkLogs;
   onWorkLogChange: (staffId: string, date: string, details: WorkLogDetails) => void;
+  onShiftChange?: (staffId: string, date: string, newShiftType: string) => void;
 }
 
 const getShiftColor = (shiftType: string) => {
@@ -31,8 +32,18 @@ const NoteIcon = () => (
 );
 
 
-const ShiftTable: React.FC<ShiftTableProps> = ({ schedule, targetMonth, workLogs, onWorkLogChange }) => {
+const AVAILABLE_SHIFT_TYPES = ['早番', '日勤', '遅番', '夜勤', '休', '明け休み'];
+
+const ShiftTable: React.FC<ShiftTableProps> = ({ schedule, targetMonth, workLogs, onWorkLogChange, onShiftChange }) => {
   const [editingLog, setEditingLog] = useState<{ staffId: string, staffName: string, date: string, shiftType: string} | null>(null);
+  const [editingShift, setEditingShift] = useState<{ staffId: string, date: string } | null>(null);
+
+  const handleShiftTypeChange = (staffId: string, date: string, newShiftType: string) => {
+    if (onShiftChange) {
+      onShiftChange(staffId, date, newShiftType);
+    }
+    setEditingShift(null);
+  };
 
   if (!schedule.length) {
     return (
@@ -90,6 +101,8 @@ const ShiftTable: React.FC<ShiftTableProps> = ({ schedule, targetMonth, workLogs
                 {staffSchedule.monthlyShifts.map((shift) => {
                   const isWorkday = shift.shiftType !== '休' && shift.shiftType !== '明け休み';
                   const log = workLogs[shift.date]?.[staffSchedule.staffId];
+                  const isEditing = editingShift?.staffId === staffSchedule.staffId && editingShift?.date === shift.date;
+
                   const cellContent = (
                      <span className={`px-2.5 py-1 inline-flex items-center text-xs leading-5 font-semibold rounded-full ${getShiftColor(shift.shiftType)}`}>
                       {shift.shiftType}
@@ -108,18 +121,35 @@ const ShiftTable: React.FC<ShiftTableProps> = ({ schedule, targetMonth, workLogs
                       )}
                     </span>
                   );
-                  
+
                   return (
-                    <td key={`${staffSchedule.staffId}-${shift.date}`} className="px-2 py-1.5 whitespace-nowrap text-center text-sm">
-                      {isWorkday ? (
-                        <button 
-                          className="w-full h-full flex items-center justify-center rounded-md hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-care-secondary"
-                          onClick={() => setEditingLog({ staffId: staffSchedule.staffId, staffName: staffSchedule.staffName, date: shift.date, shiftType: shift.shiftType })}
+                    <td key={`${staffSchedule.staffId}-${shift.date}`} className="px-2 py-1.5 whitespace-nowrap text-center text-sm relative">
+                      {isEditing ? (
+                        <div className="flex flex-col gap-1 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white border-2 border-care-secondary rounded-lg shadow-xl z-40 p-2 min-w-[100px]">
+                          {AVAILABLE_SHIFT_TYPES.map((type) => (
+                            <button
+                              key={type}
+                              onClick={() => handleShiftTypeChange(staffSchedule.staffId, shift.date, type)}
+                              className={`px-3 py-1.5 text-xs font-semibold rounded ${getShiftColor(type)} hover:opacity-80 transition-opacity`}
+                            >
+                              {type}
+                            </button>
+                          ))}
+                          <button
+                            onClick={() => setEditingShift(null)}
+                            className="mt-1 px-3 py-1 text-xs font-medium text-slate-600 bg-slate-100 rounded hover:bg-slate-200 transition-colors"
+                          >
+                            キャンセル
+                          </button>
+                        </div>
+                      ) : (
+                        <div
+                          className="w-full h-full flex items-center justify-center cursor-pointer rounded-md hover:ring-2 hover:ring-care-secondary hover:ring-opacity-50 transition-all"
+                          onDoubleClick={() => onShiftChange && setEditingShift({ staffId: staffSchedule.staffId, date: shift.date })}
+                          onClick={() => isWorkday && setEditingLog({ staffId: staffSchedule.staffId, staffName: staffSchedule.staffName, date: shift.date, shiftType: shift.shiftType })}
                         >
                           {cellContent}
-                        </button>
-                      ) : (
-                        cellContent
+                        </div>
                       )}
                     </td>
                   )

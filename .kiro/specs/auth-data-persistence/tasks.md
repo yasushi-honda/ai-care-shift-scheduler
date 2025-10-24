@@ -184,12 +184,16 @@ Phase 1-3のすべての機能が本番環境にデプロイされ、動作確�
 ## Phase 6: シフトのバージョン管理機能
 
 - [ ] 6. シフトのバージョン管理と履歴追跡
-- [ ] 6.1 下書き保存機能の実装
+- [x] 6.1 下書き保存機能の実装
   - 編集中のシフトを下書き状態（status='draft'）で保存
   - バージョン履歴を作成しない軽量な保存処理
   - LocalStorageへの自動保存（3秒間隔）
   - 手動「下書き保存」ボタンによるFirestore保存
   - _Requirements: シフトのバージョン管理（design.md）_
+  - **実装**: `ShiftTable.tsx` - シフトセル編集機能（ダブルクリックでドロップダウン）
+  - **実装**: `App.tsx` - handleShiftChange、LocalStorage自動保存、handleSaveDraft
+  - **実装**: `scheduleService.ts` - updateScheduleメソッド追加
+  - currentScheduleIdのトラッキングでFirestore更新をサポート
 
 - [ ] 6.2 シフト確定とバージョン履歴作成機能の実装
   - 「確定」ボタンによるstatus変更（draft → confirmed）
