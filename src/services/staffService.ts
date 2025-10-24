@@ -26,12 +26,12 @@ export const StaffService = {
    * スタッフ一覧をリアルタイムで購読
    *
    * @param facilityId 施設ID
-   * @param callback スタッフリストが更新されたときに呼ばれるコールバック
+   * @param callback スタッフリストが更新されたときに呼ばれるコールバック（エラー時はerrorパラメーターに情報が渡される）
    * @returns リスナー解除関数
    */
   subscribeToStaffList(
     facilityId: string,
-    callback: (staffList: Staff[]) => void
+    callback: (staffList: Staff[], error?: Error) => void
   ): Unsubscribe {
     const staffCollectionRef = collection(db, `facilities/${facilityId}/staff`);
     const q = query(staffCollectionRef, orderBy('createdAt', 'desc'));
@@ -61,7 +61,8 @@ export const StaffService = {
       },
       (error) => {
         console.error('Failed to subscribe to staff list:', error);
-        callback([]); // エラー時は空配列を返す
+        // エラー情報をコールバックに渡す
+        callback([], error as Error);
       }
     );
 

@@ -21,6 +21,8 @@ const App: React.FC = () => {
   const { selectedFacilityId } = useAuth();
   const [staffList, setStaffList] = useState<Staff[]>([]);
   const [loadingStaff, setLoadingStaff] = useState(true);
+  const [staffError, setStaffError] = useState<string | null>(null);
+  const [retryTrigger, setRetryTrigger] = useState(0);
   const [requirements, setRequirements] = useState<ShiftRequirement>({
     targetMonth: '2025-11',
     timeSlots: DEFAULT_TIME_SLOTS,
@@ -55,29 +57,43 @@ const App: React.FC = () => {
     if (!selectedFacilityId) {
       setStaffList([]);
       setLoadingStaff(false);
+      setStaffError(null);
       return;
     }
 
     setLoadingStaff(true);
+    setStaffError(null);
+
     try {
       const unsubscribe = StaffService.subscribeToStaffList(
         selectedFacilityId,
-        (staffList) => {
+        (staffList, error) => {
+          if (error) {
+            // サブスクリプション実行中のエラー（権限エラー、ネットワークエラーなど）
+            console.error('Subscription error:', error);
+            setStaffError(`スタッフ情報の読み込みに失敗しました: ${error.message}`);
+            setStaffList([]);
+            setLoadingStaff(false);
+            return;
+          }
+
+          // 正常時の処理
           setStaffList(staffList);
           setLoadingStaff(false);
-          // リスト取得成功時にエラーをクリア
-          if (error) setError(null);
+          setStaffError(null);
         }
       );
 
       return () => unsubscribe();
     } catch (err) {
+      // サブスクリプション設定時のエラー
       console.error('Failed to setup staff subscription:', err);
-      setError('スタッフ情報の購読設定に失敗しました');
+      const errorMessage = err instanceof Error ? err.message : 'スタッフ情報の購読設定に失敗しました';
+      setStaffError(`スタッフ情報の購読設定に失敗しました: ${errorMessage}`);
       setLoadingStaff(false);
       setStaffList([]);
     }
-  }, [selectedFacilityId]);
+  }, [selectedFacilityId, retryTrigger]);
 
   const handleStaffChange = useCallback(async (updatedStaff: Staff) => {
     if (!selectedFacilityId) return;
@@ -102,7 +118,11 @@ const App: React.FC = () => {
       setError(`スタッフ情報の更新に失敗しました: ${result.error.message}`);
     }
   }, [selectedFacilityId, staffList]);
-  
+
+  const handleRetryStaffLoad = useCallback(() => {
+    setRetryTrigger(prev => prev + 1);
+  }, []);
+
   const handleAddNewStaff = useCallback(async () => {
     if (!selectedFacilityId) return;
 
@@ -280,6 +300,19 @@ const App: React.FC = () => {
               <div className="p-8 text-center">
                 <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-care-secondary"></div>
                 <p className="mt-2 text-sm text-slate-600">スタッフ情報を読み込み中...</p>
+              </div>
+            ) : staffError ? (
+              <div className="p-8 text-center">
+                <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+                  <p className="text-red-700 text-sm font-medium">エラーが発生しました</p>
+                  <p className="text-red-600 text-sm mt-1">{staffError}</p>
+                </div>
+                <button
+                  onClick={handleRetryStaffLoad}
+                  className="px-4 py-2 bg-care-secondary hover:bg-care-dark text-white font-semibold rounded-lg transition-colors shadow-sm"
+                >
+                  再試行
+                </button>
               </div>
             ) : (
               <StaffSettings
