@@ -195,12 +195,16 @@ Phase 1-3のすべての機能が本番環境にデプロイされ、動作確�
   - **実装**: `scheduleService.ts` - updateScheduleメソッド追加
   - currentScheduleIdのトラッキングでFirestore更新をサポート
 
-- [ ] 6.2 シフト確定とバージョン履歴作成機能の実装
+- [x] 6.2 シフト確定とバージョン履歴作成機能の実装
   - 「確定」ボタンによるstatus変更（draft → confirmed）
   - 現在のシフトデータをversionsサブコレクションに保存
   - バージョン番号のインクリメントとタイムスタンプ記録
   - トランザクションによる原子性の保証
   - _Requirements: 4.6, シフトのバージョン管理（design.md）_
+  - **実装**: `scheduleService.ts` - confirmScheduleメソッド追加（runTransactionで原子性保証）
+  - **実装**: `App.tsx` - currentScheduleStatus state追加、handleConfirmSchedule実装、確定ボタン追加
+  - **実装**: バージョン履歴はversionsサブコレクション（/facilities/{facilityId}/schedules/{scheduleId}/versions/{versionNumber}）に保存
+  - 下書き状態（draft）のみ確定可能、確定後はボタン無効化
 
 - [ ] 6.3 バージョン履歴の表示と過去バージョンへの復元機能
   - シフトの全バージョン履歴を時系列で表示

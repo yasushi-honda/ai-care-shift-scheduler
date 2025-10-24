@@ -12,9 +12,10 @@ import {
   where,
   orderBy,
   getDoc,
+  runTransaction,
 } from 'firebase/firestore';
 import { db } from '../../firebase';
-import { Schedule, ScheduleError, Result } from '../../types';
+import { Schedule, ScheduleError, Result, ScheduleVersion } from '../../types';
 
 /**
  * ScheduleService
@@ -291,6 +292,169 @@ export const ScheduleService = {
         error: {
           code: 'FIRESTORE_ERROR',
           message: error.message || 'スケジュールの更新に失敗しました',
+        },
+      };
+    }
+  },
+
+  /**
+   * スケジュールを確定し、バージョン履歴を作成
+   *
+   * @param facilityId 施設ID
+   * @param scheduleId スケジュールID
+   * @param userId ユーザーID（確定者）
+   * @param changeDescription 変更内容の説明（オプション）
+   * @returns 確定結果
+   */
+  async confirmSchedule(
+    facilityId: string,
+    scheduleId: string,
+    userId: string,
+    changeDescription?: string
+  ): Promise<Result<void, ScheduleError>> {
+    try {
+      // バリデーション
+      if (!facilityId || facilityId.trim() === '') {
+        return {
+          success: false,
+          error: {
+            code: 'VALIDATION_ERROR',
+            message: '施設IDは必須です',
+          },
+        };
+      }
+
+      if (!scheduleId || scheduleId.trim() === '') {
+        return {
+          success: false,
+          error: {
+            code: 'VALIDATION_ERROR',
+            message: 'スケジュールIDは必須です',
+          },
+        };
+      }
+
+      if (!userId || userId.trim() === '') {
+        return {
+          success: false,
+          error: {
+            code: 'VALIDATION_ERROR',
+            message: 'ユーザーIDは必須です',
+          },
+        };
+      }
+
+      // トランザクションでバージョン履歴作成とステータス更新を原子的に実行
+      await runTransaction(db, async (transaction) => {
+        // 1. 現在のスケジュールを取得
+        const scheduleRef = doc(db, `facilities/${facilityId}/schedules/${scheduleId}`);
+        const scheduleSnap = await transaction.get(scheduleRef);
+
+        if (!scheduleSnap.exists()) {
+          throw new Error('NOT_FOUND:スケジュールが見つかりません');
+        }
+
+        const currentSchedule = scheduleSnap.data() as Schedule;
+
+        // 2. 前提条件チェック: status === 'draft'
+        if (currentSchedule.status !== 'draft') {
+          throw new Error(
+            `CONFLICT:確定できません。現在のステータスは '${currentSchedule.status}' です（'draft' である必要があります）`
+          );
+        }
+
+        // 3. バージョン番号計算
+        const currentVersion = currentSchedule.version;
+        const nextVersion = currentVersion + 1;
+
+        // 4. 現在のバージョンをversionsサブコレクションに保存
+        const versionRef = doc(
+          db,
+          `facilities/${facilityId}/schedules/${scheduleId}/versions/${currentVersion}`
+        );
+
+        // 5. 作成者の決定（nullチェック）
+        const versionCreatedBy = currentSchedule.updatedBy || currentSchedule.createdBy;
+        if (!versionCreatedBy) {
+          throw new Error('VALIDATION_ERROR:スケジュールに有効な作成者情報がありません');
+        }
+
+        transaction.set(versionRef, {
+          versionNumber: currentVersion,
+          targetMonth: currentSchedule.targetMonth,
+          staffSchedules: currentSchedule.staffSchedules,
+          createdAt: serverTimestamp(),
+          createdBy: versionCreatedBy,
+          changeDescription: changeDescription || '確定',
+          previousVersion: currentVersion - 1,
+        });
+
+        // 6. スケジュール本体を新しいバージョンで更新
+        transaction.update(scheduleRef, {
+          version: nextVersion,
+          status: 'confirmed',
+          updatedAt: serverTimestamp(),
+          updatedBy: userId,
+        });
+      });
+
+      return {
+        success: true,
+        data: undefined,
+      };
+    } catch (error: any) {
+      console.error('Failed to confirm schedule:', error);
+
+      const errorMessage = error.message || '';
+
+      // エラータイプの判定
+      if (errorMessage.includes('NOT_FOUND:')) {
+        return {
+          success: false,
+          error: {
+            code: 'NOT_FOUND',
+            message: errorMessage.replace('NOT_FOUND:', ''),
+          },
+        };
+      }
+
+      if (errorMessage.includes('CONFLICT:')) {
+        return {
+          success: false,
+          error: {
+            code: 'CONFLICT',
+            message: errorMessage.replace('CONFLICT:', ''),
+            currentVersion: 0,
+          },
+        };
+      }
+
+      if (errorMessage.includes('VALIDATION_ERROR:')) {
+        return {
+          success: false,
+          error: {
+            code: 'VALIDATION_ERROR',
+            message: errorMessage.replace('VALIDATION_ERROR:', ''),
+          },
+        };
+      }
+
+      // 権限エラーの処理
+      if (error.code === 'permission-denied') {
+        return {
+          success: false,
+          error: {
+            code: 'PERMISSION_DENIED',
+            message: 'スケジュールを確定する権限がありません',
+          },
+        };
+      }
+
+      return {
+        success: false,
+        error: {
+          code: 'FIRESTORE_ERROR',
+          message: errorMessage || 'スケジュールの確定に失敗しました',
         },
       };
     }

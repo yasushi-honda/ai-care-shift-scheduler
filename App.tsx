@@ -45,6 +45,7 @@ const App: React.FC = () => {
   });
   const [schedule, setSchedule] = useState<StaffSchedule[]>([]);
   const [currentScheduleId, setCurrentScheduleId] = useState<string | null>(null);
+  const [currentScheduleStatus, setCurrentScheduleStatus] = useState<'draft' | 'confirmed' | 'archived'>('draft');
   const [isLoading, setIsLoading] = useState(false);
   const [generatingSchedule, setGeneratingSchedule] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -143,10 +144,12 @@ const App: React.FC = () => {
             // 最新のスケジュール（最初の要素）を使用
             setSchedule(schedules[0].staffSchedules);
             setCurrentScheduleId(schedules[0].id);
+            setCurrentScheduleStatus(schedules[0].status);
           } else {
             // シフトが存在しない場合は空の配列
             setSchedule([]);
             setCurrentScheduleId(null);
+            setCurrentScheduleStatus('draft');
           }
           setLoadingSchedule(false);
           setScheduleError(null);
@@ -470,6 +473,48 @@ const App: React.FC = () => {
     }
   }, [selectedFacilityId, currentUser, currentScheduleId, schedule, requirements.targetMonth, showToast]);
 
+  const handleConfirmSchedule = useCallback(async () => {
+    if (!selectedFacilityId || !currentUser || !currentScheduleId) {
+      showToast('確定に必要な情報が不足しています', 'error');
+      return;
+    }
+
+    if (schedule.length === 0) {
+      showToast('確定するシフトがありません', 'error');
+      return;
+    }
+
+    if (currentScheduleStatus !== 'draft') {
+      showToast(`このシフトは既に${currentScheduleStatus === 'confirmed' ? '確定' : 'アーカイブ'}されています`, 'error');
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      const result = await ScheduleService.confirmSchedule(
+        selectedFacilityId,
+        currentScheduleId,
+        currentUser.uid,
+        '確定'
+      );
+
+      if (result.success) {
+        showToast('シフトを確定しました', 'success');
+        // LocalStorageの下書きを削除
+        const key = `draft-schedule-${selectedFacilityId}-${requirements.targetMonth}`;
+        localStorage.removeItem(key);
+      } else {
+        showToast(`確定に失敗しました: ${result.error.message}`, 'error');
+      }
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : '確定時にエラーが発生しました';
+      showToast(errorMessage, 'error');
+    } finally {
+      setIsLoading(false);
+    }
+  }, [selectedFacilityId, currentUser, currentScheduleId, schedule, currentScheduleStatus, requirements.targetMonth, showToast]);
+
   const handleGenerateDemo = useCallback(async () => {
     if (!selectedFacilityId || !currentUser) {
       showToast('施設またはユーザー情報が取得できません', 'error');
@@ -635,13 +680,23 @@ const App: React.FC = () => {
             </button>
             <button
               onClick={handleSaveDraft}
-              disabled={isLoading || !currentScheduleId || schedule.length === 0}
+              disabled={isLoading || !currentScheduleId || schedule.length === 0 || currentScheduleStatus !== 'draft'}
               className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg shadow-sm text-sm inline-flex items-center transition-colors duration-200 disabled:bg-slate-400 disabled:cursor-not-allowed"
             >
               <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
               </svg>
               <span className="ml-2">下書き保存</span>
+            </button>
+            <button
+              onClick={handleConfirmSchedule}
+              disabled={isLoading || !currentScheduleId || schedule.length === 0 || currentScheduleStatus !== 'draft'}
+              className="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded-lg shadow-sm text-sm inline-flex items-center transition-colors duration-200 disabled:bg-slate-400 disabled:cursor-not-allowed"
+            >
+              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              </svg>
+              <span className="ml-2">確定</span>
             </button>
             <button onClick={handleExportCSV} className="bg-white hover:bg-slate-50 text-slate-700 font-semibold py-2 px-4 border border-slate-300 rounded-lg shadow-sm text-sm inline-flex items-center transition-colors duration-200">
               <DownloadIcon/>
