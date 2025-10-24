@@ -168,11 +168,16 @@ Phase 1-3のすべての機能が本番環境にデプロイされ、動作確�
   - エラーハンドリングとリトライ機能
   - 手動生成とリアルタイム購読の競合解決（generatingScheduleフラグ）
 
-- [ ] 5.3 シフト生成後の自動保存機能の実装
+- [x] 5.3 シフト生成後の自動保存機能の実装
   - AI生成またはデモ生成後の自動Firestore保存
   - 既存シフトのバージョン管理（同じ対象月の場合）
   - 保存成功・失敗のフィードバック表示
   - _Requirements: 4.1, 4.6, 4.7, 10.5_
+  - **実装**: `App.tsx` - シフト生成後の自動保存機能
+  - handleGenerateClick: AI生成後にScheduleService.saveScheduleで自動保存
+  - handleGenerateDemo: デモ生成後にScheduleService.saveScheduleで自動保存
+  - トースト通知システム: 成功/エラーフィードバック表示（3秒自動非表示）
+  - バージョン管理: ScheduleServiceが自動的に処理（同じ対象月の場合バージョン番号インクリメント）
 
 ---
 
