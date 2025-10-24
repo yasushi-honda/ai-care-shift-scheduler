@@ -44,6 +44,8 @@ export interface Staff {
   unavailableDates: string[]; // YYYY-MM-DD
   timeSlotPreference: TimeSlotPreference;
   isNightShiftOnly: boolean;
+  createdAt?: Timestamp; // Firestore永続化時に使用
+  updatedAt?: Timestamp; // Firestore永続化時に使用
 }
 
 export interface ShiftTime {
@@ -102,6 +104,13 @@ export type AuthError =
   | { code: 'USER_NOT_FOUND'; message: string }
   | { code: 'NETWORK_ERROR'; message: string }
   | { code: 'UNKNOWN_ERROR'; message: string };
+
+// スタッフサービスエラー型
+export type StaffError =
+  | { code: 'PERMISSION_DENIED'; message: string }
+  | { code: 'NOT_FOUND'; message: string }
+  | { code: 'VALIDATION_ERROR'; message: string }
+  | { code: 'FIRESTORE_ERROR'; message: string };
 
 // ロール（RBAC）
 export enum FacilityRole {
