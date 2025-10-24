@@ -321,15 +321,12 @@ const App: React.FC = () => {
     setIsLoading(true);
     setGeneratingSchedule(true);
     setError(null);
-    setSchedule([]);
 
     try {
       // AI生成
       const result = await generateShiftSchedule(staffList, requirements, leaveRequests);
-      setSchedule(result);
-      setViewMode('shift');
 
-      // Firestoreに自動保存
+      // Firestoreに自動保存（保存成功後、リアルタイムリスナーが自動的にUIを更新）
       const saveResult = await ScheduleService.saveSchedule(
         selectedFacilityId,
         currentUser.uid,
@@ -343,8 +340,10 @@ const App: React.FC = () => {
 
       if (saveResult.success) {
         showToast('シフトを生成し、保存しました', 'success');
+        setViewMode('shift');
       } else {
         showToast(`保存に失敗しました: ${saveResult.error.message}`, 'error');
+        setError(`保存に失敗しました: ${saveResult.error.message}`);
       }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : '不明なエラーが発生しました。';
@@ -371,6 +370,8 @@ const App: React.FC = () => {
     }
 
     setGeneratingSchedule(true);
+    setError(null);
+
     const [year, month] = requirements.targetMonth.split('-').map(Number);
     const daysInMonth = new Date(year, month, 0).getDate();
     const shiftTypes = [...requirements.timeSlots.map(ts => ts.name), '休', '休', '休'];
@@ -385,11 +386,7 @@ const App: React.FC = () => {
       return { staffId: staff.id, staffName: staff.name, monthlyShifts };
     });
 
-    setError(null);
-    setSchedule(demoSchedule);
-    setViewMode('shift');
-
-    // Firestoreに自動保存
+    // Firestoreに自動保存（保存成功後、リアルタイムリスナーが自動的にUIを更新）
     try {
       const saveResult = await ScheduleService.saveSchedule(
         selectedFacilityId,
@@ -404,12 +401,15 @@ const App: React.FC = () => {
 
       if (saveResult.success) {
         showToast('デモシフトを生成し、保存しました', 'success');
+        setViewMode('shift');
       } else {
         showToast(`保存に失敗しました: ${saveResult.error.message}`, 'error');
+        setError(`保存に失敗しました: ${saveResult.error.message}`);
       }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : '保存時にエラーが発生しました';
       showToast(errorMessage, 'error');
+      setError(errorMessage);
     } finally {
       setGeneratingSchedule(false);
     }
