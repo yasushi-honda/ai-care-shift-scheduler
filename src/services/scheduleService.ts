@@ -12,6 +12,7 @@ import {
   where,
   orderBy,
   getDoc,
+  getDocs,
   runTransaction,
 } from 'firebase/firestore';
 import { db } from '../../firebase';
@@ -455,6 +456,239 @@ export const ScheduleService = {
         error: {
           code: 'FIRESTORE_ERROR',
           message: errorMessage || 'スケジュールの確定に失敗しました',
+        },
+      };
+    }
+  },
+
+  /**
+   * バージョン履歴を取得
+   *
+   * @param facilityId 施設ID
+   * @param scheduleId スケジュールID
+   * @returns バージョン履歴の配列（新しい順）
+   */
+  async getVersionHistory(
+    facilityId: string,
+    scheduleId: string
+  ): Promise<Result<ScheduleVersion[], ScheduleError>> {
+    try {
+      // バリデーション
+      if (!facilityId || facilityId.trim() === '') {
+        return {
+          success: false,
+          error: {
+            code: 'VALIDATION_ERROR',
+            message: '施設IDは必須です',
+          },
+        };
+      }
+
+      if (!scheduleId || scheduleId.trim() === '') {
+        return {
+          success: false,
+          error: {
+            code: 'VALIDATION_ERROR',
+            message: 'スケジュールIDは必須です',
+          },
+        };
+      }
+
+      // versionsサブコレクションから全バージョンを取得
+      const versionsRef = collection(db, `facilities/${facilityId}/schedules/${scheduleId}/versions`);
+      const q = query(versionsRef, orderBy('versionNumber', 'desc'));
+      const querySnapshot = await getDocs(q);
+
+      const versions: ScheduleVersion[] = querySnapshot.docs.map((doc) => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          versionNumber: data.versionNumber,
+          targetMonth: data.targetMonth,
+          staffSchedules: data.staffSchedules,
+          createdAt: data.createdAt,
+          createdBy: data.createdBy,
+          changeDescription: data.changeDescription,
+          previousVersion: data.previousVersion,
+        } as ScheduleVersion;
+      });
+
+      return {
+        success: true,
+        data: versions,
+      };
+    } catch (error: any) {
+      console.error('Failed to get version history:', error);
+
+      // 権限エラーの処理
+      if (error.code === 'permission-denied') {
+        return {
+          success: false,
+          error: {
+            code: 'PERMISSION_DENIED',
+            message: 'バージョン履歴を取得する権限がありません',
+          },
+        };
+      }
+
+      return {
+        success: false,
+        error: {
+          code: 'FIRESTORE_ERROR',
+          message: error.message || 'バージョン履歴の取得に失敗しました',
+        },
+      };
+    }
+  },
+
+  /**
+   * 指定したバージョンへ復元
+   *
+   * @param facilityId 施設ID
+   * @param scheduleId スケジュールID
+   * @param versionNumber 復元するバージョン番号
+   * @param userId ユーザーID（復元者）
+   * @returns 復元結果
+   */
+  async restoreVersion(
+    facilityId: string,
+    scheduleId: string,
+    versionNumber: number,
+    userId: string
+  ): Promise<Result<void, ScheduleError>> {
+    try {
+      // バリデーション
+      if (!facilityId || facilityId.trim() === '') {
+        return {
+          success: false,
+          error: {
+            code: 'VALIDATION_ERROR',
+            message: '施設IDは必須です',
+          },
+        };
+      }
+
+      if (!scheduleId || scheduleId.trim() === '') {
+        return {
+          success: false,
+          error: {
+            code: 'VALIDATION_ERROR',
+            message: 'スケジュールIDは必須です',
+          },
+        };
+      }
+
+      if (!userId || userId.trim() === '') {
+        return {
+          success: false,
+          error: {
+            code: 'VALIDATION_ERROR',
+            message: 'ユーザーIDは必須です',
+          },
+        };
+      }
+
+      // トランザクションで復元を実行
+      await runTransaction(db, async (transaction) => {
+        // 1. 復元元のバージョンを取得
+        const versionRef = doc(db, `facilities/${facilityId}/schedules/${scheduleId}/versions/${versionNumber}`);
+        const versionSnap = await transaction.get(versionRef);
+
+        if (!versionSnap.exists()) {
+          throw new Error('NOT_FOUND:指定されたバージョンが見つかりません');
+        }
+
+        const versionData = versionSnap.data() as ScheduleVersion;
+
+        // 2. 現在のスケジュールを取得
+        const scheduleRef = doc(db, `facilities/${facilityId}/schedules/${scheduleId}`);
+        const scheduleSnap = await transaction.get(scheduleRef);
+
+        if (!scheduleSnap.exists()) {
+          throw new Error('NOT_FOUND:スケジュールが見つかりません');
+        }
+
+        const currentSchedule = scheduleSnap.data() as Schedule;
+        const currentVersion = currentSchedule.version;
+        const nextVersion = currentVersion + 1;
+
+        // 3. 現在のバージョンをversionsサブコレクションに保存（復元前のスナップショット）
+        const currentVersionRef = doc(
+          db,
+          `facilities/${facilityId}/schedules/${scheduleId}/versions/${currentVersion}`
+        );
+
+        const currentVersionCreatedBy = currentSchedule.updatedBy || currentSchedule.createdBy;
+        if (!currentVersionCreatedBy) {
+          throw new Error('VALIDATION_ERROR:スケジュールに有効な作成者情報がありません');
+        }
+
+        transaction.set(currentVersionRef, {
+          versionNumber: currentVersion,
+          targetMonth: currentSchedule.targetMonth,
+          staffSchedules: currentSchedule.staffSchedules,
+          createdAt: serverTimestamp(),
+          createdBy: currentVersionCreatedBy,
+          changeDescription: `バージョン${versionNumber}からの復元前の状態`,
+          previousVersion: currentVersion - 1,
+        });
+
+        // 4. スケジュール本体を復元したデータで更新
+        transaction.update(scheduleRef, {
+          staffSchedules: versionData.staffSchedules,
+          version: nextVersion,
+          status: 'draft', // 復元後は下書き状態
+          updatedAt: serverTimestamp(),
+          updatedBy: userId,
+        });
+      });
+
+      return {
+        success: true,
+        data: undefined,
+      };
+    } catch (error: any) {
+      console.error('Failed to restore version:', error);
+
+      const errorMessage = error.message || '';
+
+      // エラータイプの判定
+      if (errorMessage.includes('NOT_FOUND:')) {
+        return {
+          success: false,
+          error: {
+            code: 'NOT_FOUND',
+            message: errorMessage.replace('NOT_FOUND:', ''),
+          },
+        };
+      }
+
+      if (errorMessage.includes('VALIDATION_ERROR:')) {
+        return {
+          success: false,
+          error: {
+            code: 'VALIDATION_ERROR',
+            message: errorMessage.replace('VALIDATION_ERROR:', ''),
+          },
+        };
+      }
+
+      // 権限エラーの処理
+      if (error.code === 'permission-denied') {
+        return {
+          success: false,
+          error: {
+            code: 'PERMISSION_DENIED',
+            message: 'バージョンを復元する権限がありません',
+          },
+        };
+      }
+
+      return {
+        success: false,
+        error: {
+          code: 'FIRESTORE_ERROR',
+          message: errorMessage || 'バージョンの復元に失敗しました',
         },
       };
     }
