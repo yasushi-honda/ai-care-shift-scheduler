@@ -562,7 +562,18 @@ const App: React.FC = () => {
 
       if (result.success) {
         showToast(`バージョン${versionNumber}に復元しました`, 'success');
-        setVersionHistoryModalOpen(false);
+
+        // バージョン履歴をリフレッシュ（復元時に作成された新しいスナップショットを表示）
+        try {
+          const historyResult = await ScheduleService.getVersionHistory(selectedFacilityId, currentScheduleId);
+          if (historyResult.success) {
+            setVersions(historyResult.data);
+          } else {
+            console.error('Failed to refresh version history:', historyResult.error);
+          }
+        } catch (refreshErr) {
+          console.error('Error refreshing version history:', refreshErr);
+        }
       } else {
         showToast(`復元に失敗しました: ${result.error.message}`, 'error');
       }
