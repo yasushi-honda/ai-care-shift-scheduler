@@ -79,6 +79,29 @@ export interface StaffSchedule {
   monthlyShifts: GeneratedShift[];
 }
 
+export interface Schedule {
+  id: string;
+  targetMonth: string;     // 'YYYY-MM'
+  staffSchedules: StaffSchedule[];
+  createdAt: Timestamp;
+  createdBy: string;       // UID
+  updatedAt: Timestamp;
+  updatedBy: string;       // UID
+  version: number;         // 1から開始
+  status: 'draft' | 'confirmed' | 'archived';
+}
+
+export interface ScheduleVersion {
+  id: string;
+  versionNumber: number;
+  targetMonth: string;
+  staffSchedules: StaffSchedule[];
+  createdAt: Timestamp;
+  createdBy: string;
+  changeDescription: string;
+  previousVersion: number;
+}
+
 export interface WorkLogDetails {
   workDetails: string;
   notes: string;
@@ -110,6 +133,14 @@ export type StaffError =
   | { code: 'PERMISSION_DENIED'; message: string }
   | { code: 'NOT_FOUND'; message: string }
   | { code: 'VALIDATION_ERROR'; message: string }
+  | { code: 'FIRESTORE_ERROR'; message: string };
+
+// シフトサービスエラー型
+export type ScheduleError =
+  | { code: 'PERMISSION_DENIED'; message: string }
+  | { code: 'NOT_FOUND'; message: string }
+  | { code: 'VALIDATION_ERROR'; message: string }
+  | { code: 'CONFLICT'; message: string; currentVersion: number }
   | { code: 'FIRESTORE_ERROR'; message: string };
 
 // ロール（RBAC）
