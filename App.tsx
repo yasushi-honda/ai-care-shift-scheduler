@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import {
   Role, Qualification, TimeSlotPreference, LeaveType,
-  type Staff, type ShiftRequirement, type StaffSchedule, type GeneratedShift, type LeaveRequest, type WorkLogs, type WorkLogDetails
+  type Staff, type ShiftRequirement, type StaffSchedule, type GeneratedShift, type LeaveRequest, type WorkLogs, type WorkLogDetails, type ScheduleVersion
 } from './types';
 import { DEFAULT_TIME_SLOTS } from './constants';
 import { generateShiftSchedule } from './services/geminiService';
@@ -15,6 +15,7 @@ import MonthNavigator from './components/MonthNavigator';
 import StaffSettings from './components/StaffSettings';
 import LeaveRequestCalendar from './components/LeaveRequestCalendar';
 import ConfirmModal from './components/ConfirmModal';
+import VersionHistoryModal from './components/VersionHistoryModal';
 
 type ViewMode = 'shift' | 'leaveRequest';
 
@@ -64,6 +65,9 @@ const App: React.FC = () => {
   });
   const [staffToDelete, setStaffToDelete] = useState<Staff | null>(null);
   const [openStaffId, setOpenStaffId] = useState<string | null>(null);
+  const [versionHistoryModalOpen, setVersionHistoryModalOpen] = useState(false);
+  const [versions, setVersions] = useState<ScheduleVersion[]>([]);
+  const [versionLoading, setVersionLoading] = useState(false);
 
   // Firestoreからスタッフデータをリアルタイムで購読
   useEffect(() => {
@@ -515,6 +519,72 @@ const App: React.FC = () => {
     }
   }, [selectedFacilityId, currentUser, currentScheduleId, schedule, currentScheduleStatus, requirements.targetMonth, showToast]);
 
+  const handleShowVersionHistory = useCallback(async () => {
+    if (!selectedFacilityId || !currentScheduleId) {
+      showToast('バージョン履歴を表示できません', 'error');
+      return;
+    }
+
+    setVersionHistoryModalOpen(true);
+    setVersionLoading(true);
+
+    try {
+      const result = await ScheduleService.getVersionHistory(selectedFacilityId, currentScheduleId);
+
+      if (result.success) {
+        setVersions(result.data);
+      } else {
+        showToast(`履歴の取得に失敗しました: ${result.error.message}`, 'error');
+      }
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : '履歴の取得時にエラーが発生しました';
+      showToast(errorMessage, 'error');
+    } finally {
+      setVersionLoading(false);
+    }
+  }, [selectedFacilityId, currentScheduleId, showToast]);
+
+  const handleRestoreVersion = useCallback(async (versionNumber: number) => {
+    if (!selectedFacilityId || !currentUser || !currentScheduleId) {
+      showToast('復元に必要な情報が不足しています', 'error');
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      const result = await ScheduleService.restoreVersion(
+        selectedFacilityId,
+        currentScheduleId,
+        versionNumber,
+        currentUser.uid
+      );
+
+      if (result.success) {
+        showToast(`バージョン${versionNumber}に復元しました`, 'success');
+
+        // バージョン履歴をリフレッシュ（復元時に作成された新しいスナップショットを表示）
+        try {
+          const historyResult = await ScheduleService.getVersionHistory(selectedFacilityId, currentScheduleId);
+          if (historyResult.success) {
+            setVersions(historyResult.data);
+          } else {
+            console.error('Failed to refresh version history:', historyResult.error);
+          }
+        } catch (refreshErr) {
+          console.error('Error refreshing version history:', refreshErr);
+        }
+      } else {
+        showToast(`復元に失敗しました: ${result.error.message}`, 'error');
+      }
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : '復元時にエラーが発生しました';
+      showToast(errorMessage, 'error');
+    } finally {
+      setIsLoading(false);
+    }
+  }, [selectedFacilityId, currentUser, currentScheduleId, showToast]);
+
   const handleGenerateDemo = useCallback(async () => {
     if (!selectedFacilityId || !currentUser) {
       showToast('施設またはユーザー情報が取得できません', 'error');
@@ -698,6 +768,16 @@ const App: React.FC = () => {
               </svg>
               <span className="ml-2">確定</span>
             </button>
+            <button
+              onClick={handleShowVersionHistory}
+              disabled={!currentScheduleId}
+              className="bg-purple-600 hover:bg-purple-700 text-white font-semibold py-2 px-4 rounded-lg shadow-sm text-sm inline-flex items-center transition-colors duration-200 disabled:bg-slate-400 disabled:cursor-not-allowed"
+            >
+              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <span className="ml-2">バージョン履歴</span>
+            </button>
             <button onClick={handleExportCSV} className="bg-white hover:bg-slate-50 text-slate-700 font-semibold py-2 px-4 border border-slate-300 rounded-lg shadow-sm text-sm inline-flex items-center transition-colors duration-200">
               <DownloadIcon/>
               <span className="ml-2">CSV形式でダウンロード</span>
@@ -757,6 +837,14 @@ const App: React.FC = () => {
         onCancel={() => setStaffToDelete(null)}
         confirmText="削除する"
         confirmButtonClass="bg-red-600 hover:bg-red-700 focus:ring-red-500"
+      />
+
+      <VersionHistoryModal
+        isOpen={versionHistoryModalOpen}
+        onClose={() => setVersionHistoryModalOpen(false)}
+        versions={versions}
+        onRestore={handleRestoreVersion}
+        loading={versionLoading}
       />
 
       {/* Toast Notification */}

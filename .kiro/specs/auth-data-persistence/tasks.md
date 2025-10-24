@@ -206,12 +206,15 @@ Phase 1-3のすべての機能が本番環境にデプロイされ、動作確�
   - **実装**: バージョン履歴はversionsサブコレクション（/facilities/{facilityId}/schedules/{scheduleId}/versions/{versionNumber}）に保存
   - 下書き状態（draft）のみ確定可能、確定後はボタン無効化
 
-- [ ] 6.3 バージョン履歴の表示と過去バージョンへの復元機能
+- [x] 6.3 バージョン履歴の表示と過去バージョンへの復元機能
   - シフトの全バージョン履歴を時系列で表示
   - 各バージョンの作成者、作成日時、変更内容の表示
   - 選択したバージョンへの復元機能
   - 復元時の新バージョン作成と履歴記録
   - _Requirements: シフトのバージョン管理（design.md）_
+  - **実装**: `scheduleService.ts` - getVersionHistoryメソッド（versionsサブコレクションから全バージョン取得）、restoreVersionメソッド（runTransactionで原子性保証、復元前の状態を保存）
+  - **実装**: `VersionHistoryModal.tsx` - バージョン履歴表示モーダルコンポーネント、各バージョンの詳細表示と復元ボタン、日付フォーマッティング
+  - **実装**: `App.tsx` - バージョン履歴関連のstate追加（versionHistoryModalOpen, versions, versionLoading）、handleShowVersionHistory・handleRestoreVersion実装、バージョン履歴ボタン追加（紫、時計アイコン）、モーダル統合
 
 ---
 
