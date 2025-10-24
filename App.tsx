@@ -7,6 +7,7 @@ import { DEFAULT_TIME_SLOTS } from './constants';
 import { generateShiftSchedule } from './services/geminiService';
 import { exportToCSV } from './services/exportService';
 import { StaffService } from './src/services/staffService';
+import { ScheduleService } from './src/services/scheduleService';
 import { useAuth } from './src/contexts/AuthContext';
 import ShiftTable from './components/ShiftTable';
 import Accordion from './components/Accordion';
@@ -23,6 +24,9 @@ const App: React.FC = () => {
   const [loadingStaff, setLoadingStaff] = useState(true);
   const [staffError, setStaffError] = useState<string | null>(null);
   const [retryTrigger, setRetryTrigger] = useState(0);
+  const [loadingSchedule, setLoadingSchedule] = useState(false);
+  const [scheduleError, setScheduleError] = useState<string | null>(null);
+  const [scheduleRetryTrigger, setScheduleRetryTrigger] = useState(0);
   const [requirements, setRequirements] = useState<ShiftRequirement>({
     targetMonth: '2025-11',
     timeSlots: DEFAULT_TIME_SLOTS,
@@ -35,6 +39,7 @@ const App: React.FC = () => {
   });
   const [schedule, setSchedule] = useState<StaffSchedule[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [generatingSchedule, setGeneratingSchedule] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>('shift');
   const [leaveRequests, setLeaveRequests] = useState<LeaveRequest>({
@@ -95,6 +100,61 @@ const App: React.FC = () => {
     }
   }, [selectedFacilityId, retryTrigger]);
 
+  // Firestoreからスケジュールデータをリアルタイムで購読
+  useEffect(() => {
+    // 手動生成中は購読をスキップ
+    if (generatingSchedule) {
+      return;
+    }
+
+    if (!selectedFacilityId || !requirements.targetMonth) {
+      setSchedule([]);
+      setLoadingSchedule(false);
+      setScheduleError(null);
+      return;
+    }
+
+    setLoadingSchedule(true);
+    setScheduleError(null);
+
+    try {
+      const unsubscribe = ScheduleService.subscribeToSchedules(
+        selectedFacilityId,
+        requirements.targetMonth,
+        (schedules, error) => {
+          if (error) {
+            // サブスクリプション実行中のエラー
+            console.error('Schedule subscription error:', error);
+            setScheduleError(`シフトデータの読み込みに失敗しました: ${error.message}`);
+            setSchedule([]);
+            setLoadingSchedule(false);
+            return;
+          }
+
+          // 正常時の処理
+          if (schedules.length > 0) {
+            // 最新のスケジュール（最初の要素）を使用
+            setSchedule(schedules[0].staffSchedules);
+          } else {
+            // シフトが存在しない場合は空の配列
+            setSchedule([]);
+          }
+          setLoadingSchedule(false);
+          setScheduleError(null);
+        }
+      );
+
+      return () => unsubscribe();
+    } catch (err) {
+      // サブスクリプション設定時のエラー
+      console.error('Failed to setup schedule subscription:', err);
+      const errorMessage = err instanceof Error ? err.message : 'シフトデータの購読設定に失敗しました';
+      setScheduleError(`シフトデータの購読設定に失敗しました: ${errorMessage}`);
+      setLoadingSchedule(false);
+      setSchedule([]);
+    }
+  }, [selectedFacilityId, requirements.targetMonth, scheduleRetryTrigger, generatingSchedule]);
+
   const handleStaffChange = useCallback(async (updatedStaff: Staff) => {
     if (!selectedFacilityId) return;
 
@@ -121,6 +181,10 @@ const App: React.FC = () => {
 
   const handleRetryStaffLoad = useCallback(() => {
     setRetryTrigger(prev => prev + 1);
+  }, []);
+
+  const handleRetryScheduleLoad = useCallback(() => {
+    setScheduleRetryTrigger(prev => prev + 1);
   }, []);
 
   const handleAddNewStaff = useCallback(async () => {
@@ -229,6 +293,7 @@ const App: React.FC = () => {
 
   const handleGenerateClick = useCallback(async () => {
     setIsLoading(true);
+    setGeneratingSchedule(true);
     setError(null);
     setSchedule([]);
     try {
@@ -239,6 +304,7 @@ const App: React.FC = () => {
       setError(err instanceof Error ? err.message : '不明なエラーが発生しました。');
     } finally {
       setIsLoading(false);
+      setGeneratingSchedule(false);
     }
   }, [staffList, requirements, leaveRequests]);
 
@@ -251,6 +317,7 @@ const App: React.FC = () => {
   };
 
   const handleGenerateDemo = () => {
+    setGeneratingSchedule(true);
     const [year, month] = requirements.targetMonth.split('-').map(Number);
     const daysInMonth = new Date(year, month, 0).getDate();
     const shiftTypes = [...requirements.timeSlots.map(ts => ts.name), '休', '休', '休'];
@@ -264,10 +331,11 @@ const App: React.FC = () => {
       }
       return { staffId: staff.id, staffName: staff.name, monthlyShifts };
     });
-    
+
     setError(null);
     setSchedule(demoSchedule);
     setViewMode('shift');
+    setGeneratingSchedule(false);
   };
 
   const ViewSwitcher = () => (
@@ -389,14 +457,34 @@ const App: React.FC = () => {
         </header>
         <div className="flex-1 overflow-auto pt-4 pb-4">
           {viewMode === 'shift' ? (
-             <ShiftTable 
-                schedule={schedule} 
+            loadingSchedule ? (
+              <div className="p-8 text-center">
+                <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-care-secondary"></div>
+                <p className="mt-2 text-sm text-slate-600">シフトデータを読み込み中...</p>
+              </div>
+            ) : scheduleError ? (
+              <div className="p-8 text-center">
+                <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+                  <p className="text-red-700 text-sm font-medium">エラーが発生しました</p>
+                  <p className="text-red-600 text-sm mt-1">{scheduleError}</p>
+                </div>
+                <button
+                  onClick={handleRetryScheduleLoad}
+                  className="px-4 py-2 bg-care-secondary hover:bg-care-dark text-white font-semibold rounded-lg transition-colors shadow-sm"
+                >
+                  再試行
+                </button>
+              </div>
+            ) : (
+              <ShiftTable
+                schedule={schedule}
                 targetMonth={requirements.targetMonth}
                 workLogs={workLogs}
                 onWorkLogChange={handleWorkLogChange}
-             />
+              />
+            )
           ) : (
-             <LeaveRequestCalendar 
+             <LeaveRequestCalendar
                 staffList={staffList}
                 targetMonth={requirements.targetMonth}
                 leaveRequests={leaveRequests}

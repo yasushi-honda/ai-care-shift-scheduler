@@ -157,11 +157,16 @@ Phase 1-3のすべての機能が本番環境にデプロイされ、動作確�
   - **テスト**: `src/services/__tests__/scheduleService.test.ts` - TDDアプローチで実装
   - **型定義**: `types.ts` - Schedule, ScheduleVersion, ScheduleError型を追加
 
-- [ ] 5.2 対象月別のシフト取得と表示機能の実装
+- [x] 5.2 対象月別のシフト取得と表示機能の実装
   - ユーザーが選択した対象月のシフトデータ取得
   - 対象月変更時の自動データ取得
   - シフトが存在しない場合は空のシフトを表示
   - _Requirements: 4.4, 4.5_
+  - **実装**: `App.tsx` - ScheduleService統合（リアルタイムリスナー）
+  - リアルタイムリスナーによるスケジュールデータの自動更新（subscribeToSchedules）
+  - 対象月変更時の自動再取得
+  - エラーハンドリングとリトライ機能
+  - 手動生成とリアルタイム購読の競合解決（generatingScheduleフラグ）
 
 - [ ] 5.3 シフト生成後の自動保存機能の実装
   - AI生成またはデモ生成後の自動Firestore保存
