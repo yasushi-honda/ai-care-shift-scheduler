@@ -127,10 +127,11 @@ Phase 1-3のすべての機能が本番環境にデプロイされ、動作確�
   - **実装**: `src/services/staffService.ts` - StaffService（CRUD操作、リアルタイムリスナー）
   - **テスト**: `src/services/__tests__/staffService.test.ts` - TDDアプローチで実装
 
-- [ ] 4.2 既存スタッフリストコンポーネントのFirestore統合
-  - リアルタイムリスナーによるスタッフデータの自動更新
-  - スタッフリストUIとFirestoreデータの同期
-  - スタッフ追加・編集・削除UIのFirestore連携
+- [x] 4.2 既存スタッフリストコンポーネントのFirestore統合
+  - **実装**: `App.tsx` - StaffService統合（リアルタイムリスナー、CRUD操作）
+  - リアルタイムリスナーによるスタッフデータの自動更新（subscribeToStaffList）
+  - スタッフ追加・編集・削除UIのFirestore連携（createStaff, updateStaff, deleteStaff）
+  - ローディング状態の表示
   - _Requirements: 3.5, 3.6_
 
 - [ ] 4.3 スタッフ情報の読み込みとエラーハンドリング
