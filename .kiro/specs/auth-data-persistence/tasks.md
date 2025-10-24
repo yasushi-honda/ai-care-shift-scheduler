@@ -118,12 +118,14 @@ Phase 1-3のすべての機能が本番環境にデプロイされ、動作確�
 ## Phase 4: データ永続化 - スタッフ情報
 
 - [ ] 4. スタッフ情報の永続化機能
-- [ ] 4.1 スタッフデータのCRUD操作とFirestore連携の実装
+- [x] 4.1 スタッフデータのCRUD操作とFirestore連携の実装
   - スタッフ情報の作成・読取・更新・削除機能
   - Firestoreサブコレクション（facilities/{facilityId}/staff）の操作
   - 作成日時・更新日時の自動記録
   - 権限チェック（editor以上の権限が必要）
   - _Requirements: 3.1, 3.2, 3.3, 3.4_
+  - **実装**: `src/services/staffService.ts` - StaffService（CRUD操作、リアルタイムリスナー）
+  - **テスト**: `src/services/__tests__/staffService.test.ts` - TDDアプローチで実装
 
 - [ ] 4.2 既存スタッフリストコンポーネントのFirestore統合
   - リアルタイムリスナーによるスタッフデータの自動更新
