@@ -12,6 +12,9 @@
 
 ### 主な機能
 
+- ✅ **Google OAuth認証**: Googleアカウントでのシングルサインオン（Phase 1-3完了）
+- ✅ **ロールベースアクセス制御**: super-admin/admin/editor/viewerによる権限管理（Phase 1-3完了）
+- ✅ **事業所管理**: マルチテナント対応、事業所ごとのデータ分離（Phase 1-3完了）
 - ✅ **スタッフ情報管理**: 名前、役職、資格、勤務可否を一元管理
 - ✅ **シフト要件設定**: 時間帯別必要人員と資格要件を設定
 - ✅ **休暇申請管理**: スタッフの勤務不可日を簡単登録
@@ -24,7 +27,9 @@
 
 **本番環境**: https://ai-care-shift-scheduler.web.app
 
-> ⚠️ **注意**: 現在は認証機能がないため、誰でもアクセス可能です。本番データは入力しないでください。
+> 🔐 **認証**: Google OAuth認証が実装されています。Googleアカウントでログインしてください。
+>
+> ✅ **Phase 1-3 完了**: 認証基盤、ユーザー登録、ロールベースアクセス制御が本番環境で稼働中です。
 
 ## 📚 ドキュメント
 
@@ -280,16 +285,18 @@ firebase deploy --only hosting
 
 ## 🔐 セキュリティ
 
-### 現状（MVP）
-- ⚠️ **認証なし**: 誰でもアクセス可能
-- ⚠️ **Firestore全開放**: セキュリティルールは開発モード
+### 現状（Phase 1-3 完了）
+- ✅ **Firebase Authentication**: Google OAuth認証によるSSO
+- ✅ **Firestore Security Rules**: ロールベースアクセス制御（RBAC）実装済み
+- ✅ **事業所ごとのデータ分離**: マルチテナント設計による完全なデータ分離
+- ✅ **super-admin権限**: 初回ユーザーに自動付与、管理画面へのアクセス制御
 - ✅ **HTTPS通信**: すべての通信は暗号化
-- ✅ **APIキー非公開**: Cloud Functions経由でVertex AIを呼び出し（実装後）
+- ✅ **APIキー非公開**: Cloud Functions経由でVertex AIを呼び出し
 
-### Phase 2（予定）
-- ✅ Firebase Authentication導入
-- ✅ Firestore Security Rules強化
-- ✅ 事業所ごとのデータ分離
+### Phase 4以降（予定）
+- スタッフ情報のFirestore永続化
+- シフトデータの永続化とバージョン管理
+- 監査ログとコンプライアンス機能
 
 ## 🧪 テスト
 
@@ -431,8 +438,17 @@ gcloud services enable aiplatform.googleapis.com --project=ai-care-shift-schedul
 
 ## 🐛 既知の問題
 
-1. **認証機能がない**
-   - Phase 2で Firebase Authentication 導入予定
+### ⚠️ ブラウザキャッシュによるCOOP警告（非クリティカル）
+
+**現象**: ログイン成功するが、Googleアカウント選択ウィンドウ表示時にコンソール警告が表示される場合があります。
+
+**影響**: なし（ログイン成功、すべての機能が正常に動作）
+
+**原因**: ブラウザが古いJavaScriptファイルをキャッシュしているため。
+
+**対応**: ブラウザのキャッシュをクリアするか、次回デプロイ時に自然に更新されます。
+
+詳細は [Phase 1-3 デプロイ完了サマリー](.kiro/specs/auth-data-persistence/deployment-summary.md#既知の問題非クリティカル) を参照してください。
 
 ## 🗓️ ロードマップ
 
@@ -441,10 +457,20 @@ gcloud services enable aiplatform.googleapis.com --project=ai-care-shift-schedul
 - ✅ Firebase Hostingデプロイ
 - ✅ Cloud Functions実装（Gemini 2.5 Flash-Lite）
 
-### Phase 2: 認証とマルチテナント - 2026年Q1
-- Firebase Authentication導入
-- 事業所ごとのデータ分離
-- 管理者権限管理
+### Phase 1-3: 認証基盤とRBAC（完了） - 2025年10月24日
+- ✅ Firebase Authentication導入（Google OAuth）
+- ✅ 事業所ごとのデータ分離（マルチテナント設計）
+- ✅ ロールベースアクセス制御（super-admin/admin/editor/viewer）
+- ✅ 初回ユーザーへのsuper-admin権限自動付与
+- ✅ Firestore Security Rulesによるアクセス制御
+- ✅ CI/CD（GitHub Actions → Firebase）の自動デプロイ
+
+**詳細**: [Phase 1-3 デプロイ完了サマリー](.kiro/specs/auth-data-persistence/deployment-summary.md)
+
+### Phase 4: データ永続化 - 2026年Q1（進行中）
+- スタッフ情報のFirestore永続化
+- シフトデータの永続化とバージョン管理
+- 休暇申請とシフト要件設定の永続化
 
 ### Phase 3: 高度な最適化 - 2026年Q2
 - 過去データからの学習
