@@ -71,28 +71,31 @@
 
 ---
 
-## Phase 3: 事業所管理とロールベースアクセス制御
+## Phase 3: 事業所管理とロールベースアクセス制御 ✅ 完了
 
-- [ ] 3. 事業所管理とRBACの基盤実装
-- [ ] 3.1 事業所データモデルとFirestore統合の実装
+- [x] 3. 事業所管理とRBACの基盤実装
+- [x] 3.1 事業所データモデルとFirestore統合の実装
   - 事業所（facility）コレクションの作成と構造定義
   - 事業所メタデータ（名前、作成日、メンバーリスト）の管理
   - 事業所データの作成・読取・更新機能
   - _Requirements: 2.1, 2.2_
+  - **実装**: `firestore.rules` - RBAC実装のSecurity Rules、hasRole()、isSuperAdmin()関数
 
-- [ ] 3.2 ユーザーのロール判定と権限チェック機能の実装
+- [x] 3.2 ユーザーのロール判定と権限チェック機能の実装
   - ユーザーの所属施設とロール情報の読み込み
   - ロール別の権限判定ロジック（super-admin, admin, editor, viewer）
   - 権限がない操作の拒否とエラーメッセージ表示
   - 他の施設データへのアクセス制限
   - _Requirements: 2.4, 2.5, 2.6, 2.7, 2.8, 2.9, 2.10, 2.11, 2.12, 2.13, 2.14_
+  - **実装**: `src/contexts/AuthContext.tsx` - hasRole(), isSuperAdmin(), selectFacility()追加、selectedFacilityId状態管理
 
-- [ ] 3.3 施設選択UIと複数施設対応の実装
+- [x] 3.3 施設選択UIと複数施設対応の実装
   - 1つの施設のみの場合は自動選択してメイン画面表示
   - 複数施設に所属する場合の施設選択UI
   - 施設切り替え時のデータロードとメモリクリア
   - 現在選択中の施設IDとロールの保持
   - _Requirements: 2.4, 2.5, 2.6, 2.15_
+  - **実装**: `src/components/FacilitySelectorPage.tsx` - 施設選択画面、`src/components/ProtectedRoute.tsx` - 施設選択ロジック追加
 
 ---
 
