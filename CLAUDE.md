@@ -99,6 +99,52 @@ Kiro-style Spec Driven Development implementation using claude code slash comman
 
 **重要**: pushする前に必ずCodeRabbitレビューを実行すること。スキップ禁止。
 
+### Firebase CLI認証エラー時の対処方針
+
+**原則**: Firebase CLI認証エラーが発生した場合、即座に代替手段に切り替える。
+
+#### 優先順位
+1. **GitHub Actions CI/CD** (最優先)
+   - コミット→プッシュでFirebase自動デプロイ
+   - Hosting, Functions, Firestore Rulesすべて対応
+   - 最も信頼性が高く、履歴も残る
+
+2. **gh CLI** (GitHub操作)
+   - PR作成・マージ
+   - GitHub Actions実行状況確認
+
+3. **gcloud CLI** (GCP直接操作)
+   - Cloud Functions管理: `gcloud functions list/deploy/delete`
+   - Firestore管理: `gcloud firestore` (※制限あり)
+
+4. **curl/REST API**
+   - Cloud Function実行
+   - 簡易的なデータ操作
+
+5. **Firebase CLI** (最終手段)
+   - 認証エラーが頻発するため、使用は最小限に
+   - 使用前に必ず代替手段を検討
+
+#### 実践例: Firebaseへのデプロイ
+
+```bash
+# ❌ 避けるべき方法
+firebase deploy --only functions,hosting
+
+# ✅ 推奨方法
+git add .
+git commit -m "feat: 新機能追加"
+git push origin main  # または feature ブランチ
+# → GitHub Actions が自動的に firebase deploy を実行
+```
+
+#### トラブルシューティング
+
+Firebase CLI認証エラーが発生した場合:
+1. **エラーメッセージを記録しない** - 時間の無駄
+2. **即座にGitHub Flowに切り替える**
+3. **メモリ `firebase_cli_error_handling.md` を参照**
+
 詳細: [Development Workflow](.kiro/steering/development-workflow.md)
 
 ## Workflow
