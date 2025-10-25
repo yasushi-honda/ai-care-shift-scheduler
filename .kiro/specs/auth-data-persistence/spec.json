@@ -2,7 +2,7 @@
   "feature_name": "auth-data-persistence",
   "display_name": "認証・データ永続化機能（Google OAuth + RBAC）",
   "created_at": "2025-10-23T15:48:00+09:00",
-  "updated_at": "2025-10-25T09:55:00+09:00",
+  "updated_at": "2025-10-25T10:30:00+09:00",
   "language": "ja",
   "phase": "implementation",
   "approvals": {
@@ -22,7 +22,7 @@
   "ready_for_implementation": true,
   "deployment": {
     "phase_1_8_completed": true,
-    "deployed_at": "2025-10-25T09:55:00+09:00",
+    "deployed_at": "2025-10-25T10:30:00+09:00",
     "production_url": "https://ai-care-shift-scheduler.web.app",
     "status": "Phase 1-8 deployed and verified",
     "completed_phases": [
@@ -32,9 +32,10 @@
       "Phase 4: スタッフ情報の永続化",
       "Phase 5: シフトデータの永続化",
       "Phase 6: バージョン管理機能",
+      "Phase 7: 休暇申請と要件設定の永続化",
       "Phase 8: Firestore Security Rules"
     ],
-    "next_phase": "Phase 7: 休暇申請と要件設定の永続化"
+    "next_phase": "Phase 9: データ復元とリロード対応"
   },
   "description": "事業所単位のマルチテナント設計による認証・データ永続化機能。Google OAuth認証、ロールベースアクセス制御（super-admin/admin/editor/viewer）、管理画面による権限管理、Firestore Security Rulesを使用してユーザー認証とデータ分離を実現する。"
 }
