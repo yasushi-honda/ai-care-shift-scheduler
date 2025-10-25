@@ -18,55 +18,52 @@ service cloud.firestore {
     // 指定施設に対して指定ロール以上の権限を持つかチェック
     function hasRole(facilityId, requiredRole) {
       let userProfile = getUserProfile();
+      let facilities = userProfile.facilities;
 
-      // facilities配列から該当するfacilityを探す
-      let hasAccess = false;
-      let userRole = '';
+      // 最大10施設までサポート（実用上は1-3施設が一般的）
+      return (facilities.size() > 0 && checkFacilityRole(facilities, 0, facilityId, requiredRole)) ||
+             (facilities.size() > 1 && checkFacilityRole(facilities, 1, facilityId, requiredRole)) ||
+             (facilities.size() > 2 && checkFacilityRole(facilities, 2, facilityId, requiredRole)) ||
+             (facilities.size() > 3 && checkFacilityRole(facilities, 3, facilityId, requiredRole)) ||
+             (facilities.size() > 4 && checkFacilityRole(facilities, 4, facilityId, requiredRole)) ||
+             (facilities.size() > 5 && checkFacilityRole(facilities, 5, facilityId, requiredRole)) ||
+             (facilities.size() > 6 && checkFacilityRole(facilities, 6, facilityId, requiredRole)) ||
+             (facilities.size() > 7 && checkFacilityRole(facilities, 7, facilityId, requiredRole)) ||
+             (facilities.size() > 8 && checkFacilityRole(facilities, 8, facilityId, requiredRole)) ||
+             (facilities.size() > 9 && checkFacilityRole(facilities, 9, facilityId, requiredRole));
+    }
 
-      let i = 0;
-      while (i < userProfile.facilities.size()) {
-        if (userProfile.facilities[i].facilityId == facilityId) {
-          hasAccess = true;
-          userRole = userProfile.facilities[i].role;
-          break;
-        }
-        i = i + 1;
-      }
+    // 配列の指定インデックスの施設をチェック
+    function checkFacilityRole(facilities, index, facilityId, requiredRole) {
+      return facilities[index].facilityId == facilityId &&
+             checkRolePermission(facilities[index].role, requiredRole);
+    }
 
-      if (!hasAccess) {
-        return false;
-      }
-
+    // ロール階層チェック
+    function checkRolePermission(userRole, requiredRole) {
       // super-adminは全権限を持つ
-      if (userRole == 'super-admin') {
-        return true;
-      }
-
-      // ロール階層チェック
-      if (requiredRole == 'admin') {
-        return userRole == 'admin';
-      } else if (requiredRole == 'editor') {
-        return userRole == 'admin' || userRole == 'editor';
-      } else if (requiredRole == 'viewer') {
-        return userRole == 'admin' || userRole == 'editor' || userRole == 'viewer';
-      }
-
-      return false;
+      return userRole == 'super-admin' ||
+             (requiredRole == 'admin' && userRole == 'admin') ||
+             (requiredRole == 'editor' && (userRole == 'admin' || userRole == 'editor')) ||
+             (requiredRole == 'viewer' && (userRole == 'admin' || userRole == 'editor' || userRole == 'viewer'));
     }
 
     // super-admin権限を持つかチェック
     function isSuperAdmin() {
       let userProfile = getUserProfile();
+      let facilities = userProfile.facilities;
 
-      let i = 0;
-      while (i < userProfile.facilities.size()) {
-        if (userProfile.facilities[i].role == 'super-admin') {
-          return true;
-        }
-        i = i + 1;
-      }
-
-      return false;
+      // 最大10施設までサポート
+      return (facilities.size() > 0 && facilities[0].role == 'super-admin') ||
+             (facilities.size() > 1 && facilities[1].role == 'super-admin') ||
+             (facilities.size() > 2 && facilities[2].role == 'super-admin') ||
+             (facilities.size() > 3 && facilities[3].role == 'super-admin') ||
+             (facilities.size() > 4 && facilities[4].role == 'super-admin') ||
+             (facilities.size() > 5 && facilities[5].role == 'super-admin') ||
+             (facilities.size() > 6 && facilities[6].role == 'super-admin') ||
+             (facilities.size() > 7 && facilities[7].role == 'super-admin') ||
+             (facilities.size() > 8 && facilities[8].role == 'super-admin') ||
+             (facilities.size() > 9 && facilities[9].role == 'super-admin');
     }
 
     // ==================== Collections ====================
