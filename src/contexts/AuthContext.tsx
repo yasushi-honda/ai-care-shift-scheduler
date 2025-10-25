@@ -5,6 +5,9 @@ import { auth, googleProvider, db, authReady } from '../../firebase';
 import { User, AuthError, Result, FacilityRole } from '../../types';
 import { createOrUpdateUser } from '../services/userService';
 
+// LocalStorageキー
+const SELECTED_FACILITY_KEY = 'selectedFacilityId';
+
 // AuthContext の型定義
 interface AuthContextType {
   currentUser: FirebaseUser | null;
@@ -116,11 +119,59 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               setUserProfile(profile);
 
               // 施設の自動選択ロジック
-              // 権限がある施設が1つなら自動選択、複数または0の場合はnull
-              if (profile.facilities && profile.facilities.length === 1) {
-                setSelectedFacilityId(profile.facilities[0].facilityId);
+              // 1. LocalStorageから前回選択した施設IDを復元
+              // 2. 復元した施設IDが有効かバリデーション
+              // 3. 無効な場合は、権限がある施設が1つなら自動選択、複数または0の場合はnull
+              let restoredFacilityId: string | null = null;
+
+              try {
+                const savedFacilityId = localStorage.getItem(SELECTED_FACILITY_KEY);
+                if (savedFacilityId && profile.facilities) {
+                  // 保存された施設IDへのアクセス権限があるか確認
+                  const hasAccess = profile.facilities.some(
+                    (f) => f.facilityId === savedFacilityId
+                  );
+                  if (hasAccess) {
+                    restoredFacilityId = savedFacilityId;
+                    console.log('✅ Restored facility from localStorage:', savedFacilityId);
+                  } else {
+                    // アクセス権限がない場合はLocalStorageから削除
+                    localStorage.removeItem(SELECTED_FACILITY_KEY);
+                    console.warn('⚠️ Saved facility ID is no longer accessible, removed from localStorage');
+                  }
+                }
+              } catch (error) {
+                console.error('Failed to restore facility from localStorage:', error);
+                // 破損したデータをクリーンアップ
+                try {
+                  localStorage.removeItem(SELECTED_FACILITY_KEY);
+                } catch (removeError) {
+                  console.error('Failed to remove corrupted facility data:', removeError);
+                }
+              }
+
+              if (restoredFacilityId) {
+                // LocalStorageから復元成功
+                setSelectedFacilityId(restoredFacilityId);
+              } else if (profile.facilities && profile.facilities.length === 1) {
+                // 施設が1つのみの場合は自動選択
+                const autoSelectedId = profile.facilities[0].facilityId;
+                setSelectedFacilityId(autoSelectedId);
+                // LocalStorageにも保存
+                try {
+                  localStorage.setItem(SELECTED_FACILITY_KEY, autoSelectedId);
+                } catch (error) {
+                  console.error('Failed to save auto-selected facility:', error);
+                }
               } else {
+                // 複数または0の場合はnull
                 setSelectedFacilityId(null);
+                // LocalStorageから削除（古いデータが残らないように）
+                try {
+                  localStorage.removeItem(SELECTED_FACILITY_KEY);
+                } catch (error) {
+                  console.error('Failed to remove facility from localStorage:', error);
+                }
               }
             } else {
               // ユーザードキュメントが存在しない場合はnull
@@ -202,6 +253,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signOut = async (): Promise<Result<void, AuthError>> => {
     try {
       await firebaseSignOut(auth);
+
+      // LocalStorageから施設IDを削除
+      try {
+        localStorage.removeItem(SELECTED_FACILITY_KEY);
+      } catch (error) {
+        console.error('Failed to remove facility from localStorage:', error);
+      }
+
       return { success: true, data: undefined };
     } catch (error: any) {
       console.error('Sign out error:', error);
@@ -230,6 +289,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     setSelectedFacilityId(facilityId);
+
+    // LocalStorageに保存（ページリロード時に復元するため）
+    try {
+      localStorage.setItem(SELECTED_FACILITY_KEY, facilityId);
+    } catch (error) {
+      console.error('Failed to save selected facility to localStorage:', error);
+    }
   };
 
   // ロール判定（指定施設に対して指定ロール以上の権限を持つか）
