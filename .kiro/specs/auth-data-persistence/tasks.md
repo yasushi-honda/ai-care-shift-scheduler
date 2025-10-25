@@ -274,26 +274,33 @@ Phase 1-3のすべての機能が本番環境にデプロイされ、動作確�
 
 ---
 
-## Phase 9: データ復元とリロード対応
+## Phase 9: データ復元とリロード対応 ✅ 完了
 
-- [ ] 9. ページリロード時のデータ復元機能
-- [ ] 9.1 ページリロード時の認証状態復元機能の実装
+- [x] 9. ページリロード時のデータ復元機能
+- [x] 9.1 ページリロード時の認証状態復元機能の実装
   - Firebase Authenticationセッションからのユーザー復元
   - 有効なセッションがない場合のログイン画面リダイレクト
   - 認証状態復元中のローディング表示
   - _Requirements: 7.1, 7.2, 7.3_
+  - **実装済み**: `src/contexts/AuthContext.tsx` - onAuthStateChangedによる自動復元
+  - **実装済み**: `src/components/ProtectedRoute.tsx` - loadingステート管理とローディング画面
 
-- [ ] 9.2 選択された施設とデータの自動復元機能の実装
+- [x] 9.2 選択された施設とデータの自動復元機能の実装
   - 前回選択していた施設IDの復元（LocalStorageから）
   - 復元された施設のデータ自動ロード（スタッフ、シフト、休暇、要件）
   - データ取得完了後のアプリケーション状態の復元
   - _Requirements: 7.2, 7.4_
+  - **実装**: `src/contexts/AuthContext.tsx` - LocalStorage統合（保存・復元・バリデーション・クリーンアップ）
+  - **実装**: selectFacility()でLocalStorageに保存、signOut()で削除
+  - **実装**: onAuthStateChanged内で復元＋権限チェック、複数施設時のクリーンアップ
 
-- [ ] 9.3 ローディング状態とエラーハンドリングの実装
+- [x] 9.3 ローディング状態とエラーハンドリングの実装
   - データ取得中のローディングインジケーター表示
   - データ取得失敗時のエラーメッセージとリトライボタン
   - ネットワーク接続エラーの検出と通知
   - _Requirements: 7.5, 7.6, 10.2, 10.6_
+  - **実装済み**: `App.tsx` - loadingStaff, loadingSchedule, staffError, scheduleError
+  - **実装済み**: handleRetryStaffLoad, handleRetryScheduleLoad - リトライボタン統合
 
 ---
 
