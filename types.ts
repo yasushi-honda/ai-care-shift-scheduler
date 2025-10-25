@@ -33,6 +33,18 @@ export interface LeaveRequest {
   };
 }
 
+// Firestoreドキュメント用の休暇申請型
+// Firestoreパス: /facilities/{facilityId}/leaveRequests/{requestId}
+export interface LeaveRequestDocument {
+  id: string;
+  staffId: string;
+  staffName: string;
+  date: string; // YYYY-MM-DD
+  leaveType: LeaveType;
+  createdAt?: Timestamp;
+  updatedAt?: Timestamp;
+}
+
 export interface Staff {
   id: string;
   name: string;
@@ -141,6 +153,19 @@ export type ScheduleError =
   | { code: 'NOT_FOUND'; message: string }
   | { code: 'VALIDATION_ERROR'; message: string }
   | { code: 'CONFLICT'; message: string; currentVersion: number }
+  | { code: 'FIRESTORE_ERROR'; message: string };
+
+// 休暇申請サービスエラー型
+export type LeaveRequestError =
+  | { code: 'PERMISSION_DENIED'; message: string }
+  | { code: 'NOT_FOUND'; message: string }
+  | { code: 'VALIDATION_ERROR'; message: string }
+  | { code: 'FIRESTORE_ERROR'; message: string };
+
+// 要件設定サービスエラー型
+export type RequirementError =
+  | { code: 'PERMISSION_DENIED'; message: string }
+  | { code: 'VALIDATION_ERROR'; message: string }
   | { code: 'FIRESTORE_ERROR'; message: string };
 
 // ロール（RBAC）

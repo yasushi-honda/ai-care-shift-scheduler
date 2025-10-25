@@ -1,13 +1,15 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import {
   Role, Qualification, TimeSlotPreference, LeaveType,
-  type Staff, type ShiftRequirement, type StaffSchedule, type GeneratedShift, type LeaveRequest, type WorkLogs, type WorkLogDetails, type ScheduleVersion
+  type Staff, type ShiftRequirement, type StaffSchedule, type GeneratedShift, type LeaveRequest, type WorkLogs, type WorkLogDetails, type ScheduleVersion, type LeaveRequestDocument
 } from './types';
 import { DEFAULT_TIME_SLOTS } from './constants';
 import { generateShiftSchedule } from './services/geminiService';
 import { exportToCSV } from './services/exportService';
 import { StaffService } from './src/services/staffService';
 import { ScheduleService } from './src/services/scheduleService';
+import { LeaveRequestService } from './src/services/leaveRequestService';
+import { RequirementService } from './src/services/requirementService';
 import { useAuth } from './src/contexts/AuthContext';
 import ShiftTable from './components/ShiftTable';
 import Accordion from './components/Accordion';
@@ -23,6 +25,22 @@ type ToastMessage = {
   message: string;
   type: 'success' | 'error';
 } | null;
+
+/**
+ * LeaveRequestDocument配列をLeaveRequest型に変換
+ */
+function convertToLeaveRequest(documents: LeaveRequestDocument[]): LeaveRequest {
+  const result: LeaveRequest = {};
+
+  for (const doc of documents) {
+    if (!result[doc.staffId]) {
+      result[doc.staffId] = {};
+    }
+    result[doc.staffId][doc.date] = doc.leaveType;
+  }
+
+  return result;
+}
 
 const App: React.FC = () => {
   const { selectedFacilityId, currentUser } = useAuth();
@@ -51,10 +69,8 @@ const App: React.FC = () => {
   const [generatingSchedule, setGeneratingSchedule] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>('shift');
-  const [leaveRequests, setLeaveRequests] = useState<LeaveRequest>({
-    's001': { '2025-11-18': LeaveType.PaidLeave },
-    's003': { '2025-11-25': LeaveType.Hope, '2025-11-26': LeaveType.Hope },
-  });
+  const [leaveRequests, setLeaveRequests] = useState<LeaveRequest>({});
+  const [leaveRequestDocuments, setLeaveRequestDocuments] = useState<LeaveRequestDocument[]>([]);
   const [workLogs, setWorkLogs] = useState<WorkLogs>({
     '2025-11-01': {
       's001': { workDetails: 'バイタルチェック、配薬、記録', notes: '田中様、微熱あり。要経過観察。' }
@@ -68,6 +84,55 @@ const App: React.FC = () => {
   const [versionHistoryModalOpen, setVersionHistoryModalOpen] = useState(false);
   const [versions, setVersions] = useState<ScheduleVersion[]>([]);
   const [versionLoading, setVersionLoading] = useState(false);
+
+  // Firestoreから要件設定を読み込む（施設選択時のみ）
+  useEffect(() => {
+    if (!selectedFacilityId) {
+      return;
+    }
+
+    const loadRequirement = async () => {
+      const result = await RequirementService.getRequirement(selectedFacilityId);
+
+      if (result.success && result.data) {
+        // Firestoreから取得した要件設定を使用
+        setRequirements(result.data);
+      } else if (result.success && !result.data) {
+        // 要件設定が存在しない場合はデフォルト設定を維持
+        console.log('No requirement found, using default');
+      } else {
+        console.error('Failed to load requirement:', result.error);
+        showToast(`要件設定の読み込みに失敗しました: ${result.error.message}`, 'error');
+      }
+    };
+
+    loadRequirement();
+  }, [selectedFacilityId]);
+
+  // 要件設定が変更されたときに自動保存
+  useEffect(() => {
+    if (!selectedFacilityId) {
+      return;
+    }
+
+    // 初回マウント時は保存しない（無限ループ防止）
+    const saveRequirement = async () => {
+      const result = await RequirementService.saveRequirement(
+        selectedFacilityId,
+        requirements
+      );
+
+      if (!result.success) {
+        console.error('Failed to save requirement:', result.error);
+        // エラー通知はUIに表示しない（自動保存のため）
+      }
+    };
+
+    // debounce: 1秒後に保存（頻繁な更新を防ぐ）
+    const timerId = setTimeout(saveRequirement, 1000);
+
+    return () => clearTimeout(timerId);
+  }, [selectedFacilityId, requirements]);
 
   // Firestoreからスタッフデータをリアルタイムで購読
   useEffect(() => {
@@ -170,6 +235,46 @@ const App: React.FC = () => {
       setSchedule([]);
     }
   }, [selectedFacilityId, requirements.targetMonth, scheduleRetryTrigger, generatingSchedule]);
+
+  // Firestoreから休暇申請データをリアルタイムで購読
+  useEffect(() => {
+    if (!selectedFacilityId || !requirements.targetMonth) {
+      setLeaveRequests({});
+      setLeaveRequestDocuments([]);
+      return;
+    }
+
+    try {
+      const unsubscribe = LeaveRequestService.subscribeToLeaveRequests(
+        selectedFacilityId,
+        requirements.targetMonth,
+        (leaveRequestDocs, error) => {
+          if (error) {
+            console.error('LeaveRequest subscription error:', error);
+            showToast(`休暇申請の読み込みに失敗しました: ${error.message}`, 'error');
+            setLeaveRequests({});
+            setLeaveRequestDocuments([]);
+            return;
+          }
+
+          // ドキュメントを保存（削除時にIDが必要）
+          setLeaveRequestDocuments(leaveRequestDocs);
+
+          // LeaveRequestDocument[]をLeaveRequest型に変換
+          const converted = convertToLeaveRequest(leaveRequestDocs);
+          setLeaveRequests(converted);
+        }
+      );
+
+      return () => unsubscribe();
+    } catch (err) {
+      console.error('Failed to setup leave request subscription:', err);
+      const errorMessage = err instanceof Error ? err.message : '休暇申請の購読設定に失敗しました';
+      showToast(`休暇申請の購読設定に失敗しました: ${errorMessage}`, 'error');
+      setLeaveRequests({});
+      setLeaveRequestDocuments([]);
+    }
+  }, [selectedFacilityId, requirements.targetMonth]);
 
   const handleStaffChange = useCallback(async (updatedStaff: Staff) => {
     if (!selectedFacilityId) return;
@@ -334,20 +439,49 @@ const App: React.FC = () => {
     }
   }, [staffToDelete, selectedFacilityId]);
 
-  const handleLeaveRequestChange = useCallback((staffId: string, date: string, leaveType: LeaveType | null) => {
-    setLeaveRequests(prev => {
-        const newRequests = JSON.parse(JSON.stringify(prev));
-        if (!newRequests[staffId]) {
-            newRequests[staffId] = {};
+  const handleLeaveRequestChange = useCallback(async (staffId: string, date: string, leaveType: LeaveType | null) => {
+    if (!selectedFacilityId) return;
+
+    // スタッフ名を取得
+    const staff = staffList.find(s => s.id === staffId);
+    if (!staff) {
+      console.error('Staff not found:', staffId);
+      return;
+    }
+
+    if (leaveType) {
+      // 休暇申請を作成
+      const result = await LeaveRequestService.createLeaveRequest(selectedFacilityId, {
+        staffId,
+        staffName: staff.name,
+        date,
+        leaveType,
+      });
+
+      if (!result.success) {
+        console.error('Failed to create leave request:', result.error);
+        showToast(`休暇申請の登録に失敗しました: ${result.error.message}`, 'error');
+      }
+    } else {
+      // 休暇申請を削除
+      // leaveRequestDocumentsから該当するドキュメントを検索
+      const targetDoc = leaveRequestDocuments.find(
+        doc => doc.staffId === staffId && doc.date === date
+      );
+
+      if (targetDoc) {
+        const result = await LeaveRequestService.deleteLeaveRequest(
+          selectedFacilityId,
+          targetDoc.id
+        );
+
+        if (!result.success) {
+          console.error('Failed to delete leave request:', result.error);
+          showToast(`休暇申請の削除に失敗しました: ${result.error.message}`, 'error');
         }
-        if (leaveType) {
-            newRequests[staffId][date] = leaveType;
-        } else {
-            delete newRequests[staffId][date];
-        }
-        return newRequests;
-    });
-  }, []);
+      }
+    }
+  }, [selectedFacilityId, staffList, leaveRequestDocuments]);
 
   const handleWorkLogChange = useCallback((staffId: string, date: string, details: WorkLogDetails) => {
     setWorkLogs(prev => {
