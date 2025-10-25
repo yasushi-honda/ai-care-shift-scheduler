@@ -14,21 +14,21 @@ export function AdminDashboard(): JSX.Element {
       description: '施設の一覧表示、作成、詳細表示',
       path: '/admin/facilities',
       icon: '🏢',
-      color: 'blue',
+      hoverClass: 'hover:border-blue-500',
     },
     {
       title: 'ユーザー管理',
       description: 'ユーザーの一覧表示、権限付与、詳細表示',
       path: '/admin/users',
       icon: '👥',
-      color: 'green',
+      hoverClass: 'hover:border-green-500',
     },
     {
       title: '監査ログ',
       description: 'システムの監査ログ表示とエクスポート',
       path: '/admin/audit-logs',
       icon: '📋',
-      color: 'purple',
+      hoverClass: 'hover:border-purple-500',
     },
   ];
 
@@ -46,10 +46,7 @@ export function AdminDashboard(): JSX.Element {
           <Link
             key={link.path}
             to={link.path}
-            className={`
-              block p-6 bg-white rounded-lg shadow-sm border-2 border-transparent
-              hover:border-${link.color}-500 hover:shadow-md transition-all
-            `}
+            className={`block p-6 bg-white rounded-lg shadow-sm border-2 border-transparent hover:shadow-md transition-all ${link.hoverClass}`}
           >
             <div className="text-4xl mb-4">{link.icon}</div>
             <h2 className="text-xl font-semibold text-gray-900 mb-2">
