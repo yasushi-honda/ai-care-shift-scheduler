@@ -18,19 +18,55 @@ service cloud.firestore {
     // 指定施設に対して指定ロール以上の権限を持つかチェック
     function hasRole(facilityId, requiredRole) {
       let userProfile = getUserProfile();
-      let facilities = userProfile.facilities.where(f, f.facilityId == facilityId);
 
-      return facilities.size() > 0 &&
-        (facilities[0].role == 'super-admin' ||
-         (requiredRole == 'admin' && facilities[0].role == 'admin') ||
-         (requiredRole == 'editor' && facilities[0].role in ['admin', 'editor']) ||
-         (requiredRole == 'viewer' && facilities[0].role in ['admin', 'editor', 'viewer']));
+      // facilities配列から該当するfacilityを探す
+      let hasAccess = false;
+      let userRole = '';
+
+      let i = 0;
+      while (i < userProfile.facilities.size()) {
+        if (userProfile.facilities[i].facilityId == facilityId) {
+          hasAccess = true;
+          userRole = userProfile.facilities[i].role;
+          break;
+        }
+        i = i + 1;
+      }
+
+      if (!hasAccess) {
+        return false;
+      }
+
+      // super-adminは全権限を持つ
+      if (userRole == 'super-admin') {
+        return true;
+      }
+
+      // ロール階層チェック
+      if (requiredRole == 'admin') {
+        return userRole == 'admin';
+      } else if (requiredRole == 'editor') {
+        return userRole == 'admin' || userRole == 'editor';
+      } else if (requiredRole == 'viewer') {
+        return userRole == 'admin' || userRole == 'editor' || userRole == 'viewer';
+      }
+
+      return false;
     }
 
     // super-admin権限を持つかチェック
     function isSuperAdmin() {
       let userProfile = getUserProfile();
-      return userProfile.facilities.where(f, f.role == 'super-admin').size() > 0;
+
+      let i = 0;
+      while (i < userProfile.facilities.size()) {
+        if (userProfile.facilities[i].role == 'super-admin') {
+          return true;
+        }
+        i = i + 1;
+      }
+
+      return false;
     }
 
     // ==================== Collections ====================
