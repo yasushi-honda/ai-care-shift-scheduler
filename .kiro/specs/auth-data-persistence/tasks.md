@@ -238,27 +238,33 @@ Phase 1-3のすべての機能が本番環境にデプロイされ、動作確�
 
 ---
 
-## Phase 8: Firestore Security Rulesの実装
+## Phase 8: Firestore Security Rulesの実装 ✅ 完了
 
-- [ ] 8. Firestore Security Rulesによるアクセス制御
-- [ ] 8.1 基本的なRBACルールの作成とテスト
+- [x] 8. Firestore Security Rulesによるアクセス制御
+- [x] 8.1 基本的なRBACルールの作成とテスト
   - 認証必須ルール（未認証ユーザーのアクセス拒否）
   - 事業所ベースのデータ分離ルール
   - ロール別の読取・書込権限ルール（admin, editor, viewer）
   - usersコレクションの自己アクセスのみ許可ルール
   - _Requirements: 8.1, 8.2, 8.3, 8.4, 8.5, 8.6, 8.7_
+  - **実装**: `firestore.rules` - hasRole(), checkFacilityRole(), checkRolePermission(), isSuperAdmin()関数
+  - **トラブルシューティング**: where()、in、whileループは使用不可 → インデックス直接アクセスとOR演算子で実装
+  - **デプロイ**: 2025-10-25 GitHub Actions経由で本番環境にデプロイ完了
 
-- [ ] 8.2 バージョン履歴の不変性保証ルールの実装
+- [x] 8.2 バージョン履歴の不変性保証ルールの実装
   - versionsサブコレクションの作成のみ許可
   - バージョン履歴の更新・削除を禁止
   - editor以上の権限でのみバージョン作成可能
   - _Requirements: シフトのバージョン管理（design.md）_
+  - **実装**: `firestore.rules` - versionsサブコレクションルール（allow create: editor以上、allow update/delete: false）
 
-- [ ] 8.3 Security Rulesのデプロイとテスト
-  - Firebase CLIによるSecurity Rulesのデプロイ
+- [x] 8.3 Security Rulesのデプロイとテスト
+  - GitHub Actions CI/CDによるSecurity Rulesの自動デプロイ
   - ルールの動作確認（権限あり・なしでのアクセステスト）
   - CI/CDパイプラインへのSecurity Rulesデプロイの統合
   - _Requirements: 8.8_
+  - **実装**: `.github/workflows/ci.yml` - firebase deploy --only firestore:rules統合
+  - **検証**: 本番環境でスタッフ・シフトデータのアクセス権限を確認
 
 ---
 
