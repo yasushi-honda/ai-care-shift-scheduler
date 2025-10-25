@@ -1,4 +1,5 @@
 import React, { useState, useCallback, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import {
   Role, Qualification, TimeSlotPreference, LeaveType,
   type Staff, type ShiftRequirement, type StaffSchedule, type GeneratedShift, type LeaveRequest, type WorkLogs, type WorkLogDetails, type ScheduleVersion, type LeaveRequestDocument
@@ -43,7 +44,7 @@ function convertToLeaveRequest(documents: LeaveRequestDocument[]): LeaveRequest 
 }
 
 const App: React.FC = () => {
-  const { selectedFacilityId, currentUser } = useAuth();
+  const { selectedFacilityId, currentUser, isSuperAdmin } = useAuth();
   const [staffList, setStaffList] = useState<Staff[]>([]);
   const [loadingStaff, setLoadingStaff] = useState(true);
   const [staffError, setStaffError] = useState<string | null>(null);
@@ -792,8 +793,21 @@ const App: React.FC = () => {
     <div className="flex h-screen bg-slate-100 font-sans text-slate-800">
       <aside className="w-1/3 max-w-lg bg-white shadow-2xl flex flex-col h-screen">
         <header className="p-5 bg-gradient-to-r from-care-dark to-care-secondary text-white shadow-md">
-          <h1 className="text-2xl font-bold">AIシフト自動作成</h1>
-          <p className="text-sm text-indigo-200 mt-1">介護・福祉事業所向け</p>
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-2xl font-bold">AIシフト自動作成</h1>
+              <p className="text-sm text-indigo-200 mt-1">介護・福祉事業所向け</p>
+            </div>
+            {isSuperAdmin() && (
+              <Link
+                to="/admin"
+                className="px-3 py-2 bg-white bg-opacity-20 hover:bg-opacity-30 rounded-lg text-sm font-medium transition-colors flex items-center gap-1"
+                title="管理画面"
+              >
+                ⚙️ 管理
+              </Link>
+            )}
+          </div>
         </header>
         <div className="flex-grow overflow-y-auto">
           <Accordion title="スタッフ情報設定" icon={<UserGroupIcon/>}>
