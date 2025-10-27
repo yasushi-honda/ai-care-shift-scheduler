@@ -1,5 +1,6 @@
 import React from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import { Button } from './Button';
 
 /**
  * アクセス権限なしユーザー向け画面
@@ -74,13 +75,13 @@ export function NoAccessPage() {
 
           {/* アクション */}
           <div className="space-y-3">
-            <button
+            <Button
               onClick={() => window.location.reload()}
-              className="w-full bg-blue-600 px-4 py-2 rounded-md hover:bg-blue-700 transition-colors"
-              style={{ color: 'white' }}
+              variant="primary"
+              className="w-full"
             >
               ページを再読み込み
-            </button>
+            </Button>
             <button
               onClick={handleLogout}
               className="w-full bg-white text-gray-700 px-4 py-2 rounded-md border border-gray-300 hover:bg-gray-50 transition-colors"

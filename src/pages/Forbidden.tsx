@@ -1,5 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Button } from '../components/Button';
 
 /**
  * Forbidden (403エラーページ)
@@ -23,13 +24,13 @@ export function Forbidden(): JSX.Element {
         </div>
 
         <div className="space-y-3">
-          <button
+          <Button
             onClick={() => navigate('/')}
-            className="w-full px-6 py-3 bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors font-medium"
-            style={{ color: 'white' }}
+            variant="primary"
+            className="w-full px-6 py-3"
           >
             ホームに戻る
-          </button>
+          </Button>
           <p className="text-sm text-gray-500">
             管理画面にアクセスするにはsuper-admin権限が必要です。
           </p>

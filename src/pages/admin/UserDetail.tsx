@@ -4,6 +4,7 @@ import { User, Facility, FacilityRole } from '../../../types';
 import { getUserById, grantAccess, revokeAccess } from '../../services/userService';
 import { getAllFacilities } from '../../services/facilityService';
 import { useAuth } from '../../contexts/AuthContext';
+import { Button } from '../../components/Button';
 
 /**
  * UserDetail
@@ -250,14 +251,13 @@ export function UserDetail(): JSX.Element {
 
       {/* アクセス権限付与ボタン */}
       <div className="mb-6">
-        <button
+        <Button
           onClick={() => setShowGrantForm(true)}
-          className="px-4 py-2 bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors font-medium"
-          style={{ color: 'white' }}
+          variant="primary"
           disabled={availableFacilities.length === 0}
         >
           ➕ アクセス権限を付与
-        </button>
+        </Button>
         {availableFacilities.length === 0 && (
           <p className="text-sm text-gray-500 mt-2">
             付与可能な施設がありません
@@ -332,14 +332,13 @@ export function UserDetail(): JSX.Element {
                 >
                   キャンセル
                 </button>
-                <button
+                <Button
                   type="submit"
-                  className="px-4 py-2 bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                  style={{ color: 'white' }}
+                  variant="primary"
                   disabled={granting || !selectedFacilityId}
                 >
                   {granting ? '付与中...' : '付与'}
-                </button>
+                </Button>
               </div>
             </form>
           </div>

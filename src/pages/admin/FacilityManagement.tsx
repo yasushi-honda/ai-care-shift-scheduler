@@ -8,6 +8,7 @@ import {
   getFacilityStats,
   FacilityStats,
 } from '../../services/facilityService';
+import { Button } from '../../components/Button';
 
 /**
  * FacilityManagement
@@ -117,13 +118,13 @@ export function FacilityManagement(): JSX.Element {
     return (
       <div className="bg-red-50 border border-red-200 rounded-lg p-4">
         <p className="text-red-600">エラー: {error}</p>
-        <button
+        <Button
           onClick={loadFacilities}
-          className="mt-2 px-4 py-2 bg-red-600 rounded hover:bg-red-700"
-          style={{ color: 'white' }}
+          variant="danger"
+          className="mt-2"
         >
           再試行
-        </button>
+        </Button>
       </div>
     );
   }
@@ -140,13 +141,12 @@ export function FacilityManagement(): JSX.Element {
             全施設の管理と新規施設の作成
           </p>
         </div>
-        <button
+        <Button
           onClick={() => setShowCreateForm(true)}
-          className="px-4 py-2 bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors font-medium"
-          style={{ color: 'white' }}
+          variant="primary"
         >
           ➕ 新規施設作成
-        </button>
+        </Button>
       </div>
 
       {/* 新規施設作成フォーム（モーダル） */}
@@ -196,14 +196,13 @@ export function FacilityManagement(): JSX.Element {
                 >
                   キャンセル
                 </button>
-                <button
+                <Button
                   type="submit"
-                  className="px-4 py-2 bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                  style={{ color: 'white' }}
+                  variant="primary"
                   disabled={creating || !newFacilityName.trim()}
                 >
                   {creating ? '作成中...' : '作成'}
-                </button>
+                </Button>
               </div>
             </form>
           </div>

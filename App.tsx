@@ -20,6 +20,7 @@ import StaffSettings from './components/StaffSettings';
 import LeaveRequestCalendar from './components/LeaveRequestCalendar';
 import ConfirmModal from './components/ConfirmModal';
 import VersionHistoryModal from './components/VersionHistoryModal';
+import { Button } from './src/components/Button';
 
 type ViewMode = 'shift' | 'leaveRequest';
 
@@ -877,39 +878,39 @@ const App: React.FC = () => {
               <SparklesIcon/>
               <span className="ml-2">デモシフト作成</span>
             </button>
-            <button
+            <Button
               onClick={handleSaveDraft}
               disabled={isLoading || !currentScheduleId || schedule.length === 0 || currentScheduleStatus !== 'draft'}
-              className="bg-blue-600 hover:bg-blue-700 font-semibold py-2 px-4 rounded-lg shadow-sm text-sm inline-flex items-center transition-colors duration-200 disabled:bg-slate-400 disabled:cursor-not-allowed"
-              style={{ color: 'white' }}
+              variant="primary"
+              className="font-semibold py-2 px-4 shadow-sm text-sm inline-flex items-center"
             >
               <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
               </svg>
               <span className="ml-2">下書き保存</span>
-            </button>
-            <button
+            </Button>
+            <Button
               onClick={handleConfirmSchedule}
               disabled={isLoading || !currentScheduleId || schedule.length === 0 || currentScheduleStatus !== 'draft'}
-              className="bg-green-600 hover:bg-green-700 font-semibold py-2 px-4 rounded-lg shadow-sm text-sm inline-flex items-center transition-colors duration-200 disabled:bg-slate-400 disabled:cursor-not-allowed"
-              style={{ color: 'white' }}
+              variant="success"
+              className="font-semibold py-2 px-4 shadow-sm text-sm inline-flex items-center"
             >
               <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
               </svg>
               <span className="ml-2">確定</span>
-            </button>
-            <button
+            </Button>
+            <Button
               onClick={handleShowVersionHistory}
               disabled={!currentScheduleId}
-              className="bg-purple-600 hover:bg-purple-700 font-semibold py-2 px-4 rounded-lg shadow-sm text-sm inline-flex items-center transition-colors duration-200 disabled:bg-slate-400 disabled:cursor-not-allowed"
-              style={{ color: 'white' }}
+              variant="purple"
+              className="font-semibold py-2 px-4 shadow-sm text-sm inline-flex items-center"
             >
               <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
               <span className="ml-2">バージョン履歴</span>
-            </button>
+            </Button>
             <button onClick={handleExportCSV} className="bg-white hover:bg-slate-50 text-slate-700 font-semibold py-2 px-4 border border-slate-300 rounded-lg shadow-sm text-sm inline-flex items-center transition-colors duration-200">
               <DownloadIcon/>
               <span className="ml-2">CSV形式でダウンロード</span>

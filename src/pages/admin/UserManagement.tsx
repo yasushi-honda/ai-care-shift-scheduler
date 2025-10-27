@@ -2,6 +2,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { getAllUsers, UserSummary } from '../../services/userService';
+import { Button } from '../../components/Button';
 
 /**
  * UserManagement
@@ -65,13 +66,13 @@ export function UserManagement(): JSX.Element {
     return (
       <div className="bg-red-50 border border-red-200 rounded-lg p-4">
         <p className="text-red-600">エラー: {error}</p>
-        <button
+        <Button
           onClick={loadUsers}
-          className="mt-2 px-4 py-2 bg-red-600 rounded hover:bg-red-700"
-          style={{ color: 'white' }}
+          variant="danger"
+          className="mt-2"
         >
           再試行
-        </button>
+        </Button>
       </div>
     );
   }
