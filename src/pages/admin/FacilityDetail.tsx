@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Facility } from '../../../types';
 import {
@@ -26,11 +26,7 @@ export function FacilityDetail(): JSX.Element {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    loadFacilityDetail();
-  }, [facilityId, currentUser]);
-
-  async function loadFacilityDetail() {
+  const loadFacilityDetail = useCallback(async () => {
     if (!facilityId || !currentUser) return;
 
     setLoading(true);
@@ -54,7 +50,11 @@ export function FacilityDetail(): JSX.Element {
     }
 
     setLoading(false);
-  }
+  }, [facilityId, currentUser]);
+
+  useEffect(() => {
+    loadFacilityDetail();
+  }, [loadFacilityDetail]);
 
   function formatDate(timestamp: any): string {
     if (!timestamp) return '-';

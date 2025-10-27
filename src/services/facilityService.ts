@@ -6,11 +6,12 @@ import {
   setDoc,
   query,
   orderBy,
+  limit,
   Timestamp,
   CollectionReference,
 } from 'firebase/firestore';
 import { db } from '../../firebase';
-import { Facility, FacilityMember, FacilityRole, Result } from '../../types';
+import { Facility, FacilityMember, FacilityRole, Result, User } from '../../types';
 
 // Facility サービスエラー型
 export type FacilityError =
@@ -28,6 +29,26 @@ export interface FacilityStats {
 }
 
 /**
+ * ユーザーがsuper-adminかどうかを確認
+ * @param userId - ユーザーID
+ * @returns Promise<boolean>
+ */
+async function checkIsSuperAdmin(userId: string): Promise<boolean> {
+  try {
+    const userDoc = await getDoc(doc(db, 'users', userId));
+    if (!userDoc.exists()) {
+      return false;
+    }
+
+    const user = userDoc.data() as User;
+    return user.facilities?.some((f) => f.role === FacilityRole.SuperAdmin) || false;
+  } catch (error) {
+    console.error('Error checking super-admin status:', error);
+    return false;
+  }
+}
+
+/**
  * 全施設を取得（super-admin専用）
  *
  * @param currentUserId - 現在のユーザーID
@@ -37,8 +58,17 @@ export async function getAllFacilities(
   currentUserId: string
 ): Promise<Result<Facility[], FacilityError>> {
   try {
-    // TODO: super-admin権限チェック（後でAuthContextから確認）
-    // 今回は簡略化のため、呼び出し側で権限チェック済みと想定
+    // super-admin権限チェック
+    const isSuperAdmin = await checkIsSuperAdmin(currentUserId);
+    if (!isSuperAdmin) {
+      return {
+        success: false,
+        error: {
+          code: 'PERMISSION_DENIED',
+          message: 'この操作にはスーパー管理者権限が必要です',
+        },
+      };
+    }
 
     const facilitiesRef = collection(db, 'facilities') as CollectionReference<Facility>;
     const q = query(facilitiesRef, orderBy('createdAt', 'desc'));
@@ -117,6 +147,18 @@ export async function createFacility(
   currentUserId: string
 ): Promise<Result<Facility, FacilityError>> {
   try {
+    // super-admin権限チェック
+    const isSuperAdmin = await checkIsSuperAdmin(currentUserId);
+    if (!isSuperAdmin) {
+      return {
+        success: false,
+        error: {
+          code: 'PERMISSION_DENIED',
+          message: 'この操作にはスーパー管理者権限が必要です',
+        },
+      };
+    }
+
     // バリデーション
     if (!name || name.trim().length === 0) {
       return {
@@ -178,19 +220,24 @@ export async function getFacilityStats(
     const staffSnapshot = await getDocs(staffRef);
     const totalStaff = staffSnapshot.size;
 
-    // スケジュール数を取得
+    // スケジュール数と最新スケジュールを効率的に取得
     const schedulesRef = collection(db, 'facilities', facilityId, 'schedules');
     const schedulesSnapshot = await getDocs(schedulesRef);
     const totalSchedules = schedulesSnapshot.size;
 
-    // 最新スケジュールの月を取得
+    // 最新スケジュールの月を取得（Firestoreクエリで最適化）
     let latestScheduleMonth: string | null = null;
-    if (schedulesSnapshot.size > 0) {
-      const schedules = schedulesSnapshot.docs.map((doc) => doc.data());
-      const sortedSchedules = schedules.sort((a, b) => {
-        return b.targetMonth.localeCompare(a.targetMonth);
-      });
-      latestScheduleMonth = sortedSchedules[0].targetMonth;
+    if (totalSchedules > 0) {
+      // targetMonthで降順ソート、1件のみ取得
+      const latestQuery = query(
+        schedulesRef,
+        orderBy('targetMonth', 'desc'),
+        limit(1)
+      );
+      const latestSnapshot = await getDocs(latestQuery);
+      if (!latestSnapshot.empty) {
+        latestScheduleMonth = latestSnapshot.docs[0].data().targetMonth;
+      }
     }
 
     const stats: FacilityStats = {

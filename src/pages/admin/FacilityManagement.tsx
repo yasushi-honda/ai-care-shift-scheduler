@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { Facility } from '../../../types';
@@ -30,12 +30,23 @@ export function FacilityManagement(): JSX.Element {
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
 
-  // 施設一覧を取得
-  useEffect(() => {
-    loadFacilities();
-  }, [currentUser]);
+  const loadStats = useCallback(async (facilityList: Facility[]) => {
+    const statsMap = new Map<string, FacilityStats>();
 
-  async function loadFacilities() {
+    // 並列で全施設の統計を取得
+    await Promise.all(
+      facilityList.map(async (facility) => {
+        const result = await getFacilityStats(facility.facilityId);
+        if (result.success) {
+          statsMap.set(facility.facilityId, result.data);
+        }
+      })
+    );
+
+    setStats(statsMap);
+  }, []);
+
+  const loadFacilities = useCallback(async () => {
     if (!currentUser) return;
 
     setLoading(true);
@@ -52,23 +63,12 @@ export function FacilityManagement(): JSX.Element {
     }
 
     setLoading(false);
-  }
+  }, [currentUser, loadStats]);
 
-  async function loadStats(facilityList: Facility[]) {
-    const statsMap = new Map<string, FacilityStats>();
-
-    // 並列で全施設の統計を取得
-    await Promise.all(
-      facilityList.map(async (facility) => {
-        const result = await getFacilityStats(facility.facilityId);
-        if (result.success) {
-          statsMap.set(facility.facilityId, result.data);
-        }
-      })
-    );
-
-    setStats(statsMap);
-  }
+  // 施設一覧を取得
+  useEffect(() => {
+    loadFacilities();
+  }, [loadFacilities]);
 
   async function handleCreateFacility(e: React.FormEvent) {
     e.preventDefault();
