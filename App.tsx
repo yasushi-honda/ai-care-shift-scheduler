@@ -12,6 +12,7 @@ import { ScheduleService } from './src/services/scheduleService';
 import { LeaveRequestService } from './src/services/leaveRequestService';
 import { RequirementService } from './src/services/requirementService';
 import { useAuth } from './src/contexts/AuthContext';
+import { useToast } from './src/contexts/ToastContext';
 import ShiftTable from './components/ShiftTable';
 import Accordion from './components/Accordion';
 import MonthNavigator from './components/MonthNavigator';
@@ -21,11 +22,6 @@ import ConfirmModal from './components/ConfirmModal';
 import VersionHistoryModal from './components/VersionHistoryModal';
 
 type ViewMode = 'shift' | 'leaveRequest';
-
-type ToastMessage = {
-  message: string;
-  type: 'success' | 'error';
-} | null;
 
 /**
  * LeaveRequestDocument配列をLeaveRequest型に変換
@@ -45,6 +41,7 @@ function convertToLeaveRequest(documents: LeaveRequestDocument[]): LeaveRequest 
 
 const App: React.FC = () => {
   const { selectedFacilityId, currentUser, isSuperAdmin } = useAuth();
+  const { showSuccess, showError } = useToast();
   const [staffList, setStaffList] = useState<Staff[]>([]);
   const [loadingStaff, setLoadingStaff] = useState(true);
   const [staffError, setStaffError] = useState<string | null>(null);
@@ -52,7 +49,6 @@ const App: React.FC = () => {
   const [loadingSchedule, setLoadingSchedule] = useState(false);
   const [scheduleError, setScheduleError] = useState<string | null>(null);
   const [scheduleRetryTrigger, setScheduleRetryTrigger] = useState(0);
-  const [toast, setToast] = useState<ToastMessage>(null);
   const [requirements, setRequirements] = useState<ShiftRequirement>({
     targetMonth: '2025-11',
     timeSlots: DEFAULT_TIME_SLOTS,
@@ -103,7 +99,7 @@ const App: React.FC = () => {
         console.log('No requirement found, using default');
       } else {
         console.error('Failed to load requirement:', result.error);
-        showToast(`要件設定の読み込みに失敗しました: ${result.error.message}`, 'error');
+        showError(`要件設定の読み込みに失敗しました: ${result.error.message}`);
       }
     };
 
@@ -252,7 +248,7 @@ const App: React.FC = () => {
         (leaveRequestDocs, error) => {
           if (error) {
             console.error('LeaveRequest subscription error:', error);
-            showToast(`休暇申請の読み込みに失敗しました: ${error.message}`, 'error');
+            showError(`休暇申請の読み込みに失敗しました: ${error.message}`);
             setLeaveRequests({});
             setLeaveRequestDocuments([]);
             return;
@@ -271,7 +267,7 @@ const App: React.FC = () => {
     } catch (err) {
       console.error('Failed to setup leave request subscription:', err);
       const errorMessage = err instanceof Error ? err.message : '休暇申請の購読設定に失敗しました';
-      showToast(`休暇申請の購読設定に失敗しました: ${errorMessage}`, 'error');
+      showError(`休暇申請の購読設定に失敗しました: ${errorMessage}`);
       setLeaveRequests({});
       setLeaveRequestDocuments([]);
     }
@@ -308,21 +304,6 @@ const App: React.FC = () => {
   const handleRetryScheduleLoad = useCallback(() => {
     setScheduleRetryTrigger(prev => prev + 1);
   }, []);
-
-  // Toast notification helper
-  const showToast = useCallback((message: string, type: 'success' | 'error') => {
-    setToast({ message, type });
-  }, []);
-
-  // Auto-hide toast after 3 seconds
-  useEffect(() => {
-    if (toast) {
-      const timer = setTimeout(() => {
-        setToast(null);
-      }, 3000);
-      return () => clearTimeout(timer);
-    }
-  }, [toast]);
 
   // LocalStorage auto-save: save schedule draft every 3 seconds after edit
   useEffect(() => {
@@ -461,7 +442,7 @@ const App: React.FC = () => {
 
       if (!result.success) {
         console.error('Failed to create leave request:', result.error);
-        showToast(`休暇申請の登録に失敗しました: ${result.error.message}`, 'error');
+        showError(`休暇申請の登録に失敗しました: ${result.error.message}`);
       }
     } else {
       // 休暇申請を削除
@@ -478,7 +459,7 @@ const App: React.FC = () => {
 
         if (!result.success) {
           console.error('Failed to delete leave request:', result.error);
-          showToast(`休暇申請の削除に失敗しました: ${result.error.message}`, 'error');
+          showError(`休暇申請の削除に失敗しました: ${result.error.message}`);
         }
       }
     }
@@ -523,7 +504,7 @@ const App: React.FC = () => {
 
   const handleGenerateClick = useCallback(async () => {
     if (!selectedFacilityId || !currentUser) {
-      showToast('施設またはユーザー情報が取得できません', 'error');
+      showError('施設またはユーザー情報が取得できません');
       return;
     }
 
@@ -548,21 +529,21 @@ const App: React.FC = () => {
       );
 
       if (saveResult.success) {
-        showToast('シフトを生成し、保存しました', 'success');
+        showSuccess('シフトを生成し、保存しました');
         setViewMode('shift');
       } else {
-        showToast(`保存に失敗しました: ${saveResult.error.message}`, 'error');
+        showError(`保存に失敗しました: ${saveResult.error.message}`);
         setError(`保存に失敗しました: ${saveResult.error.message}`);
       }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : '不明なエラーが発生しました。';
       setError(errorMessage);
-      showToast(errorMessage, 'error');
+      showError(errorMessage);
     } finally {
       setIsLoading(false);
       setGeneratingSchedule(false);
     }
-  }, [staffList, requirements, leaveRequests, selectedFacilityId, currentUser, showToast]);
+  }, [staffList, requirements, leaveRequests, selectedFacilityId, currentUser, showSuccess, showError]);
 
   const handleExportCSV = () => {
     if (schedule.length > 0) {
@@ -574,12 +555,12 @@ const App: React.FC = () => {
 
   const handleSaveDraft = useCallback(async () => {
     if (!selectedFacilityId || !currentUser || !currentScheduleId) {
-      showToast('保存に必要な情報が不足しています', 'error');
+      showError('保存に必要な情報が不足しています');
       return;
     }
 
     if (schedule.length === 0) {
-      showToast('保存するシフトがありません', 'error');
+      showError('保存するシフトがありません');
       return;
     }
 
@@ -597,34 +578,34 @@ const App: React.FC = () => {
       );
 
       if (result.success) {
-        showToast('下書きを保存しました', 'success');
+        showSuccess('下書きを保存しました');
         // LocalStorageの下書きを削除
         const key = `draft-schedule-${selectedFacilityId}-${requirements.targetMonth}`;
         localStorage.removeItem(key);
       } else {
-        showToast(`保存に失敗しました: ${result.error.message}`, 'error');
+        showError(`保存に失敗しました: ${result.error.message}`);
       }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : '保存時にエラーが発生しました';
-      showToast(errorMessage, 'error');
+      showError(errorMessage);
     } finally {
       setIsLoading(false);
     }
-  }, [selectedFacilityId, currentUser, currentScheduleId, schedule, requirements.targetMonth, showToast]);
+  }, [selectedFacilityId, currentUser, currentScheduleId, schedule, requirements.targetMonth, showSuccess, showError]);
 
   const handleConfirmSchedule = useCallback(async () => {
     if (!selectedFacilityId || !currentUser || !currentScheduleId) {
-      showToast('確定に必要な情報が不足しています', 'error');
+      showError('確定に必要な情報が不足しています');
       return;
     }
 
     if (schedule.length === 0) {
-      showToast('確定するシフトがありません', 'error');
+      showError('確定するシフトがありません');
       return;
     }
 
     if (currentScheduleStatus !== 'draft') {
-      showToast(`このシフトは既に${currentScheduleStatus === 'confirmed' ? '確定' : 'アーカイブ'}されています`, 'error');
+      showError(`このシフトは既に${currentScheduleStatus === 'confirmed' ? '確定' : 'アーカイブ'}されています`);
       return;
     }
 
@@ -639,24 +620,24 @@ const App: React.FC = () => {
       );
 
       if (result.success) {
-        showToast('シフトを確定しました', 'success');
+        showSuccess('シフトを確定しました');
         // LocalStorageの下書きを削除
         const key = `draft-schedule-${selectedFacilityId}-${requirements.targetMonth}`;
         localStorage.removeItem(key);
       } else {
-        showToast(`確定に失敗しました: ${result.error.message}`, 'error');
+        showError(`確定に失敗しました: ${result.error.message}`);
       }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : '確定時にエラーが発生しました';
-      showToast(errorMessage, 'error');
+      showError(errorMessage);
     } finally {
       setIsLoading(false);
     }
-  }, [selectedFacilityId, currentUser, currentScheduleId, schedule, currentScheduleStatus, requirements.targetMonth, showToast]);
+  }, [selectedFacilityId, currentUser, currentScheduleId, schedule, currentScheduleStatus, requirements.targetMonth, showSuccess, showError]);
 
   const handleShowVersionHistory = useCallback(async () => {
     if (!selectedFacilityId || !currentScheduleId) {
-      showToast('バージョン履歴を表示できません', 'error');
+      showError('バージョン履歴を表示できません');
       return;
     }
 
@@ -669,19 +650,19 @@ const App: React.FC = () => {
       if (result.success) {
         setVersions(result.data);
       } else {
-        showToast(`履歴の取得に失敗しました: ${result.error.message}`, 'error');
+        showError(`履歴の取得に失敗しました: ${result.error.message}`);
       }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : '履歴の取得時にエラーが発生しました';
-      showToast(errorMessage, 'error');
+      showError(errorMessage);
     } finally {
       setVersionLoading(false);
     }
-  }, [selectedFacilityId, currentScheduleId, showToast]);
+  }, [selectedFacilityId, currentScheduleId, showSuccess, showError]);
 
   const handleRestoreVersion = useCallback(async (versionNumber: number) => {
     if (!selectedFacilityId || !currentUser || !currentScheduleId) {
-      showToast('復元に必要な情報が不足しています', 'error');
+      showError('復元に必要な情報が不足しています');
       return;
     }
 
@@ -696,7 +677,7 @@ const App: React.FC = () => {
       );
 
       if (result.success) {
-        showToast(`バージョン${versionNumber}に復元しました`, 'success');
+        showSuccess(`バージョン${versionNumber}に復元しました`);
 
         // バージョン履歴をリフレッシュ（復元時に作成された新しいスナップショットを表示）
         try {
@@ -710,19 +691,19 @@ const App: React.FC = () => {
           console.error('Error refreshing version history:', refreshErr);
         }
       } else {
-        showToast(`復元に失敗しました: ${result.error.message}`, 'error');
+        showError(`復元に失敗しました: ${result.error.message}`);
       }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : '復元時にエラーが発生しました';
-      showToast(errorMessage, 'error');
+      showError(errorMessage);
     } finally {
       setIsLoading(false);
     }
-  }, [selectedFacilityId, currentUser, currentScheduleId, showToast]);
+  }, [selectedFacilityId, currentUser, currentScheduleId, showSuccess, showError]);
 
   const handleGenerateDemo = useCallback(async () => {
     if (!selectedFacilityId || !currentUser) {
-      showToast('施設またはユーザー情報が取得できません', 'error');
+      showError('施設またはユーザー情報が取得できません');
       return;
     }
 
@@ -757,20 +738,20 @@ const App: React.FC = () => {
       );
 
       if (saveResult.success) {
-        showToast('デモシフトを生成し、保存しました', 'success');
+        showSuccess('デモシフトを生成し、保存しました');
         setViewMode('shift');
       } else {
-        showToast(`保存に失敗しました: ${saveResult.error.message}`, 'error');
+        showError(`保存に失敗しました: ${saveResult.error.message}`);
         setError(`保存に失敗しました: ${saveResult.error.message}`);
       }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : '保存時にエラーが発生しました';
-      showToast(errorMessage, 'error');
+      showError(errorMessage);
       setError(errorMessage);
     } finally {
       setGeneratingSchedule(false);
     }
-  }, [requirements, staffList, selectedFacilityId, currentUser, showToast]);
+  }, [requirements, staffList, selectedFacilityId, currentUser, showSuccess, showError]);
 
   const ViewSwitcher = () => (
     <div className="flex border-b border-slate-300">
@@ -994,50 +975,6 @@ const App: React.FC = () => {
         onRestore={handleRestoreVersion}
         loading={versionLoading}
       />
-
-      {/* Toast Notification */}
-      {toast && (
-        <div className="fixed top-4 right-4 z-50 animate-slide-in">
-          <div
-            className={`px-6 py-4 rounded-lg shadow-lg flex items-center gap-3 min-w-[300px] ${
-              toast.type === 'success'
-                ? 'bg-green-50 border border-green-200 text-green-800'
-                : 'bg-red-50 border border-red-200 text-red-800'
-            }`}
-          >
-            {toast.type === 'success' ? (
-              <svg className="w-6 h-6 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                <path
-                  fillRule="evenodd"
-                  d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                  clipRule="evenodd"
-                />
-              </svg>
-            ) : (
-              <svg className="w-6 h-6 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                <path
-                  fillRule="evenodd"
-                  d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
-                  clipRule="evenodd"
-                />
-              </svg>
-            )}
-            <p className="font-medium">{toast.message}</p>
-            <button
-              onClick={() => setToast(null)}
-              className="ml-auto p-1 rounded-md hover:bg-white/50 transition-colors"
-            >
-              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                <path
-                  fillRule="evenodd"
-                  d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
-                  clipRule="evenodd"
-                />
-              </svg>
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   );
 };
