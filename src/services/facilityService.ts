@@ -12,6 +12,7 @@ import {
 } from 'firebase/firestore';
 import { db } from '../../firebase';
 import { Facility, FacilityMember, FacilityRole, Result, User } from '../../types';
+import { checkIsSuperAdmin } from '../utils/permissions';
 
 // Facility サービスエラー型
 export type FacilityError =
@@ -26,26 +27,6 @@ export interface FacilityStats {
   totalStaff: number;
   totalSchedules: number;
   latestScheduleMonth: string | null;
-}
-
-/**
- * ユーザーがsuper-adminかどうかを確認
- * @param userId - ユーザーID
- * @returns Promise<boolean>
- */
-async function checkIsSuperAdmin(userId: string): Promise<boolean> {
-  try {
-    const userDoc = await getDoc(doc(db, 'users', userId));
-    if (!userDoc.exists()) {
-      return false;
-    }
-
-    const user = userDoc.data() as User;
-    return user.facilities?.some((f) => f.role === FacilityRole.SuperAdmin) || false;
-  } catch (error) {
-    console.error('Error checking super-admin status:', error);
-    return false;
-  }
 }
 
 /**
