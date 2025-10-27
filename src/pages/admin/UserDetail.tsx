@@ -255,8 +255,13 @@ export function UserDetail(): JSX.Element {
           onClick={() => setShowGrantForm(true)}
           variant="primary"
           disabled={availableFacilities.length === 0}
+          icon={
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+            </svg>
+          }
         >
-          ➕ アクセス権限を付与
+          アクセス権限を付与
         </Button>
         {availableFacilities.length === 0 && (
           <p className="text-sm text-gray-500 mt-2">

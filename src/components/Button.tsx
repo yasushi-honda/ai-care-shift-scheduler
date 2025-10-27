@@ -2,6 +2,7 @@ import React from 'react';
 
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: 'primary' | 'danger' | 'success' | 'purple';
+  icon?: React.ReactNode;
   children: React.ReactNode;
 }
 
@@ -9,14 +10,16 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
  * 再利用可能なButtonコンポーネント
  *
  * アクセシビリティとデザインの一貫性を保証
+ * アイコン付きボタンをサポート（SVG推奨）
  */
 export function Button({
   variant = 'primary',
+  icon,
   children,
   className = '',
   ...props
 }: ButtonProps) {
-  const baseStyles = 'px-4 py-2 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed';
+  const baseStyles = 'px-4 py-2 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center gap-2';
 
   const variantStyles = {
     primary: 'bg-blue-600 hover:bg-blue-700 text-white',
@@ -30,7 +33,8 @@ export function Button({
       className={`${baseStyles} ${variantStyles[variant]} ${className}`}
       {...props}
     >
-      {children}
+      {icon && <span className="inline-block" style={{ color: 'currentColor' }}>{icon}</span>}
+      <span>{children}</span>
     </button>
   );
 }
