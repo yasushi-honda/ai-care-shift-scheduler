@@ -4,6 +4,8 @@ import ReactDOM from 'react-dom/client';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import App from './App';
 import { AuthProvider } from './src/contexts/AuthContext';
+import { ToastProvider, ToastContainer } from './src/contexts/ToastContext';
+import { LoadingProvider, LoadingOverlay } from './src/contexts/LoadingContext';
 import { ProtectedRoute } from './src/components/ProtectedRoute';
 import { AdminProtectedRoute } from './src/components/AdminProtectedRoute';
 import { Forbidden } from './src/pages/Forbidden';
@@ -24,41 +26,49 @@ const root = ReactDOM.createRoot(rootElement);
 root.render(
   <React.StrictMode>
     <AuthProvider>
-      <BrowserRouter>
-        <Routes>
-          {/* メインアプリケーション */}
-          <Route
-            path="/"
-            element={
-              <ProtectedRoute>
-                <App />
-              </ProtectedRoute>
-            }
-          />
+      <ToastProvider>
+        <LoadingProvider>
+          <BrowserRouter>
+            <Routes>
+              {/* メインアプリケーション */}
+              <Route
+                path="/"
+                element={
+                  <ProtectedRoute>
+                    <App />
+                  </ProtectedRoute>
+                }
+              />
 
-          {/* 403エラーページ */}
-          <Route path="/forbidden" element={<Forbidden />} />
+              {/* 403エラーページ */}
+              <Route path="/forbidden" element={<Forbidden />} />
 
-          {/* 管理画面（super-admin専用） */}
-          <Route
-            path="/admin"
-            element={
-              <ProtectedRoute>
-                <AdminProtectedRoute>
-                  <AdminLayout />
-                </AdminProtectedRoute>
-              </ProtectedRoute>
-            }
-          >
-            <Route index element={<AdminDashboard />} />
-            <Route path="facilities" element={<FacilityManagement />} />
-            <Route path="facilities/:facilityId" element={<FacilityDetail />} />
-            <Route path="users" element={<UserManagement />} />
-            <Route path="users/:userId" element={<UserDetail />} />
-            <Route path="audit-logs" element={<AuditLogs />} />
-          </Route>
-        </Routes>
-      </BrowserRouter>
+              {/* 管理画面（super-admin専用） */}
+              <Route
+                path="/admin"
+                element={
+                  <ProtectedRoute>
+                    <AdminProtectedRoute>
+                      <AdminLayout />
+                    </AdminProtectedRoute>
+                  </ProtectedRoute>
+                }
+              >
+                <Route index element={<AdminDashboard />} />
+                <Route path="facilities" element={<FacilityManagement />} />
+                <Route path="facilities/:facilityId" element={<FacilityDetail />} />
+                <Route path="users" element={<UserManagement />} />
+                <Route path="users/:userId" element={<UserDetail />} />
+                <Route path="audit-logs" element={<AuditLogs />} />
+              </Route>
+            </Routes>
+
+            {/* グローバルコンポーネント */}
+            <ToastContainer />
+            <LoadingOverlay />
+          </BrowserRouter>
+        </LoadingProvider>
+      </ToastProvider>
     </AuthProvider>
   </React.StrictMode>
 );
