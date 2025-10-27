@@ -76,7 +76,8 @@ export function NoAccessPage() {
           <div className="space-y-3">
             <button
               onClick={() => window.location.reload()}
-              className="w-full bg-blue-600 !text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors"
+              className="w-full bg-blue-600 px-4 py-2 rounded-md hover:bg-blue-700 transition-colors"
+              style={{ color: 'white' }}
             >
               ページを再読み込み
             </button>

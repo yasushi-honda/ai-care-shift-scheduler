@@ -67,7 +67,8 @@ export function UserManagement(): JSX.Element {
         <p className="text-red-600">エラー: {error}</p>
         <button
           onClick={loadUsers}
-          className="mt-2 px-4 py-2 bg-red-600 !text-white rounded hover:bg-red-700"
+          className="mt-2 px-4 py-2 bg-red-600 rounded hover:bg-red-700"
+          style={{ color: 'white' }}
         >
           再試行
         </button>

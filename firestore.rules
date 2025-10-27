@@ -76,8 +76,10 @@ service cloud.firestore {
 
     // users collection
     match /users/{userId} {
-      // 自分のドキュメントのみ読み取り可能
-      allow read: if isAuthenticated() && request.auth.uid == userId;
+      // super-adminは全ユーザーをリスト可能（getAllUsers用）
+      allow list: if isAuthenticated() && isSuperAdmin();
+      // 自分のドキュメントのみ個別読み取り可能
+      allow get: if isAuthenticated() && request.auth.uid == userId;
 
       // 初回作成: 認証済みユーザーが自分のドキュメントのみ作成可能（facilitiesは空配列のみ許可）
       allow create: if isAuthenticated()
