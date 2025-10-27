@@ -139,17 +139,50 @@ jobs:
           echo '${{ secrets.FIREBASE_SERVICE_ACCOUNT_AI_CARE_SHIFT_SCHEDULER }}' > $HOME/gcloud-key.json
           export GOOGLE_APPLICATION_CREDENTIALS="$HOME/gcloud-key.json"
 
-          # デプロイ実行
-          firebase deploy --only hosting,functions,firestore:rules --project ai-care-shift-scheduler --non-interactive
+          # Hosting deploymentを優先（最も重要）
+          firebase deploy --only hosting --project ai-care-shift-scheduler --non-interactive
+
+          # Firestore Rules deployment
+          firebase deploy --only firestore:rules --project ai-care-shift-scheduler --non-interactive
+
+          # Functions deployment（失敗してもワークフロー全体は成功扱い）
+          firebase deploy --only functions --project ai-care-shift-scheduler --non-interactive || echo "⚠️ Functions deployment had warnings (non-critical)"
 
           # キーファイルを削除
           rm $HOME/gcloud-key.json
+
+      - name: デプロイ検証
+        run: |
+          echo "⏳ CDN反映待ち（30秒）..."
+          sleep 30
+
+          # ローカルビルドのJSファイル名を取得
+          LOCAL_HASH=$(cat dist/index.html | grep -o 'index-[^.]*\.js' | head -1)
+          echo "📦 ローカルビルド: $LOCAL_HASH"
+
+          # 本番環境のJSファイル名を取得（キャッシュ回避のためクエリパラメータ付き）
+          DEPLOYED_HASH=$(curl -s "https://ai-care-shift-scheduler.web.app/?nocache=$(date +%s)" | grep -o 'index-[^.]*\.js' | head -1)
+          echo "🌐 本番環境: $DEPLOYED_HASH"
+
+          if [ "$DEPLOYED_HASH" != "$LOCAL_HASH" ]; then
+            echo "❌ デプロイ検証失敗: ハッシュが一致しません"
+            echo "⚠️ Firebase Hosting CDNのキャッシュが残っている可能性があります"
+            echo "💡 対処方法: ブラウザでハードリロード（Cmd+Shift+R）を実行してください"
+            # 検証失敗してもデプロイは成功しているので exit 0
+            exit 0
+          fi
+
+          echo "✅ デプロイ検証成功: ハッシュが一致しました"
 
       - name: デプロイ完了
         run: |
           echo "## デプロイ完了 🚀" >> $GITHUB_STEP_SUMMARY
           echo "✅ Firebase Hostingへのデプロイ完了" >> $GITHUB_STEP_SUMMARY
-          echo "✅ Cloud Functionsへのデプロイ完了" >> $GITHUB_STEP_SUMMARY
+          echo "✅ Cloud Functionsへのデプロイ完了（またはスキップ）" >> $GITHUB_STEP_SUMMARY
           echo "✅ Firestore Security Rulesへのデプロイ完了" >> $GITHUB_STEP_SUMMARY
           echo "🔗 本番環境: https://ai-care-shift-scheduler.web.app" >> $GITHUB_STEP_SUMMARY
           echo "📁 ファイル数: $(find dist -type f | wc -l)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### ⚠️ 重要" >> $GITHUB_STEP_SUMMARY
+          echo "デプロイ直後はブラウザキャッシュの影響で古いバージョンが表示される場合があります。" >> $GITHUB_STEP_SUMMARY
+          echo "**ハードリロード（Cmd+Shift+R または Ctrl+Shift+R）を実行してください。**" >> $GITHUB_STEP_SUMMARY

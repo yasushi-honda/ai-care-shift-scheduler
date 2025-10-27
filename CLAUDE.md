@@ -147,6 +147,47 @@ Firebase CLI認証エラーが発生した場合:
 
 詳細: [Development Workflow](.kiro/steering/development-workflow.md)
 
+### デプロイ後の確認とキャッシュ対策
+
+#### Firebase Hostingキャッシュの理解
+
+Firebase Hostingは多層キャッシュを使用しています：
+- **ブラウザキャッシュ**: Cache-Control ヘッダーで制御
+- **CDNキャッシュ**: Firebase側で管理
+- **Origin**: Firebase Hosting server
+
+#### デプロイ直後の確認手順
+
+**必須**: デプロイ後は必ずハードリロードで確認すること
+
+```bash
+# 1. デプロイ完了を確認
+gh run list --limit 1
+
+# 2. 本番環境でハードリロード
+# Mac: Cmd + Shift + R
+# Windows: Ctrl + Shift + R
+
+# 3. 開発者ツールでJSファイル名を確認
+# ローカルのdist/index.htmlと本番環境のソースを比較
+```
+
+#### キャッシュ問題が発生した場合
+
+**症状**: デプロイ後も古いバージョンが表示される
+
+**対処方法**:
+1. **ブラウザのハードリロード**: `Cmd+Shift+R` (Mac) / `Ctrl+Shift+R` (Windows)
+2. **シークレットモード**: 新しいブラウザセッションで確認
+3. **キャッシュクリア**: ブラウザの設定からキャッシュを削除
+4. **待機**: cache-control設定に従い、最大1時間待つ
+
+**予防策**:
+- `firebase.json`で`index.html`のキャッシュを無効化済み（設定済み）
+- GitHub Actionsでデプロイ検証を自動実行（設定済み）
+
+詳細: [Deployment Troubleshooting](.kiro/steering/deployment-troubleshooting.md)
+
 ## Workflow
 
 ### Phase 0: Steering (Optional)
