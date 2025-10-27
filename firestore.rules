@@ -101,8 +101,10 @@ service cloud.firestore {
 
     // facilities collection
     match /facilities/{facilityId} {
-      // viewer以上の権限で読み取り可能
-      allow read: if isAuthenticated() && hasRole(facilityId, 'viewer');
+      // super-adminは全施設をリスト可能（getAllFacilities用）
+      allow list: if isAuthenticated() && isSuperAdmin();
+      // viewer以上の権限で個別ドキュメント読み取り可能
+      allow get: if isAuthenticated() && hasRole(facilityId, 'viewer');
       // super-adminのみ作成・削除可能
       allow create, delete: if isAuthenticated() && isSuperAdmin();
       // admin権限で更新可能
