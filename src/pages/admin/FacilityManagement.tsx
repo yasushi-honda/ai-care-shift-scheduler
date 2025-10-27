@@ -1,40 +1,318 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
+import { useAuth } from '../../contexts/AuthContext';
+import { Facility } from '../../../types';
+import {
+  getAllFacilities,
+  createFacility,
+  getFacilityStats,
+  FacilityStats,
+} from '../../services/facilityService';
 
 /**
  * FacilityManagement
  *
- * 施設管理ページ
- * - 全施設の一覧表示
- * - 新規施設作成
- * - 施設詳細表示
- *
- * Phase 10.2で実装予定
+ * 施設管理ページ（super-admin専用）
+ * - 全施設の一覧表示（テーブル形式）
+ * - 新規施設作成フォーム
+ * - 施設詳細へのリンク
  */
 export function FacilityManagement(): JSX.Element {
+  const { currentUser } = useAuth();
+  const [facilities, setFacilities] = useState<Facility[]>([]);
+  const [stats, setStats] = useState<Map<string, FacilityStats>>(new Map());
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // 新規施設作成フォーム状態
+  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [newFacilityName, setNewFacilityName] = useState('');
+  const [creating, setCreating] = useState(false);
+  const [createError, setCreateError] = useState<string | null>(null);
+
+  // 施設一覧を取得
+  useEffect(() => {
+    loadFacilities();
+  }, [currentUser]);
+
+  async function loadFacilities() {
+    if (!currentUser) return;
+
+    setLoading(true);
+    setError(null);
+
+    const result = await getAllFacilities(currentUser.uid);
+
+    if (result.success) {
+      setFacilities(result.data);
+      // 各施設の統計情報を取得
+      await loadStats(result.data);
+    } else {
+      setError(result.error.message);
+    }
+
+    setLoading(false);
+  }
+
+  async function loadStats(facilityList: Facility[]) {
+    const statsMap = new Map<string, FacilityStats>();
+
+    // 並列で全施設の統計を取得
+    await Promise.all(
+      facilityList.map(async (facility) => {
+        const result = await getFacilityStats(facility.facilityId);
+        if (result.success) {
+          statsMap.set(facility.facilityId, result.data);
+        }
+      })
+    );
+
+    setStats(statsMap);
+  }
+
+  async function handleCreateFacility(e: React.FormEvent) {
+    e.preventDefault();
+
+    if (!currentUser) return;
+
+    setCreating(true);
+    setCreateError(null);
+
+    const result = await createFacility(newFacilityName, currentUser.uid);
+
+    if (result.success) {
+      // 成功：フォームをクリアして一覧を再読み込み
+      setNewFacilityName('');
+      setShowCreateForm(false);
+      await loadFacilities();
+    } else {
+      setCreateError(result.error.message);
+    }
+
+    setCreating(false);
+  }
+
+  function formatDate(timestamp: any): string {
+    if (!timestamp) return '-';
+    const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
+    return date.toLocaleDateString('ja-JP', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    });
+  }
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-4"></div>
+          <p className="text-gray-600">読み込み中...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+        <p className="text-red-600">エラー: {error}</p>
+        <button
+          onClick={loadFacilities}
+          className="mt-2 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
+        >
+          再試行
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div>
-      <h1 className="text-3xl font-bold text-gray-900 mb-2">
-        施設管理
-      </h1>
-      <p className="text-gray-600 mb-8">
-        全施設の管理と新規施設の作成
-      </p>
+      {/* ヘッダー */}
+      <div className="flex items-center justify-between mb-8">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">
+            施設管理
+          </h1>
+          <p className="text-gray-600">
+            全施設の管理と新規施設の作成
+          </p>
+        </div>
+        <button
+          onClick={() => setShowCreateForm(true)}
+          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+        >
+          ➕ 新規施設作成
+        </button>
+      </div>
 
-      <div className="bg-white rounded-lg shadow-sm p-8 text-center">
-        <div className="text-6xl mb-4">🏢</div>
-        <h2 className="text-xl font-semibold text-gray-900 mb-2">
-          施設管理機能
-        </h2>
-        <p className="text-gray-600 mb-4">
-          Phase 10.2で実装予定
-        </p>
-        <div className="text-sm text-gray-500 text-left max-w-md mx-auto space-y-2">
-          <p>実装予定の機能:</p>
-          <ul className="list-disc list-inside space-y-1">
-            <li>全施設の一覧表示（施設名、作成日、メンバー数、ステータス）</li>
-            <li>新規施設作成フォームと作成処理</li>
-            <li>施設詳細画面（メンバー一覧、シフトデータ統計）</li>
-          </ul>
+      {/* 新規施設作成フォーム（モーダル） */}
+      {showCreateForm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <h2 className="text-xl font-semibold text-gray-900 mb-4">
+              新規施設作成
+            </h2>
+
+            <form onSubmit={handleCreateFacility}>
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  施設名 <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={newFacilityName}
+                  onChange={(e) => setNewFacilityName(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="例: 〇〇介護施設"
+                  required
+                  maxLength={100}
+                  autoFocus
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  100文字以内で入力してください
+                </p>
+              </div>
+
+              {createError && (
+                <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded text-sm text-red-600">
+                  {createError}
+                </div>
+              )}
+
+              <div className="flex gap-3 justify-end">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowCreateForm(false);
+                    setNewFacilityName('');
+                    setCreateError(null);
+                  }}
+                  className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                  disabled={creating}
+                >
+                  キャンセル
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  disabled={creating || !newFacilityName.trim()}
+                >
+                  {creating ? '作成中...' : '作成'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* 施設一覧テーブル */}
+      {facilities.length === 0 ? (
+        <div className="bg-white rounded-lg shadow-sm p-12 text-center">
+          <div className="text-6xl mb-4">🏢</div>
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">
+            施設がまだありません
+          </h2>
+          <p className="text-gray-600 mb-4">
+            「新規施設作成」ボタンから最初の施設を作成してください
+          </p>
+        </div>
+      ) : (
+        <div className="bg-white rounded-lg shadow-sm overflow-hidden">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  施設名
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  作成日
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  メンバー数
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  スタッフ数
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  シフト数
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  操作
+                </th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {facilities.map((facility) => {
+                const facilityStats = stats.get(facility.facilityId);
+                return (
+                  <tr key={facility.facilityId} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm font-medium text-gray-900">
+                        {facility.name}
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        ID: {facility.facilityId.slice(0, 8)}...
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {formatDate(facility.createdAt)}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {facility.members?.length || 0}人
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {facilityStats ? `${facilityStats.totalStaff}人` : '-'}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {facilityStats
+                        ? `${facilityStats.totalSchedules}件`
+                        : '-'}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm">
+                      <Link
+                        to={`/admin/facilities/${facility.facilityId}`}
+                        className="text-blue-600 hover:text-blue-800 font-medium"
+                      >
+                        詳細を見る →
+                      </Link>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {/* 統計サマリー */}
+      <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="bg-blue-50 rounded-lg p-4">
+          <div className="text-sm text-blue-600 font-medium">総施設数</div>
+          <div className="text-2xl font-bold text-blue-900">
+            {facilities.length}
+          </div>
+        </div>
+        <div className="bg-green-50 rounded-lg p-4">
+          <div className="text-sm text-green-600 font-medium">総メンバー数</div>
+          <div className="text-2xl font-bold text-green-900">
+            {facilities.reduce(
+              (sum, f) => sum + (f.members?.length || 0),
+              0
+            )}
+          </div>
+        </div>
+        <div className="bg-purple-50 rounded-lg p-4">
+          <div className="text-sm text-purple-600 font-medium">
+            総スタッフ数
+          </div>
+          <div className="text-2xl font-bold text-purple-900">
+            {Array.from(stats.values()).reduce(
+              (sum, s) => sum + s.totalStaff,
+              0
+            )}
+          </div>
         </div>
       </div>
     </div>
