@@ -322,19 +322,25 @@ Phase 1-3のすべての機能が本番環境にデプロイされ、動作確�
   - **実装**: `index.tsx` - React Routerルーティング設定
   - **実装**: `App.tsx` - メインアプリにsuper-admin向け管理画面リンクを追加
 
-- [ ] 10.2 施設管理機能（一覧・作成・詳細）の実装
+- [x] 10.2 施設管理機能（一覧・作成・詳細）の実装
   - 全施設の一覧表示（施設名、作成日、メンバー数、ステータス）
   - 新規施設作成フォームと作成処理
   - 施設詳細画面（メンバー一覧、シフトデータ統計）
   - _Requirements: 12.4, 12.5, 12.6, 12.7_
+  - **実装**: `src/services/facilityService.ts` - getAllFacilities(), getFacilityById(), createFacility(), getFacilityStats()
+  - **実装**: `src/pages/admin/FacilityManagement.tsx` - 施設一覧テーブル、新規作成フォーム
+  - **実装**: `src/pages/admin/FacilityDetail.tsx` - 施設詳細、メンバー一覧、統計表示
 
-- [ ] 10.3 ユーザー管理とアクセス権限付与機能の実装
+- [x] 10.3 ユーザー管理とアクセス権限付与機能の実装
   - 全ユーザーの一覧表示（名前、メール、所属施設数、最終ログイン）
   - ユーザー詳細画面（所属施設とロール、アクセス履歴）
   - アクセス権限付与フォーム（施設選択、ロール選択）
   - アクセス権限付与・剥奪処理（usersドキュメントのfacilities配列更新）
   - admin権限ユーザーはeditor/viewerのみ付与可能な制限
   - _Requirements: 12.8, 12.9, 12.10, 12.11, 12.12, 12.13, 12.14_
+  - **実装**: `src/services/userService.ts` - getAllUsers(), getUserById(), grantAccess(), revokeAccess()
+  - **実装**: `src/pages/admin/UserManagement.tsx` - ユーザー一覧テーブル、統計サマリー
+  - **実装**: `src/pages/admin/UserDetail.tsx` - ユーザー詳細、権限付与・剥奪UI
 
 ---
 
