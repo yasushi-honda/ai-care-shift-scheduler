@@ -259,3 +259,84 @@ export async function checkIsSuperAdmin(userId: string): Promise<boolean> {
 **オプション C: 軽量版Phase 3-4**
 - 1-2サービスのみ移行（例: userServiceとfacilityService）
 - 推定4-6時間
+
+---
+
+## UI/UXアクセシビリティ改善 (2025-10-27 午後)
+
+### 背景
+ユーザーからボタンの背景色とテキスト・アイコンが同じ色になり、視認性が低下している問題が報告された。
+
+### 実施内容
+
+#### Phase 1: Buttonコンポーネントの作成
+**問題**: ボタンに inline style `style={{ color: 'white' }}` が直接指定され、ハードコード化していた
+
+**解決**: 再利用可能なButtonコンポーネントを作成
+
+**実装**: `src/components/Button.tsx` (41行)
+- TypeScript型安全なprops（ButtonProps interface）
+- variant system: `primary`, `danger`, `success`, `purple`
+- アイコンサポート（SVG、`currentColor`で色継承）
+- Tailwind CSSベースのスタイリング
+
+**置き換え箇所**: 11ファイル
+- UserDetail.tsx: 3 buttons
+- FacilityManagement.tsx: 3 buttons
+- App.tsx: 3 buttons
+- UserManagement.tsx, Forbidden.tsx, NoAccessPage.tsx: 各1 button
+
+**削減**: inline style の完全削除、100% DRY原則準拠
+
+#### Phase 2: Tailwind設定の修正
+**問題**: `src/` directory がTailwindのビルド対象外で、utility classesが生成されない
+
+**修正**: `tailwind.config.js` の `content` 配列に `"./src/**/*.{js,ts,jsx,tsx}"` を追加
+
+**検証**: CSS bundle size 24.05 kB → 30.45 kB (+6.4 kB)
+
+#### Phase 3: Firestore Rules修正（super-admin権限）
+**問題**: super-adminが新規作成した施設（members配列が空）にアクセスできない
+
+**原因**: `allow get: if hasRole(facilityId, 'viewer')` のみで、super-adminの明示的権限なし
+
+**修正**: `firestore.rules`
+```javascript
+allow get: if isAuthenticated() && (isSuperAdmin() || hasRole(facilityId, 'viewer'));
+allow update: if isAuthenticated() && (isSuperAdmin() || hasRole(facilityId, 'admin'));
+```
+
+**影響**: super-adminがすべての施設にアクセス可能に
+
+#### Phase 4: 文言改善
+**変更**: "剥奪" → "削除"
+
+**理由**: より一般的で分かりやすい日本語表現
+
+**影響範囲**:
+- UserDetail.tsx: 確認ダイアログ、ボタンテキスト、コメント（4箇所）
+- userService.ts: JSDocコメント、エラーメッセージ（2箇所）
+
+### コミット履歴
+```
+6fdb3a2 refactor: 「剥奪」表現を「削除」に統一
+05e72dc fix: super-adminが新規作成した施設を読み取れない問題を修正
+f67481e fix: Tailwind設定にsrc/ディレクトリを追加（根本原因修正）
+85a5ac2 refactor: 絵文字からSVGアイコンへ移行（セオリー準拠）
+ece0671 refactor: インラインスタイルから再利用可能なButtonコンポーネントへ移行
+```
+
+### デプロイ状況
+- ✅ すべてのコミットでGitHub Actions CI/CD成功
+- ✅ CodeRabbitレビュー完了
+- ✅ 本番環境デプロイ完了
+
+### 学んだ教訓
+1. **ユーザーフィードバックの重要性**: 「セオリー的に正しいか？」という質問が設計改善のきっかけ
+2. **段階的改善**: 即座の修正 → ベストプラクティス適用
+3. **ビルド設定の確認**: CSSフレームワーク使用時はcontent pathsの設定が重要
+4. **UX用語**: 技術的に正確でも分かりにくい用語は改善すべき
+
+### 参照
+- メモリ: `ui_accessibility_improvements.md`
+- メモリ: `firestore_security_rules_troubleshooting.md` (super-admin権限追記済み)
