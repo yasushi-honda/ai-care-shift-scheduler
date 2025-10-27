@@ -880,7 +880,7 @@ const App: React.FC = () => {
             <button
               onClick={handleSaveDraft}
               disabled={isLoading || !currentScheduleId || schedule.length === 0 || currentScheduleStatus !== 'draft'}
-              className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg shadow-sm text-sm inline-flex items-center transition-colors duration-200 disabled:bg-slate-400 disabled:cursor-not-allowed"
+              className="bg-blue-600 hover:bg-blue-700 !text-white font-semibold py-2 px-4 rounded-lg shadow-sm text-sm inline-flex items-center transition-colors duration-200 disabled:bg-slate-400 disabled:cursor-not-allowed"
             >
               <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
@@ -890,7 +890,7 @@ const App: React.FC = () => {
             <button
               onClick={handleConfirmSchedule}
               disabled={isLoading || !currentScheduleId || schedule.length === 0 || currentScheduleStatus !== 'draft'}
-              className="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded-lg shadow-sm text-sm inline-flex items-center transition-colors duration-200 disabled:bg-slate-400 disabled:cursor-not-allowed"
+              className="bg-green-600 hover:bg-green-700 !text-white font-semibold py-2 px-4 rounded-lg shadow-sm text-sm inline-flex items-center transition-colors duration-200 disabled:bg-slate-400 disabled:cursor-not-allowed"
             >
               <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
@@ -900,7 +900,7 @@ const App: React.FC = () => {
             <button
               onClick={handleShowVersionHistory}
               disabled={!currentScheduleId}
-              className="bg-purple-600 hover:bg-purple-700 text-white font-semibold py-2 px-4 rounded-lg shadow-sm text-sm inline-flex items-center transition-colors duration-200 disabled:bg-slate-400 disabled:cursor-not-allowed"
+              className="bg-purple-600 hover:bg-purple-700 !text-white font-semibold py-2 px-4 rounded-lg shadow-sm text-sm inline-flex items-center transition-colors duration-200 disabled:bg-slate-400 disabled:cursor-not-allowed"
             >
               <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />

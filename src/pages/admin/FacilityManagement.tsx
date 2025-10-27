@@ -119,7 +119,7 @@ export function FacilityManagement(): JSX.Element {
         <p className="text-red-600">エラー: {error}</p>
         <button
           onClick={loadFacilities}
-          className="mt-2 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
+          className="mt-2 px-4 py-2 bg-red-600 !text-white rounded hover:bg-red-700"
         >
           再試行
         </button>
@@ -141,7 +141,7 @@ export function FacilityManagement(): JSX.Element {
         </div>
         <button
           onClick={() => setShowCreateForm(true)}
-          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+          className="px-4 py-2 bg-blue-600 !text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
         >
           ➕ 新規施設作成
         </button>
@@ -196,7 +196,7 @@ export function FacilityManagement(): JSX.Element {
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-4 py-2 bg-blue-600 !text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   disabled={creating || !newFacilityName.trim()}
                 >
                   {creating ? '作成中...' : '作成'}

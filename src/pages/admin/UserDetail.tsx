@@ -252,7 +252,7 @@ export function UserDetail(): JSX.Element {
       <div className="mb-6">
         <button
           onClick={() => setShowGrantForm(true)}
-          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+          className="px-4 py-2 bg-blue-600 !text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
           disabled={availableFacilities.length === 0}
         >
           ➕ アクセス権限を付与
@@ -333,7 +333,7 @@ export function UserDetail(): JSX.Element {
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-4 py-2 bg-blue-600 !text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   disabled={granting || !selectedFacilityId}
                 >
                   {granting ? '付与中...' : '付与'}
