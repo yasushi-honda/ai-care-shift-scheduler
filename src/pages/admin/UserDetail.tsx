@@ -13,7 +13,7 @@ import { Button } from '../../components/Button';
  * - ユーザーの基本情報
  * - 所属施設とロール一覧
  * - アクセス権限付与フォーム
- * - アクセス権限剥奪機能
+ * - アクセス権限削除機能
  */
 export function UserDetail(): JSX.Element {
   const { userId } = useParams<{ userId: string }>();
@@ -32,7 +32,7 @@ export function UserDetail(): JSX.Element {
   const [granting, setGranting] = useState(false);
   const [grantError, setGrantError] = useState<string | null>(null);
 
-  // アクセス権限剥奪状態
+  // アクセス権限削除状態
   const [revoking, setRevoking] = useState<string | null>(null); // facilityId being revoked
 
   const loadUserDetail = useCallback(async () => {
@@ -98,7 +98,7 @@ export function UserDetail(): JSX.Element {
     if (!currentUser || !userId) return;
 
     const confirmed = window.confirm(
-      'このユーザーの施設へのアクセス権限を剥奪してもよろしいですか？'
+      'このユーザーの施設へのアクセス権限を削除してもよろしいですか？'
     );
     if (!confirmed) return;
 
@@ -408,7 +408,7 @@ export function UserDetail(): JSX.Element {
                         className="text-red-600 hover:text-red-800 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                         disabled={revoking === access.facilityId}
                       >
-                        {revoking === access.facilityId ? '剥奪中...' : '剥奪'}
+                        {revoking === access.facilityId ? '削除中...' : '削除'}
                       </button>
                     </td>
                   </tr>

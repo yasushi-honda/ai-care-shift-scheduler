@@ -429,7 +429,7 @@ export async function grantAccess(
 }
 
 /**
- * ユーザーのアクセス権限を剥奪（super-admin専用）
+ * ユーザーのアクセス権限を削除（super-admin専用）
  *
  * @param userId - 対象ユーザーID
  * @param facilityId - 施設ID
@@ -543,7 +543,7 @@ export async function revokeAccess(
       success: false,
       error: {
         code: 'FIRESTORE_ERROR',
-        message: 'アクセス権限の剥奪に失敗しました',
+        message: 'アクセス権限の削除に失敗しました',
       },
     };
   }
