@@ -105,12 +105,12 @@ service cloud.firestore {
     match /facilities/{facilityId} {
       // super-adminは全施設をリスト可能（getAllFacilities用）
       allow list: if isAuthenticated() && isSuperAdmin();
-      // viewer以上の権限で個別ドキュメント読み取り可能
-      allow get: if isAuthenticated() && hasRole(facilityId, 'viewer');
+      // super-adminまたはviewer以上の権限で個別ドキュメント読み取り可能
+      allow get: if isAuthenticated() && (isSuperAdmin() || hasRole(facilityId, 'viewer'));
       // super-adminのみ作成・削除可能
       allow create, delete: if isAuthenticated() && isSuperAdmin();
-      // admin権限で更新可能
-      allow update: if isAuthenticated() && hasRole(facilityId, 'admin');
+      // super-adminまたはadmin権限で更新可能
+      allow update: if isAuthenticated() && (isSuperAdmin() || hasRole(facilityId, 'admin'));
 
       // staff subcollection
       match /staff/{staffId} {
