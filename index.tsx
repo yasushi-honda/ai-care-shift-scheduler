@@ -10,6 +10,7 @@ import { Forbidden } from './src/pages/Forbidden';
 import { AdminLayout } from './src/pages/admin/AdminLayout';
 import { AdminDashboard } from './src/pages/admin/AdminDashboard';
 import { FacilityManagement } from './src/pages/admin/FacilityManagement';
+import { FacilityDetail } from './src/pages/admin/FacilityDetail';
 import { UserManagement } from './src/pages/admin/UserManagement';
 import { AuditLogs } from './src/pages/admin/AuditLogs';
 
@@ -50,6 +51,7 @@ root.render(
           >
             <Route index element={<AdminDashboard />} />
             <Route path="facilities" element={<FacilityManagement />} />
+            <Route path="facilities/:facilityId" element={<FacilityDetail />} />
             <Route path="users" element={<UserManagement />} />
             <Route path="audit-logs" element={<AuditLogs />} />
           </Route>
