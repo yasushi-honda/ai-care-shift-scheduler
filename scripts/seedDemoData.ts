@@ -386,7 +386,7 @@ async function main() {
     console.log(`   - 休暇申請: ${demoLeaveRequests.length}件`);
     console.log('');
 
-    if (!isDryRun) {
+    if (!isDryRun && !isYes) {
       const answer = await promptQuestion('本当に削除しますか？ (yes/no): ');
       if (answer.toLowerCase() !== 'yes') {
         console.log('キャンセルしました。');
