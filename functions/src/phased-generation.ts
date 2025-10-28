@@ -18,8 +18,27 @@ const VERTEX_AI_MODEL = 'gemini-2.5-flash-lite';
 const BATCH_SIZE = 10; // 詳細生成時のバッチサイズ（10名 × 30日 = 300セル）
 
 /**
- * JSONレスポンスをクリーンアップしてパース
- * Gemini APIが時々Markdownコードブロック形式で返すため、それを削除
+ * Gemini APIからのJSONレスポンスを安全にパース
+ *
+ * Gemini APIは以下のような問題のあるレスポンスを返すことがあります:
+ * 1. Markdownコードブロック形式: ```json\n{...}\n```
+ * 2. 無効なJSON構文: トレーリングカンマ、コメント、シングルクォート
+ * 3. トークン制限による切り捨て
+ *
+ * この関数は上記の問題に対処し、エラー時には詳細なデバッグ情報を提供します。
+ *
+ * @param responseText - Gemini APIからの生のレスポンステキスト
+ * @returns パースされたJSONオブジェクト
+ * @throws エラー時、parseError プロパティを含む詳細なエラーオブジェクトをスロー
+ *
+ * @example
+ * ```typescript
+ * const result = await model.generateContent({...});
+ * const responseText = result.response.candidates?.[0]?.content?.parts?.[0]?.text || '';
+ * const data = parseGeminiJsonResponse(responseText);
+ * ```
+ *
+ * @see {@link https://github.com/yasushi-honda/ai-care-shift-scheduler/.kiro/memories/gemini_json_parsing_troubleshooting.md}
  */
 export function parseGeminiJsonResponse(responseText: string): any {
   try {
