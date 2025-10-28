@@ -62,17 +62,28 @@ export function parseGeminiJsonResponse(responseText: string): any {
     console.error('Response text (last 500 chars):', responseText.substring(Math.max(0, responseText.length - 500)));
 
     // エラー位置付近のテキストを表示
+    let contextInfo = '';
     if (error instanceof SyntaxError && error.message.includes('position')) {
       const match = error.message.match(/position (\d+)/);
       if (match) {
         const position = parseInt(match[1], 10);
         const start = Math.max(0, position - 200);
         const end = Math.min(responseText.length, position + 200);
-        console.error(`Context around position ${position}:`, responseText.substring(start, end));
+        contextInfo = responseText.substring(start, end);
+        console.error(`Context around position ${position}:`, contextInfo);
       }
     }
 
-    throw new Error(`Failed to parse Gemini JSON response: ${error instanceof Error ? error.message : String(error)}`);
+    // エラー詳細をクライアントに返せるように、エラーオブジェクトに含める
+    const detailedError: any = new Error(`Failed to parse Gemini JSON response: ${error instanceof Error ? error.message : String(error)}`);
+    detailedError.parseError = {
+      message: error instanceof Error ? error.message : String(error),
+      responseLength: responseText.length,
+      firstChars: responseText.substring(0, 500),
+      lastChars: responseText.substring(Math.max(0, responseText.length - 500)),
+      contextAroundError: contextInfo,
+    };
+    throw detailedError;
   }
 }
 

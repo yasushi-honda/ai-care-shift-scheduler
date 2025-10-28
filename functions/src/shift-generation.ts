@@ -279,10 +279,17 @@ export const generateShift = onRequest(
       console.error('❌ Error generating shift:', error);
 
       // エラーレスポンス（スタックトレースは含めない）
-      res.status(500).json({
+      const errorResponse: any = {
         success: false,
         error: error instanceof Error ? error.message : 'Unknown error occurred',
-      });
+      };
+
+      // parseError情報があれば含める（デバッグ用）
+      if (error && typeof error === 'object' && 'parseError' in error) {
+        errorResponse.parseError = (error as any).parseError;
+      }
+
+      res.status(500).json(errorResponse);
     }
   }
 );

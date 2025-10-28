@@ -71,6 +71,12 @@ export const generateShiftSchedule = async (
         error: errorData,
       });
 
+      // parseError情報があれば詳細をログ出力
+      if (errorData.parseError) {
+        console.error('🔍 JSON Parse Error Details:', errorData.parseError);
+        console.error('📝 Error Context:', errorData.parseError.contextAroundError);
+      }
+
       throw new Error(
         errorData.error ||
         `Cloud Functions エラー: ${response.status} ${response.statusText}`
