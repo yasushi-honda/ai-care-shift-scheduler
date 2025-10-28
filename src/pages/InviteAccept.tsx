@@ -20,7 +20,7 @@ export function InviteAccept(): JSX.Element {
   const [loading, setLoading] = useState(true);
   const [verifying, setVerifying] = useState(true);
   const [accepting, setAccepting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<{ message: string; canRetry: boolean } | null>(null);
   const [invitationInfo, setInvitationInfo] = useState<{
     email: string;
     role: string;
@@ -33,7 +33,7 @@ export function InviteAccept(): JSX.Element {
   useEffect(() => {
     const verifyToken = async () => {
       if (!token) {
-        setError('招待トークンが見つかりません');
+        setError({ message: '招待トークンが見つかりません', canRetry: false });
         setVerifying(false);
         setLoading(false);
         return;
@@ -44,18 +44,24 @@ export function InviteAccept(): JSX.Element {
       if (!result.success) {
         // 招待固有のエラーメッセージをユーザーフレンドリーに変換
         let friendlyMessage = '';
+        let canRetry = true;
+
         if (result.error.code === 'EXPIRED') {
           friendlyMessage = 'この招待リンクは有効期限が切れています。\n招待を送った方に新しいリンクの発行を依頼してください。';
+          canRetry = false;
         } else if (result.error.code === 'ALREADY_ACCEPTED') {
           friendlyMessage = 'この招待は既に使用されています。\n新しい招待リンクが必要な場合は、招待を送った方にご連絡ください。';
+          canRetry = false;
         } else if (result.error.code === 'NOT_FOUND') {
           friendlyMessage = 'この招待リンクは見つかりませんでした。\nリンクが正しいか確認してください。';
+          canRetry = false;
         } else {
           const errorMsg = handleError(result.error, '招待の検証');
           friendlyMessage = errorMsg.message;
+          canRetry = errorMsg.canRetry;
         }
 
-        setError(friendlyMessage);
+        setError({ message: friendlyMessage, canRetry });
         setVerifying(false);
         setLoading(false);
         return;
@@ -87,9 +93,10 @@ export function InviteAccept(): JSX.Element {
       if (
         currentUser.email?.toLowerCase() !== invitationInfo.email.toLowerCase()
       ) {
-        setError(
-          `この招待は ${invitationInfo.email} 宛です。現在ログインしているアカウント（${currentUser.email}）とは異なります。正しいアカウントでログインしてください。`
-        );
+        setError({
+          message: `この招待は ${invitationInfo.email} 宛です。現在ログインしているアカウント（${currentUser.email}）とは異なります。正しいアカウントでログインしてください。`,
+          canRetry: false,
+        });
         return;
       }
 
@@ -106,16 +113,21 @@ export function InviteAccept(): JSX.Element {
       if (!result.success) {
         // 招待受け入れ固有のエラーメッセージをユーザーフレンドリーに変換
         let friendlyMessage = '';
+        let canRetry = true;
+
         if (result.error.code === 'PERMISSION_DENIED') {
           friendlyMessage = 'アクセス権限がありません。\nページを更新してもう一度お試しください。\n問題が解決しない場合は、招待を送った方にご連絡ください。';
+          canRetry = true;
         } else if (result.error.code === 'ALREADY_HAS_ACCESS' || result.error.message?.includes('すでに')) {
           friendlyMessage = 'あなたは既にこの施設にアクセスできます。\nホーム画面から施設を選択してください。';
+          canRetry = false;
         } else {
           const errorMsg = handleError(result.error, '招待の受け入れ');
           friendlyMessage = errorMsg.message;
+          canRetry = errorMsg.canRetry;
         }
 
-        setError(friendlyMessage);
+        setError({ message: friendlyMessage, canRetry });
         return;
       }
 
@@ -133,7 +145,7 @@ export function InviteAccept(): JSX.Element {
       // ログイン後、useEffectが自動的に招待を受け入れます
     } catch (error) {
       const errorMsg = handleError(error, 'ログイン');
-      setError(errorMsg.message);
+      setError({ message: errorMsg.message, canRetry: errorMsg.canRetry });
     }
   };
 
@@ -169,21 +181,25 @@ export function InviteAccept(): JSX.Element {
               招待の処理に失敗しました
             </h1>
             <p className="text-sm text-gray-600">
-              エラーが発生しました。ページを更新してもう一度お試しください。
+              {error.canRetry 
+                ? 'エラーが発生しました。ページを更新してもう一度お試しください。'
+                : 'エラーが発生しました。詳細は下記をご確認ください。'}
             </p>
           </div>
 
           <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
-            <p className="text-sm text-red-800 whitespace-pre-wrap">{error}</p>
+            <p className="text-sm text-red-800 whitespace-pre-wrap">{error.message}</p>
           </div>
 
           <div className="space-y-3">
-            <button
-              onClick={() => window.location.reload()}
-              className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
-            >
-              ページを更新する
-            </button>
+            {error.canRetry && (
+              <button
+                onClick={() => window.location.reload()}
+                className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+              >
+                ページを更新する
+              </button>
+            )}
             <button
               onClick={() => navigate('/')}
               className="w-full px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium"
