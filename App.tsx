@@ -2,7 +2,7 @@ import React, { useState, useCallback, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Role, Qualification, TimeSlotPreference, LeaveType,
-  type Staff, type ShiftRequirement, type StaffSchedule, type GeneratedShift, type LeaveRequest, type WorkLogs, type WorkLogDetails, type ScheduleVersion, type LeaveRequestDocument
+  type Staff, type ShiftRequirement, type StaffSchedule, type GeneratedShift, type LeaveRequest, type WorkLogs, type WorkLogDetails, type ScheduleVersion, type LeaveRequestDocument, type Facility
 } from './types';
 import { DEFAULT_TIME_SLOTS } from './constants';
 import { generateShiftSchedule } from './services/geminiService';
@@ -11,6 +11,7 @@ import { StaffService } from './src/services/staffService';
 import { ScheduleService } from './src/services/scheduleService';
 import { LeaveRequestService } from './src/services/leaveRequestService';
 import { RequirementService } from './src/services/requirementService';
+import { getFacilityById } from './src/services/facilityService';
 import { useAuth } from './src/contexts/AuthContext';
 import { useToast } from './src/contexts/ToastContext';
 import ShiftTable from './components/ShiftTable';
@@ -41,8 +42,10 @@ function convertToLeaveRequest(documents: LeaveRequestDocument[]): LeaveRequest 
 }
 
 const App: React.FC = () => {
-  const { selectedFacilityId, currentUser, isSuperAdmin } = useAuth();
+  const { selectedFacilityId, currentUser, isSuperAdmin, userProfile, selectFacility } = useAuth();
   const { showSuccess, showError } = useToast();
+  const [facilities, setFacilities] = useState<Map<string, Facility>>(new Map());
+  const [loadingFacilities, setLoadingFacilities] = useState(true);
   const [staffList, setStaffList] = useState<Staff[]>([]);
   const [loadingStaff, setLoadingStaff] = useState(true);
   const [staffError, setStaffError] = useState<string | null>(null);
@@ -82,6 +85,32 @@ const App: React.FC = () => {
   const [versionHistoryModalOpen, setVersionHistoryModalOpen] = useState(false);
   const [versions, setVersions] = useState<ScheduleVersion[]>([]);
   const [versionLoading, setVersionLoading] = useState(false);
+
+  // ユーザーがアクセスできる施設情報をロード
+  useEffect(() => {
+    if (!currentUser || !userProfile || !userProfile.facilities) {
+      setLoadingFacilities(false);
+      return;
+    }
+
+    const loadFacilities = async () => {
+      setLoadingFacilities(true);
+      const facilityMap = new Map<string, Facility>();
+
+      // 各施設IDに対して施設情報を取得
+      for (const facilityAccess of userProfile.facilities) {
+        const result = await getFacilityById(facilityAccess.facilityId, currentUser.uid);
+        if (result.success) {
+          facilityMap.set(facilityAccess.facilityId, result.data);
+        }
+      }
+
+      setFacilities(facilityMap);
+      setLoadingFacilities(false);
+    };
+
+    loadFacilities();
+  }, [currentUser, userProfile]);
 
   // Firestoreから要件設定を読み込む（施設選択時のみ）
   useEffect(() => {
@@ -754,6 +783,14 @@ const App: React.FC = () => {
     }
   }, [requirements, staffList, selectedFacilityId, currentUser, showSuccess, showError]);
 
+  // 施設選択ハンドラー
+  const handleFacilityChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
+    const newFacilityId = event.target.value;
+    if (newFacilityId) {
+      selectFacility(newFacilityId);
+    }
+  };
+
   const ViewSwitcher = () => (
     <div className="flex border-b border-slate-300">
       <button 
@@ -775,7 +812,7 @@ const App: React.FC = () => {
     <div className="flex h-screen bg-slate-100 font-sans text-slate-800">
       <aside className="w-1/3 max-w-lg bg-white shadow-2xl flex flex-col h-screen">
         <header className="p-5 bg-gradient-to-r from-care-dark to-care-secondary text-white shadow-md">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between mb-3">
             <div>
               <h1 className="text-2xl font-bold">AIシフト自動作成</h1>
               <p className="text-sm text-indigo-200 mt-1">介護・福祉事業所向け</p>
@@ -790,6 +827,44 @@ const App: React.FC = () => {
               </Link>
             )}
           </div>
+          {/* 施設選択 */}
+          {userProfile && userProfile.facilities && userProfile.facilities.length > 0 && (
+            <div className="mt-3">
+              {userProfile.facilities.length === 1 ? (
+                // 1施設のみの場合は施設名を表示（選択不可）
+                <div className="text-sm">
+                  <span className="text-indigo-200">施設:</span>{' '}
+                  <span className="font-semibold">
+                    {loadingFacilities ? '読み込み中...' : facilities.get(userProfile.facilities[0].facilityId)?.name || userProfile.facilities[0].facilityId}
+                  </span>
+                </div>
+              ) : (
+                // 複数施設の場合はドロップダウンを表示
+                <div>
+                  <label htmlFor="facility-select" className="block text-xs text-indigo-200 mb-1">
+                    施設を選択:
+                  </label>
+                  <select
+                    id="facility-select"
+                    value={selectedFacilityId || ''}
+                    onChange={handleFacilityChange}
+                    className="w-full px-3 py-2 text-sm bg-white text-slate-800 rounded-lg border-0 focus:outline-none focus:ring-2 focus:ring-white focus:ring-opacity-50"
+                    disabled={loadingFacilities}
+                  >
+                    <option value="">-- 施設を選択してください --</option>
+                    {userProfile.facilities.map((facilityAccess) => (
+                      <option key={facilityAccess.facilityId} value={facilityAccess.facilityId}>
+                        {loadingFacilities
+                          ? facilityAccess.facilityId
+                          : facilities.get(facilityAccess.facilityId)?.name || facilityAccess.facilityId
+                        }
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+            </div>
+          )}
         </header>
         <div className="flex-grow overflow-y-auto">
           <Accordion title="スタッフ情報設定" icon={<UserGroupIcon/>}>
