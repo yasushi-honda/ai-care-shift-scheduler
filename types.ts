@@ -212,3 +212,18 @@ export interface FacilityMember {
   name: string;
   role: FacilityRole;
 }
+
+// 招待ステータス
+export type InvitationStatus = 'pending' | 'accepted' | 'expired';
+
+// 招待情報（Firestore /facilities/{facilityId}/invitations/{invitationId}）
+export interface Invitation {
+  id: string;
+  email: string; // 招待先メールアドレス
+  role: 'editor' | 'viewer'; // 付与する権限（admin権限で招待可能なのはeditorとviewerのみ）
+  token: string; // ランダムトークン（UUID）
+  status: InvitationStatus;
+  createdBy: string; // 招待したユーザーのUID
+  createdAt: Timestamp;
+  expiresAt: Timestamp; // 有効期限（7日間）
+}

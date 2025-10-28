@@ -548,3 +548,128 @@ export async function revokeAccess(
     };
   }
 }
+
+/**
+ * 招待経由でのアクセス権限付与（権限チェックなし）
+ *
+ * NOTE: この関数は招待システム専用です。invitationService.tsからのみ呼び出してください。
+ * 招待トークンの検証は呼び出し側で行われている前提です。
+ *
+ * @param userId - ユーザーID
+ * @param facilityId - 施設ID
+ * @param role - 付与するロール
+ * @param grantedBy - 権限を付与したユーザーのUID（招待を作成したadmin）
+ * @returns 成功/失敗
+ */
+export async function grantAccessFromInvitation(
+  userId: string,
+  facilityId: string,
+  role: FacilityRole,
+  grantedBy: string
+): Promise<Result<void, UserError>> {
+  try {
+    // バリデーション
+    if (!userId || !facilityId || !role) {
+      return {
+        success: false,
+        error: {
+          code: 'VALIDATION_ERROR',
+          message: 'ユーザーID、施設ID、ロールは必須です',
+        },
+      };
+    }
+
+    // トランザクションで users と facilities の両方を更新
+    await runTransaction(db, async (transaction) => {
+      const userRef = doc(db, 'users', userId);
+      const facilityRef = doc(db, 'facilities', facilityId);
+
+      const userDoc = await transaction.get(userRef);
+      const facilityDoc = await transaction.get(facilityRef);
+
+      if (!userDoc.exists()) {
+        throw new Error('USER_NOT_FOUND');
+      }
+      if (!facilityDoc.exists()) {
+        throw new Error('FACILITY_NOT_FOUND');
+      }
+
+      const user = userDoc.data() as User;
+      const facility = facilityDoc.data();
+
+      // すでに権限がある場合はチェック
+      const existingAccess = user.facilities?.find((f) => f.facilityId === facilityId);
+      if (existingAccess) {
+        throw new Error('ALREADY_HAS_ACCESS');
+      }
+
+      // FacilityAccess エントリを作成
+      const newAccess: FacilityAccess = {
+        facilityId,
+        role,
+        grantedAt: Timestamp.now(),
+        grantedBy,
+      };
+
+      // FacilityMember エントリを作成（施設の非正規化データ）
+      const newMember: FacilityMember = {
+        userId: user.userId,
+        email: user.email,
+        name: user.name,
+        role,
+      };
+
+      // users ドキュメントの facilities 配列に追加
+      transaction.update(userRef, {
+        facilities: arrayUnion(newAccess),
+      });
+
+      // facilities ドキュメントの members 配列に追加
+      transaction.update(facilityRef, {
+        members: arrayUnion(newMember),
+      });
+    });
+
+    return { success: true, data: undefined };
+  } catch (error: any) {
+    console.error('Error granting access from invitation:', error);
+
+    if (error.message === 'USER_NOT_FOUND') {
+      return {
+        success: false,
+        error: {
+          code: 'NOT_FOUND',
+          message: '指定されたユーザーが見つかりません',
+        },
+      };
+    }
+
+    if (error.message === 'FACILITY_NOT_FOUND') {
+      return {
+        success: false,
+        error: {
+          code: 'NOT_FOUND',
+          message: '指定された施設が見つかりません',
+        },
+      };
+    }
+
+    if (error.message === 'ALREADY_HAS_ACCESS') {
+      return {
+        success: false,
+        error: {
+          code: 'VALIDATION_ERROR',
+          message: 'このユーザーはすでにこの施設へのアクセス権限を持っています',
+        },
+      };
+    }
+
+    return {
+      success: false,
+      error: {
+        code: 'FIRESTORE_ERROR',
+        message: 'アクセス権限の付与に失敗しました',
+      },
+    };
+  }
+}
