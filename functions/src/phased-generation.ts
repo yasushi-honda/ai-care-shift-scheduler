@@ -18,6 +18,31 @@ const VERTEX_AI_MODEL = 'gemini-2.5-flash-lite';
 const BATCH_SIZE = 10; // 詳細生成時のバッチサイズ（10名 × 30日 = 300セル）
 
 /**
+ * JSONレスポンスをクリーンアップしてパース
+ * Gemini APIが時々Markdownコードブロック形式で返すため、それを削除
+ */
+function parseGeminiJsonResponse(responseText: string): any {
+  try {
+    // Markdownコードブロックを削除（```json ... ``` または ``` ... ```）
+    let cleanedText = responseText.trim();
+    if (cleanedText.startsWith('```')) {
+      // 最初の```行を削除
+      cleanedText = cleanedText.replace(/^```(?:json)?\n?/, '');
+      // 最後の```行を削除
+      cleanedText = cleanedText.replace(/\n?```$/, '');
+    }
+
+    return JSON.parse(cleanedText);
+  } catch (error) {
+    // パースエラー時は詳細情報をログ出力
+    console.error('❌ JSON Parse Error:', error);
+    console.error('Response text (first 500 chars):', responseText.substring(0, 500));
+    console.error('Response text (last 500 chars):', responseText.substring(Math.max(0, responseText.length - 500)));
+    throw new Error(`Failed to parse Gemini JSON response: ${error instanceof Error ? error.message : String(error)}`);
+  }
+}
+
+/**
  * Phase 1: 骨子生成用スキーマ
  */
 function getSkeletonSchema(daysInMonth: number) {
@@ -137,7 +162,7 @@ export async function generateSkeleton(
   });
 
   const responseText = result.response.candidates?.[0]?.content?.parts?.[0]?.text || '';
-  const skeleton = JSON.parse(responseText) as ScheduleSkeleton;
+  const skeleton = parseGeminiJsonResponse(responseText) as ScheduleSkeleton;
   console.log(`✅ Phase 1完了: ${skeleton.staffSchedules.length}名分の骨子生成`);
 
   return skeleton;
@@ -225,7 +250,7 @@ export async function generateDetailedShifts(
     });
 
     const batchResponseText = result.response.candidates?.[0]?.content?.parts?.[0]?.text || '';
-    const batchResult = JSON.parse(batchResponseText);
+    const batchResult = parseGeminiJsonResponse(batchResponseText);
     allSchedules.push(...batchResult.schedule);
   }
 
