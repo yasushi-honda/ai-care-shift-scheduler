@@ -21,7 +21,7 @@ const BATCH_SIZE = 10; // 詳細生成時のバッチサイズ（10名 × 30日 
  * JSONレスポンスをクリーンアップしてパース
  * Gemini APIが時々Markdownコードブロック形式で返すため、それを削除
  */
-function parseGeminiJsonResponse(responseText: string): any {
+export function parseGeminiJsonResponse(responseText: string): any {
   try {
     // Markdownコードブロックを削除（```json ... ``` または ``` ... ```）
     let cleanedText = responseText.trim();

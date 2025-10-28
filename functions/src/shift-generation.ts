@@ -3,7 +3,7 @@ import { VertexAI } from '@google-cloud/vertexai';
 import * as admin from 'firebase-admin';
 import * as crypto from 'crypto';
 import type { Staff, ShiftRequirement, LeaveRequest } from './types';
-import { generateSkeleton, generateDetailedShifts } from './phased-generation';
+import { generateSkeleton, generateDetailedShifts, parseGeminiJsonResponse } from './phased-generation';
 
 // Firebase Admin初期化（index.tsで行うため、ここでは不要）
 // admin.initializeApp();
@@ -216,7 +216,7 @@ export const generateShift = onRequest(
         });
 
         const responseText = result.response.candidates?.[0]?.content?.parts?.[0]?.text || '';
-        scheduleData = JSON.parse(responseText);
+        scheduleData = parseGeminiJsonResponse(responseText);
         tokensUsed = result.response.usageMetadata?.totalTokenCount || 0;
         console.log('✅ 一括生成完了');
 
