@@ -188,8 +188,8 @@ export const generateShift = onRequest(
       let scheduleData: { schedule: any[] };
       let tokensUsed = 0;
 
-      if (staffList.length <= 10) {
-        // 10名以下：従来の一括生成（高速）
+      if (staffList.length <= 5) {
+        // 5名以下：従来の一括生成（高速）
         console.log(`📊 小規模シフト生成（${staffList.length}名）: 一括生成モード`);
 
         const vertexAI = new VertexAI({
@@ -221,7 +221,7 @@ export const generateShift = onRequest(
         console.log('✅ 一括生成完了');
 
       } else {
-        // 11名以上：段階的生成（骨子→詳細バッチ処理）
+        // 6名以上：段階的生成（骨子→詳細バッチ処理）
         console.log(`📊 大規模シフト生成（${staffList.length}名）: 段階的生成モード`);
 
         // Phase 1: 骨子生成
