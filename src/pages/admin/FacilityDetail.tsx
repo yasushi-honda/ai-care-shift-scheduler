@@ -142,7 +142,7 @@ export function FacilityDetail(): JSX.Element {
 
     // 既存メンバーチェック
     const isExistingMember = facility?.members?.some(
-      (m) => m.email.toLowerCase() === inviteEmail.trim().toLowerCase()
+      (m) => m.email && m.email.toLowerCase() === inviteEmail.trim().toLowerCase()
     );
     if (isExistingMember) {
       setInviteError('このメールアドレスのユーザーはすでにメンバーです');
