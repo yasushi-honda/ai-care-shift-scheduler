@@ -44,8 +44,8 @@ function generateUUID(): string {
  * @returns 招待リンクURL
  */
 export function generateInvitationLink(token: string): string {
-  // 本番環境のURL（環境変数から取得、デフォルトはlocalhost）
-  const baseUrl = import.meta.env.VITE_APP_URL || 'http://localhost:5173';
+  // 本番環境のURL（環境変数から取得、デフォルトは本番URL）
+  const baseUrl = import.meta.env.VITE_APP_URL || 'https://ai-care-shift-scheduler.web.app';
   return `${baseUrl}/invite?token=${token}`;
 }
 
