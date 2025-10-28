@@ -8,19 +8,22 @@
  * - 開発・デモ・テスト用のサンプルデータ
  *
  * 使用方法:
- *   npm run seed:demo              # 新規投入（既存データがある場合はスキップ）
- *   npm run seed:demo -- --reset   # 既存データを削除して再投入
- *   npm run seed:demo -- --dry-run # 実行内容を表示のみ（実際には投入しない）
+ *   npm run seed:demo                  # 新規投入（既存データがある場合はスキップ）
+ *   npm run seed:demo -- --reset       # 既存データを削除して再投入
+ *   npm run seed:demo -- --dry-run     # 実行内容を表示のみ（実際には投入しない）
+ *   npm run seed:demo -- --force       # 本番環境への投入を許可（公開前のみ使用）
+ *   npm run seed:demo -- --yes         # 確認プロンプトをスキップ
+ *   npm run seed:demo -- --force --yes # 本番環境に確認なしで投入（非推奨）
  *
  * 安全策:
- *   - 本番環境での実行を防止
+ *   - 本番環境での実行を防止（--forceで許可可能）
  *   - 冪等性確保（既存データチェック）
  *   - ドライランモード
  *   - バッチ書き込み（トランザクション）
  */
 
-import * as admin from 'firebase-admin';
-import * as readline from 'readline';
+import admin from 'firebase-admin';
+import readline from 'readline';
 
 // ==================== 型定義 ====================
 
@@ -89,6 +92,8 @@ const TARGET_MONTH = '2025-11';
 const args = process.argv.slice(2);
 const isReset = args.includes('--reset');
 const isDryRun = args.includes('--dry-run');
+const isForce = args.includes('--force');
+const isYes = args.includes('--yes') || args.includes('-y');
 
 // ==================== Firebase Admin初期化 ====================
 
@@ -105,14 +110,24 @@ if (!projectId) {
 console.log(`🔧 プロジェクトID: ${projectId}`);
 
 // 本番環境での実行を防止
-if (projectId === 'ai-care-shift-scheduler') {
+if (projectId === 'ai-care-shift-scheduler' && !isForce) {
   console.error('');
   console.error('❌❌❌ 本番環境では実行できません！ ❌❌❌');
   console.error('');
   console.error('デモデータの投入は開発環境でのみ実行してください。');
   console.error('本番環境でこのスクリプトを実行すると、実データが破壊される可能性があります。');
   console.error('');
+  console.error('💡 公開前のテスト目的で本番環境に投入する場合は --force オプションを使用してください。');
+  console.error('   例: npm run seed:demo -- --force');
+  console.error('');
   process.exit(1);
+}
+
+// 本番環境への強制実行の警告
+if (projectId === 'ai-care-shift-scheduler' && isForce) {
+  console.warn('');
+  console.warn('⚠️  警告: --force オプションが指定されているため、本番環境への投入を続行します');
+  console.warn('');
 }
 
 // Firebase Admin SDK初期化
@@ -389,7 +404,7 @@ async function main() {
   console.log(`   - 休暇申請: ${demoLeaveRequests.length}件`);
   console.log('');
 
-  if (!isDryRun && !isReset) {
+  if (!isDryRun && !isReset && !isYes) {
     const answer = await promptQuestion('投入してもよろしいですか？ (yes/no): ');
     if (answer.toLowerCase() !== 'yes') {
       console.log('キャンセルしました。');
