@@ -14,12 +14,12 @@ const getCloudFunctionUrl = (): string => {
   const url = import.meta.env.VITE_CLOUD_FUNCTION_URL;
 
   if (!url) {
-    // フォールバック: GCPプロジェクトIDから構築
-    const projectId = import.meta.env.VITE_GCP_PROJECT_ID;
+    // フォールバック: FirebaseプロジェクトIDから構築
+    const projectId = import.meta.env.VITE_FIREBASE_PROJECT_ID;
     if (!projectId) {
       throw new Error(
-        'VITE_CLOUD_FUNCTION_URL or VITE_GCP_PROJECT_ID environment variable must be set.\n' +
-        'Please set VITE_CLOUD_FUNCTION_URL in .env.local'
+        'VITE_CLOUD_FUNCTION_URL or VITE_FIREBASE_PROJECT_ID environment variable must be set.\n' +
+        'Please check your Firebase configuration in .env.local'
       );
     }
     return `https://us-central1-${projectId}.cloudfunctions.net/generateShift`;
