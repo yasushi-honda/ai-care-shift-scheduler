@@ -2,7 +2,7 @@
   "feature_name": "auth-data-persistence",
   "display_name": "認証・データ永続化機能（Google OAuth + RBAC）",
   "created_at": "2025-10-23T15:48:00+09:00",
-  "updated_at": "2025-10-25T11:05:00+09:00",
+  "updated_at": "2025-10-27T21:40:00+09:00",
   "language": "ja",
   "phase": "implementation",
   "approvals": {
@@ -21,12 +21,14 @@
   },
   "ready_for_implementation": true,
   "deployment": {
+    "phase_0_completed": true,
     "phase_1_9_completed": true,
-    "phase_10_1_completed": true,
-    "deployed_at": "2025-10-25T10:50:00+09:00",
+    "phase_10_completed": true,
+    "deployed_at": "2025-10-27T21:36:00+09:00",
     "production_url": "https://ai-care-shift-scheduler.web.app",
-    "status": "Phase 1-9 deployed, Phase 10.1 ready for deployment",
+    "status": "Phase 0-10, 12, 12.5 completed. Next: Phase 11 (User Invitation)",
     "completed_phases": [
+      "Phase 0: デモ環境整備（シードデータ投入機能）",
       "Phase 1: 認証基盤の構築",
       "Phase 2: ユーザー登録とアクセス権限管理",
       "Phase 3: 事業所管理とRBAC",
@@ -35,12 +37,13 @@
       "Phase 6: バージョン管理機能",
       "Phase 7: 休暇申請と要件設定の永続化",
       "Phase 8: Firestore Security Rules",
-      "Phase 9: データ復元とリロード対応"
+      "Phase 9: データ復元とリロード対応",
+      "Phase 10: 管理画面（super-admin専用）",
+      "Phase 12: エラーハンドリングとユーザーフィードバック",
+      "Phase 12.5: コード重複削除リファクタリング"
     ],
-    "in_progress_phases": [
-      "Phase 10.1: 管理画面レイアウトとナビゲーション（実装完了、デプロイ待ち）"
-    ],
-    "next_phase": "Phase 10.2: 施設管理機能"
+    "in_progress_phases": [],
+    "next_phase": "Phase 11: ユーザー招待機能"
   },
-  "description": "事業所単位のマルチテナント設計による認証・データ永続化機能。Google OAuth認証、ロールベースアクセス制御（super-admin/admin/editor/viewer）、管理画面による権限管理、Firestore Security Rulesを使用してユーザー認証とデータ分離を実現する。"
+  "description": "事業所単位のマルチテナント設計による認証・データ永続化機能。Google OAuth認証、ロールベースアクセス制御（super-admin/admin/editor/viewer）、管理画面による権限管理、Firestore Security Rulesを使用してユーザー認証とデータ分離を実現する。デモ環境整備により開発効率とデモンストレーション能力を向上。"
 }
