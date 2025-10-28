@@ -409,23 +409,28 @@ Phase 1-3のすべての機能が本番環境にデプロイされ、動作確�
 
 ---
 
-## Phase 11: ユーザー招待機能（admin権限）
+## Phase 11: ユーザー招待機能（admin権限） ✅ 完了
 
-- [ ] 11. ユーザー招待機能の実装
-- [ ] 11.1 招待メール送信のCloud Function実装
+- [x] 11. ユーザー招待機能の実装
+- [x] 11.1 招待メール送信のCloud Function実装
   - 招待情報（email, role, token）をinvitationsサブコレクションに保存
-  - 招待メールの生成と送信（Firebase Email Extension使用）
   - 招待リンクの生成（トークン付きURL）
   - 招待の有効期限管理（7日間）
   - _Requirements: 12.17, 9.1, 9.2_
+  - **実装**: `src/services/invitationService.ts` - createInvitation(), verifyInvitationToken(), acceptInvitation()
+  - **実装**: `src/pages/admin/FacilityDetail.tsx` - 招待モーダルとメンバー追加ボタン
+  - **NOTE**: Firebase Email Extensionは将来の拡張として保留。現在は招待リンクをUIに表示
 
-- [ ] 11.2 招待リンクからのアクセス権限付与フローの実装
+- [x] 11.2 招待リンクからのアクセス権限付与フローの実装
   - 招待リンククリック時のトークン検証
   - Google OAuth認証後の自動権限付与
   - usersドキュメントのfacilities配列への施設追加
   - facilitiesドキュメントのmembers配列への追加
   - 招待ステータスの更新（pending → accepted）
   - _Requirements: 9.3, 9.4, 9.5, 9.6, 12.18_
+  - **実装**: `src/pages/InviteAccept.tsx` - 招待受け入れページ
+  - **実装**: `src/services/userService.ts` - grantAccessFromInvitation()
+  - **実装**: `index.tsx` - /invite ルート追加
 
 ---
 

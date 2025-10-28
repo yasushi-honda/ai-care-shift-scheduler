@@ -16,6 +16,7 @@ import { FacilityDetail } from './src/pages/admin/FacilityDetail';
 import { UserManagement } from './src/pages/admin/UserManagement';
 import { UserDetail } from './src/pages/admin/UserDetail';
 import { AuditLogs } from './src/pages/admin/AuditLogs';
+import { InviteAccept } from './src/pages/InviteAccept';
 
 const rootElement = document.getElementById('root');
 if (!rootElement) {
@@ -42,6 +43,9 @@ root.render(
 
               {/* 403エラーページ */}
               <Route path="/forbidden" element={<Forbidden />} />
+
+              {/* 招待受け入れページ（認証不要） */}
+              <Route path="/invite" element={<InviteAccept />} />
 
               {/* 管理画面（super-admin専用） */}
               <Route
