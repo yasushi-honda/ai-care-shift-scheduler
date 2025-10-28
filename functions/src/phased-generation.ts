@@ -32,12 +32,46 @@ export function parseGeminiJsonResponse(responseText: string): any {
       cleanedText = cleanedText.replace(/\n?```$/, '');
     }
 
-    return JSON.parse(cleanedText);
+    // まず素直にパースを試みる
+    try {
+      return JSON.parse(cleanedText);
+    } catch (firstError) {
+      // 失敗したら、JSONクリーニングを試みる
+      console.warn('⚠️ Initial JSON parse failed, attempting to clean JSON...');
+
+      // トレーリングカンマを削除（配列とオブジェクト）
+      cleanedText = cleanedText.replace(/,(\s*[}\]])/g, '$1');
+
+      // JSONコメントを削除（// ... と /* ... */）
+      cleanedText = cleanedText.replace(/\/\/.*$/gm, '');
+      cleanedText = cleanedText.replace(/\/\*[\s\S]*?\*\//g, '');
+
+      // シングルクォートをダブルクォートに変換（プロパティ名のみ）
+      // 注: 値のシングルクォートは複雑なので、プロパティ名のみ対象
+      cleanedText = cleanedText.replace(/([{,]\s*)'/g, '$1"');
+      cleanedText = cleanedText.replace(/'\s*:/g, '":');
+
+      // 再度パース
+      return JSON.parse(cleanedText);
+    }
   } catch (error) {
     // パースエラー時は詳細情報をログ出力
     console.error('❌ JSON Parse Error:', error);
+    console.error('Response text length:', responseText.length);
     console.error('Response text (first 500 chars):', responseText.substring(0, 500));
     console.error('Response text (last 500 chars):', responseText.substring(Math.max(0, responseText.length - 500)));
+
+    // エラー位置付近のテキストを表示
+    if (error instanceof SyntaxError && error.message.includes('position')) {
+      const match = error.message.match(/position (\d+)/);
+      if (match) {
+        const position = parseInt(match[1], 10);
+        const start = Math.max(0, position - 200);
+        const end = Math.min(responseText.length, position + 200);
+        console.error(`Context around position ${position}:`, responseText.substring(start, end));
+      }
+    }
+
     throw new Error(`Failed to parse Gemini JSON response: ${error instanceof Error ? error.message : String(error)}`);
   }
 }
