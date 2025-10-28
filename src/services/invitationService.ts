@@ -30,14 +30,11 @@ export type InvitationError =
   | { code: 'FIRESTORE_ERROR'; message: string };
 
 /**
- * UUIDv4を生成
+ * UUIDv4を生成（暗号学的に安全）
  */
 function generateUUID(): string {
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
-    const r = (Math.random() * 16) | 0;
-    const v = c === 'x' ? r : (r & 0x3) | 0x8;
-    return v.toString(16);
-  });
+  // crypto.randomUUID()を使用して暗号学的に安全なトークンを生成
+  return crypto.randomUUID();
 }
 
 /**
@@ -133,9 +130,8 @@ export async function createInvitation(
 
     console.log('招待を作成しました:', {
       facilityId,
-      email,
       role,
-      invitationLink,
+      invitationId,
     });
 
     return {
@@ -175,9 +171,20 @@ export async function getInvitationByToken(
     }
 
     // 全施設の招待コレクションからトークンで検索
-    // NOTE: これは効率的ではないが、招待数が少ないため許容範囲
-    // より効率的な実装には、別途invitationsコレクション(グローバル)を作成するか、
-    // Cloud Functionで処理する
+    // TODO: SCALABILITY ISSUE - O(n×m) complexity
+    // CodeRabbitレビュー指摘事項：
+    // 現在の実装は全施設を反復し、各施設のinvitationsサブコレクションをクエリします。
+    // これはO(n×m)の複雑性を持ち、施設数が増えると以下の問題が発生します：
+    // - Firestoreコスト増加（読み取りごとに課金）
+    // - レスポンス時間の遅延
+    // - タイムアウトリスク
+    //
+    // 推奨される改善策：
+    // 1. トップレベルのinvitationsコレクションを作成し、facilityIdフィールドを追加
+    // 2. tokenにインデックスを設定
+    // 3. または、token → facilityIdマッピング用の別コレクションを作成
+    //
+    // 現時点では小規模システムのため許容範囲として実装を保留
 
     const facilitiesSnapshot = await getDocs(collection(db, 'facilities'));
 
@@ -292,6 +299,20 @@ export async function verifyInvitationToken(
 /**
  * 招待を受け入れてアクセス権限を付与
  *
+ * TODO: RACE CONDITION ISSUE
+ * CodeRabbitレビュー指摘事項：
+ * 現在の実装では、招待の検証とステータス更新の間にrace conditionが存在します。
+ * 複数のユーザーが同時に同じ招待を受け入れられる可能性があります。
+ *
+ * 推奨される修正：
+ * 1. Firestoreトランザクションを使用して、招待ドキュメントの取得、検証、
+ *    ステータス更新をアトミックに実行
+ * 2. grantAccessFromInvitation()もトランザクション内で呼び出すか、
+ *    または別途処理してエラーハンドリング
+ *
+ * 現時点では小規模システムで同時アクセスが少ないため、
+ * 簡易的なチェックで実装を保留
+ *
  * @param token - 招待トークン
  * @param userId - ユーザーID（受け入れるユーザー）
  * @param userEmail - ユーザーのメールアドレス
@@ -370,7 +391,7 @@ export async function acceptInvitation(
     await updateDoc(invitationRef, { status: 'accepted' as InvitationStatus });
 
     console.log('招待を受け入れました:', {
-      userId,
+      invitationId: invitation.id,
       facilityId,
       role: invitation.role,
     });

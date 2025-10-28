@@ -130,13 +130,30 @@ export function FacilityDetail(): JSX.Element {
   const handleSendInvitation = async () => {
     if (!facilityId || !currentUser) return;
 
-    setInviting(true);
     setInviteError(null);
     setInviteSuccess(null);
 
+    // メールアドレスのフォーマット検証
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(inviteEmail.trim())) {
+      setInviteError('有効なメールアドレスを入力してください');
+      return;
+    }
+
+    // 既存メンバーチェック
+    const isExistingMember = facility?.members?.some(
+      (m) => m.email.toLowerCase() === inviteEmail.trim().toLowerCase()
+    );
+    if (isExistingMember) {
+      setInviteError('このメールアドレスのユーザーはすでにメンバーです');
+      return;
+    }
+
+    setInviting(true);
+
     const result = await createInvitation(
       facilityId,
-      inviteEmail,
+      inviteEmail.trim(),
       inviteRole,
       currentUser.uid
     );
