@@ -16,6 +16,23 @@ import { db } from '../../firebase';
 import { Staff, StaffError, Result } from '../../types';
 
 /**
+ * Staff型からFirestoreスキーマへの変換（書き込み用）
+ *
+ * Staff型とFirestoreスキーマでフィールド名が異なるため、
+ * 書き込み時にフィールド名を変換する必要がある。
+ */
+function staffToFirestore(staff: Partial<Omit<Staff, 'id' | 'createdAt' | 'updatedAt'>>) {
+  const { role, qualifications, maxConsecutiveWorkDays, isNightShiftOnly, ...rest } = staff;
+  return {
+    ...rest,
+    ...(role !== undefined && { position: role }),                           // role → position
+    ...(qualifications !== undefined && { certifications: qualifications }), // qualifications → certifications
+    ...(maxConsecutiveWorkDays !== undefined && { maxConsecutiveDays: maxConsecutiveWorkDays }), // maxConsecutiveWorkDays → maxConsecutiveDays
+    ...(isNightShiftOnly !== undefined && { nightShiftOnly: isNightShiftOnly }), // isNightShiftOnly → nightShiftOnly
+  };
+}
+
+/**
  * StaffService
  *
  * スタッフ情報のCRUD操作をFirestoreで管理するサービス
@@ -44,14 +61,15 @@ export const StaffService = {
           return {
             id: doc.id,
             name: data.name,
-            role: data.role,
-            qualifications: data.qualifications,
-            weeklyWorkCount: data.weeklyWorkCount,
-            maxConsecutiveWorkDays: data.maxConsecutiveWorkDays,
-            availableWeekdays: data.availableWeekdays,
-            unavailableDates: data.unavailableDates,
-            timeSlotPreference: data.timeSlotPreference,
-            isNightShiftOnly: data.isNightShiftOnly,
+            // Firestoreフィールド名とStaff型のフィールド名をマッピング
+            role: data.position ?? data.role,  // position → role
+            qualifications: data.certifications ?? data.qualifications ?? [],  // certifications → qualifications
+            weeklyWorkCount: data.weeklyWorkCount ?? { hope: 20, must: 16 },
+            maxConsecutiveWorkDays: data.maxConsecutiveDays ?? data.maxConsecutiveWorkDays ?? 5,  // maxConsecutiveDays → maxConsecutiveWorkDays
+            availableWeekdays: data.availableWeekdays || [0, 1, 2, 3, 4, 5, 6],  // デフォルト: 全曜日
+            unavailableDates: data.unavailableDates || [],
+            timeSlotPreference: data.timeSlotPreference || {},
+            isNightShiftOnly: data.nightShiftOnly ?? data.isNightShiftOnly ?? false,  // nightShiftOnly → isNightShiftOnly
             createdAt: data.createdAt,
             updatedAt: data.updatedAt,
           } as Staff;
@@ -102,10 +120,10 @@ export const StaffService = {
         };
       }
 
-      // Firestoreに保存
+      // Firestoreに保存（フィールド名を変換）
       const staffCollectionRef = collection(db, `facilities/${facilityId}/staff`);
       const docRef = await addDoc(staffCollectionRef, {
-        ...staff,
+        ...staffToFirestore(staff),
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
       });
@@ -190,9 +208,9 @@ export const StaffService = {
       // id, createdAt, updatedAtは更新しない
       const { id, createdAt, updatedAt, ...allowedUpdates } = updates;
 
-      // Firestoreに保存
+      // Firestoreに保存（フィールド名を変換）
       await updateDoc(staffDocRef, {
-        ...allowedUpdates,
+        ...staffToFirestore(allowedUpdates),
         updatedAt: serverTimestamp(),
       });
 
