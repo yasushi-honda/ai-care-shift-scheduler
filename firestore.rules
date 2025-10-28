@@ -142,9 +142,15 @@ service cloud.firestore {
 
       // invitations subcollection (Phase 2-3で実装予定)
       match /invitations/{invitationId} {
-        // super-adminまたはadmin以上で読み取り・作成、更新・削除はCloud Functionのみ
+        // super-adminまたはadmin以上で読み取り・作成
         allow read, create: if isAuthenticated() && (isSuperAdmin() || hasRole(facilityId, 'admin'));
-        allow update, delete: if false; // Cloud Functionのみ
+        // 招待されたユーザー本人のみ、自分の招待ステータスを 'accepted' に更新可能
+        allow update: if isAuthenticated()
+          && request.auth.token.email == resource.data.email
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status'])
+          && request.resource.data.status == 'accepted';
+        // 削除はCloud Functionのみ
+        allow delete: if false;
       }
     }
 
