@@ -135,9 +135,9 @@ service cloud.firestore {
 
       // requirements subcollection
       match /requirements/{requirementId} {
-        // viewer以上で読み取り、admin以上で書き込み
+        // viewer以上で読み取り、editor以上で書き込み
         allow read: if isAuthenticated() && hasRole(facilityId, 'viewer');
-        allow write: if isAuthenticated() && hasRole(facilityId, 'admin');
+        allow write: if isAuthenticated() && hasRole(facilityId, 'editor');
       }
 
       // invitations subcollection (Phase 2-3で実装予定)
