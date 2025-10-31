@@ -16,7 +16,7 @@ Kiro-style Spec Driven Development implementation using claude code slash comman
 
 ### Active Specifications
 - **ai-shift-integration-test**: AI自動シフト生成機能の統合テストと検証（TDD） - ✅ 完了
-- **auth-data-persistence**: 認証・データ永続化機能（事業所単位マルチテナント設計） - 📝 仕様策定中
+- **auth-data-persistence**: 認証・データ永続化機能（事業所単位マルチテナント設計） - ✅ Phase 0-12.5完了・検証済み
 - Use `/kiro:spec-status [feature-name]` to check progress
 
 ## Development Guidelines
@@ -213,6 +213,7 @@ Note: Optional for new features or small additions. You can proceed directly to 
 5. **Update task status**: Mark tasks as completed when working on them
 6. **Keep steering current**: Run `/kiro:steering` after significant changes
 7. **Check spec compliance**: Use `/kiro:spec-status` to verify alignment
+8. **Document milestones**: Create comprehensive documentation at major milestones (see Documentation Standards below)
 
 ## Steering Configuration
 
@@ -236,4 +237,194 @@ Managed by `/kiro:steering` command. Updates here reflect command changes.
 - **Always**: Loaded in every interaction (default)
 - **Conditional**: Loaded for specific file patterns (e.g., "*.test.js")
 - **Manual**: Reference with `@filename.md` syntax
+
+---
+
+## Documentation Standards
+
+### 原則：テキスト + Mermaid図の併用
+
+**目的**: 将来のAIセッションや新規メンバーが振り返るときに、即座にプロジェクト状況を理解できるようにする
+
+**ベストプラクティス**:
+- ✅ **テキストドキュメント**で詳細・理由・コンテキストを記録
+- ✅ **Mermaid図**で全体像・構造・関係性を視覚化
+- ✅ 両者を**相互参照**して補完し合う
+
+### 記録が必要なマイルストーン
+
+以下のタイミングでは必ず包括的なドキュメントを作成すること：
+
+1. **Phase完了時**（特にPhase 0, Phase 5, Phase 10, Phase 15など大きな節目）
+2. **重大なバグ修正後**（設計判断の変更を伴う場合）
+3. **本番環境デプロイ後**（初回デプロイ、大規模変更時）
+4. **アーキテクチャ変更後**（マルチテナント化、認証方式変更など）
+5. **四半期または月次レビュー時**（開発状況の定期的な記録）
+
+### ドキュメント構成（必須）
+
+#### 1. テキストドキュメント（詳細版）
+
+**保存場所**: `.kiro/[適切なディレクトリ]/[記録種別]-[日付].md`
+
+**例**:
+- `.kiro/specs/auth-data-persistence/phase0-verification-2025-10-31.md`
+- `.kiro/specs/auth-data-persistence/bugfix-2025-10-31.md`
+- `.kiro/development-status-2025-10-31.md`
+
+**必須セクション**:
+```markdown
+# [タイトル]
+
+**更新日**: YYYY-MM-DD
+**仕様ID**: [spec-name]（該当する場合）
+**Phase**: [phase-number]（該当する場合）
+
+## 概要
+[何が行われたか、なぜ行われたか]
+
+## 詳細内容
+[詳細な説明、技術的決定、実装方法]
+
+## 検証結果・テスト結果
+[動作確認結果、エビデンス]
+
+## 影響分析
+[変更による影響範囲、リスク評価]
+
+## 今後の対応
+[次のステップ、未完了項目]
+
+## 関連ドキュメント
+[関連するファイルへのリンク]
+
+## 学び・振り返り
+[今後の改善点、注意事項]
+```
+
+#### 2. Mermaid図ドキュメント（構造版）
+
+**保存場所**: `.kiro/[適切なディレクトリ]/[記録種別]-diagram-[日付].md`
+
+**例**:
+- `.kiro/development-status-diagram-2025-10-31.md`
+- `.kiro/specs/auth-data-persistence/architecture-diagram-2025-10-31.md`
+
+**必須図の種類**（状況に応じて選択）:
+
+1. **ガントチャート** - Phase実装状況、スケジュール
+   ```mermaid
+   gantt
+       title Phase実装進捗状況
+       dateFormat YYYY-MM-DD
+       section Phase 0-6
+       Phase 0: デモ環境整備 :done, p0, 2025-10-23, 2025-10-31
+   ```
+
+2. **システムアーキテクチャ図** - コンポーネント構成、技術スタック
+   ```mermaid
+   graph TB
+       subgraph "クライアント層"
+           A[React SPA]
+       end
+       subgraph "Firebase層"
+           B[Authentication]
+           C[Firestore]
+       end
+   ```
+
+3. **シーケンス図** - 処理フロー、コンポーネント間のやり取り
+   ```mermaid
+   sequenceDiagram
+       actor User
+       participant UI
+       participant Backend
+       User->>UI: アクション
+       UI->>Backend: リクエスト
+   ```
+
+4. **ER図** - データモデル、コレクション関係
+   ```mermaid
+   erDiagram
+       USERS ||--o{ FACILITIES : "facilities[]"
+       FACILITIES ||--o{ STAFF : "staff subcollection"
+   ```
+
+5. **タイムライン** - リリース計画、ロードマップ
+   ```mermaid
+   timeline
+       title リリース計画ロードマップ
+       section 完了済み
+       Phase 0-12.5 : 実装完了
+   ```
+
+6. **フローチャート** - 開発ワークフロー、判断分岐
+   ```mermaid
+   graph TB
+       A[要件定義] --> B[技術設計]
+       B --> C{承認}
+       C -->|承認| D[実装]
+   ```
+
+### 命名規則
+
+**日付フォーマット**: `YYYY-MM-DD`
+
+**ファイル名パターン**:
+- Phase検証: `phase[N]-verification-YYYY-MM-DD.md`
+- バグ修正: `bugfix-YYYY-MM-DD.md`
+- 開発状況: `development-status-YYYY-MM-DD.md`
+- 開発状況図: `development-status-diagram-YYYY-MM-DD.md`
+- アーキテクチャ: `architecture-diagram-YYYY-MM-DD.md`
+- リリースノート: `release-notes-vX.Y.Z-YYYY-MM-DD.md`
+
+### 具体例（参考）
+
+#### 良い例：Phase 0検証記録（2025年10月31日実施）
+
+**テキストドキュメント**: `.kiro/specs/auth-data-persistence/phase0-verification-2025-10-31.md`
+- 検証目的、検証内容、検証結果の詳細
+- 発見されたバグの説明と修正内容
+- 今後のステップ（Phase 13, 14の推奨）
+- 学び・振り返り
+
+**Mermaid図ドキュメント**: `.kiro/development-status-diagram-2025-10-31.md`
+- Phase実装状況（ガントチャート）
+- システムアーキテクチャ図
+- 認証・アクセス制御フロー（シーケンス図）
+- AIシフト生成フロー（シーケンス図）
+- データモデル（ER図）
+- RBAC権限マトリックス（グラフ）
+- リリース計画タイムライン
+- 開発ワークフロー（フローチャート）
+- Phase 13/14詳細設計
+
+**相互参照**:
+```markdown
+詳細は [development-status-2025-10-31.md](./development-status-2025-10-31.md) を参照
+```
+
+#### 悪い例：不十分な記録
+
+❌ Mermaid図のみで説明がない
+❌ テキストのみで構造が見えない
+❌ 「なぜ」の理由が書かれていない
+❌ 日付や関連ドキュメントへのリンクがない
+
+### AI振り返り時の効果
+
+**この標準に従うことで**:
+
+1. ✅ **即座に全体像把握**: Mermaid図で構造を視覚的に理解
+2. ✅ **詳細コンテキスト理解**: テキストで「なぜ」「どのように」を把握
+3. ✅ **正確な意思決定追跡**: 設計判断の理由が明確に記録
+4. ✅ **効率的な情報検索**: 命名規則により必要な情報に素早くアクセス
+5. ✅ **新規メンバーのオンボーディング**: 過去の経緯を容易に理解
+
+### 実装時の注意
+
+- **記録は実装の一部**: コードと同様に重要な成果物
+- **リアルタイム記録**: 後回しにせず、完了時に即座に記録
+- **相互参照**: テキスト ↔ 図を相互リンクで結びつける
+- **更新も記録**: 既存ドキュメントを更新する場合、更新日と変更理由を記載
 
