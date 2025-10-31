@@ -154,10 +154,24 @@ service cloud.firestore {
       }
     }
 
-    // auditLogs collection (super-admin only, Phase 2-4で実装予定)
+    // auditLogs collection (Phase 13で実装)
     match /auditLogs/{logId} {
+      // super-adminのみ読み取り可能
       allow read: if isAuthenticated() && isSuperAdmin();
-      allow write: if false; // Cloud Functionのみ
+
+      // Phase 13.1: 認証済みユーザーが自分のログのみ作成可能（開発時）
+      // セキュリティ: userIdが認証ユーザーのuidと一致することを検証
+      // TODO: Phase 13.2で Cloud Function のみに制限（allow create: if false;）
+      allow create: if isAuthenticated()
+        && request.resource.data.userId == request.auth.uid
+        && request.resource.data.userId is string
+        && request.resource.data.action is string
+        && request.resource.data.resourceType is string
+        && request.resource.data.result is string
+        && (request.resource.data.result == 'success' || request.resource.data.result == 'failure');
+
+      // 更新・削除は禁止（不変ログ）
+      allow update, delete: if false;
     }
 
     // デフォルトルール: 上記以外のコレクションはアクセス拒否

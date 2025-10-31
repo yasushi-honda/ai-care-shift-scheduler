@@ -227,3 +227,41 @@ export interface Invitation {
   createdAt: Timestamp;
   expiresAt: Timestamp; // 有効期限（7日間）
 }
+
+// ==================== 監査ログ（Phase 13）====================
+
+// 監査ログアクション
+export enum AuditLogAction {
+  CREATE = 'CREATE',
+  READ = 'READ',
+  UPDATE = 'UPDATE',
+  DELETE = 'DELETE',
+  LOGIN = 'LOGIN',
+  LOGOUT = 'LOGOUT',
+  GRANT_ROLE = 'GRANT_ROLE',
+  REVOKE_ROLE = 'REVOKE_ROLE',
+}
+
+// 監査ログエントリ（Firestore /auditLogs/{logId}）
+export interface AuditLog {
+  id: string;
+  userId: string; // 操作したユーザーのUID
+  facilityId: string | null; // 対象施設ID（グローバル操作の場合はnull）
+  action: AuditLogAction; // 操作種別
+  resourceType: string; // 対象リソース（'staff', 'schedule', 'user', 'facility'など）
+  resourceId: string | null; // 対象リソースのID
+  details: Record<string, unknown>; // 操作内容の詳細（変更前後の値など）
+  deviceInfo: {
+    ipAddress: string | null; // IPアドレス
+    userAgent: string | null; // ユーザーエージェント
+  };
+  result: 'success' | 'failure'; // 操作結果
+  errorMessage?: string; // 失敗時のエラーメッセージ
+  timestamp: Timestamp; // 操作日時
+}
+
+// 監査ログサービスエラー型
+export type AuditLogError =
+  | { code: 'PERMISSION_DENIED'; message: string }
+  | { code: 'VALIDATION_ERROR'; message: string }
+  | { code: 'FIRESTORE_ERROR'; message: string };
