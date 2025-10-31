@@ -514,12 +514,18 @@ Phase 1-3のすべての機能が本番環境にデプロイされ、動作確�
 ## Phase 13: 監査ログとコンプライアンス（Phase 2-4）
 
 - [ ] 13. 監査ログとコンプライアンス機能
-- [ ] 13.1 監査ログ記録機能の実装
+- [x] 13.1 監査ログ記録機能の実装 ✅ 完了
   - すべてのCRUD操作の監査ログ記録
   - ログエントリの構造（timestamp, userId, action, resourceType, details）
   - デバイス情報（IPアドレス、ユーザーエージェント）の記録
   - auditLogsコレクションへの不変ログ保存
   - _Requirements: 11.1, 11.2, 11.3, 11.4, 11.5_
+  - **実装**: `src/services/auditLogService.ts` - logAction(), getAuditLogs()
+  - **テスト**: `src/services/__tests__/auditLogService.test.ts` - TDDアプローチで実装
+  - **型定義**: `types.ts` - AuditLog, AuditLogAction, AuditLogError型を追加
+  - **Security Rules**: `firestore.rules` - auditLogsコレクションのルール実装（認証ユーザーが自分のログのみ作成可能）
+  - **実装日**: 2025年10月31日
+  - **コミット**: 945c26c
 
 - [ ] 13.2 監査ログビューアUIの実装
   - 監査ログの一覧表示とフィルタリング機能
