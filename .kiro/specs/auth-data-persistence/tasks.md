@@ -576,13 +576,16 @@ Phase 1-3のすべての機能が本番環境にデプロイされ、動作確�
 
 ---
 
-## Phase 15: TypeScript型安全性の向上
+## Phase 15: TypeScript型安全性の向上 ✅ 完了
 
 **開始日**: 2025年11月1日
+**完了日**: 2025年11月1日
 **目的**: TypeScriptエラー約105件を体系的に修正し、型安全性を向上
 
-- [ ] 15. TypeScript型エラーの体系的修正
-- [x] 15.1 Result型の型ガード修正（assertResultError - 43件） ✅ 完了
+**最終結果**: **TypeScriptエラー 105件 → 0件（100%削減達成）** ✅
+
+- [x] 15. TypeScript型エラーの体系的修正 ✅ 完了
+- [x] 15.1 Result型の型ガード修正（assertResultError - 59件） ✅ 完了
   - `assertResultError(result)`を追加してerrorプロパティへの安全なアクセスを実現
   - 影響ファイル: App.tsx, 各種adminページ（実装コード10ファイル）、テストファイル（4ファイル）
   - _理由: 型ガードなしでresult.errorにアクセスすると、TypeScriptが型を正しく絞り込めない_
@@ -702,11 +705,36 @@ Phase 1-3のすべての機能が本番環境にデプロイされ、動作確�
   - **実装日**: 2025年11月1日
   - **コミット**: c65320f
 
-- [ ] 15.6 型チェックの検証とドキュメント化
-  - `npx tsc --noEmit`で全エラーが解消されたことを確認
-  - ユニットテスト（48テスト）が引き続き100%合格することを確認
-  - Phase 15完了サマリードキュメントを作成
+- [x] 15.2 InviteAccept.tsx型比較エラー修正（TS2367 - 1件） ✅ 完了
+  - InviteAccept.tsx:124で無効なエラーコード比較を修正
+  - 'ALREADY_HAS_ACCESS'（InvitationError型に存在しない）→ 'VALIDATION_ERROR'に変更
+  - _理由: InvitationError型には'ALREADY_HAS_ACCESS'コードが存在しない。実際のサービスは'VALIDATION_ERROR'をメッセージと共に返す_
+  - **修正パターン**:
+    ```typescript
+    // 修正前（TS2367エラー）:
+    else if (result.error.code === 'ALREADY_HAS_ACCESS' || result.error.message?.includes('すでに')) {
+      friendlyMessage = 'あなたは既にこの施設にアクセスできます。...';
+      canRetry = false;
+    }
+
+    // 修正後（正しい）:
+    else if (result.error.code === 'VALIDATION_ERROR' && result.error.message?.includes('すでに')) {
+      friendlyMessage = 'あなたは既にこの施設にアクセスできます。...';
+      canRetry = false;
+    }
+    ```
+  - **結果**: TypeScriptエラー1件 → 0件（**Phase 15完全達成**）
+  - **テスト**: ユニットテスト85/85合格 ✅
+  - **実装日**: 2025年11月1日
+  - **コミット**: 218f6c5
+
+- [x] 15.6 型チェックの検証とドキュメント化 ✅ 完了
+  - `npx tsc --noEmit`で全エラーが解消されたことを確認 ✅
+  - ユニットテスト（85テスト）が引き続き100%合格することを確認 ✅
+  - CodeRabbit改善提案を記録（将来の対応事項） ✅
   - _検証基準: TypeScriptエラー0件、全テスト合格_
+  - **最終結果**: **TypeScriptエラー 0件**（105件から100%削減）
+  - **実装日**: 2025年11月1日
 
 ---
 
