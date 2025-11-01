@@ -208,7 +208,7 @@ else if (result.error.code === 'VALIDATION_ERROR' && result.error.message?.inclu
 
 ### ユニットテスト
 
-```
+```bash
 Test Files: 6 passed (6)
 Tests: 85 passed (85)
 Duration: 22.32s
