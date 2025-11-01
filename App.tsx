@@ -155,6 +155,7 @@ const App: React.FC = () => {
       );
 
       if (!result.success) {
+        assertResultError(result);
         console.error('Failed to save requirement:', result.error);
         // エラー通知はUIに表示しない（自動保存のため）
       }
@@ -325,6 +326,7 @@ const App: React.FC = () => {
     );
 
     if (!result.success) {
+      assertResultError(result);
       console.error('Failed to update staff:', result.error);
       // 楽観的アップデートをrevert
       setStaffList(previousStaffList);
@@ -404,6 +406,7 @@ const App: React.FC = () => {
     const result = await StaffService.createStaff(selectedFacilityId, newStaff);
 
     if (!result.success) {
+      assertResultError(result);
       console.error('Failed to create staff:', result.error);
       setError(`スタッフの追加に失敗しました: ${result.error.message}`);
       return;
@@ -429,6 +432,7 @@ const App: React.FC = () => {
     const result = await StaffService.deleteStaff(selectedFacilityId, staffId);
 
     if (!result.success) {
+      assertResultError(result);
       console.error('Failed to delete staff:', result.error);
       setError(`スタッフの削除に失敗しました: ${result.error.message}`);
       setStaffToDelete(null);
@@ -478,6 +482,7 @@ const App: React.FC = () => {
       });
 
       if (!result.success) {
+        assertResultError(result);
         console.error('Failed to create leave request:', result.error);
         showError(`休暇申請の登録に失敗しました: ${result.error.message}`);
       }
@@ -495,6 +500,7 @@ const App: React.FC = () => {
         );
 
         if (!result.success) {
+          assertResultError(result);
           console.error('Failed to delete leave request:', result.error);
           showError(`休暇申請の削除に失敗しました: ${result.error.message}`);
         }
@@ -566,6 +572,7 @@ const App: React.FC = () => {
       );
 
       if (!saveResult.success) {
+        assertResultError(saveResult);
         showError(`保存に失敗しました: ${saveResult.error.message}`);
         setError(`保存に失敗しました: ${saveResult.error.message}`);
         return;
@@ -616,6 +623,7 @@ const App: React.FC = () => {
       );
 
       if (!result.success) {
+        assertResultError(result);
         showError(`保存に失敗しました: ${result.error.message}`);
         return;
       }
@@ -659,6 +667,7 @@ const App: React.FC = () => {
       );
 
       if (!result.success) {
+        assertResultError(result);
         showError(`確定に失敗しました: ${result.error.message}`);
         return;
       }
@@ -688,6 +697,7 @@ const App: React.FC = () => {
       const result = await ScheduleService.getVersionHistory(selectedFacilityId, currentScheduleId);
 
       if (!result.success) {
+        assertResultError(result);
         showError(`履歴の取得に失敗しました: ${result.error.message}`);
         return;
       }
@@ -718,6 +728,7 @@ const App: React.FC = () => {
       );
 
       if (!result.success) {
+        assertResultError(result);
         showError(`復元に失敗しました: ${result.error.message}`);
         return;
       }
@@ -728,6 +739,7 @@ const App: React.FC = () => {
       try {
         const historyResult = await ScheduleService.getVersionHistory(selectedFacilityId, currentScheduleId);
         if (!historyResult.success) {
+          assertResultError(historyResult);
           console.error('Failed to refresh version history:', historyResult.error);
           return;
         }
@@ -780,6 +792,7 @@ const App: React.FC = () => {
       );
 
       if (!saveResult.success) {
+        assertResultError(saveResult);
         showError(`保存に失敗しました: ${saveResult.error.message}`);
         setError(`保存に失敗しました: ${saveResult.error.message}`);
         return;
