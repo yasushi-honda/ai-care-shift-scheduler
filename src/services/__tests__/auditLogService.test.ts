@@ -1,22 +1,40 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { AuditLogService } from '../auditLogService';
-import { AuditLogAction } from '../../types';
+import { AuditLogAction } from '../../../types';
+import * as firestore from 'firebase/firestore';
+
+// Firestoreモックのセットアップ
+vi.mock('firebase/firestore');
+vi.mock('../../../firebase', () => ({
+  db: {},
+  auth: {
+    currentUser: {
+      uid: 'test-user-123',
+      email: 'test@example.com',
+    },
+  },
+}));
 
 describe('AuditLogService', () => {
   const mockUserId = 'test-user-123';
   const mockFacilityId = 'test-facility-456';
 
-  beforeEach(() => {
-    // Firebase Emulator接続設定
-    process.env.FIRESTORE_EMULATOR_HOST = 'localhost:8080';
-  });
+  beforeEach(async () => {
+    vi.clearAllMocks();
 
-  afterEach(async () => {
-    // テストデータのクリーンアップ
+    // auth.currentUserを設定
+    const { auth } = await import('../../../firebase');
+    vi.mocked(auth).currentUser = {
+      uid: mockUserId,
+      email: 'test@example.com',
+    };
   });
 
   describe('logAction', () => {
     it('should create an audit log entry with all required fields', async () => {
+      const mockDocRef = { id: 'log-123' };
+      vi.mocked(firestore.addDoc).mockResolvedValue(mockDocRef as any);
+
       const result = await AuditLogService.logAction({
         userId: mockUserId,
         facilityId: mockFacilityId,
@@ -38,10 +56,15 @@ describe('AuditLogService', () => {
       if (result.success) {
         expect(result.data).toBeTruthy();
         expect(typeof result.data).toBe('string'); // ログIDを返す
+        expect(result.data).toBe('log-123');
       }
+      expect(firestore.addDoc).toHaveBeenCalled();
     });
 
     it('should create an audit log entry for global actions (null facilityId)', async () => {
+      const mockDocRef = { id: 'log-456' };
+      vi.mocked(firestore.addDoc).mockResolvedValue(mockDocRef as any);
+
       const result = await AuditLogService.logAction({
         userId: mockUserId,
         facilityId: null,
@@ -60,6 +83,9 @@ describe('AuditLogService', () => {
     });
 
     it('should create an audit log entry for failure cases', async () => {
+      const mockDocRef = { id: 'log-789' };
+      vi.mocked(firestore.addDoc).mockResolvedValue(mockDocRef as any);
+
       const result = await AuditLogService.logAction({
         userId: mockUserId,
         facilityId: mockFacilityId,
@@ -78,9 +104,9 @@ describe('AuditLogService', () => {
       expect(result.success).toBe(true);
     });
 
-    it('should return validation error for missing userId', async () => {
+    it('should return permission error for mismatched userId', async () => {
       const result = await AuditLogService.logAction({
-        userId: '',
+        userId: '', // Empty userId doesn't match currentUser.uid
         facilityId: mockFacilityId,
         action: AuditLogAction.CREATE,
         resourceType: 'staff',
@@ -95,7 +121,8 @@ describe('AuditLogService', () => {
 
       expect(result.success).toBe(false);
       if (!result.success) {
-        expect(result.error.code).toBe('VALIDATION_ERROR');
+        expect(result.error.code).toBe('PERMISSION_DENIED');
+        expect(result.error.message).toContain('他のユーザーのログを作成することはできません');
       }
     });
 
@@ -123,6 +150,10 @@ describe('AuditLogService', () => {
 
   describe('getAuditLogs', () => {
     it('should retrieve audit logs for a specific facility', async () => {
+      // ログ作成のモック
+      const mockDocRef = { id: 'log-999' };
+      vi.mocked(firestore.addDoc).mockResolvedValue(mockDocRef as any);
+
       // まず、ログを作成
       await AuditLogService.logAction({
         userId: mockUserId,
@@ -138,6 +169,24 @@ describe('AuditLogService', () => {
         result: 'success',
       });
 
+      // ログ取得のモック
+      const mockLogs = [
+        {
+          id: 'log-999',
+          data: () => ({
+            userId: mockUserId,
+            facilityId: mockFacilityId,
+            action: AuditLogAction.CREATE,
+            resourceType: 'staff',
+            resourceId: 'staff-001',
+            timestamp: { toDate: () => new Date() },
+            result: 'success',
+          }),
+        },
+      ];
+      const mockSnapshot = { docs: mockLogs, forEach: (cb: any) => mockLogs.forEach(cb) };
+      vi.mocked(firestore.getDocs).mockResolvedValue(mockSnapshot as any);
+
       const result = await AuditLogService.getAuditLogs({
         facilityId: mockFacilityId,
         limit: 10,
@@ -151,6 +200,36 @@ describe('AuditLogService', () => {
     });
 
     it('should filter audit logs by action', async () => {
+      // ログ取得のモック（CREATE操作のみ）
+      const mockLogs = [
+        {
+          id: 'log-1',
+          data: () => ({
+            userId: mockUserId,
+            facilityId: mockFacilityId,
+            action: AuditLogAction.CREATE,
+            resourceType: 'staff',
+            resourceId: 'staff-001',
+            timestamp: { toDate: () => new Date() },
+            result: 'success',
+          }),
+        },
+        {
+          id: 'log-2',
+          data: () => ({
+            userId: mockUserId,
+            facilityId: mockFacilityId,
+            action: AuditLogAction.CREATE,
+            resourceType: 'staff',
+            resourceId: 'staff-002',
+            timestamp: { toDate: () => new Date() },
+            result: 'success',
+          }),
+        },
+      ];
+      const mockSnapshot = { docs: mockLogs, forEach: (cb: any) => mockLogs.forEach(cb) };
+      vi.mocked(firestore.getDocs).mockResolvedValue(mockSnapshot as any);
+
       const result = await AuditLogService.getAuditLogs({
         facilityId: mockFacilityId,
         action: AuditLogAction.CREATE,
@@ -167,6 +246,36 @@ describe('AuditLogService', () => {
     });
 
     it('should filter audit logs by userId', async () => {
+      // ログ取得のモック（特定ユーザーのみ）
+      const mockLogs = [
+        {
+          id: 'log-1',
+          data: () => ({
+            userId: mockUserId,
+            facilityId: mockFacilityId,
+            action: AuditLogAction.READ,
+            resourceType: 'schedule',
+            resourceId: 'schedule-001',
+            timestamp: { toDate: () => new Date() },
+            result: 'success',
+          }),
+        },
+        {
+          id: 'log-2',
+          data: () => ({
+            userId: mockUserId,
+            facilityId: mockFacilityId,
+            action: AuditLogAction.UPDATE,
+            resourceType: 'staff',
+            resourceId: 'staff-001',
+            timestamp: { toDate: () => new Date() },
+            result: 'success',
+          }),
+        },
+      ];
+      const mockSnapshot = { docs: mockLogs, forEach: (cb: any) => mockLogs.forEach(cb) };
+      vi.mocked(firestore.getDocs).mockResolvedValue(mockSnapshot as any);
+
       const result = await AuditLogService.getAuditLogs({
         facilityId: mockFacilityId,
         userId: mockUserId,

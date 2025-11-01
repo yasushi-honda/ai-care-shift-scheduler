@@ -265,3 +265,57 @@ export type AuditLogError =
   | { code: 'PERMISSION_DENIED'; message: string }
   | { code: 'VALIDATION_ERROR'; message: string }
   | { code: 'FIRESTORE_ERROR'; message: string };
+
+// ==================== セキュリティアラート（Phase 13.3）====================
+
+// セキュリティアラート種別
+export enum SecurityAlertType {
+  BULK_EXPORT = 'BULK_EXPORT', // 大量データエクスポート
+  UNUSUAL_TIME_ACCESS = 'UNUSUAL_TIME_ACCESS', // 通常外時間帯アクセス
+  MULTIPLE_AUTH_FAILURES = 'MULTIPLE_AUTH_FAILURES', // 複数回認証失敗
+  UNAUTHORIZED_ACCESS_ATTEMPT = 'UNAUTHORIZED_ACCESS_ATTEMPT', // 権限なしアクセス試行
+  STORAGE_THRESHOLD_EXCEEDED = 'STORAGE_THRESHOLD_EXCEEDED', // ストレージ容量閾値超過
+}
+
+// アラート重要度
+export enum SecurityAlertSeverity {
+  LOW = 'LOW',
+  MEDIUM = 'MEDIUM',
+  HIGH = 'HIGH',
+  CRITICAL = 'CRITICAL',
+}
+
+// アラートステータス
+export enum SecurityAlertStatus {
+  NEW = 'NEW', // 新規
+  ACKNOWLEDGED = 'ACKNOWLEDGED', // 確認済み
+  INVESTIGATING = 'INVESTIGATING', // 調査中
+  RESOLVED = 'RESOLVED', // 解決済み
+  FALSE_POSITIVE = 'FALSE_POSITIVE', // 誤検知
+}
+
+// セキュリティアラート（Firestore /securityAlerts/{alertId}）
+export interface SecurityAlert {
+  id: string;
+  type: SecurityAlertType; // アラート種別
+  severity: SecurityAlertSeverity; // 重要度
+  status: SecurityAlertStatus; // ステータス
+  userId: string | null; // 対象ユーザーID（該当する場合）
+  facilityId: string | null; // 対象施設ID（該当する場合）
+  title: string; // アラートタイトル
+  description: string; // アラート詳細
+  metadata: Record<string, unknown>; // 追加情報（検出条件、カウントなど）
+  detectedAt: Timestamp; // 検出日時
+  acknowledgedBy: string | null; // 確認したユーザーのUID
+  acknowledgedAt: Timestamp | null; // 確認日時
+  resolvedBy: string | null; // 解決したユーザーのUID
+  resolvedAt: Timestamp | null; // 解決日時
+  notes: string | null; // 管理者メモ
+}
+
+// セキュリティアラートサービスエラー型
+export type SecurityAlertError =
+  | { code: 'PERMISSION_DENIED'; message: string }
+  | { code: 'VALIDATION_ERROR'; message: string }
+  | { code: 'FIRESTORE_ERROR'; message: string }
+  | { code: 'NOT_FOUND'; message: string };

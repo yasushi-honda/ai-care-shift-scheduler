@@ -2,7 +2,7 @@
   "feature_name": "auth-data-persistence",
   "display_name": "認証・データ永続化機能（Google OAuth + RBAC）",
   "created_at": "2025-10-23T15:48:00+09:00",
-  "updated_at": "2025-10-27T21:40:00+09:00",
+  "updated_at": "2025-11-01T16:00:00+09:00",
   "language": "ja",
   "phase": "implementation",
   "approvals": {
@@ -28,7 +28,7 @@
     "phase_11_completed": true,
     "deployed_at": "2025-10-28T00:00:00+09:00",
     "production_url": "https://ai-care-shift-scheduler.web.app",
-    "status": "Phase 0-12.5 completed and verified. All core features operational in production.",
+    "status": "Phase 0-13 completed and tested (48/48 unit tests passing). All core features + audit logs + security alerts operational.",
     "completed_phases": [
       "Phase 0: デモ環境整備（シードデータ投入機能）",
       "Phase 1: 認証基盤の構築",
@@ -43,10 +43,14 @@
       "Phase 10: 管理画面（super-admin専用）",
       "Phase 11: ユーザー招待機能（admin権限）",
       "Phase 12: エラーハンドリングとユーザーフィードバック",
-      "Phase 12.5: コード重複削除リファクタリング"
+      "Phase 12.5: コード重複削除リファクタリング",
+      "Phase 13.1: 監査ログ記録機能",
+      "Phase 13.2: 監査ログビューアUI",
+      "Phase 13.3: セキュリティアラートと異常検知（ユニットテスト100%合格）",
+      "Phase 13.4: 既存テスト環境整備とテスト修正（全48テスト100%合格）"
     ],
     "in_progress_phases": [],
-    "next_phase": "Future enhancements (Email notifications, analytics, etc.)"
+    "next_phase": "Phase 14: E2Eテスト（後回し） / カバレッジレポート確認・型チェック"
   },
   "description": "事業所単位のマルチテナント設計による認証・データ永続化機能。Google OAuth認証、ロールベースアクセス制御（super-admin/admin/editor/viewer）、管理画面による権限管理、Firestore Security Rulesを使用してユーザー認証とデータ分離を実現する。デモ環境整備により開発効率とデモンストレーション能力を向上。"
 }

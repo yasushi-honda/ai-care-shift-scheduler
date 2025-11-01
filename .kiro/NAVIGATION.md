@@ -29,6 +29,27 @@
 
 個別機能の要件・設計・実装タスクに関するドキュメント
 
+### ✅ Auth Data Persistence（認証・データ永続化）（Phase 0-13完了）
+
+**目的**: 事業所単位のマルチテナント設計、Google OAuth認証、RBAC、監査ログ
+
+| ドキュメント | 内容 |
+|------------|------|
+| [`specs/auth-data-persistence/requirements.md`](specs/auth-data-persistence/requirements.md) | 全要件の詳細定義 |
+| [`specs/auth-data-persistence/design.md`](specs/auth-data-persistence/design.md) | 技術設計、アーキテクチャ |
+| [`specs/auth-data-persistence/tasks.md`](specs/auth-data-persistence/tasks.md) | 実装タスク（Phase 0-13完了） |
+| [`specs/auth-data-persistence/phase13-completion-summary-2025-11-01.md`](specs/auth-data-persistence/phase13-completion-summary-2025-11-01.md) | **Phase 13完了サマリー** 📊 |
+| [`specs/auth-data-persistence/phase13-diagram-2025-11-01.md`](specs/auth-data-persistence/phase13-diagram-2025-11-01.md) | **Phase 13構造図（Mermaid）** 📈 |
+| [`specs/auth-data-persistence/phase0-verification-2025-10-31.md`](specs/auth-data-persistence/phase0-verification-2025-10-31.md) | Phase 0検証記録 |
+| [`specs/auth-data-persistence/deployment-summary.md`](specs/auth-data-persistence/deployment-summary.md) | デプロイサマリー |
+| [`specs/auth-data-persistence/spec.json`](specs/auth-data-persistence/spec.json) | メタデータ |
+
+**ステータス**: ✅ Phase 0-13完了（2025-11-01）
+**テスト結果**: 48/48ユニットテスト成功、100%成功率
+**カバレッジ**: Phase 13サービス 79-92% statements, 100% functions
+
+---
+
 ### ✅ AI Shift Integration Test（完了）
 
 **目的**: AIシフト生成機能の動作を包括的にテスト
@@ -82,13 +103,21 @@ Infrastructure
 
 ## 🧪 テスト関連
 
-| テストタイプ | 場所 | 実行コマンド |
-|------------|------|------------|
-| 統合テスト（Jest） | `functions/__tests__/integration/` | `cd functions && npm run test:integration` |
-| E2Eテスト（Playwright） | `e2e/` | `npx playwright test` |
-| CI/CD | `.github/workflows/ci.yml` | 自動実行（push時） |
+| テストタイプ | 場所 | 実行コマンド | ステータス |
+|------------|------|------------|-----------|
+| **ユニットテスト（Vitest）** | `src/services/__tests__/` | `npm run test:unit` | ✅ 48/48合格 (100%) |
+| 統合テスト（Jest） | `functions/__tests__/integration/` | `cd functions && npm run test:integration` | ✅ 37/37合格 (100%) |
+| E2Eテスト（Playwright） | `e2e/` | `npx playwright test` | ⏳ 後回し |
+| CI/CD | `.github/workflows/ci.yml` | 自動実行（push時） | ✅ 稼働中 |
 
 **詳細**: [`README.md`](../README.md) - 🧪 テストセクション
+
+**ユニットテストカバレッジ**:
+- `auditLogService`: 81% statements, 100% functions
+- `securityAlertService`: 79% statements, 100% functions
+- `anomalyDetectionService`: 93% statements, 100% functions
+- `staffService`: 66% statements, 88% functions
+- `scheduleService`: 18% statements, 29% functions（要改善）
 
 ---
 
@@ -169,6 +198,6 @@ Infrastructure
 
 ---
 
-**最終更新**: 2025-10-23
-**バージョン**: 1.0
+**最終更新**: 2025-11-01
+**バージョン**: 1.1
 **メンテナ**: 開発チーム

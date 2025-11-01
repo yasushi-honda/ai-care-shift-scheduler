@@ -527,20 +527,52 @@ Phase 1-3のすべての機能が本番環境にデプロイされ、動作確�
   - **実装日**: 2025年10月31日
   - **コミット**: 945c26c
 
-- [ ] 13.2 監査ログビューアUIの実装
+- [x] 13.2 監査ログビューアUIの実装 ✅
   - 監査ログの一覧表示とフィルタリング機能
   - 日時範囲、ユーザーID、操作種別、対象リソースでの検索
   - ログの詳細表示
-  - CSV/JSON形式でのエクスポート機能
+  - CSV/JSON形式でのエクスポート機能（UTF-8 BOM対応）
   - _Requirements: 11.6, 11.7, 11.10_
+  - **実装**: `src/pages/admin/AuditLogs.tsx` (545行) - フィルタリング、CSV/JSONエクスポート、詳細モーダル
+  - **ルート**: `/admin/audit-logs` - AdminLayoutのナビゲーションに追加
+  - **実装日**: 2025年11月1日
 
-- [ ] 13.3 セキュリティアラートと異常検知機能の実装
+- [x] 13.3 セキュリティアラートと異常検知機能の実装 ✅
   - 不審なアクセスパターンの検出ロジック
   - 大量データエクスポート、通常外時間帯アクセスの検出
   - 複数回認証失敗、権限なしアクセス試行の検出
   - アラート生成と管理者への通知
   - ストレージ容量閾値の監視とアーカイブ促進
   - _Requirements: 11.8, 11.9_
+  - **型定義**: `types.ts` - SecurityAlert, SecurityAlertType, SecurityAlertSeverity, SecurityAlertStatus型を追加
+  - **サービス**: `src/services/securityAlertService.ts` (304行) - createAlert(), getAlerts(), updateAlertStatus(), addNotes()
+  - **異常検知**: `src/services/anomalyDetectionService.ts` (280行) - 5種類の検知ロジック実装
+  - **UI**: `src/pages/admin/SecurityAlerts.tsx` (590行) - アラート管理UI、ステータス更新、手動検知実行
+  - **ルート**: `/admin/security-alerts` - AdminLayoutのナビゲーションに追加
+  - **テスト**: `src/services/__tests__/securityAlertService.test.ts` (10テスト, 100%合格)
+  - **テスト**: `src/services/__tests__/anomalyDetectionService.test.ts` (11テスト, 100%合格)
+  - **カバレッジ**: 90.2% Statements, 100% Functions
+  - **実装日**: 2025年11月1日
+
+- [x] 13.4 既存テスト環境の整備とテスト修正 ✅ 完了
+  - Vitestテスト環境のセットアップとグローバルモック設定
+  - Firebase Emulatorアプローチからモックアプローチへの移行
+  - 既存サービステストの修正と検証
+  - _Requirements: テスト品質向上、CI/CD統合_
+  - **環境構築**: `package.json` - test:unit, test:unit:watch, test:unit:ui, test:unit:coverage スクリプト追加
+  - **環境構築**: `vite.config.ts` - Vitest設定追加（happy-dom環境、v8カバレッジ）
+  - **環境構築**: `src/test/setup.ts` (新規作成) - Firebaseグローバルモックセットアップ
+  - **テスト修正**: `src/services/__tests__/auditLogService.test.ts` - モックアプローチに移行（8テスト, 100%合格）
+  - **テスト修正**: `src/services/__tests__/staffService.test.ts` - モックアプローチに移行（10テスト, 100%合格）
+  - **テスト修正**: `src/services/__tests__/scheduleService.test.ts` - モックアプローチに移行（9テスト, 100%合格）
+  - **検証結果**: 全サービスユニットテスト 48/48件合格 (100%)
+    - auditLogService: 8/8テスト合格
+    - staffService: 10/10テスト合格
+    - scheduleService: 9/9テスト合格
+    - securityAlertService: 10/10テスト合格
+    - anomalyDetectionService: 11/11テスト合格
+  - **実装日**: 2025年11月1日
+  - **効果**: Firebase Emulator不要、テスト実行時間大幅短縮（48テスト全体で約389ms）
 
 ---
 

@@ -31,6 +31,7 @@ export function AdminLayout(): JSX.Element {
     { path: '/admin/facilities', label: '施設管理', icon: '🏢' },
     { path: '/admin/users', label: 'ユーザー管理', icon: '👥' },
     { path: '/admin/audit-logs', label: '監査ログ', icon: '📋' },
+    { path: '/admin/security-alerts', label: 'セキュリティアラート', icon: '🚨' },
   ];
 
   return (

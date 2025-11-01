@@ -9,7 +9,7 @@ import {
   getDocs,
   QueryConstraint,
 } from 'firebase/firestore';
-import { db, auth } from '../firebase';
+import { db, auth } from '../../firebase';
 import { AuditLog, AuditLogAction, AuditLogError, Result } from '../../types';
 
 /**

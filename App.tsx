@@ -121,15 +121,18 @@ const App: React.FC = () => {
     const loadRequirement = async () => {
       const result = await RequirementService.getRequirement(selectedFacilityId);
 
-      if (result.success && result.data) {
-        // Firestoreから取得した要件設定を使用
-        setRequirements(result.data);
-      } else if (result.success && !result.data) {
-        // 要件設定が存在しない場合はデフォルト設定を維持
-        console.log('No requirement found, using default');
-      } else {
+      if (!result.success) {
         console.error('Failed to load requirement:', result.error);
         showError(`要件設定の読み込みに失敗しました: ${result.error.message}`);
+        return;
+      }
+
+      if (result.data) {
+        // Firestoreから取得した要件設定を使用
+        setRequirements(result.data);
+      } else {
+        // 要件設定が存在しない場合はデフォルト設定を維持
+        console.log('No requirement found, using default');
       }
     };
 
@@ -398,13 +401,14 @@ const App: React.FC = () => {
     // Firestoreに作成
     const result = await StaffService.createStaff(selectedFacilityId, newStaff);
 
-    if (result.success) {
-      // 新規追加されたスタッフを自動的に展開状態にする
-      setOpenStaffId(result.data);
-    } else {
+    if (!result.success) {
       console.error('Failed to create staff:', result.error);
       setError(`スタッフの追加に失敗しました: ${result.error.message}`);
+      return;
     }
+
+    // 新規追加されたスタッフを自動的に展開状態にする
+    setOpenStaffId(result.data);
   }, [selectedFacilityId]);
 
   const handleDeleteStaff = useCallback((staffId: string) => {
@@ -422,33 +426,34 @@ const App: React.FC = () => {
     // Firestoreから削除
     const result = await StaffService.deleteStaff(selectedFacilityId, staffId);
 
-    if (result.success) {
-      // 関連データのクリーンアップ
-      setLeaveRequests(prev => {
-        const newRequests = { ...prev };
-        delete newRequests[staffId];
-        return newRequests;
-      });
-
-      setWorkLogs(prev => {
-        const newLogs = JSON.parse(JSON.stringify(prev));
-        for (const date in newLogs) {
-          if (newLogs[date][staffId]) {
-            delete newLogs[date][staffId];
-            if (Object.keys(newLogs[date]).length === 0) {
-              delete newLogs[date];
-            }
-          }
-        }
-        return newLogs;
-      });
-
-      setStaffToDelete(null);
-    } else {
+    if (!result.success) {
       console.error('Failed to delete staff:', result.error);
       setError(`スタッフの削除に失敗しました: ${result.error.message}`);
       setStaffToDelete(null);
+      return;
     }
+
+    // 関連データのクリーンアップ
+    setLeaveRequests(prev => {
+      const newRequests = { ...prev };
+      delete newRequests[staffId];
+      return newRequests;
+    });
+
+    setWorkLogs(prev => {
+      const newLogs = JSON.parse(JSON.stringify(prev));
+      for (const date in newLogs) {
+        if (newLogs[date][staffId]) {
+          delete newLogs[date][staffId];
+          if (Object.keys(newLogs[date]).length === 0) {
+            delete newLogs[date];
+          }
+        }
+      }
+      return newLogs;
+    });
+
+    setStaffToDelete(null);
   }, [staffToDelete, selectedFacilityId]);
 
   const handleLeaveRequestChange = useCallback(async (staffId: string, date: string, leaveType: LeaveType | null) => {
@@ -558,13 +563,14 @@ const App: React.FC = () => {
         }
       );
 
-      if (saveResult.success) {
-        showSuccess('シフトを生成し、保存しました');
-        setViewMode('shift');
-      } else {
+      if (!saveResult.success) {
         showError(`保存に失敗しました: ${saveResult.error.message}`);
         setError(`保存に失敗しました: ${saveResult.error.message}`);
+        return;
       }
+
+      showSuccess('シフトを生成し、保存しました');
+      setViewMode('shift');
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : '不明なエラーが発生しました。';
       setError(errorMessage);
@@ -607,14 +613,15 @@ const App: React.FC = () => {
         }
       );
 
-      if (result.success) {
-        showSuccess('下書きを保存しました');
-        // LocalStorageの下書きを削除
-        const key = `draft-schedule-${selectedFacilityId}-${requirements.targetMonth}`;
-        localStorage.removeItem(key);
-      } else {
+      if (!result.success) {
         showError(`保存に失敗しました: ${result.error.message}`);
+        return;
       }
+
+      showSuccess('下書きを保存しました');
+      // LocalStorageの下書きを削除
+      const key = `draft-schedule-${selectedFacilityId}-${requirements.targetMonth}`;
+      localStorage.removeItem(key);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : '保存時にエラーが発生しました';
       showError(errorMessage);
@@ -649,14 +656,15 @@ const App: React.FC = () => {
         '確定'
       );
 
-      if (result.success) {
-        showSuccess('シフトを確定しました');
-        // LocalStorageの下書きを削除
-        const key = `draft-schedule-${selectedFacilityId}-${requirements.targetMonth}`;
-        localStorage.removeItem(key);
-      } else {
+      if (!result.success) {
         showError(`確定に失敗しました: ${result.error.message}`);
+        return;
       }
+
+      showSuccess('シフトを確定しました');
+      // LocalStorageの下書きを削除
+      const key = `draft-schedule-${selectedFacilityId}-${requirements.targetMonth}`;
+      localStorage.removeItem(key);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : '確定時にエラーが発生しました';
       showError(errorMessage);
@@ -677,11 +685,12 @@ const App: React.FC = () => {
     try {
       const result = await ScheduleService.getVersionHistory(selectedFacilityId, currentScheduleId);
 
-      if (result.success) {
-        setVersions(result.data);
-      } else {
+      if (!result.success) {
         showError(`履歴の取得に失敗しました: ${result.error.message}`);
+        return;
       }
+
+      setVersions(result.data);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : '履歴の取得時にエラーが発生しました';
       showError(errorMessage);
@@ -706,22 +715,23 @@ const App: React.FC = () => {
         currentUser.uid
       );
 
-      if (result.success) {
-        showSuccess(`バージョン${versionNumber}に復元しました`);
-
-        // バージョン履歴をリフレッシュ（復元時に作成された新しいスナップショットを表示）
-        try {
-          const historyResult = await ScheduleService.getVersionHistory(selectedFacilityId, currentScheduleId);
-          if (historyResult.success) {
-            setVersions(historyResult.data);
-          } else {
-            console.error('Failed to refresh version history:', historyResult.error);
-          }
-        } catch (refreshErr) {
-          console.error('Error refreshing version history:', refreshErr);
-        }
-      } else {
+      if (!result.success) {
         showError(`復元に失敗しました: ${result.error.message}`);
+        return;
+      }
+
+      showSuccess(`バージョン${versionNumber}に復元しました`);
+
+      // バージョン履歴をリフレッシュ（復元時に作成された新しいスナップショットを表示）
+      try {
+        const historyResult = await ScheduleService.getVersionHistory(selectedFacilityId, currentScheduleId);
+        if (!historyResult.success) {
+          console.error('Failed to refresh version history:', historyResult.error);
+          return;
+        }
+        setVersions(historyResult.data);
+      } catch (refreshErr) {
+        console.error('Error refreshing version history:', refreshErr);
       }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : '復元時にエラーが発生しました';
@@ -767,13 +777,14 @@ const App: React.FC = () => {
         }
       );
 
-      if (saveResult.success) {
-        showSuccess('デモシフトを生成し、保存しました');
-        setViewMode('shift');
-      } else {
+      if (!saveResult.success) {
         showError(`保存に失敗しました: ${saveResult.error.message}`);
         setError(`保存に失敗しました: ${saveResult.error.message}`);
+        return;
       }
+
+      showSuccess('デモシフトを生成し、保存しました');
+      setViewMode('shift');
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : '保存時にエラーが発生しました';
       showError(errorMessage);

@@ -18,6 +18,23 @@ export default defineConfig(({ mode }) => {
         alias: {
           '@': path.resolve(__dirname, '.'),
         }
+      },
+      test: {
+        globals: true,
+        environment: 'happy-dom',
+        setupFiles: './src/test/setup.ts',
+        coverage: {
+          provider: 'v8',
+          reporter: ['text', 'json', 'html'],
+          exclude: [
+            'node_modules/',
+            'src/test/',
+            '**/*.test.ts',
+            '**/*.test.tsx',
+            'dist/',
+            'functions/',
+          ],
+        },
       }
     };
 });
