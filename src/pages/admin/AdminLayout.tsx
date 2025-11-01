@@ -10,7 +10,7 @@ import { useAuth } from '../../contexts/AuthContext';
  * - ヘッダー（ユーザー情報、ログアウトボタン）
  * - メインコンテンツエリア（Outlet）
  */
-export function AdminLayout(): JSX.Element {
+export function AdminLayout(): React.ReactElement {
   const location = useLocation();
   const navigate = useNavigate();
   const { signOut, userProfile } = useAuth();

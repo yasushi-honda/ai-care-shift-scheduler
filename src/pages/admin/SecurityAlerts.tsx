@@ -22,7 +22,7 @@ import { Timestamp } from 'firebase/firestore';
  * - メモ追加機能
  * - 手動異常検知実行
  */
-export function SecurityAlerts(): JSX.Element {
+export function SecurityAlerts(): React.ReactElement {
   const [alerts, setAlerts] = useState<SecurityAlert[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

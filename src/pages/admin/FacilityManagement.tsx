@@ -18,7 +18,7 @@ import { Button } from '../../components/Button';
  * - 新規施設作成フォーム
  * - 施設詳細へのリンク
  */
-export function FacilityManagement(): JSX.Element {
+export function FacilityManagement(): React.ReactElement {
   const { currentUser } = useAuth();
   const [facilities, setFacilities] = useState<Facility[]>([]);
   const [stats, setStats] = useState<Map<string, FacilityStats>>(new Map());

@@ -18,7 +18,7 @@ import { handleError } from '../../utils/errorHandler';
  * - メンバー一覧
  * - シフトデータ統計
  */
-export function FacilityDetail(): JSX.Element {
+export function FacilityDetail(): React.ReactElement {
   const { facilityId } = useParams<{ facilityId: string }>();
   const { currentUser } = useAuth();
   const navigate = useNavigate();

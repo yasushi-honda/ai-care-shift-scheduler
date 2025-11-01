@@ -12,7 +12,7 @@ interface AdminProtectedRouteProps {
  * super-admin権限を持つユーザーのみアクセスを許可するルート保護コンポーネント
  * super-admin以外のユーザーは /forbidden にリダイレクトされる
  */
-export function AdminProtectedRoute({ children }: AdminProtectedRouteProps): JSX.Element {
+export function AdminProtectedRoute({ children }: AdminProtectedRouteProps): React.ReactElement {
   const { loading, isSuperAdmin } = useAuth();
 
   // ローディング中は何も表示しない

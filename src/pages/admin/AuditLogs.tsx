@@ -15,7 +15,7 @@ import { Timestamp } from 'firebase/firestore';
  * - ページネーション
  * - 詳細表示モーダル
  */
-export function AuditLogs(): JSX.Element {
+export function AuditLogs(): React.ReactElement {
   const [logs, setLogs] = useState<AuditLog[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

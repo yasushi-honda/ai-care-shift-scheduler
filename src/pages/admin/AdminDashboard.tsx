@@ -7,7 +7,7 @@ import { Link } from 'react-router-dom';
  * 管理画面のダッシュボード（ランディングページ）
  * 各管理機能へのクイックアクセスリンクを表示
  */
-export function AdminDashboard(): JSX.Element {
+export function AdminDashboard(): React.ReactElement {
   const quickLinks = [
     {
       title: '施設管理',

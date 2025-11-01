@@ -15,7 +15,7 @@ import { Button } from '../../components/Button';
  * - アクセス権限付与フォーム
  * - アクセス権限削除機能
  */
-export function UserDetail(): JSX.Element {
+export function UserDetail(): React.ReactElement {
   const { userId } = useParams<{ userId: string }>();
   const { currentUser } = useAuth();
   const navigate = useNavigate();

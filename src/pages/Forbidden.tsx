@@ -7,7 +7,7 @@ import { Button } from '../components/Button';
  *
  * super-admin権限を持たないユーザーが管理画面にアクセスしようとした際に表示されるページ
  */
-export function Forbidden(): JSX.Element {
+export function Forbidden(): React.ReactElement {
   const navigate = useNavigate();
 
   return (

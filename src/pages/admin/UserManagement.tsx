@@ -11,7 +11,7 @@ import { Button } from '../../components/Button';
  * - 全ユーザーの一覧表示（名前、メール、所属施設数、最終ログイン）
  * - ユーザー詳細へのリンク
  */
-export function UserManagement(): JSX.Element {
+export function UserManagement(): React.ReactElement {
   const { currentUser } = useAuth();
   const [users, setUsers] = useState<UserSummary[]>([]);
   const [loading, setLoading] = useState(true);
