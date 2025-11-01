@@ -2,7 +2,8 @@ import React, { useState, useCallback, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Role, Qualification, TimeSlotPreference, LeaveType,
-  type Staff, type ShiftRequirement, type StaffSchedule, type GeneratedShift, type LeaveRequest, type WorkLogs, type WorkLogDetails, type ScheduleVersion, type LeaveRequestDocument, type Facility
+  type Staff, type ShiftRequirement, type StaffSchedule, type GeneratedShift, type LeaveRequest, type WorkLogs, type WorkLogDetails, type ScheduleVersion, type LeaveRequestDocument, type Facility,
+  assertResultError, assertResultSuccess
 } from './types';
 import { DEFAULT_TIME_SLOTS } from './constants';
 import { generateShiftSchedule } from './services/geminiService';
@@ -122,6 +123,7 @@ const App: React.FC = () => {
       const result = await RequirementService.getRequirement(selectedFacilityId);
 
       if (!result.success) {
+        assertResultError(result);
         console.error('Failed to load requirement:', result.error);
         showError(`要件設定の読み込みに失敗しました: ${result.error.message}`);
         return;

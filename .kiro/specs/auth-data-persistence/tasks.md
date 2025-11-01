@@ -576,6 +576,61 @@ Phase 1-3のすべての機能が本番環境にデプロイされ、動作確�
 
 ---
 
+## Phase 15: TypeScript型安全性の向上
+
+**開始日**: 2025年11月1日
+**目的**: TypeScriptエラー約105件を体系的に修正し、型安全性を向上
+
+- [ ] 15. TypeScript型エラーの体系的修正
+- [ ] 15.1 Result型の型ガード修正（TS2339 - 71件）
+  - `!result.success`チェックを追加してerrorプロパティへの安全なアクセスを実現
+  - 影響ファイル: App.tsx, 各種adminページ
+  - _理由: 型ガードなしでresult.errorにアクセスすると、TypeScriptが型を正しく絞り込めない_
+  - **修正パターン**:
+    ```typescript
+    // 修正前（エラー）
+    const result = await SomeService.someMethod();
+    if (result.error) { ... }  // TS2339: Property 'error' does not exist
+
+    // 修正後（正しい）
+    const result = await SomeService.someMethod();
+    if (!result.success) {
+      console.error(result.error.message);
+      return;
+    }
+    // ここではresult.dataに安全にアクセス可能
+    ```
+
+- [ ] 15.2 ButtonPropsの型定義修正（TS2322 - 11件）
+  - onClick, type, classNameプロパティを型定義に追加
+  - 影響ファイル: src/components/Button.tsx, App.tsx, 各種adminページ
+  - _理由: ButtonコンポーネントがonClickハンドラーを受け付けるが、型定義に含まれていない_
+  - **修正**: ButtonProps interfaceを拡張
+
+- [ ] 15.3 JSX名前空間エラーの修正（TS2503 - 11件）
+  - JSX名前空間のインポートまたは型定義を追加
+  - 影響ファイル: 各種adminページコンポーネント
+  - _理由: React 19で`JSX.Element`の戻り値型を使用しているが、名前空間が見つからない_
+  - **修正**: `import type { JSX } from 'react'`を追加、または戻り値型を`React.ReactElement`に変更
+
+- [ ] 15.4 テストモックのreadonly プロパティエラー修正（TS2540 - 11件）
+  - vi.mocked(auth).currentUserのモック方法を修正
+  - 影響ファイル: 各種テストファイル
+  - _理由: currentUserはreadonly プロパティのため、直接代入できない_
+  - **修正**: モックの実装方法を変更
+
+- [ ] 15.5 その他の型エラー修正（TS2345 - 1件）
+  - 引数の型不一致を修正
+  - _理由: 個別ケースごとに適切な型変換または型定義修正_
+
+- [ ] 15.6 型チェックの検証とドキュメント化
+  - `npx tsc --noEmit`で全エラーが解消されたことを確認
+  - ユニットテスト（48テスト）が引き続き100%合格することを確認
+  - Phase 15完了サマリードキュメントを作成
+  - _検証基準: TypeScriptエラー0件、全テスト合格_
+
+---
+
 ## Phase 14: 統合テストとE2Eテスト
 
 - [ ] 14. 統合テストとE2Eテストの実装

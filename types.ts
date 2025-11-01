@@ -132,6 +132,23 @@ export type Result<T, E> =
   | { success: true; data: T }
   | { success: false; error: E };
 
+// Result型のヘルパー関数（型推論を助けるため）
+export function assertResultError<T, E>(
+  result: Result<T, E>
+): asserts result is { success: false; error: E } {
+  if (result.success) {
+    throw new Error('Expected result to be an error, but got success');
+  }
+}
+
+export function assertResultSuccess<T, E>(
+  result: Result<T, E>
+): asserts result is { success: true; data: T } {
+  if (!result.success) {
+    throw new Error('Expected result to be success, but got error');
+  }
+}
+
 // 認証エラー型
 export type AuthError =
   | { code: 'AUTH_FAILED'; message: string }
