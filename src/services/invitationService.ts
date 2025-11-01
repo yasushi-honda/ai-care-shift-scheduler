@@ -17,6 +17,7 @@ import {
   Result,
   FacilityMember,
   FacilityAccess,
+  FacilityRole,
 } from '../../types';
 import { grantAccessFromInvitation } from './userService';
 
@@ -346,10 +347,15 @@ export async function acceptInvitation(
 
     // grantAccessFromInvitationを使ってアクセス権限を付与
     // この関数は権限チェックをスキップし、招待トークンが検証済みであることを前提とします
+    // invitation.role（文字列）をFacilityRole enumにマッピング
+    const roleMap: Record<'editor' | 'viewer', FacilityRole> = {
+      'editor': FacilityRole.Editor,
+      'viewer': FacilityRole.Viewer,
+    };
     const grantResult = await grantAccessFromInvitation(
       userId,
       facilityId,
-      invitation.role,
+      roleMap[invitation.role],
       invitation.createdBy // 招待を作成したユーザーのUIDを使用
     );
 
