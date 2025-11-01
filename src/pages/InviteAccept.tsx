@@ -121,7 +121,7 @@ export function InviteAccept(): React.ReactElement {
         if (result.error.code === 'PERMISSION_DENIED') {
           friendlyMessage = 'アクセス権限がありません。\nページを更新してもう一度お試しください。\n問題が解決しない場合は、招待を送った方にご連絡ください。';
           canRetry = true;
-        } else if (result.error.code === 'ALREADY_HAS_ACCESS' || result.error.message?.includes('すでに')) {
+        } else if (result.error.code === 'VALIDATION_ERROR' && result.error.message?.includes('すでに')) {
           friendlyMessage = 'あなたは既にこの施設にアクセスできます。\nホーム画面から施設を選択してください。';
           canRetry = false;
         } else {
