@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { AuditLogService } from '../auditLogService';
-import { AuditLogAction } from '../../../types';
+import { AuditLogAction, assertResultError } from '../../../types';
 import * as firestore from 'firebase/firestore';
 
 // Firestoreモックのセットアップ
@@ -125,6 +125,7 @@ describe('AuditLogService', () => {
 
       expect(result.success).toBe(false);
       if (!result.success) {
+        assertResultError(result);
         expect(result.error.code).toBe('PERMISSION_DENIED');
         expect(result.error.message).toContain('他のユーザーのログを作成することはできません');
       }
@@ -147,6 +148,7 @@ describe('AuditLogService', () => {
 
       expect(result.success).toBe(false);
       if (!result.success) {
+        assertResultError(result);
         expect(result.error.code).toBe('VALIDATION_ERROR');
       }
     });

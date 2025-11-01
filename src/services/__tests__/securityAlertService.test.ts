@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { SecurityAlertService } from '../securityAlertService';
-import { SecurityAlertType, SecurityAlertSeverity, SecurityAlertStatus } from '../../../types';
+import { SecurityAlertType, SecurityAlertSeverity, SecurityAlertStatus, assertResultError } from '../../../types';
 import * as firestore from 'firebase/firestore';
 
 // Firestoreモックのセットアップ
@@ -42,6 +42,7 @@ describe('SecurityAlertService', () => {
 
       expect(result.success).toBe(false);
       if (!result.success) {
+        assertResultError(result);
         expect(result.error.code).toBe('PERMISSION_DENIED');
       }
     });
@@ -70,6 +71,7 @@ describe('SecurityAlertService', () => {
 
       expect(result.success).toBe(false);
       if (!result.success) {
+        assertResultError(result);
         expect(result.error.code).toBe('VALIDATION_ERROR');
         expect(result.error.message).toContain('タイトル');
       }
@@ -120,6 +122,7 @@ describe('SecurityAlertService', () => {
 
       expect(result.success).toBe(false);
       if (!result.success) {
+        assertResultError(result);
         expect(result.error.code).toBe('PERMISSION_DENIED');
       }
     });
@@ -193,6 +196,7 @@ describe('SecurityAlertService', () => {
 
       expect(result.success).toBe(false);
       if (!result.success) {
+        assertResultError(result);
         expect(result.error.code).toBe('PERMISSION_DENIED');
       }
     });
@@ -219,6 +223,7 @@ describe('SecurityAlertService', () => {
 
       expect(result.success).toBe(false);
       if (!result.success) {
+        assertResultError(result);
         expect(result.error.code).toBe('NOT_FOUND');
       }
     });
@@ -265,6 +270,7 @@ describe('SecurityAlertService', () => {
 
       expect(result.success).toBe(false);
       if (!result.success) {
+        assertResultError(result);
         expect(result.error.code).toBe('PERMISSION_DENIED');
       }
     });

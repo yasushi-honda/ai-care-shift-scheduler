@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { StaffService } from '../staffService';
-import { Staff, Role, Qualification, TimeSlotPreference } from '../../../types';
+import { Staff, Role, Qualification, TimeSlotPreference, assertResultError } from '../../../types';
 import * as firestore from 'firebase/firestore';
 
 // Firestoreモックのセットアップ
@@ -55,6 +55,7 @@ describe('StaffService', () => {
 
       expect(result.success).toBe(false);
       if (!result.success) {
+        assertResultError(result);
         expect(result.error.code).toBe('VALIDATION_ERROR');
       }
     });
@@ -166,6 +167,7 @@ describe('StaffService', () => {
 
       expect(result.success).toBe(false);
       if (!result.success) {
+        assertResultError(result);
         expect(result.error.code).toBe('NOT_FOUND');
       }
     });
@@ -239,6 +241,7 @@ describe('StaffService', () => {
 
       expect(result.success).toBe(false);
       if (!result.success) {
+        assertResultError(result);
         expect(result.error.code).toBe('NOT_FOUND');
       }
     });

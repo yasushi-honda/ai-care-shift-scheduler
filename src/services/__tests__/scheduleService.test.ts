@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { ScheduleService } from '../scheduleService';
-import { Schedule, StaffSchedule, GeneratedShift } from '../../../types';
+import { Schedule, StaffSchedule, GeneratedShift, assertResultError } from '../../../types';
 import * as firestore from 'firebase/firestore';
 
 // Firestoreモックのセットアップ
@@ -80,6 +80,7 @@ describe('ScheduleService', () => {
 
       expect(result.success).toBe(false);
       if (!result.success) {
+        assertResultError(result);
         expect(result.error.code).toBe('VALIDATION_ERROR');
       }
     });
@@ -93,6 +94,7 @@ describe('ScheduleService', () => {
 
       expect(result.success).toBe(false);
       if (!result.success) {
+        assertResultError(result);
         expect(result.error.code).toBe('VALIDATION_ERROR');
       }
     });
@@ -106,6 +108,7 @@ describe('ScheduleService', () => {
 
       expect(result.success).toBe(false);
       if (!result.success) {
+        assertResultError(result);
         expect(result.error.code).toBe('VALIDATION_ERROR');
       }
     });
@@ -151,7 +154,7 @@ describe('ScheduleService', () => {
         expect(firestore.addDoc).toHaveBeenCalled();
         // addDocに渡されたデータを確認
         const addDocCall = vi.mocked(firestore.addDoc).mock.calls[0];
-        const docData = addDocCall[1];
+        const docData = addDocCall[1] as Schedule;
 
         expect(docData.staffSchedules).toBeDefined();
         expect(Array.isArray(docData.staffSchedules)).toBe(true);
