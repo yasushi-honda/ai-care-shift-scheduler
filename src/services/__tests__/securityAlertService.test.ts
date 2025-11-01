@@ -24,7 +24,11 @@ describe('SecurityAlertService', () => {
     it('認証されていない場合、PERMISSION_DENIEDエラーを返す', async () => {
       // auth.currentUserをnullに設定
       const { auth } = await import('../../../firebase');
-      vi.mocked(auth).currentUser = null;
+      Object.defineProperty(auth, 'currentUser', {
+        value: null,
+        writable: true,
+        configurable: true,
+      });
 
       const result = await SecurityAlertService.createAlert({
         type: SecurityAlertType.BULK_EXPORT,
@@ -45,10 +49,14 @@ describe('SecurityAlertService', () => {
     it('タイトルが空の場合、VALIDATION_ERRORを返す', async () => {
       // auth.currentUserを復元
       const { auth } = await import('../../../firebase');
-      vi.mocked(auth).currentUser = {
-        uid: 'test-admin-uid',
-        email: 'admin@test.com',
-      } as any;
+      Object.defineProperty(auth, 'currentUser', {
+        value: {
+          uid: 'test-admin-uid',
+          email: 'admin@test.com',
+        },
+        writable: true,
+        configurable: true,
+      });
 
       const result = await SecurityAlertService.createAlert({
         type: SecurityAlertType.BULK_EXPORT,
@@ -69,10 +77,14 @@ describe('SecurityAlertService', () => {
 
     it('正しいパラメータでアラートを作成できる', async () => {
       const { auth } = await import('../../../firebase');
-      vi.mocked(auth).currentUser = {
-        uid: 'test-admin-uid',
-        email: 'admin@test.com',
-      } as any;
+      Object.defineProperty(auth, 'currentUser', {
+        value: {
+          uid: 'test-admin-uid',
+          email: 'admin@test.com',
+        },
+        writable: true,
+        configurable: true,
+      });
 
       const mockDocRef = { id: 'alert-123' };
       vi.mocked(firestore.addDoc).mockResolvedValue(mockDocRef as any);
@@ -98,7 +110,11 @@ describe('SecurityAlertService', () => {
   describe('getAlerts', () => {
     it('認証されていない場合、PERMISSION_DENIEDエラーを返す', async () => {
       const { auth } = await import('../../../firebase');
-      vi.mocked(auth).currentUser = null;
+      Object.defineProperty(auth, 'currentUser', {
+        value: null,
+        writable: true,
+        configurable: true,
+      });
 
       const result = await SecurityAlertService.getAlerts({});
 
@@ -110,10 +126,14 @@ describe('SecurityAlertService', () => {
 
     it('フィルター条件でアラートを取得できる', async () => {
       const { auth } = await import('../../../firebase');
-      vi.mocked(auth).currentUser = {
-        uid: 'test-admin-uid',
-        email: 'admin@test.com',
-      } as any;
+      Object.defineProperty(auth, 'currentUser', {
+        value: {
+          uid: 'test-admin-uid',
+          email: 'admin@test.com',
+        },
+        writable: true,
+        configurable: true,
+      });
 
       const mockAlerts = [
         {
@@ -160,7 +180,11 @@ describe('SecurityAlertService', () => {
   describe('updateAlertStatus', () => {
     it('認証されていない場合、PERMISSION_DENIEDエラーを返す', async () => {
       const { auth } = await import('../../../firebase');
-      vi.mocked(auth).currentUser = null;
+      Object.defineProperty(auth, 'currentUser', {
+        value: null,
+        writable: true,
+        configurable: true,
+      });
 
       const result = await SecurityAlertService.updateAlertStatus(
         'alert-123',
@@ -175,10 +199,14 @@ describe('SecurityAlertService', () => {
 
     it('存在しないアラートの場合、NOT_FOUNDエラーを返す', async () => {
       const { auth } = await import('../../../firebase');
-      vi.mocked(auth).currentUser = {
-        uid: 'test-admin-uid',
-        email: 'admin@test.com',
-      } as any;
+      Object.defineProperty(auth, 'currentUser', {
+        value: {
+          uid: 'test-admin-uid',
+          email: 'admin@test.com',
+        },
+        writable: true,
+        configurable: true,
+      });
 
       vi.mocked(firestore.getDoc).mockResolvedValue({
         exists: () => false,
@@ -197,10 +225,14 @@ describe('SecurityAlertService', () => {
 
     it('アラートステータスを更新できる', async () => {
       const { auth } = await import('../../../firebase');
-      vi.mocked(auth).currentUser = {
-        uid: 'test-admin-uid',
-        email: 'admin@test.com',
-      } as any;
+      Object.defineProperty(auth, 'currentUser', {
+        value: {
+          uid: 'test-admin-uid',
+          email: 'admin@test.com',
+        },
+        writable: true,
+        configurable: true,
+      });
 
       vi.mocked(firestore.getDoc).mockResolvedValue({
         exists: () => true,
@@ -223,7 +255,11 @@ describe('SecurityAlertService', () => {
   describe('addNotes', () => {
     it('認証されていない場合、PERMISSION_DENIEDエラーを返す', async () => {
       const { auth } = await import('../../../firebase');
-      vi.mocked(auth).currentUser = null;
+      Object.defineProperty(auth, 'currentUser', {
+        value: null,
+        writable: true,
+        configurable: true,
+      });
 
       const result = await SecurityAlertService.addNotes('alert-123', 'Test note');
 
@@ -235,10 +271,14 @@ describe('SecurityAlertService', () => {
 
     it('メモを追加できる', async () => {
       const { auth } = await import('../../../firebase');
-      vi.mocked(auth).currentUser = {
-        uid: 'test-admin-uid',
-        email: 'admin@test.com',
-      } as any;
+      Object.defineProperty(auth, 'currentUser', {
+        value: {
+          uid: 'test-admin-uid',
+          email: 'admin@test.com',
+        },
+        writable: true,
+        configurable: true,
+      });
 
       vi.mocked(firestore.updateDoc).mockResolvedValue(undefined as any);
 

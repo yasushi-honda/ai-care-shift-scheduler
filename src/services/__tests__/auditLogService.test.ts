@@ -22,12 +22,16 @@ describe('AuditLogService', () => {
   beforeEach(async () => {
     vi.clearAllMocks();
 
-    // auth.currentUserを設定
+    // auth.currentUserを設定（readonly対策）
     const { auth } = await import('../../../firebase');
-    vi.mocked(auth).currentUser = {
-      uid: mockUserId,
-      email: 'test@example.com',
-    };
+    Object.defineProperty(auth, 'currentUser', {
+      value: {
+        uid: mockUserId,
+        email: 'test@example.com',
+      },
+      writable: true,
+      configurable: true,
+    });
   });
 
   describe('logAction', () => {
