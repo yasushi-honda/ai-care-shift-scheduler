@@ -30,10 +30,10 @@ export function AuditLogs(): JSX.Element {
   const [selectedLog, setSelectedLog] = useState<AuditLog | null>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
 
-  // 初回ロード
+  // フィルター変更時のロード
   useEffect(() => {
     loadLogs();
-  }, []);
+  }, [filterUserId, filterAction, filterResourceType, filterFacilityId]);
 
   const loadLogs = async () => {
     setLoading(true);
@@ -75,7 +75,6 @@ export function AuditLogs(): JSX.Element {
     setFilterAction('');
     setFilterResourceType('');
     setFilterFacilityId('');
-    loadLogs();
   };
 
   const formatTimestamp = (timestamp: Timestamp): string => {

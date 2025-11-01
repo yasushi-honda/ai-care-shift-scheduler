@@ -38,10 +38,10 @@ export function SecurityAlerts(): JSX.Element {
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [notes, setNotes] = useState('');
 
-  // 初回ロード
+  // フィルター変更時のロード
   useEffect(() => {
     loadAlerts();
-  }, []);
+  }, [filterStatus, filterType, filterSeverity]);
 
   const loadAlerts = async () => {
     setLoading(true);
@@ -78,7 +78,6 @@ export function SecurityAlerts(): JSX.Element {
     setFilterStatus('');
     setFilterType('');
     setFilterSeverity('');
-    loadAlerts();
   };
 
   const handleRunDetection = async () => {

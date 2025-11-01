@@ -249,15 +249,6 @@ export const AnomalyDetectionService = {
    */
   async detectStorageThresholdExceeded(): Promise<void> {
     try {
-      // 監査ログの総数を取得（最新1件のみでカウント効率化）
-      const q = query(
-        collection(db, 'auditLogs'),
-        orderBy('timestamp', 'desc'),
-        firestoreLimit(1)
-      );
-
-      const snapshot = await getDocs(q);
-
       // 概算: 全件数を取得するにはcollection.countが必要だが、
       // ここでは簡易的に最新10,000件を超えているかチェック
       const countQuery = query(

@@ -61,17 +61,8 @@ describe('StaffService', () => {
 
     it('should include createdAt and updatedAt timestamps', async () => {
       const mockDocRef = { id: 'staff-456' };
-      const mockTimestamp = { seconds: Date.now() / 1000, nanoseconds: 0 };
 
       vi.mocked(firestore.addDoc).mockResolvedValue(mockDocRef as any);
-      vi.mocked(firestore.getDoc).mockResolvedValue({
-        exists: () => true,
-        data: () => ({
-          ...mockStaffData,
-          createdAt: mockTimestamp,
-          updatedAt: mockTimestamp,
-        }),
-      } as any);
 
       const result = await StaffService.createStaff(mockFacilityId, mockStaffData);
 
