@@ -18,6 +18,7 @@ import {
   FacilityMember,
   FacilityAccess,
   FacilityRole,
+  assertResultError,
 } from '../../types';
 import { grantAccessFromInvitation } from './userService';
 
@@ -360,6 +361,7 @@ export async function acceptInvitation(
     );
 
     if (!grantResult.success) {
+      assertResultError(grantResult);
       // 既にアクセス権限がある場合は成功とみなす
       if (grantResult.error.code === 'VALIDATION_ERROR' &&
           grantResult.error.message.includes('すでに')) {
