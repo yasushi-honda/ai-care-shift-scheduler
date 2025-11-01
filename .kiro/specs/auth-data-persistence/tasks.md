@@ -607,11 +607,14 @@ Phase 1-3のすべての機能が本番環境にデプロイされ、動作確�
   - _理由: ButtonコンポーネントがonClickハンドラーを受け付けるが、型定義に含まれていない_
   - **修正**: ButtonProps interfaceを拡張
 
-- [ ] 15.3 JSX名前空間エラーの修正（TS2503 - 11件）
-  - JSX名前空間のインポートまたは型定義を追加
-  - 影響ファイル: 各種adminページコンポーネント
+- [x] 15.3 JSX名前空間エラーの修正（TS2503 - 11件） ✅ 完了
+  - JSX.ElementをReact.ReactElementに置換
+  - 影響ファイル: AdminProtectedRoute.tsx, 各種adminページ（11ファイル）
   - _理由: React 19で`JSX.Element`の戻り値型を使用しているが、名前空間が見つからない_
-  - **修正**: `import type { JSX } from 'react'`を追加、または戻り値型を`React.ReactElement`に変更
+  - **修正**: 戻り値型を`React.ReactElement`に変更（React 19推奨）
+  - **結果**: TypeScriptエラー103件 → 92件（11件減少）、ユニットテスト48/48合格
+  - **実装日**: 2025年11月1日
+  - **コミット**: eba027f
 
 - [ ] 15.4 テストモックのreadonly プロパティエラー修正（TS2540 - 11件）
   - vi.mocked(auth).currentUserのモック方法を修正
