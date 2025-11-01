@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { verifyInvitationToken, acceptInvitation } from '../services/invitationService';
 import { useAuth } from '../contexts/AuthContext';
 import { handleError } from '../utils/errorHandler';
+import { assertResultError } from '../../types';
 
 /**
  * InviteAccept
@@ -42,6 +43,7 @@ export function InviteAccept(): React.ReactElement {
       const result = await verifyInvitationToken(token);
 
       if (!result.success) {
+        assertResultError(result);
         // 招待固有のエラーメッセージをユーザーフレンドリーに変換
         let friendlyMessage = '';
         let canRetry = true;
@@ -111,6 +113,7 @@ export function InviteAccept(): React.ReactElement {
       setAccepting(false);
 
       if (!result.success) {
+        assertResultError(result);
         // 招待受け入れ固有のエラーメッセージをユーザーフレンドリーに変換
         let friendlyMessage = '';
         let canRetry = true;
