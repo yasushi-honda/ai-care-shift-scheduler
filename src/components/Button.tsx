@@ -1,9 +1,13 @@
 import React from 'react';
 
-interface ButtonProps extends React.ComponentPropsWithoutRef<'button'> {
+interface ButtonProps {
   variant?: 'primary' | 'danger' | 'success' | 'purple';
   icon?: React.ReactNode;
   children: React.ReactNode;
+  className?: string;
+  onClick?: React.MouseEventHandler<HTMLButtonElement>;
+  disabled?: boolean;
+  type?: 'button' | 'submit' | 'reset';
 }
 
 /**
