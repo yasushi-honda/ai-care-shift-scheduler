@@ -660,9 +660,36 @@ Phase 1-3のすべての機能が本番環境にデプロイされ、動作確�
   - **実装日**: 2025年11月1日
   - **コミット**: 83b6a72
 
-- [ ] 15.5 その他の型エラー修正（TS2345 - 1件）
-  - 引数の型不一致を修正
-  - _理由: 個別ケースごとに適切な型変換または型定義修正_
+- [x] 15.5 その他の型エラー修正（TS2345 - 1件） ✅ 完了
+  - invitationService.ts:352で招待ロール型の不一致を修正
+  - invitation.role（'editor' | 'viewer'文字列型）をFacilityRole enumにマッピング
+  - _理由: grantAccessFromInvitation関数がFacilityRole enum型を期待しているが、invitation.roleは文字列リテラル型_
+  - **修正パターン**:
+    ```typescript
+    // 修正前（TS2345エラー）:
+    const grantResult = await grantAccessFromInvitation(
+      userId,
+      facilityId,
+      invitation.role, // 'editor' | 'viewer'型
+      invitation.createdBy
+    );
+
+    // 修正後（正しい）:
+    const roleMap: Record<'editor' | 'viewer', FacilityRole> = {
+      'editor': FacilityRole.Editor,
+      'viewer': FacilityRole.Viewer,
+    };
+    const grantResult = await grantAccessFromInvitation(
+      userId,
+      facilityId,
+      roleMap[invitation.role], // FacilityRole enum型
+      invitation.createdBy
+    );
+    ```
+  - **結果**: TypeScriptエラー49件 → 48件（1件減少）、TS2345エラー1件 → 0件（解決）
+  - **テスト**: ユニットテスト48/48合格 ✅
+  - **実装日**: 2025年11月1日
+  - **コミット**: c65320f
 
 - [ ] 15.6 型チェックの検証とドキュメント化
   - `npx tsc --noEmit`で全エラーが解消されたことを確認
