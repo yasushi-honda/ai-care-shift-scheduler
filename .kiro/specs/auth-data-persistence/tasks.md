@@ -582,11 +582,11 @@ Phase 1-3のすべての機能が本番環境にデプロイされ、動作確�
 **目的**: TypeScriptエラー約105件を体系的に修正し、型安全性を向上
 
 - [ ] 15. TypeScript型エラーの体系的修正
-- [ ] 15.1 Result型の型ガード修正（TS2339 - 71件）
-  - `!result.success`チェックを追加してerrorプロパティへの安全なアクセスを実現
-  - 影響ファイル: App.tsx, 各種adminページ
+- [x] 15.1 Result型の型ガード修正（assertResultError - 43件） ✅ 完了
+  - `assertResultError(result)`を追加してerrorプロパティへの安全なアクセスを実現
+  - 影響ファイル: App.tsx, 各種adminページ（実装コード10ファイル）、テストファイル（4ファイル）
   - _理由: 型ガードなしでresult.errorにアクセスすると、TypeScriptが型を正しく絞り込めない_
-  - **修正パターン**:
+  - **修正パターン（実装コード）**:
     ```typescript
     // 修正前（エラー）
     const result = await SomeService.someMethod();
@@ -595,11 +595,22 @@ Phase 1-3のすべての機能が本番環境にデプロイされ、動作確�
     // 修正後（正しい）
     const result = await SomeService.someMethod();
     if (!result.success) {
+      assertResultError(result);  // 型アサーション関数
       console.error(result.error.message);
       return;
     }
     // ここではresult.dataに安全にアクセス可能
     ```
+  - **修正パターン（テストファイル）**: 実装コードと同様
+  - **結果**: TypeScriptエラー105件 → 1件（104件削減、99%削減率）
+  - **修正内訳**:
+    - 実装コード: App.tsx (20), invitationService.ts (3), InviteAccept.tsx (8), AdminPages (12) = 43箇所
+    - テストファイル: auditLogService (3), staffService (3), securityAlertService (7), scheduleService (3) = 16箇所
+    - 特殊ケース: FacilityManagement.tsx reduce型修正 (1), AdminLayout.tsx displayName修正 (1)
+  - **テスト**: ユニットテスト85/85合格 ✅
+  - **実装日**: 2025年11月1日
+  - **コミット**: 664c1ba, 6def239, 0137b19, 849e935, 71818ef
+  - **ドキュメント**: [phase15.1-implementation-progress-2025-11-01.md](./phase15.1-implementation-progress-2025-11-01.md)
 
 - [x] 15.2 ButtonPropsの型定義修正（TS2322 - 9件） ✅ 完了
   - className, onClick, disabled, typeプロパティを明示的に型定義に追加
