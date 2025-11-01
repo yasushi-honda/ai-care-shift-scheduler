@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { getAllUsers, UserSummary } from '../../services/userService';
 import { Button } from '../../components/Button';
+import { assertResultError } from '../../../types';
 
 /**
  * UserManagement
@@ -28,6 +29,7 @@ export function UserManagement(): React.ReactElement {
     if (result.success) {
       setUsers(result.data);
     } else {
+      assertResultError(result);
       setError(result.error.message);
     }
 

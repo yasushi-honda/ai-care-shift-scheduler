@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Facility } from '../../../types';
+import { Facility, assertResultError } from '../../../types';
 import {
   getFacilityById,
   getFacilityStats,
@@ -46,6 +46,7 @@ export function FacilityDetail(): React.ReactElement {
     const facilityResult = await getFacilityById(facilityId, currentUser.uid);
 
     if (!facilityResult.success) {
+      assertResultError(facilityResult);
       setError(facilityResult.error.message);
       setLoading(false);
       return;
@@ -161,6 +162,7 @@ export function FacilityDetail(): React.ReactElement {
     setInviting(false);
 
     if (!result.success) {
+      assertResultError(result);
       const errorMsg = handleError(result.error, '招待の送信');
       setInviteError(errorMsg.message);
       return;

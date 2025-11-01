@@ -6,6 +6,7 @@ import {
   SecurityAlertType,
   SecurityAlertSeverity,
   SecurityAlertStatus,
+  assertResultError,
 } from '../../../types';
 import { Timestamp } from 'firebase/firestore';
 
@@ -61,6 +62,7 @@ export function SecurityAlerts(): React.ReactElement {
     const result = await SecurityAlertService.getAlerts(filters);
 
     if (!result.success) {
+      assertResultError(result);
       setError(result.error.message);
       setLoading(false);
       return;
@@ -177,6 +179,7 @@ export function SecurityAlerts(): React.ReactElement {
     );
 
     if (!result.success) {
+      assertResultError(result);
       alert(`ステータス更新に失敗しました: ${result.error.message}`);
       return;
     }
@@ -192,6 +195,7 @@ export function SecurityAlerts(): React.ReactElement {
     const result = await SecurityAlertService.addNotes(selectedAlert.id, notes);
 
     if (!result.success) {
+      assertResultError(result);
       alert(`メモの保存に失敗しました: ${result.error.message}`);
       return;
     }

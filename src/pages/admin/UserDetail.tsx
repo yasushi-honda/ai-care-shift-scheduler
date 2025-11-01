@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { User, Facility, FacilityRole } from '../../../types';
+import { User, Facility, FacilityRole, assertResultError } from '../../../types';
 import { getUserById, grantAccess, revokeAccess } from '../../services/userService';
 import { getAllFacilities } from '../../services/facilityService';
 import { useAuth } from '../../contexts/AuthContext';
@@ -48,6 +48,7 @@ export function UserDetail(): React.ReactElement {
     ]);
 
     if (!userResult.success) {
+      assertResultError(userResult);
       setError(userResult.error.message);
       setLoading(false);
       return;
@@ -88,6 +89,7 @@ export function UserDetail(): React.ReactElement {
       setShowGrantForm(false);
       await loadUserDetail();
     } else {
+      assertResultError(result);
       setGrantError(result.error.message);
     }
 
@@ -110,6 +112,7 @@ export function UserDetail(): React.ReactElement {
       // 成功：詳細を再読み込み
       await loadUserDetail();
     } else {
+      assertResultError(result);
       alert(`エラー: ${result.error.message}`);
     }
 

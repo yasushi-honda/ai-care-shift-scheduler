@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { AuditLogService } from '../../services/auditLogService';
-import { AuditLog, AuditLogAction } from '../../../types';
+import { AuditLog, AuditLogAction, assertResultError } from '../../../types';
 import { Timestamp } from 'firebase/firestore';
 
 /**
@@ -57,6 +57,7 @@ export function AuditLogs(): React.ReactElement {
     const result = await AuditLogService.getAuditLogs(filters);
 
     if (!result.success) {
+      assertResultError(result);
       setError(result.error.message);
       setLoading(false);
       return;

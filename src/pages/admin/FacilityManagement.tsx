@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
-import { Facility } from '../../../types';
+import { Facility, assertResultError } from '../../../types';
 import {
   getAllFacilities,
   createFacility,
@@ -60,6 +60,7 @@ export function FacilityManagement(): React.ReactElement {
       // 各施設の統計情報を取得
       await loadStats(result.data);
     } else {
+      assertResultError(result);
       setError(result.error.message);
     }
 
@@ -87,6 +88,7 @@ export function FacilityManagement(): React.ReactElement {
       setShowCreateForm(false);
       await loadFacilities();
     } else {
+      assertResultError(result);
       setCreateError(result.error.message);
     }
 
@@ -315,8 +317,8 @@ export function FacilityManagement(): React.ReactElement {
             総スタッフ数
           </div>
           <div className="text-2xl font-bold text-purple-900">
-            {Array.from(stats.values()).reduce(
-              (sum, s) => sum + s.totalStaff,
+            {Array.from(stats.values()).reduce<number>(
+              (sum: number, s: FacilityStats) => sum + s.totalStaff,
               0
             )}
           </div>

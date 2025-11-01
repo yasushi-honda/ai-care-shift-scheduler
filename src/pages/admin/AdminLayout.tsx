@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
+import { assertResultError } from '../../../types';
 
 /**
  * AdminLayout
@@ -22,6 +23,7 @@ export function AdminLayout(): React.ReactElement {
     if (result.success) {
       navigate('/');
     } else {
+      assertResultError(result);
       console.error('Sign out failed:', result.error);
       setIsSigningOut(false);
     }
@@ -52,7 +54,7 @@ export function AdminLayout(): React.ReactElement {
           </div>
           <div className="flex items-center space-x-4">
             <div className="text-sm text-gray-700">
-              <span className="font-medium">{userProfile?.displayName || 'ユーザー'}</span>
+              <span className="font-medium">{userProfile?.name || 'ユーザー'}</span>
               <span className="ml-2 px-2 py-1 bg-purple-100 text-purple-800 text-xs font-semibold rounded">
                 super-admin
               </span>
