@@ -288,4 +288,529 @@ describe('ScheduleService', () => {
       unsubscribe();
     });
   });
+
+  describe('updateSchedule', () => {
+    const mockScheduleId = 'schedule-123';
+    const mockUpdates = { staffSchedules: mockStaffSchedules };
+
+    it('should update schedule successfully', async () => {
+      const mockDocSnapshot = {
+        exists: () => true,
+        data: () => mockScheduleData,
+      };
+      vi.mocked(firestore.getDoc).mockResolvedValue(mockDocSnapshot as any);
+      vi.mocked(firestore.updateDoc).mockResolvedValue(undefined);
+
+      const result = await ScheduleService.updateSchedule(
+        mockFacilityId,
+        mockScheduleId,
+        mockUserId,
+        mockUpdates
+      );
+
+      expect(result.success).toBe(true);
+      expect(firestore.updateDoc).toHaveBeenCalled();
+    });
+
+    it('should return validation error for empty facilityId', async () => {
+      const result = await ScheduleService.updateSchedule(
+        '',
+        mockScheduleId,
+        mockUserId,
+        mockUpdates
+      );
+
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        assertResultError(result);
+        expect(result.error.code).toBe('VALIDATION_ERROR');
+      }
+    });
+
+    it('should return validation error for empty scheduleId', async () => {
+      const result = await ScheduleService.updateSchedule(
+        mockFacilityId,
+        '',
+        mockUserId,
+        mockUpdates
+      );
+
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        assertResultError(result);
+        expect(result.error.code).toBe('VALIDATION_ERROR');
+      }
+    });
+
+    it('should return validation error for empty userId', async () => {
+      const result = await ScheduleService.updateSchedule(
+        mockFacilityId,
+        mockScheduleId,
+        '',
+        mockUpdates
+      );
+
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        assertResultError(result);
+        expect(result.error.code).toBe('VALIDATION_ERROR');
+      }
+    });
+
+    it('should return NOT_FOUND error when schedule does not exist', async () => {
+      const mockDocSnapshot = {
+        exists: () => false,
+      };
+      vi.mocked(firestore.getDoc).mockResolvedValue(mockDocSnapshot as any);
+
+      const result = await ScheduleService.updateSchedule(
+        mockFacilityId,
+        mockScheduleId,
+        mockUserId,
+        mockUpdates
+      );
+
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        assertResultError(result);
+        expect(result.error.code).toBe('NOT_FOUND');
+      }
+    });
+
+    it('should return PERMISSION_DENIED error when permission denied', async () => {
+      const mockDocSnapshot = {
+        exists: () => true,
+        data: () => mockScheduleData,
+      };
+      vi.mocked(firestore.getDoc).mockResolvedValue(mockDocSnapshot as any);
+      vi.mocked(firestore.updateDoc).mockRejectedValue({ code: 'permission-denied' });
+
+      const result = await ScheduleService.updateSchedule(
+        mockFacilityId,
+        mockScheduleId,
+        mockUserId,
+        mockUpdates
+      );
+
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        assertResultError(result);
+        expect(result.error.code).toBe('PERMISSION_DENIED');
+      }
+    });
+
+    it('should return FIRESTORE_ERROR when Firestore error occurs', async () => {
+      const mockDocSnapshot = {
+        exists: () => true,
+        data: () => mockScheduleData,
+      };
+      vi.mocked(firestore.getDoc).mockResolvedValue(mockDocSnapshot as any);
+      vi.mocked(firestore.updateDoc).mockRejectedValue(new Error('Firestore error'));
+
+      const result = await ScheduleService.updateSchedule(
+        mockFacilityId,
+        mockScheduleId,
+        mockUserId,
+        mockUpdates
+      );
+
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        assertResultError(result);
+        expect(result.error.code).toBe('FIRESTORE_ERROR');
+      }
+    });
+  });
+
+  describe('confirmSchedule', () => {
+    const mockScheduleId = 'schedule-123';
+
+    it('should confirm schedule successfully', async () => {
+      const mockScheduleSnapshot = {
+        exists: () => true,
+        data: () => ({
+          ...mockScheduleData,
+          status: 'draft',
+          version: 1,
+          createdBy: mockUserId,
+        }),
+      };
+
+      vi.mocked(firestore.runTransaction).mockImplementation(async (db, callback: any) => {
+        const mockTransaction = {
+          get: vi.fn().mockResolvedValue(mockScheduleSnapshot),
+          set: vi.fn(),
+          update: vi.fn(),
+        };
+        await callback(mockTransaction);
+      });
+
+      const result = await ScheduleService.confirmSchedule(
+        mockFacilityId,
+        mockScheduleId,
+        mockUserId
+      );
+
+      expect(result.success).toBe(true);
+    });
+
+    it('should return validation error for empty facilityId', async () => {
+      const result = await ScheduleService.confirmSchedule(
+        '',
+        mockScheduleId,
+        mockUserId
+      );
+
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        assertResultError(result);
+        expect(result.error.code).toBe('VALIDATION_ERROR');
+      }
+    });
+
+    it('should return validation error for empty scheduleId', async () => {
+      const result = await ScheduleService.confirmSchedule(
+        mockFacilityId,
+        '',
+        mockUserId
+      );
+
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        assertResultError(result);
+        expect(result.error.code).toBe('VALIDATION_ERROR');
+      }
+    });
+
+    it('should return validation error for empty userId', async () => {
+      const result = await ScheduleService.confirmSchedule(
+        mockFacilityId,
+        mockScheduleId,
+        ''
+      );
+
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        assertResultError(result);
+        expect(result.error.code).toBe('VALIDATION_ERROR');
+      }
+    });
+
+    it('should return NOT_FOUND error when schedule does not exist', async () => {
+      vi.mocked(firestore.runTransaction).mockImplementation(async (db, callback: any) => {
+        const mockTransaction = {
+          get: vi.fn().mockResolvedValue({ exists: () => false }),
+          set: vi.fn(),
+          update: vi.fn(),
+        };
+        await callback(mockTransaction);
+      });
+
+      const result = await ScheduleService.confirmSchedule(
+        mockFacilityId,
+        mockScheduleId,
+        mockUserId
+      );
+
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        assertResultError(result);
+        expect(result.error.code).toBe('NOT_FOUND');
+      }
+    });
+
+    it('should return CONFLICT error when status is not draft', async () => {
+      const mockScheduleSnapshot = {
+        exists: () => true,
+        data: () => ({
+          ...mockScheduleData,
+          status: 'confirmed',
+          version: 1,
+          createdBy: mockUserId,
+        }),
+      };
+
+      vi.mocked(firestore.runTransaction).mockImplementation(async (db, callback: any) => {
+        const mockTransaction = {
+          get: vi.fn().mockResolvedValue(mockScheduleSnapshot),
+          set: vi.fn(),
+          update: vi.fn(),
+        };
+        await callback(mockTransaction);
+      });
+
+      const result = await ScheduleService.confirmSchedule(
+        mockFacilityId,
+        mockScheduleId,
+        mockUserId
+      );
+
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        assertResultError(result);
+        expect(result.error.code).toBe('CONFLICT');
+      }
+    });
+  });
+
+  describe('getVersionHistory', () => {
+    const mockScheduleId = 'schedule-123';
+
+    it('should get version history successfully', async () => {
+      const mockVersions = [
+        {
+          id: 'v2',
+          data: () => ({
+            versionNumber: 2,
+            targetMonth: mockTargetMonth,
+            staffSchedules: mockStaffSchedules,
+            createdAt: new Date(),
+            createdBy: mockUserId,
+            changeDescription: '確定',
+            previousVersion: 1,
+          }),
+        },
+        {
+          id: 'v1',
+          data: () => ({
+            versionNumber: 1,
+            targetMonth: mockTargetMonth,
+            staffSchedules: mockStaffSchedules,
+            createdAt: new Date(),
+            createdBy: mockUserId,
+            changeDescription: '初版',
+            previousVersion: 0,
+          }),
+        },
+      ];
+
+      vi.mocked(firestore.getDocs).mockResolvedValue({
+        docs: mockVersions,
+      } as any);
+
+      const result = await ScheduleService.getVersionHistory(
+        mockFacilityId,
+        mockScheduleId
+      );
+
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(Array.isArray(result.data)).toBe(true);
+        expect(result.data.length).toBe(2);
+      }
+    });
+
+    it('should return validation error for empty facilityId', async () => {
+      const result = await ScheduleService.getVersionHistory(
+        '',
+        mockScheduleId
+      );
+
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        assertResultError(result);
+        expect(result.error.code).toBe('VALIDATION_ERROR');
+      }
+    });
+
+    it('should return validation error for empty scheduleId', async () => {
+      const result = await ScheduleService.getVersionHistory(
+        mockFacilityId,
+        ''
+      );
+
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        assertResultError(result);
+        expect(result.error.code).toBe('VALIDATION_ERROR');
+      }
+    });
+
+    it('should return PERMISSION_DENIED error when permission denied', async () => {
+      vi.mocked(firestore.getDocs).mockRejectedValue({ code: 'permission-denied' });
+
+      const result = await ScheduleService.getVersionHistory(
+        mockFacilityId,
+        mockScheduleId
+      );
+
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        assertResultError(result);
+        expect(result.error.code).toBe('PERMISSION_DENIED');
+      }
+    });
+
+    it('should return FIRESTORE_ERROR when Firestore error occurs', async () => {
+      vi.mocked(firestore.getDocs).mockRejectedValue(new Error('Firestore error'));
+
+      const result = await ScheduleService.getVersionHistory(
+        mockFacilityId,
+        mockScheduleId
+      );
+
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        assertResultError(result);
+        expect(result.error.code).toBe('FIRESTORE_ERROR');
+      }
+    });
+  });
+
+  describe('restoreVersion', () => {
+    const mockScheduleId = 'schedule-123';
+    const mockVersionNumber = 1;
+
+    it('should restore version successfully', async () => {
+      const mockVersionSnapshot = {
+        exists: () => true,
+        data: () => ({
+          versionNumber: 1,
+          targetMonth: mockTargetMonth,
+          staffSchedules: mockStaffSchedules,
+          createdAt: new Date(),
+          createdBy: mockUserId,
+          changeDescription: '初版',
+          previousVersion: 0,
+        }),
+      };
+
+      const mockScheduleSnapshot = {
+        exists: () => true,
+        data: () => ({
+          ...mockScheduleData,
+          version: 2,
+          createdBy: mockUserId,
+        }),
+      };
+
+      vi.mocked(firestore.runTransaction).mockImplementation(async (db, callback: any) => {
+        const mockTransaction = {
+          get: vi.fn()
+            .mockResolvedValueOnce(mockVersionSnapshot)
+            .mockResolvedValueOnce(mockScheduleSnapshot),
+          set: vi.fn(),
+          update: vi.fn(),
+        };
+        await callback(mockTransaction);
+      });
+
+      const result = await ScheduleService.restoreVersion(
+        mockFacilityId,
+        mockScheduleId,
+        mockVersionNumber,
+        mockUserId
+      );
+
+      expect(result.success).toBe(true);
+    });
+
+    it('should return validation error for empty facilityId', async () => {
+      const result = await ScheduleService.restoreVersion(
+        '',
+        mockScheduleId,
+        mockVersionNumber,
+        mockUserId
+      );
+
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        assertResultError(result);
+        expect(result.error.code).toBe('VALIDATION_ERROR');
+      }
+    });
+
+    it('should return validation error for empty scheduleId', async () => {
+      const result = await ScheduleService.restoreVersion(
+        mockFacilityId,
+        '',
+        mockVersionNumber,
+        mockUserId
+      );
+
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        assertResultError(result);
+        expect(result.error.code).toBe('VALIDATION_ERROR');
+      }
+    });
+
+    it('should return validation error for empty userId', async () => {
+      const result = await ScheduleService.restoreVersion(
+        mockFacilityId,
+        mockScheduleId,
+        mockVersionNumber,
+        ''
+      );
+
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        assertResultError(result);
+        expect(result.error.code).toBe('VALIDATION_ERROR');
+      }
+    });
+
+    it('should return NOT_FOUND error when version does not exist', async () => {
+      vi.mocked(firestore.runTransaction).mockImplementation(async (db, callback: any) => {
+        const mockTransaction = {
+          get: vi.fn().mockResolvedValue({ exists: () => false }),
+          set: vi.fn(),
+          update: vi.fn(),
+        };
+        await callback(mockTransaction);
+      });
+
+      const result = await ScheduleService.restoreVersion(
+        mockFacilityId,
+        mockScheduleId,
+        mockVersionNumber,
+        mockUserId
+      );
+
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        assertResultError(result);
+        expect(result.error.code).toBe('NOT_FOUND');
+      }
+    });
+
+    it('should return NOT_FOUND error when schedule does not exist', async () => {
+      const mockVersionSnapshot = {
+        exists: () => true,
+        data: () => ({
+          versionNumber: 1,
+          targetMonth: mockTargetMonth,
+          staffSchedules: mockStaffSchedules,
+          createdAt: new Date(),
+          createdBy: mockUserId,
+          changeDescription: '初版',
+          previousVersion: 0,
+        }),
+      };
+
+      vi.mocked(firestore.runTransaction).mockImplementation(async (db, callback: any) => {
+        const mockTransaction = {
+          get: vi.fn()
+            .mockResolvedValueOnce(mockVersionSnapshot)
+            .mockResolvedValueOnce({ exists: () => false }),
+          set: vi.fn(),
+          update: vi.fn(),
+        };
+        await callback(mockTransaction);
+      });
+
+      const result = await ScheduleService.restoreVersion(
+        mockFacilityId,
+        mockScheduleId,
+        mockVersionNumber,
+        mockUserId
+      );
+
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        assertResultError(result);
+        expect(result.error.code).toBe('NOT_FOUND');
+      }
+    });
+  });
 });
