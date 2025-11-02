@@ -17,3 +17,4 @@ setGlobalOptions({
 export { generateShift } from './shift-generation';
 export { assignSuperAdminOnFirstUser, updateLastLogin } from './auth-onCreate';
 export { fixFirstUserRole } from './fix-facility-role';
+export { archiveAuditLogs } from './archiveAuditLogs';
