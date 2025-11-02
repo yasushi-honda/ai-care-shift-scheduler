@@ -86,7 +86,7 @@ test.describe('認証フロー - ログアウト機能', () => {
     await logoutButton.click();
 
     // ログイン画面に戻ることを確認
-    await expect(page).toHaveURL(/.*/, { timeout: 5000 });
+    await expect(page).toHaveURL('/', { timeout: 5000 });
 
     // Googleログインボタンが表示されることを確認
     await expect(page.getByRole('button', { name: /Google/ })).toBeVisible({ timeout: 5000 });
