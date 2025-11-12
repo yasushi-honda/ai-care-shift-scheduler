@@ -124,6 +124,13 @@ service cloud.firestore {
         // super-adminまたはviewer以上で読み取り、editor以上で書き込み
         allow read: if isAuthenticated() && (isSuperAdmin() || hasRole(facilityId, 'viewer'));
         allow write: if isAuthenticated() && hasRole(facilityId, 'editor');
+
+        // versions サブコレクション
+        match /versions/{versionId} {
+          // viewer以上で読み取り、editor以上で書き込み（scheduleと同じ権限）
+          allow read: if isAuthenticated() && (isSuperAdmin() || hasRole(facilityId, 'viewer'));
+          allow write: if isAuthenticated() && hasRole(facilityId, 'editor');
+        }
       }
 
       // leaveRequests subcollection

@@ -1049,4 +1049,74 @@ Phase 1-3のすべての機能が本番環境にデプロイされ、動作確�
 - クリーンアップスクリプトで誤削除した場合: 監査ログから復元
 
 ---
+
+## Phase 17.5: Permission Error修正（versionsサブコレクション） 🔧 **実装中**
+
+**優先度**: 🔴 緊急（本番環境の重大バグ）
+
+**目的**: versionsサブコレクションのSecurity Rules未定義によるPermission errorを修正
+
+**バグ詳細**:
+- **Version History Permission Error**: `getVersionHistory`でPermission errorが発生
+- **根本原因**: `firestore.rules`にversionsサブコレクションのルールが未定義
+
+**関連ドキュメント**:
+- `phase17-5-bug-analysis-2025-11-12.md` - バグ分析
+- `phase17-5-design-2025-11-12.md` - 技術設計
+
+**推定工数**: 30分
+
+---
+
+### タスク
+
+- [x] 17.5.1 バグ分析ドキュメント作成
+  - エラー発生箇所の特定
+  - Firestore Security Rulesの調査
+  - 根本原因の分析
+  - _Requirements: バグ分析_
+  - **成果物**: `phase17-5-bug-analysis-2025-11-12.md`
+
+- [x] 17.5.2 技術設計ドキュメント作成
+  - Security Rules設計
+  - 権限設計（viewer/editor）
+  - デプロイ戦略
+  - テスト戦略
+  - _Requirements: 技術設計_
+  - **成果物**: `phase17-5-design-2025-11-12.md`
+
+- [x] 17.5.3 firestore.rulesにversionsサブコレクションのルール追加
+  - schedules/{scheduleId}/versions/{versionId}のルール追加
+  - viewer以上で読み取り、editor以上で書き込み
+  - _Requirements: Security Rules修正_
+  - **成果物**: `firestore.rules` - versionsルール追加
+
+- [ ] 17.5.4 デプロイと検証
+  - GitHub Actions CI/CDでデプロイ
+  - Firebase Consoleで確認
+  - 本番環境でバージョン履歴表示確認
+  - _Requirements: デプロイと検証_
+
+- [ ] 17.5.5 Phase 17.5検証ドキュメント作成
+  - 修正内容サマリー
+  - デプロイ結果
+  - 本番環境での動作確認結果
+  - _Requirements: ドキュメント_
+  - **成果物**: `phase17-5-verification-2025-11-12.md`
+
+---
+
+**実装完了基準**:
+- ✅ firestore.rulesにversionsサブコレクションのルール追加
+- ✅ GitHub Actions CI/CDでデプロイ成功
+- ✅ 本番環境でバージョン履歴が表示される
+- ✅ Permission errorが発生しない
+
+**デプロイ戦略**:
+- GitHub Actions CI/CDでfirestore:rulesをデプロイ
+
+**ロールバック計画**:
+- 問題発生時: `git revert`でロールバック、またはFirebase Consoleで手動ロールバック
+
+---
 7. **Phase 14**: 統合テストとE2Eテスト（全フェーズ）
