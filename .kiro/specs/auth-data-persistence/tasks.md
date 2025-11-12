@@ -1259,4 +1259,96 @@ Phase 1-3のすべての機能が本番環境にデプロイされ、動作確�
 - 問題発生時: `git revert`でロールバック
 
 ---
+
+## Phase 17.8: User Fetch Permission Error修正 🔧 **完了**
+
+**優先度**: 🔴 緊急（本番環境の重大バグ）
+
+**目的**: Firestore認証トークン初期化タイミング問題によるPermission deniedエラーを修正
+
+**バグ詳細**:
+- **User Fetch Permission Error**: 新規ユーザーログイン時にユーザープロファイル取得でPermission errorが発生
+- **根本原因**: `onAuthStateChanged`が呼ばれた時点で、Firestoreの`request.auth`がまだ完全に初期化されていない
+
+**関連ドキュメント**:
+- `phase17-8-bug-analysis-2025-11-12.md` - バグ分析
+- `phase17-8-design-2025-11-12.md` - 技術設計
+- `phase17-8-verification-2025-11-12.md` - 検証レポート
+
+**推定工数**: 20分
+
+**実績工数**: 15分
+
+**完了日**: 2025-11-12
+
+---
+
+### タスク
+
+- [x] 17.8.1 バグ分析ドキュメント作成
+  - エラー発生箇所の特定（AuthContext.tsx Line 107）
+  - Cloud Functions動作確認（Firebase CLIログ確認）
+  - 根本原因の特定（Firestore認証トークン初期化タイミング問題）
+  - _Requirements: バグ分析_
+  - **成果物**: `phase17-8-bug-analysis-2025-11-12.md`
+  - **実施日**: 2025-11-12
+
+- [x] 17.8.2 技術設計ドキュメント作成
+  - 解決策設計（`user.getIdToken(true)`による強制更新）
+  - パフォーマンス影響分析（+100-500ms、許容範囲）
+  - エラーハンドリング設計
+  - テスト戦略
+  - _Requirements: 技術設計_
+  - **成果物**: `phase17-8-design-2025-11-12.md`
+  - **実施日**: 2025-11-12
+
+- [x] 17.8.3 AuthContext.tsx修正
+  - `getDoc()`実行前に`user.getIdToken(true)`で認証トークン強制更新（Lines 95-103）
+  - Firestoreの`request.auth`を確実に初期化
+  - エラーハンドリング追加（トークン更新失敗時は続行）
+  - _Requirements: コード修正_
+  - **成果物**: `src/contexts/AuthContext.tsx` - 9行追加
+  - **実施日**: 2025-11-12
+
+- [x] 17.8.4 デプロイと検証
+  - TypeScript型チェック（npx tsc --noEmit）→ ✅ 合格
+  - CodeRabbitレビュー → ✅ 合格
+  - GitHub Actions CI/CD（Run ID: 19293017630）→ ✅ 成功
+  - 本番環境確認（ハードリロード後）→ ✅ Permission error解消
+  - _Requirements: デプロイと検証_
+  - **実施日**: 2025-11-12
+
+- [x] 17.8.5 Phase 17.8検証ドキュメント作成
+  - 修正内容サマリー
+  - Before/After比較
+  - デプロイ結果
+  - 本番環境での動作確認結果
+  - ブラウザキャッシュの影響と対処方法
+  - _Requirements: ドキュメント_
+  - **成果物**: `phase17-8-verification-2025-11-12.md`
+  - **実施日**: 2025-11-12
+
+---
+
+**実装完了基準**:
+- ✅ AuthContext.tsxに認証トークン強制更新を追加
+- ✅ TypeScript型チェック合格
+- ✅ CodeRabbitレビュー合格
+- ✅ GitHub Actions CI/CDでデプロイ成功
+- ✅ 本番環境でPermission errorが発生しない
+- ✅ ユーザープロファイルが正常に取得される
+
+**デプロイ戦略**:
+- GitHub Actions CI/CDでFirebase Hostingをデプロイ
+
+**ロールバック計画**:
+- 問題発生時: `git revert`でロールバック
+
+**検証結果**:
+- ✅ 本番環境でハードリロード後、「✅ Firestore auth token refreshed」ログが表示
+- ✅ Permission errorが解消
+- ✅ 施設選択の復元も正常動作
+- ⚠️ ブラウザキャッシュの影響（ハードリロードが必要）
+
+---
 7. **Phase 14**: 統合テストとE2Eテスト（全フェーズ）

@@ -2,7 +2,7 @@
 
 **更新日**: 2025-11-12
 **仕様ID**: auth-data-persistence
-**Phase**: 17.5-17.7
+**Phase**: 17.5-17.8
 **ステータス**: ✅ すべて完了・本番デプロイ完了・動作確認済み
 
 ---
@@ -13,20 +13,22 @@
 2. [Phase 17.5: versionsサブコレクションのSecurity Rules追加](#phase-175-versionsサブコレクションのsecurity-rules追加)
 3. [Phase 17.6: COOPヘッダー設定](#phase-176-coopヘッダー設定)
 4. [Phase 17.7: COOP警告の説明ログ追加](#phase-177-coop警告の説明ログ追加)
-5. [全体サマリー](#全体サマリー)
-6. [学び・振り返り](#学び振り返り)
+5. [Phase 17.8: User Fetch Permission Error修正](#phase-178-user-fetch-permission-error修正)
+6. [全体サマリー](#全体サマリー)
+7. [学び・振り返り](#学び振り返り)
 
 ---
 
 ## 概要
 
-Phase 17は、本番環境で発見された2つの問題（Permission errorとCOOP警告）に対する修正と、開発者体験向上のためのUX改善を実施しました。
+Phase 17は、本番環境で発見された3つの問題（Permission error ×2、COOP警告）に対する修正と、開発者体験向上のためのUX改善を実施しました。
 
 ### 対応したPhase
 
 1. **Phase 17.5**: versionsサブコレクションのSecurity Rules追加（重大バグ修正）
 2. **Phase 17.6**: COOPヘッダー設定（警告解消の試み）
 3. **Phase 17.7**: COOP警告の説明ログ追加（UX改善）
+4. **Phase 17.8**: User Fetch Permission Error修正（重大バグ修正）
 
 ### 全体タイムライン
 
@@ -38,11 +40,13 @@ Phase 17は、本番環境で発見された2つの問題（Permission errorとC
 │  └─ COOPヘッダー設定
 ├─ Phase 17.6 追加調査（30分）
 │  └─ COOP警告はFirebase仕様による制限と判明
-└─ Phase 17.7 実装・デプロイ（10分）
-   └─ COOP警告の説明ログ追加
+├─ Phase 17.7 実装・デプロイ（10分）
+│  └─ COOP警告の説明ログ追加
+└─ Phase 17.8 実装・デプロイ（15分）
+   └─ User Fetch Permission Error修正（認証トークン強制更新）
 ```
 
-**総所要時間**: 約90分
+**総所要時間**: 約105分
 
 ---
 
@@ -225,6 +229,80 @@ Cross-Origin-Opener-Policy policy would block the window.closed call.
 
 ---
 
+## Phase 17.8: User Fetch Permission Error修正
+
+### 問題
+
+```
+Error fetching user: FirebaseError: Missing or insufficient permissions.
+```
+
+**根本原因**: Firestore認証トークンの初期化タイミング問題
+
+### 解決策
+
+`src/contexts/AuthContext.tsx`の`onAuthStateChanged`コールバックに認証トークン強制更新を追加：
+
+```typescript
+if (user) {
+  // Firestoreの認証トークンを強制的に更新
+  // これにより、Firestoreの request.auth が完全に初期化される
+  try {
+    await user.getIdToken(true);
+    console.log('✅ Firestore auth token refreshed');
+  } catch (tokenError) {
+    console.error('❌ Failed to refresh auth token:', tokenError);
+    // トークン更新失敗時は続行（既存の動作を維持）
+  }
+
+  // Firestoreからユーザープロファイルを取得
+  try {
+    const userDoc = await getDoc(doc(db, 'users', user.uid));
+```
+
+### 結果
+
+- ✅ Permission errorが完全に解消
+- ✅ 認証トークン強制更新が正常に動作
+- ✅ ユーザープロファイルが正常に取得
+- ✅ パフォーマンス影響は許容範囲内（+100-500ms）
+
+### デプロイ
+
+- **GitHub Actions CI/CD**: Run ID 19293017630
+- **ステータス**: ✅ 成功
+- **デプロイ内容**: Firebase Hosting
+
+### ドキュメント
+
+- `phase17-8-bug-analysis-2025-11-12.md` - バグ分析
+- `phase17-8-design-2025-11-12.md` - 技術設計
+- `phase17-8-verification-2025-11-12.md` - 検証レポート
+
+### コンソール表示（検証結果）
+
+#### Before（Phase 17.7まで）❌
+
+```
+Error fetching user: FirebaseError: Missing or insufficient permissions.
+エラー: ユーザー情報の取得に失敗しました
+```
+
+**問題**: Permission errorが発生、ユーザーがアプリを使用できない
+
+---
+
+#### After（Phase 17.8以降）✅ **本番環境で確認済み**
+
+```
+✅ Firestore auth token refreshed
+✅ Restored facility from localStorage: facility-o3BZBx5EEPbFqiIaHYRYQKraAut1
+```
+
+**改善**: Permission error完全解消、すべてのユーザーが正常にアプリを使用可能
+
+---
+
 ## 全体サマリー
 
 ### 修正したファイル
@@ -234,6 +312,7 @@ Cross-Origin-Opener-Policy policy would block the window.closed call.
 | 17.5 | `firestore.rules` | versionsサブコレクションルール追加 | バージョン履歴が動作 |
 | 17.6 | `firebase.json` | COOPヘッダー追加 | セキュリティ向上 |
 | 17.7 | `src/contexts/AuthContext.tsx` | 説明ログ追加（7行） | 開発者体験向上 |
+| 17.8 | `src/contexts/AuthContext.tsx` | 認証トークン強制更新追加（9行） | Permission error解消 |
 
 ### 作成したドキュメント
 
@@ -253,10 +332,15 @@ Cross-Origin-Opener-Policy policy would block the window.closed call.
 - `phase17-7-design-2025-11-12.md`
 - `phase17-7-verification-2025-11-12.md`
 
+**Phase 17.8** (3件):
+- `phase17-8-bug-analysis-2025-11-12.md`
+- `phase17-8-design-2025-11-12.md`
+- `phase17-8-verification-2025-11-12.md`
+
 **Phase 17総括** (1件):
 - `phase17-summary-2025-11-12.md` ← 本ドキュメント
 
-**合計**: 11件のドキュメント
+**合計**: 14件のドキュメント
 
 ### GitHub Actions CI/CDデプロイ
 
@@ -265,6 +349,7 @@ Cross-Origin-Opener-Policy policy would block the window.closed call.
 | 17.5 | 19290977532 | ✅ 成功 | Firestore Rules |
 | 17.6 | 19291219701 | ✅ 成功 | Firebase Hosting |
 | 17.7 | 19291702994 | ✅ 成功 | Firebase Hosting |
+| 17.8 | 19293017630 | ✅ 成功 | Firebase Hosting |
 
 すべてのデプロイが成功し、本番環境に反映されました。
 
@@ -322,21 +407,18 @@ Cross-Origin-Opener-Policy policy would block the window.closed call.
 - ✅ **Phase 17.5**: versionsサブコレクションのSecurity Rules追加
 - ✅ **Phase 17.6**: COOPヘッダー設定
 - ✅ **Phase 17.7**: COOP警告の説明ログ追加
-- ✅ **本番環境での動作確認**: ユーザー確認済み
+- ✅ **Phase 17.8**: User Fetch Permission Error修正
+- ✅ **本番環境での動作確認**: ユーザー確認済み（Phase 17.7, 17.8）
 
 すべての完了基準を満たしました。
 
-### 未対応の問題（Phase 17.6で識別）
+### Phase 17で対応した問題
 
-**User Fetch Permission Error**:
-```
-Error fetching user: FirebaseError: Missing or insufficient permissions.
-エラー: ユーザー情報の取得に失敗しました
-```
-
-**対応方針**:
-- Phase 17では未対応（Phase 17.5で識別したが、優先度が低いため保留）
-- 必要に応じてPhase 17.8として対応可能
+**すべて解決済み**:
+- ✅ versionsサブコレクションのPermission error（Phase 17.5）
+- ✅ COOPヘッダー未設定（Phase 17.6）
+- ✅ COOP警告の説明不足（Phase 17.7）
+- ✅ User Fetch Permission Error（Phase 17.8）
 
 ### 推奨される追加対応（オプション）
 
@@ -352,29 +434,31 @@ Error fetching user: FirebaseError: Missing or insufficient permissions.
 
 ## まとめ
 
-Phase 17は、本番環境で発見された2つの問題（Permission errorとCOOP警告）に対する修正と、開発者体験向上のためのUX改善を実施しました。
+Phase 17は、本番環境で発見された3つの問題（Permission error ×2、COOP警告）に対する修正と、開発者体験向上のためのUX改善を実施しました。
 
 ### Phase 17の成果
 
 **修正したバグ**:
 - ✅ versionsサブコレクションのPermission error（Phase 17.5）
 - ✅ COOPヘッダー未設定（Phase 17.6）
+- ✅ User Fetch Permission Error（Phase 17.8）
 
 **UX改善**:
 - ✅ COOP警告の説明ログ追加（Phase 17.7）
 
 **作成したドキュメント**:
-- ✅ 11件（バグ分析、技術設計、検証レポート、総括）
+- ✅ 14件（バグ分析、技術設計、検証レポート、総括）
 
 **デプロイ**:
-- ✅ 3回のGitHub Actions CI/CDデプロイ（すべて成功）
+- ✅ 4回のGitHub Actions CI/CDデプロイ（すべて成功）
 
 **本番環境での確認**:
 - ✅ Phase 17.7の動作確認済み（ユーザー確認）
+- ✅ Phase 17.8の動作確認済み（ユーザー確認）
 
 ### Phase 17の評価
 
-**総所要時間**: 約90分
+**総所要時間**: 約105分
 
 **品質**:
 - ドキュメントドリブン開発による高品質な修正
@@ -384,6 +468,7 @@ Phase 17は、本番環境で発見された2つの問題（Permission errorとC
 **ユーザー満足度**:
 - ユーザー要望に的確に対応
 - 開発者体験の向上を実現
+- 重大なPermission error（Phase 17.8）を15分で修正・デプロイ
 
 ---
 
@@ -405,8 +490,13 @@ Phase 17は、本番環境で発見された2つの問題（Permission errorとC
 - `phase17-7-design-2025-11-12.md`
 - `phase17-7-verification-2025-11-12.md`
 
+### Phase 17.8
+- `phase17-8-bug-analysis-2025-11-12.md`
+- `phase17-8-design-2025-11-12.md`
+- `phase17-8-verification-2025-11-12.md`
+
 ### その他
-- `tasks.md` - Phase 17.5, 17.6, 17.7のタスク記録
+- `tasks.md` - Phase 17.5, 17.6, 17.7, 17.8のタスク記録
 - `firestore.rules` - Security Rules
 - `firebase.json` - Firebase Hosting設定
 - `src/contexts/AuthContext.tsx` - 認証コンテキスト
@@ -415,4 +505,4 @@ Phase 17は、本番環境で発見された2つの問題（Permission errorとC
 
 **レポート作成日**: 2025-11-12
 **作成者**: AI（Claude Code）
-**ステータス**: Phase 17完了・本番デプロイ完了・動作確認済み
+**ステータス**: Phase 17完了（17.5-17.8）・本番デプロイ完了・動作確認済み
