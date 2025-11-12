@@ -1351,4 +1351,117 @@ Phase 1-3のすべての機能が本番環境にデプロイされ、動作確�
 - ⚠️ ブラウザキャッシュの影響（ハードリロードが必要）
 
 ---
+
+## Phase 17.9: Admin User Detail Permission Error修正 🔧 **完了**
+
+**優先度**: 🔴 緊急（本番環境の重大バグ）
+
+**目的**: Firestore Security Rulesの設計矛盾によるPermission deniedエラーを修正
+
+**バグ詳細**:
+- **Admin User Detail Permission Error**: super-adminがユーザー詳細ページ（`/admin/users/{userId}`）にアクセスするとPermission errorが発生
+- **根本原因**: `firestore.rules`の`users`コレクションの`allow get`ルールがsuper-adminに対応していなかった
+- **設計矛盾**: `allow list`はsuper-adminを許可していたが、`allow get`は自分のドキュメントのみを許可していた
+
+**関連ドキュメント**:
+- `phase17-9-bug-analysis-2025-11-12.md` - バグ分析
+- `phase17-9-design-2025-11-12.md` - 技術設計
+- `phase17-9-verification-2025-11-12.md` - 検証レポート
+- `phase17-summary-2025-11-12.md` - Phase 17総括レポート（更新）
+
+**推定工数**: 3時間
+
+**実績工数**: 約3時間（バグ分析1時間、技術設計1時間、実装・デプロイ・検証1時間）
+
+**完了日**: 2025-11-12
+
+---
+
+### タスク
+
+- [x] 17.9.1 バグ分析ドキュメント作成
+  - エラー発生箇所の特定（userService.ts Line 267）
+  - Firestore Security Rulesの分析
+  - allow listとallow getの矛盾を発見
+  - Phase 17.8との関連性を分析
+  - _Requirements: バグ分析_
+  - **成果物**: `phase17-9-bug-analysis-2025-11-12.md`
+  - **実施日**: 2025-11-12
+
+- [x] 17.9.2 技術設計ドキュメント作成
+  - 解決策設計（allow getにsuper-admin権限追加）
+  - 権限評価ロジック詳細設計（3つのパターン）
+  - セキュリティ影響分析
+  - テスト戦略（3つのシナリオ）
+  - _Requirements: 技術設計_
+  - **成果物**: `phase17-9-design-2025-11-12.md`
+  - **実施日**: 2025-11-12
+
+- [x] 17.9.3 firestore.rules修正
+  - users collection Line 82修正（1行）
+  - allow getルールに`|| isSuperAdmin()`を追加
+  - _Requirements: コード修正_
+  - **成果物**: `firestore.rules` - Line 82修正
+  - **実施日**: 2025-11-12
+
+- [x] 17.9.4 デプロイと検証
+  - TypeScript型チェック（不要 - Rulesファイル）
+  - CodeRabbitレビュー → ✅ 合格（ドキュメント修正2回実施）
+  - GitHub Actions CI/CD（Run ID: 19293842580）→ ✅ 成功
+  - 本番環境確認 → ✅ Permission error解消（ユーザー確認："OKです！"）
+  - _Requirements: デプロイと検証_
+  - **実施日**: 2025-11-12
+
+- [x] 17.9.5 Phase 17.9検証ドキュメント作成
+  - 修正内容サマリー
+  - Before/After比較
+  - デプロイ結果
+  - 本番環境での動作確認結果
+  - セキュリティチェックリスト
+  - _Requirements: ドキュメント_
+  - **成果物**: `phase17-9-verification-2025-11-12.md`
+  - **実施日**: 2025-11-12
+
+- [x] 17.9.6 Phase 17総括レポート更新
+  - Phase 17.9セクション追加
+  - 全体サマリー更新（ドキュメント数、デプロイ回数など）
+  - タイムライン更新
+  - 総所要時間更新（約285分）
+  - _Requirements: ドキュメント_
+  - **成果物**: `phase17-summary-2025-11-12.md` - 更新
+  - **実施日**: 2025-11-12
+
+---
+
+**実装完了基準**:
+- ✅ firestore.rulesのallow getルールにsuper-admin権限追加
+- ✅ CodeRabbitレビュー合格（ドキュメント品質保証）
+- ✅ GitHub Actions CI/CDでデプロイ成功
+- ✅ 本番環境でPermission errorが発生しない
+- ✅ super-adminがユーザー詳細ページにアクセス可能
+- ✅ 一般ユーザーは自分の情報のみアクセス可能（既存の動作を維持）
+
+**デプロイ戦略**:
+- GitHub Actions CI/CDでFirestore Rules, Firebase Hosting, Cloud Functionsをデプロイ
+
+**ロールバック計画**:
+- 問題発生時: `git revert`でロールバック
+- または Firebase Console から手動ロールバック
+
+**検証結果**:
+- ✅ 本番環境でユーザー詳細ページが正常に表示
+- ✅ Permission errorが完全に解消
+- ✅ アクセス権限付与・剥奪機能が正常に動作
+- ✅ ユーザー確認："OKです！"
+
+**CodeRabbitレビュー修正**:
+1. ✅ isSuperAdmin()関数のドキュメント修正（5施設→10施設）
+2. ✅ users collection rulesのドキュメント修正（実際の実装に合わせて）
+
+**学び・振り返り**:
+- Phase 17.8で認証トークン問題を修正したが、別の箇所に別のPermission errorが存在していた
+- ドキュメントドリブン開発により、根本原因を迅速に特定し、最小限の修正（1行）で解決
+- CodeRabbitレビューによりドキュメント品質も向上
+
+---
 7. **Phase 14**: 統合テストとE2Eテスト（全フェーズ）
