@@ -61,8 +61,7 @@ jobs:
       - name: Permission errorテスト実行（Emulator環境）
         if: inputs.environment == 'emulator'
         run: firebase emulators:exec --only auth,firestore "npm run test:e2e:permission"
-        env:
-          PLAYWRIGHT_BASE_URL: http://localhost:5173
+        # PLAYWRIGHT_BASE_URLは設定せず、playwright.config.tsのwebServerで開発サーバーを自動起動
 
       # 5c. 本番環境でテスト実行（本番環境）
       - name: Permission errorテスト実行（本番環境）

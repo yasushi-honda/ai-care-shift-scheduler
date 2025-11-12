@@ -67,11 +67,12 @@ export default defineConfig({
   ],
 
   // 開発サーバーの起動設定
-  // 本番環境URL（PLAYWRIGHT_BASE_URL）が設定されている場合はwebServerをスキップ
-  webServer: process.env.PLAYWRIGHT_BASE_URL && !process.env.PLAYWRIGHT_BASE_URL.includes('localhost')
+  // PLAYWRIGHT_BASE_URLが設定されている場合はwebServerをスキップ
+  // （Emulator環境では、firebase emulators:execが開発サーバーも起動するため）
+  webServer: process.env.PLAYWRIGHT_BASE_URL
     ? undefined
     : {
-        // localhost環境: 開発サーバーを使用（CI環境でもEmulator使用時はdev server）
+        // PLAYWRIGHT_BASE_URL未設定の場合: 開発サーバーを自動起動
         command: 'npm run dev',
         url: 'http://localhost:5173',
         reuseExistingServer: !process.env.CI, // CI環境では再利用しない
