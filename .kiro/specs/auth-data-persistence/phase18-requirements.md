@@ -195,11 +195,11 @@ test('ログイン直後にユーザー情報を正常に取得', async ({ page 
   await loginAsSuperAdmin(page);
 
   // ログイン直後、Permission errorが発生しないことを確認
-  await page.waitForTimeout(2000); // 認証トークン初期化を待つ
-  await expect(page.getByText(/permission/i)).not.toBeVisible();
+  // 認証トークン初期化を待つ（ユーザー情報が表示されるまで）
+  await expect(page.getByText(/super-admin/i)).toBeVisible({ timeout: 5000 });
 
-  // ユーザー情報が表示されることを確認
-  await expect(page.getByText(/super-admin/i)).toBeVisible();
+  // Permission errorが表示されていないことを確認
+  await expect(page.getByText(/permission/i)).not.toBeVisible();
 });
 ```
 
@@ -324,11 +324,21 @@ test('ログイン直後にユーザー情報を正常に取得', async ({ page 
    - Firebase Authenticationの実際のGoogle認証はテストできない（モック必要）
    - 本番環境のFirestoreデータには直接アクセスしない（エミュレータ使用）
 
-2. **監視の制約**:
+2. **テストデータ管理戦略**:
+   - **フィクスチャ管理**: テスト前に既知の状態のデータセットを準備
+   - **テスト分離**: 各テストが独立して実行可能（他のテストに依存しない）
+   - **クリーンアップ**: テスト後にデータを初期状態にリセット
+   - **環境**: Firebase Emulator使用（本番データに影響なし）
+   - **実装パターン**:
+     - フィクスチャファイル: `e2e/fixtures/` に管理
+     - セットアップ/クリーンアップ: 各テストの `beforeEach`/`afterEach` で実行
+     - 参照: Phase 14実装パターンを踏襲
+
+3. **監視の制約**:
    - Firebase Consoleの無料枠の制限
    - 通知先はSlackまたはEmailのみ（他のサービスは追加設定が必要）
 
-3. **CI/CDの制約**:
+4. **CI/CDの制約**:
    - GitHub Actionsの実行時間制限（無料枠: 2000分/月）
    - E2Eテストの追加により実行時間が増加
 

@@ -59,7 +59,8 @@
 3. **Create Alert Policy**
 
 4. アラート設定:
-   - **Metric**: `cloud.googleapis.com/functions/execution/error_count`
+   - **Metric**: `cloudfunctions.googleapis.com/function/execution_count`
+   - **Filter**: `metric.status = "error"`
    - **Condition**: Count > **3**（5分間）
    - **Notification channel**: Email
    - **Documentation**:

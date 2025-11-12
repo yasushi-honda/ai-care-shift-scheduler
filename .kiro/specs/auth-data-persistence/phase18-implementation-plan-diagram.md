@@ -108,7 +108,7 @@ flowchart TD
 
 ```mermaid
 sequenceDiagram
-    auct or E2Eテスト
+    actor E2Eテスト
     participant Monitor as ConsoleMonitor
     participant Browser as ブラウザ
     participant Page as Webページ
