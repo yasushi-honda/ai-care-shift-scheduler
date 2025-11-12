@@ -843,15 +843,26 @@ const App: React.FC = () => {
               <h1 className="text-2xl font-bold">AIシフト自動作成</h1>
               <p className="text-sm text-indigo-200 mt-1">介護・福祉事業所向け</p>
             </div>
-            {isSuperAdmin() && (
-              <Link
-                to="/admin"
+            <div className="flex items-center gap-2">
+              <a
+                href="/manual.html"
+                target="_blank"
+                rel="noopener noreferrer"
                 className="px-3 py-2 bg-white bg-opacity-20 hover:bg-opacity-30 rounded-lg text-sm font-medium transition-colors flex items-center gap-1"
-                title="管理画面"
+                title="操作マニュアル"
               >
-                ⚙️ 管理
-              </Link>
-            )}
+                📖 マニュアル
+              </a>
+              {isSuperAdmin() && (
+                <Link
+                  to="/admin"
+                  className="px-3 py-2 bg-white bg-opacity-20 hover:bg-opacity-30 rounded-lg text-sm font-medium transition-colors flex items-center gap-1"
+                  title="管理画面"
+                >
+                  ⚙️ 管理
+                </Link>
+              )}
+            </div>
           </div>
           {/* 施設選択 */}
           {userProfile && userProfile.facilities && userProfile.facilities.length > 0 && (
