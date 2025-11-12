@@ -181,6 +181,27 @@ service cloud.firestore {
       allow update, delete: if false;
     }
 
+    // securityAlerts collection (Phase 13.3で実装、Phase 17.11でRules追加)
+    match /securityAlerts/{alertId} {
+      // super-adminのみ読み取り可能
+      allow read: if isAuthenticated() && isSuperAdmin();
+
+      // 認証済みユーザーがアラートを作成可能（不審なアクセス検出時）
+      // セキュリティ: 必須フィールドのバリデーション
+      allow create: if isAuthenticated()
+        && request.resource.data.type is string
+        && request.resource.data.severity is string
+        && request.resource.data.status is string
+        && request.resource.data.title is string
+        && request.resource.data.description is string;
+
+      // super-adminのみ更新可能（ステータス変更、確認、解決）
+      allow update: if isAuthenticated() && isSuperAdmin();
+
+      // 削除は禁止（不変・監査証跡として保持）
+      allow delete: if false;
+    }
+
     // デフォルトルール: 上記以外のコレクションはアクセス拒否
     match /{document=**} {
       allow read, write: if false;
