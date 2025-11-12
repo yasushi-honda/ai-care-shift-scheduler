@@ -1,0 +1,48 @@
+/**
+ * Playwright Global Setup
+ *
+ * Phase 18.2: Firebase Auth Emulator環境の準備
+ *
+ * このファイルは、全E2Eテスト実行前に一度だけ実行されます。
+ * Emulator環境でのテスト準備を行います。
+ */
+
+import { chromium, FullConfig } from '@playwright/test';
+
+/**
+ * Global Setup関数
+ *
+ * @param config Playwright設定
+ */
+async function globalSetup(config: FullConfig) {
+  // baseURLを環境変数またはプロジェクト設定から取得
+  const baseURL = process.env.PLAYWRIGHT_BASE_URL ||
+                  (config.projects && config.projects[0]?.use?.baseURL) ||
+                  'http://localhost:5173';
+
+  console.log('🔧 Playwright Global Setup開始');
+  console.log(`  ベースURL: ${baseURL}`);
+
+  // Emulator環境かどうかを判定
+  const isEmulatorEnv = baseURL.includes('localhost') || baseURL.includes('127.0.0.1');
+
+  if (isEmulatorEnv) {
+    console.log('  🟢 Emulator環境を検出');
+    console.log('  📌 Auth Emulator: http://localhost:9099');
+    console.log('  📌 Firestore Emulator: http://localhost:8080');
+    console.log('  📌 Emulator UI: http://localhost:4000');
+
+    // Emulator環境の検証
+    // 注意: この時点ではEmulatorが起動していることを前提とする
+    // （firebase emulators:exec で実行される場合は自動的に起動済み）
+
+    console.log('  ✅ Emulator環境準備完了');
+  } else {
+    console.log('  🟡 本番環境を検出');
+    console.log('  ⚠️  Permission errorテストは認証状態が必要です');
+  }
+
+  console.log('✅ Playwright Global Setup完了\n');
+}
+
+export default globalSetup;

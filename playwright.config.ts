@@ -8,6 +8,9 @@ import { defineConfig, devices } from '@playwright/test';
 export default defineConfig({
   testDir: './e2e',
 
+  // Global Setup（Phase 18.2: Emulator環境準備）
+  globalSetup: './e2e/global-setup.ts',
+
   // 全テストのタイムアウト（30秒）
   timeout: 30 * 1000,
 
