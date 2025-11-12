@@ -20,7 +20,10 @@
     "test": "npm run test:unit && npm run test:e2e",
     "seed:demo": "tsx scripts/seedDemoData.ts",
     "seed:demo:reset": "tsx scripts/seedDemoData.ts --reset",
-    "cleanup:deleted-users": "tsx scripts/cleanupDeletedUsers.ts"
+    "cleanup:deleted-users": "tsx scripts/cleanupDeletedUsers.ts",
+    "emulators": "firebase emulators:start --only auth,firestore",
+    "emulators:auth": "firebase emulators:start --only auth",
+    "emulators:exec": "firebase emulators:exec --only auth,firestore"
   },
   "dependencies": {
     "@google/genai": "^1.22.0",
