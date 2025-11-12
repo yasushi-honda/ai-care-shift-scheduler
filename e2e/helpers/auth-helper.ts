@@ -74,27 +74,46 @@ export async function signInWithEmulator(
   const signInSuccess = await page.evaluate(
     async ({ testEmail, testPassword }) => {
       try {
+        // Phase 18.2 Step 6: デバッグログ - グローバルオブジェクト確認
+        console.log('🔍 [Auth Debug] グローバルオブジェクト確認:', {
+          hasWindow: typeof window !== 'undefined',
+          hasAuth: !!(window as any).__firebaseAuth,
+          hasDb: !!(window as any).__firebaseDb,
+          windowKeys: typeof window !== 'undefined' ? Object.keys(window).filter(k => k.startsWith('__firebase')) : [],
+        });
+
         // firebase.tsでグローバルに公開された__firebaseAuthを使用
         const auth = (window as any).__firebaseAuth;
 
         if (!auth) {
           console.error('❌ Firebase Auth がグローバルオブジェクトに存在しません');
+          console.error('🔍 [Auth Debug] window.__firebaseAuth is undefined');
           return false;
         }
 
+        console.log('✅ [Auth Debug] Firebase Auth取得成功');
+
         // Firebase Auth SDKのsignInWithEmailAndPasswordを動的インポート
         // Viteの開発サーバーでは、node_modulesからESMとして提供される
+        console.log('🔍 [Auth Debug] Firebase Auth SDK動的インポート開始');
         const authModule = await import('firebase/auth');
         const { signInWithEmailAndPassword } = authModule;
+        console.log('✅ [Auth Debug] Firebase Auth SDK動的インポート成功');
 
         // ログイン実行
+        console.log(`🔍 [Auth Debug] ログイン実行開始: ${testEmail}`);
         const userCredential = await signInWithEmailAndPassword(auth, testEmail, testPassword);
 
         console.log(`✅ Emulator認証成功: ${userCredential.user.email} (UID: ${userCredential.user.uid})`);
         return true;
       } catch (error: any) {
         console.error(`❌ Emulator認証失敗: ${error.message}`);
-        console.error(error);
+        console.error('🔍 [Auth Debug] エラー詳細:', {
+          name: error.name,
+          message: error.message,
+          code: error.code,
+          stack: error.stack,
+        });
         return false;
       }
     },

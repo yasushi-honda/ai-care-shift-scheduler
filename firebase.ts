@@ -49,6 +49,14 @@ const isLocalhost = typeof window !== 'undefined' &&
                     (window.location.hostname === 'localhost' ||
                      window.location.hostname === '127.0.0.1');
 
+// Phase 18.2 Step 6: デバッグログ
+console.log('🔍 [Firebase Debug] Environment check:', {
+  isLocalhost,
+  isDev: import.meta.env.DEV,
+  hostname: typeof window !== 'undefined' ? window.location.hostname : 'N/A',
+  mode: import.meta.env.MODE,
+});
+
 if (isLocalhost && import.meta.env.DEV) {
   // Auth Emulator接続（http://localhost:9099）
   connectAuthEmulator(auth, 'http://localhost:9099', { disableWarnings: true });
@@ -63,7 +71,17 @@ if (isLocalhost && import.meta.env.DEV) {
   if (typeof window !== 'undefined') {
     (window as any).__firebaseAuth = auth;
     (window as any).__firebaseDb = db;
+    console.log('✅ [Firebase Debug] グローバルオブジェクト公開成功:', {
+      hasAuth: !!(window as any).__firebaseAuth,
+      hasDb: !!(window as any).__firebaseDb,
+    });
   }
+} else {
+  console.log('⚠️ [Firebase Debug] Emulator接続スキップ:', {
+    reason: !isLocalhost ? 'Not localhost' : 'Not DEV mode',
+    isLocalhost,
+    isDev: import.meta.env.DEV,
+  });
 }
 
 // エクスポート
