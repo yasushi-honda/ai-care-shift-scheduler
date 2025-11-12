@@ -57,7 +57,9 @@ console.log('🔍 [Firebase Debug] Environment check:', {
   mode: import.meta.env.MODE,
 });
 
-if (isLocalhost && import.meta.env.DEV) {
+// Phase 18.2 Step 6: import.meta.env.DEVの条件を削除（CI環境対応）
+// CI環境でも開発サーバー（npm run dev）を使用するため、localhostのみで判定
+if (isLocalhost) {
   // Auth Emulator接続（http://localhost:9099）
   connectAuthEmulator(auth, 'http://localhost:9099', { disableWarnings: true });
 
