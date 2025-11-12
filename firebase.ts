@@ -1,6 +1,6 @@
 import { initializeApp } from 'firebase/app';
-import { getAuth, GoogleAuthProvider, setPersistence, browserLocalPersistence } from 'firebase/auth';
-import { getFirestore } from 'firebase/firestore';
+import { getAuth, GoogleAuthProvider, setPersistence, browserLocalPersistence, connectAuthEmulator } from 'firebase/auth';
+import { getFirestore, connectFirestoreEmulator } from 'firebase/firestore';
 
 // Firebase設定（環境変数から取得）
 const firebaseConfig = {
@@ -42,6 +42,22 @@ googleProvider.setCustomParameters({
 
 // Cloud Firestoreの初期化
 const db = getFirestore(app);
+
+// Firebase Emulator接続（Phase 18.2: E2Eテスト対応）
+// localhost環境かつ開発モードの場合、Emulatorに接続
+const isLocalhost = typeof window !== 'undefined' &&
+                    (window.location.hostname === 'localhost' ||
+                     window.location.hostname === '127.0.0.1');
+
+if (isLocalhost && import.meta.env.DEV) {
+  // Auth Emulator接続（http://localhost:9099）
+  connectAuthEmulator(auth, 'http://localhost:9099', { disableWarnings: true });
+
+  // Firestore Emulator接続（http://localhost:8080）
+  connectFirestoreEmulator(db, 'localhost', 8080);
+
+  console.log('🔧 Firebase Emulator接続完了（Auth: http://localhost:9099, Firestore: http://localhost:8080）');
+}
 
 // エクスポート
 export { auth, googleProvider, db, authReady };
