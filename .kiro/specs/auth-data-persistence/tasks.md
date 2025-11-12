@@ -946,4 +946,107 @@ Phase 1-3のすべての機能が本番環境にデプロイされ、動作確�
 4. **Phase 8-9**: Security Rulesとデータ復元
 5. **Phase 10-12**: 管理画面、ユーザー招待、エラーハンドリング
 6. **Phase 13**: 監査ログ（本番リリース前に必須）
+
+---
+
+## Phase 17: ユーザー管理の不具合修正 🔧 **実装中**
+
+**優先度**: 🔴 緊急（本番環境の重大バグ）
+
+**目的**: 本番環境で発見されたユーザー管理機能の2つの重大バグを修正
+
+**バグ詳細**:
+1. **Firestore Permission Error**: ユーザーフェッチ時に「Missing or insufficient permissions」エラーが発生
+2. **User Management Sync Issue**: Firebase Authenticationで削除したユーザーが、ユーザー管理画面のリストに残り続ける
+
+**関連ドキュメント**:
+- `phase17-bug-analysis-2025-11-12.md` - バグ分析
+- `phase17-design-2025-11-12.md` - 技術設計
+
+**推定工数**: 4-6時間
+
+---
+
+### タスク
+
+- [ ] 17.1 AuthContext エラーハンドリング改善（即時対応）
+  - Permission errorの詳細ログ記録
+  - ドキュメント不存在時の明確なメッセージ
+  - ユーザー体験向上（エラー時でもクラッシュしない）
+  - _Requirements: バグ1修正_
+  - **成果物**:
+    - `src/contexts/AuthContext.tsx` - エラーハンドリング改善
+    - Unit Tests: `src/contexts/__tests__/AuthContext.test.tsx`
+
+- [ ] 17.2 既存削除済みユーザーのクリーンアップスクリプト（即時対応）
+  - Firestore users collectionとAuthentication同期確認
+  - 削除済みユーザーのFirestoreドキュメントを一括削除
+  - 監査ログに記録
+  - 安全策（本番環境実行防止、確認プロンプト）
+  - _Requirements: バグ2即時対応_
+  - **成果物**:
+    - `scripts/cleanupDeletedUsers.ts` - クリーンアップスクリプト
+    - `package.json` - npm scripts追加（cleanup:deleted-users）
+  - **実行手順**:
+    ```bash
+    export GOOGLE_APPLICATION_CREDENTIALS="/path/to/service-account-key.json"
+    npm run cleanup:deleted-users
+    ```
+
+- [ ] 17.3 Cloud Function - onUserDelete トリガー（恒久対応）
+  - Firebase Authentication onDelete トリガー実装
+  - Firestore users collectionドキュメント自動削除
+  - 監査ログに削除操作記録
+  - エラーハンドリングと冪等性確保
+  - _Requirements: バグ2恒久対応_
+  - **成果物**:
+    - `functions/src/onUserDelete.ts` - ユーザー削除トリガー
+    - `functions/src/index.ts` - エントリーポイント更新
+    - Integration Tests: `functions/src/__tests__/onUserDelete.test.ts`
+  - **デプロイ**:
+    ```bash
+    firebase deploy --only functions:onUserDelete
+    ```
+
+- [ ] 17.4 手動テストと検証
+  - 新規ユーザー登録でエラーが発生しないことを確認
+  - クリーンアップスクリプト実行と結果確認
+  - ユーザー削除時のCloud Function動作確認
+  - 監査ログ記録確認
+  - _Requirements: 全バグ修正の検証_
+  - **テストシナリオ**:
+    1. 新規Googleアカウントでログイン → エラーなし
+    2. クリーンアップスクリプト実行 → 削除済みユーザー消える
+    3. テストユーザー削除 → Firestoreドキュメントも削除される
+    4. 監査ログに削除操作が記録されている
+
+- [ ] 17.5 Phase 17検証ドキュメント作成
+  - 修正内容サマリー
+  - テスト結果
+  - 本番環境での動作確認結果
+  - 学び・振り返り
+  - _Requirements: ドキュメント_
+  - **成果物**:
+    - `phase17-verification-2025-11-12.md` - 検証レポート
+
+---
+
+**実装完了基準**:
+- ✅ AuthContextでPermission errorが適切にハンドリングされる
+- ✅ 既存の削除済みユーザーがクリーンアップされる
+- ✅ ユーザー削除時にFirestoreドキュメントも自動削除される
+- ✅ 監査ログに削除操作が記録される
+- ✅ すべての手動テストがパスする
+
+**デプロイ戦略**:
+1. **フェーズ1**: AuthContext修正（緊急）
+2. **フェーズ2**: クリーンアップスクリプト実行（即時）
+3. **フェーズ3**: Cloud Functionデプロイ（恒久）
+
+**ロールバック計画**:
+- AuthContext修正で問題が発生した場合: `git revert`でロールバック
+- Cloud Functionで問題が発生した場合: `firebase functions:delete onUserDelete`
+- クリーンアップスクリプトで誤削除した場合: 監査ログから復元
+
+---
 7. **Phase 14**: 統合テストとE2Eテスト（全フェーズ）

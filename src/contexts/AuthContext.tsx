@@ -174,12 +174,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 }
               }
             } else {
-              // ユーザードキュメントが存在しない場合はnull
+              // ユーザードキュメントが存在しない場合
+              console.warn('⚠️ User document does not exist for UID:', user.uid);
+              console.warn('This may happen if:');
+              console.warn('1. User just logged in and Cloud Function has not created the document yet');
+              console.warn('2. User was deleted from Firestore but still exists in Authentication');
+              console.warn('3. There was an error during user creation');
               setUserProfile(null);
               setSelectedFacilityId(null);
             }
-          } catch (error) {
-            console.error('Failed to fetch user profile:', error);
+          } catch (error: any) {
+            // エラーコードに応じた詳細ログ
+            if (error.code === 'permission-denied') {
+              console.error('❌ Permission denied when fetching user profile');
+              console.error('Possible causes:');
+              console.error('1. Security Rules not deployed correctly');
+              console.error('2. User document does not exist (new user)');
+              console.error('3. Authentication token not fully initialized');
+              console.error('Error details:', error);
+            } else if (error.code === 'unavailable') {
+              console.error('❌ Firestore service unavailable');
+              console.error('Possible causes:');
+              console.error('1. Network connection issue');
+              console.error('2. Firestore service outage');
+              console.error('Error details:', error);
+            } else {
+              console.error('❌ Failed to fetch user profile:', error);
+            }
             setUserProfile(null);
             setSelectedFacilityId(null);
           }

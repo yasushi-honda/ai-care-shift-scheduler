@@ -18,7 +18,8 @@
     "test:e2e:report": "playwright show-report",
     "test": "npm run test:unit && npm run test:e2e",
     "seed:demo": "tsx scripts/seedDemoData.ts",
-    "seed:demo:reset": "tsx scripts/seedDemoData.ts --reset"
+    "seed:demo:reset": "tsx scripts/seedDemoData.ts --reset",
+    "cleanup:deleted-users": "tsx scripts/cleanupDeletedUsers.ts"
   },
   "dependencies": {
     "@google/genai": "^1.22.0",
