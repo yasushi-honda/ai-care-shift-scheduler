@@ -26,6 +26,20 @@ test.describe('Permission error自動検出 - 管理画面', () => {
   let isEmulator: boolean;
 
   test.beforeEach(async ({ page, baseURL }) => {
+    // Phase 18.2 Step 6: すべてのブラウザコンソールログをキャプチャ
+    // firebase.ts、auth-helper.tsのデバッグログを確認するため
+    page.on('console', (msg) => {
+      const type = msg.type();
+      const text = msg.text();
+
+      // Firebase DebugまたはAuth Debugログを強調表示
+      if (text.includes('[Firebase Debug]') || text.includes('[Auth Debug]')) {
+        console.log(`🔍 [Browser Console ${type.toUpperCase()}] ${text}`);
+      } else {
+        console.log(`[Browser Console ${type}] ${text}`);
+      }
+    });
+
     // 環境判定
     isEmulator = isEmulatorEnvironment(baseURL || 'http://localhost:5173');
 
