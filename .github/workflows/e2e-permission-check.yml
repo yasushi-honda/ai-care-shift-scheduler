@@ -2,14 +2,23 @@ name: E2E Permission Check (Manual Trigger)
 
 # 手動トリガーのみ
 # Phase 18.1: Permission error自動検出テスト
+# Phase 18.2: Firebase Emulator環境対応
 # 背景: Phase 17で5つのPermission errorが本番環境で発見された
 # 目的: デプロイ前にPermission errorを自動検出し、Phase 17のような問題を繰り返さない
 on:
   workflow_dispatch:
     inputs:
-      test_user_id:
-        description: 'Test user ID (super-admin)'
+      environment:
+        description: 'テスト環境 (emulator: Firebase Emulator, production: 本番環境)'
         required: true
+        type: choice
+        options:
+          - emulator
+          - production
+        default: emulator
+      test_user_id:
+        description: 'Test user ID (本番環境のみ必要、super-admin)'
+        required: false
         type: string
 
 env:
@@ -43,8 +52,21 @@ jobs:
       - name: Playwrightブラウザをインストール
         run: npx playwright install --with-deps chromium
 
-      # 5. Permission errorテスト実行
-      - name: Permission errorテスト実行
+      # 5a. Firebase CLIのインストール（Emulator環境のみ）
+      - name: Firebase CLIをインストール
+        if: inputs.environment == 'emulator'
+        run: npm install -g firebase-tools
+
+      # 5b. Firebase Emulatorでテスト実行（Emulator環境）
+      - name: Permission errorテスト実行（Emulator環境）
+        if: inputs.environment == 'emulator'
+        run: firebase emulators:exec --only auth,firestore "npm run test:e2e:permission"
+        env:
+          PLAYWRIGHT_BASE_URL: http://localhost:5173
+
+      # 5c. 本番環境でテスト実行（本番環境）
+      - name: Permission errorテスト実行（本番環境）
+        if: inputs.environment == 'production'
         run: npm run test:e2e:permission
         env:
           PLAYWRIGHT_BASE_URL: https://ai-care-shift-scheduler.web.app
@@ -65,14 +87,20 @@ jobs:
         run: |
           echo "## Permission errorテスト結果 🔍" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "**テスト環境**: https://ai-care-shift-scheduler.web.app" >> $GITHUB_STEP_SUMMARY
-          echo "**テストユーザーID**: ${{ inputs.test_user_id }}" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ inputs.environment }}" = "emulator" ]; then
+            echo "**テスト環境**: 🟢 Firebase Emulator（localhost）" >> $GITHUB_STEP_SUMMARY
+            echo "**認証方式**: 自動認証（Email/Password）" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "**テスト環境**: 🟡 本番環境（https://ai-care-shift-scheduler.web.app）" >> $GITHUB_STEP_SUMMARY
+            echo "**テストユーザーID**: ${{ inputs.test_user_id }}" >> $GITHUB_STEP_SUMMARY
+          fi
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### テストケース" >> $GITHUB_STEP_SUMMARY
+          echo "### テストケース（Phase 18.1-18.2）" >> $GITHUB_STEP_SUMMARY
           echo "1. ユーザー詳細ページ（Phase 17.9対応）" >> $GITHUB_STEP_SUMMARY
           echo "2. セキュリティアラートページ（Phase 17.11対応）" >> $GITHUB_STEP_SUMMARY
           echo "3. バージョン履歴表示（Phase 17.5対応）" >> $GITHUB_STEP_SUMMARY
           echo "4. 管理画面主要ページ（Phase 17.8対応）" >> $GITHUB_STEP_SUMMARY
           echo "5. ログイン直後（Phase 17.8対応）" >> $GITHUB_STEP_SUMMARY
+          echo "6. コンソールログ収集（デバッグ用）" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "詳細なテストレポートは **Artifacts** からダウンロードしてください。" >> $GITHUB_STEP_SUMMARY

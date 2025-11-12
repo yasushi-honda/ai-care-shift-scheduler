@@ -70,19 +70,11 @@ export default defineConfig({
   // 本番環境URL（PLAYWRIGHT_BASE_URL）が設定されている場合はwebServerをスキップ
   webServer: process.env.PLAYWRIGHT_BASE_URL && !process.env.PLAYWRIGHT_BASE_URL.includes('localhost')
     ? undefined
-    : process.env.CI
-    ? {
-        // CI環境: ビルド後のプレビューサーバーを使用
-        command: 'npm run preview',
-        url: 'http://localhost:4173',
-        reuseExistingServer: false,
-        timeout: 60 * 1000,
-      }
     : {
-        // ローカル環境: 開発サーバーを使用
+        // localhost環境: 開発サーバーを使用（CI環境でもEmulator使用時はdev server）
         command: 'npm run dev',
         url: 'http://localhost:5173',
-        reuseExistingServer: true,
+        reuseExistingServer: !process.env.CI, // CI環境では再利用しない
         timeout: 120 * 1000,
       },
 });
