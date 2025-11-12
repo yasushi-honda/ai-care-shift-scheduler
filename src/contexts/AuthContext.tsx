@@ -226,6 +226,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Google OAuth ログイン
   const signInWithGoogle = async (): Promise<Result<void, AuthError>> => {
     try {
+      // COOP警告の説明ログを事前に出力
+      console.info('ℹ️ Google認証を開始します...');
+      console.info(
+        '⚠️ [予想される警告] Cross-Origin-Opener-Policy警告が表示される場合がありますが、' +
+        'これはFirebase Authenticationの仕様による正常な動作です。認証機能には影響ありません。'
+      );
+
       const result = await signInWithPopup(auth, googleProvider);
       const firebaseUser = result.user;
 
