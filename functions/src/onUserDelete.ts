@@ -1,4 +1,4 @@
-import * as functions from 'firebase-functions';
+import * as functionsV1 from 'firebase-functions/v1';
 import * as admin from 'firebase-admin';
 
 /**
@@ -8,15 +8,16 @@ import * as admin from 'firebase-admin';
  * 1. Firestore users collection からユーザードキュメントを削除
  * 2. 削除操作を監査ログに記録
  *
- * Requirements: Phase 17 - ユーザー管理の不具合修正
+ * Requirements: Phase 17.10 - onUserDelete Cloud Function修正
  *
  * Note: Firebase Authenticationでユーザーが削除されると、このトリガーが自動実行される。
  * Firestoreの users collection とデータ整合性を保つために、
  * 対応するドキュメントも削除する。
+ * v2にはユーザー削除トリガーがないため、v1のAPIを使用しています。
  *
  * @param user - 削除されたユーザー情報
  */
-export const onUserDelete = functions.auth.user().onDelete(async (user) => {
+export const onUserDelete = functionsV1.auth.user().onDelete(async (user) => {
   const uid = user.uid;
   const userEmail = user.email || 'unknown';
   const db = admin.firestore();
