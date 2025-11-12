@@ -25,9 +25,11 @@ if (process.env.NODE_ENV === 'production') {
 }
 
 // Firebase Admin SDK初期化
-admin.initializeApp({
-  projectId: 'ai-care-shift-scheduler', // プロジェクトID
-});
+// Firebase Admin SDK will auto-detect project from environment
+// Set GOOGLE_APPLICATION_CREDENTIALS or FIREBASE_CONFIG env vars
+if (!admin.apps.length) {
+  admin.initializeApp();
+}
 
 const db = admin.firestore();
 const auth = admin.auth();
