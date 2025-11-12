@@ -1,0 +1,78 @@
+name: E2E Permission Check (Manual Trigger)
+
+# 手動トリガーのみ
+# Phase 18.1: Permission error自動検出テスト
+# 背景: Phase 17で5つのPermission errorが本番環境で発見された
+# 目的: デプロイ前にPermission errorを自動検出し、Phase 17のような問題を繰り返さない
+on:
+  workflow_dispatch:
+    inputs:
+      test_user_id:
+        description: 'Test user ID (super-admin)'
+        required: true
+        type: string
+
+env:
+  NODE_VERSION: '20'
+
+jobs:
+  e2e-permission-test:
+    name: Permission error自動検出テスト
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+
+    steps:
+      # 1. リポジトリのチェックアウト
+      - name: チェックアウト
+        uses: actions/checkout@v4
+
+      # 2. Node.jsのセットアップ
+      - name: Node.js ${{ env.NODE_VERSION }} をセットアップ
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      # 3. 依存関係のインストール
+      - name: 依存関係をインストール
+        run: npm ci
+
+      # 4. Playwrightブラウザのインストール
+      - name: Playwrightブラウザをインストール
+        run: npx playwright install --with-deps chromium
+
+      # 5. Permission errorテスト実行
+      - name: Permission errorテスト実行
+        run: npm run test:e2e:permission
+        env:
+          PLAYWRIGHT_BASE_URL: https://ai-care-shift-scheduler.web.app
+          TEST_USER_ID: ${{ inputs.test_user_id }}
+
+      # 6. テストレポートのアップロード
+      - name: テストレポートをアップロード
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report-permission
+          path: playwright-report/
+          retention-days: 7
+
+      # 7. テスト結果サマリー
+      - name: テスト結果サマリー
+        if: always()
+        run: |
+          echo "## Permission errorテスト結果 🔍" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**テスト環境**: https://ai-care-shift-scheduler.web.app" >> $GITHUB_STEP_SUMMARY
+          echo "**テストユーザーID**: ${{ inputs.test_user_id }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### テストケース" >> $GITHUB_STEP_SUMMARY
+          echo "1. ユーザー詳細ページ（Phase 17.9対応）" >> $GITHUB_STEP_SUMMARY
+          echo "2. セキュリティアラートページ（Phase 17.11対応）" >> $GITHUB_STEP_SUMMARY
+          echo "3. バージョン履歴表示（Phase 17.5対応）" >> $GITHUB_STEP_SUMMARY
+          echo "4. 管理画面主要ページ（Phase 17.8対応）" >> $GITHUB_STEP_SUMMARY
+          echo "5. ログイン直後（Phase 17.8対応）" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "詳細なテストレポートは **Artifacts** からダウンロードしてください。" >> $GITHUB_STEP_SUMMARY

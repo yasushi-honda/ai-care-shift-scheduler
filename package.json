@@ -16,6 +16,7 @@
     "test:e2e:headed": "playwright test --headed",
     "test:e2e:debug": "playwright test --debug",
     "test:e2e:report": "playwright show-report",
+    "test:e2e:permission": "playwright test e2e/permission-errors.spec.ts",
     "test": "npm run test:unit && npm run test:e2e",
     "seed:demo": "tsx scripts/seedDemoData.ts",
     "seed:demo:reset": "tsx scripts/seedDemoData.ts --reset",
