@@ -1,9 +1,11 @@
 import { test, expect } from '@playwright/test';
 import { ConsoleMonitor } from './helpers/console-monitor';
+import { isEmulatorEnvironment } from './helpers/auth-helper';
 
 /**
  * Permission error自動検出E2Eテスト
  * Phase 18.1: 管理画面の主要ページでPermission errorが発生しないことを確認
+ * Phase 18.2: Firebase Auth Emulator対応
  *
  * 背景:
  * Phase 17で5つのPermission errorが本番環境で発見された。
@@ -13,19 +15,27 @@ import { ConsoleMonitor } from './helpers/console-monitor';
  * - Permission errorをデプロイ前に自動検出
  * - Phase 17のような問題を繰り返さない
  *
- * 制約:
- * - Firebase Auth Emulator不使用（設定が複雑なため）
- * - 本番環境で実際の認証を使用（手動トリガー）
- *
  * 実行方法:
- * - ローカル: PLAYWRIGHT_BASE_URL=https://ai-care-shift-scheduler.web.app npm run test:e2e:permission
- * - CI/CD: 手動トリガー（workflow_dispatch）
+ * - ローカル（Emulator）: npm run emulators && npm run test:e2e:permission
+ * - ローカル（本番環境）: PLAYWRIGHT_BASE_URL=https://ai-care-shift-scheduler.web.app npm run test:e2e:permission
+ * - CI/CD: GitHub Actions workflow（Emulator環境）
  */
 
 test.describe('Permission error自動検出 - 管理画面', () => {
   let monitor: ConsoleMonitor;
+  let isEmulator: boolean;
 
-  test.beforeEach(async ({ page }) => {
+  test.beforeEach(async ({ page, baseURL }) => {
+    // 環境判定
+    isEmulator = isEmulatorEnvironment(baseURL || 'http://localhost:5173');
+
+    if (isEmulator) {
+      console.log('🟢 Emulator環境でテスト実行');
+      // TODO: Step 4b-4cでEmulator認証を実装
+    } else {
+      console.log('🟡 本番環境でテスト実行');
+    }
+
     // コンソール監視を開始
     monitor = new ConsoleMonitor(page);
   });
