@@ -57,11 +57,22 @@ jobs:
         if: inputs.environment == 'emulator'
         run: npm install -g firebase-tools
 
-      # 5b. Firebase Emulatorでテスト実行（Emulator環境）
+      # 5b. 開発サーバーをバックグラウンドで起動（Emulator環境のみ）
+      - name: 開発サーバーを起動
+        if: inputs.environment == 'emulator'
+        run: npm run dev &
+
+      # 5c. 開発サーバーの起動を待機
+      - name: 開発サーバーの起動を待機
+        if: inputs.environment == 'emulator'
+        run: npx wait-on http://localhost:5173 --timeout 60000
+
+      # 5d. Firebase Emulatorでテスト実行（Emulator環境）
       - name: Permission errorテスト実行（Emulator環境）
         if: inputs.environment == 'emulator'
         run: firebase emulators:exec --only auth,firestore "npm run test:e2e:permission"
-        # PLAYWRIGHT_BASE_URLは設定せず、playwright.config.tsのwebServerで開発サーバーを自動起動
+        env:
+          PLAYWRIGHT_BASE_URL: http://localhost:5173
 
       # 5c. 本番環境でテスト実行（本番環境）
       - name: Permission errorテスト実行（本番環境）
