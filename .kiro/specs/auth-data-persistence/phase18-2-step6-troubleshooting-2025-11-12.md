@@ -155,6 +155,46 @@ const authModule = await import('firebase/auth');
 
 ---
 
+### 問題5: import.meta.env.DEV削除後も認証失敗（最新の問題）
+
+**発生時刻**: Run ID 19315041811
+
+**エラー内容**:
+```
+Error: Emulator認証に失敗しました: test@example.com
+```
+
+**対策実施**:
+1. firebase.tsの`import.meta.env.DEV`条件を削除
+   ```typescript
+   // 変更前
+   if (isLocalhost && import.meta.env.DEV) {
+
+   // 変更後
+   if (isLocalhost) {  // CI環境対応
+   ```
+
+2. デバッグログ追加
+   - firebase.ts: 環境変数、グローバルオブジェクト公開状態
+   - auth-helper.ts: 認証フロー詳細
+
+3. コミット: `3f4b753` - "fix(phase18-2): CI環境対応 - Emulator接続条件からimport.meta.env.DEV削除"
+
+**結果**: ❌ 失敗（5/6テスト失敗、同じエラー）
+
+**観察事項**:
+- デバッグログが出力されていない（ブラウザコンソールログがキャプチャされていない）
+- 認証エラーメッセージは同じ
+- 開発サーバー、Emulator起動は成功している
+
+**可能な原因**:
+1. **ビルドキャッシュ問題**: firebase.tsの変更が反映されていない可能性
+2. **ブラウザコンソールログ未キャプチャ**: デバッグログが確認できず、問題特定が困難
+3. **動的インポート失敗**: page.evaluate()内での`import('firebase/auth')`が失敗している可能性
+4. **Firebase SDK初期化遅延**: 1秒の待機では不十分な可能性
+
+---
+
 ## 現在の状況
 
 ### 成功した部分（Step 1-5）
@@ -176,76 +216,104 @@ const authModule = await import('firebase/auth');
 ### Step 6で未解決の問題
 
 - ❌ Emulator認証失敗（5/6テスト失敗）
-- ❓ `window.__firebaseAuth`が存在しない可能性
-- ❓ `import.meta.env.DEV`の値が不明
+- ❌ `import.meta.env.DEV`削除でも改善せず
+- ❌ デバッグログがキャプチャされず、問題特定困難
 
 ---
 
-## 次のステップの選択肢
+## 次のステップの選択肢（更新版 - 問題5発生後）
 
-### オプション1: デバッグログ追加（推奨）
+### オプション1: ブラウザコンソールログキャプチャを追加（推奨）
 
 **実施内容**:
-1. firebase.tsにデバッグログ追加
-   - `isLocalhost`の値
-   - `import.meta.env.DEV`の値
-   - グローバルオブジェクト公開の成否
-2. auth-helper.tsにデバッグログ追加
-   - `window.__firebaseAuth`の存在確認
-   - Firebase SDK初期化状態
-   - 認証エラーの詳細
-3. GitHub Actions再実行・ログ確認
-4. 問題を特定して修正
+1. e2e/permission-errors.spec.tsにpage.on('console')イベントリスナー追加
+   - すべてのブラウザコンソールログをキャプチャ
+   - firebase.ts、auth-helper.tsのデバッグログを確認可能に
+2. GitHub Actions再実行・ログ確認
+3. デバッグログから問題を特定
+4. 修正実施
 
-**所要時間**: 約1時間
+**所要時間**: 約30分（実装） + 約15分（GitHub Actions実行・確認）
 
 **メリット**:
+- ✅ firebase.tsのデバッグログが確認可能
+- ✅ window.__firebaseAuthの状態を直接確認可能
 - ✅ 問題の根本原因を特定可能
-- ✅ 確実な修正が可能
 
 **デメリット**:
-- ⏱️ 時間がかかる
-- ⏱️ 複数回のGitHub Actions実行が必要
+- ⏱️ 追加のコード変更が必要
 
 ---
 
-### オプション2: 代替アプローチ検討
+### オプション2: ローカルEmulator環境でテスト実行（デバッグ効率的）
 
 **実施内容**:
-1. グローバルオブジェクト公開の条件を緩和
-   - `import.meta.env.DEV`の条件を削除
-   - `isLocalhost`のみで判定
-2. または、別の認証方法を検討
-   - Admin SDKを使用した自動認証
-   - Emulator REST APIを直接使用
-3. GitHub Actions再実行・検証
+1. ローカルでFirebase Emulator起動
+   ```bash
+   firebase emulators:start --only auth,firestore
+   ```
+2. 別ターミナルで開発サーバー起動
+   ```bash
+   npm run dev
+   ```
+3. Playwrightテスト実行
+   ```bash
+   PLAYWRIGHT_BASE_URL=http://localhost:5173 npm run test:e2e:permission
+   ```
+4. ブラウザコンソールログをリアルタイム確認
+5. 問題を特定・修正後、GitHub Actionsで検証
 
-**所要時間**: 約30分
+**所要時間**: 約30分（セットアップ + デバッグ） + 約15分（修正 + GitHub Actions確認）
 
 **メリット**:
-- ✅ 迅速な解決の可能性
-- ✅ GitHub Actions実行回数が少ない
+- ✅ リアルタイムでデバッグ可能
+- ✅ ブラウザDevToolsで詳細確認可能
+- ✅ 迅速なイテレーション
 
 **デメリット**:
-- ⚠️ 根本原因を特定せずに進む
-- ⚠️ 別の問題が発生する可能性
+- ⏱️ ローカル環境のセットアップが必要
+- ⚠️ ローカルとCI環境の差異がある可能性
 
 ---
 
-### オプション3: Phase 18.2を一旦保留
+### オプション3: 代替認証方式の検討（根本的アプローチ変更）
 
 **実施内容**:
-1. Phase 18.2の現状をドキュメント化
+1. window.__firebaseAuthを使わない認証方式を検討
+   - 選択肢A: Playwright test fixtureでfirebase/authを直接インポート
+   - 選択肢B: Auth Emulator REST APIを直接使用してトークン取得
+   - 選択肢C: カスタムトークンを使用した認証
+2. 新しいアプローチを実装
+3. テスト実行・検証
+
+**所要時間**: 約1-2時間（設計 + 実装 + テスト）
+
+**メリット**:
+- ✅ window.__firebaseAuth依存を排除
+- ✅ よりシンプルなアーキテクチャ
+- ✅ CI環境での安定性向上
+
+**デメリット**:
+- ⏱️ 大きな設計変更
+- ⚠️ 既存のauth-helper.tsを大幅に書き換え
+
+---
+
+### オプション4: Phase 18.2を一旦保留（時間効率重視）
+
+**実施内容**:
+1. Phase 18.2の現状をドキュメント化（本ドキュメント）
 2. 未解決の問題をIssueとして記録
 3. 他の優先度の高いタスクに移行
-4. 後日、Phase 18.2を再開
+4. 後日、Phase 18.2を再開（オプション1またはオプション2で対応）
 
-**所要時間**: 約30分（ドキュメント作成）
+**所要時間**: 約15分（まとめ作業のみ）
 
 **メリット**:
 - ✅ 時間の有効活用
 - ✅ 他のタスクを進められる
 - ✅ 知見が蓄積された状態で再開可能
+- ✅ トラブルシューティング記録が完備
 
 **デメリット**:
 - ⚠️ Phase 18.2の目標未達成
@@ -298,14 +366,15 @@ const authModule = await import('firebase/auth');
 | 問題1: webServerタイムアウト（第1回） | 10分 | 10分 | 1回 |
 | 問題2: webServerタイムアウト（第2回） | 15分 | 15分 | 1回 |
 | 問題3: Viteポート不一致 | 5分 | 5分 | 1回 |
-| 問題4: Emulator認証失敗 | - | - | 1回（進行中） |
-| **合計** | 30分 | 30分 | 4回 |
+| 問題4: Emulator認証失敗（原因分析） | 30分 | - | 1回 |
+| 問題5: import.meta.env.DEV削除でも失敗 | 15分 | 10分 | 1回 |
+| **合計** | 75分（1時間15分） | 40分 | 5回 |
 
 ### 所要時間
 
-- トラブルシューティング: 約2時間
-- ドキュメント作成: 約30分（本ドキュメント）
-- **合計**: 約2時間30分
+- トラブルシューティング: 約3時間15分
+- ドキュメント作成: 約45分（本ドキュメント初版 + 更新）
+- **合計**: 約4時間
 
 ---
 
@@ -329,23 +398,50 @@ const authModule = await import('firebase/auth');
 
 ---
 
-## 推奨事項
+## 推奨事項（更新版 - 問題5発生後）
 
-**現時点での推奨**: オプション1（デバッグログ追加）
+**現時点での推奨**: オプション2（ローカルEmulator環境でテスト実行）
 
 **理由**:
-- Phase 18.2の目標は「Emulator環境でのE2Eテスト自動化」
-- 問題の根本原因を特定することが重要
-- デバッグログ追加は比較的低リスク
-- 確実な解決に繋がる
+1. **デバッグ効率が最も高い**
+   - ブラウザDevToolsでリアルタイム確認可能
+   - console.logが即座に確認できる
+   - 迅速なイテレーション
+
+2. **問題5の状況を考慮**
+   - GitHub Actions上でのデバッグは時間がかかる（既に5回実行）
+   - デバッグログがキャプチャされず、問題特定が困難
+   - ローカルなら問題を直接観察可能
+
+3. **コスト対効果**
+   - セットアップ時間: 約10分
+   - デバッグ効率: GitHub Actionsの5-10倍
+   - 総所要時間: 30-45分で解決可能
 
 **実施手順**:
-1. firebase.tsにデバッグログ追加（isLocalhost, import.meta.env.DEV, グローバルオブジェクト公開）
-2. auth-helper.tsにデバッグログ追加（window.__firebaseAuth存在確認、認証エラー詳細）
-3. コミット・プッシュ
-4. GitHub Actions再実行
-5. ログ確認・問題特定
-6. 修正実施
+1. ローカルでFirebase Emulator起動
+   ```bash
+   firebase emulators:start --only auth,firestore
+   ```
+2. 別ターミナルで開発サーバー起動（ポート5173）
+   ```bash
+   npm run dev
+   ```
+3. Playwrightテスト実行
+   ```bash
+   PLAYWRIGHT_BASE_URL=http://localhost:5173 npm run test:e2e:permission
+   ```
+4. ブラウザコンソールで以下を確認:
+   - firebase.tsのデバッグログ（isLocalhost, import.meta.env.DEV）
+   - window.__firebaseAuthの存在
+   - 動的インポート（`import('firebase/auth')`）の成否
+5. 問題を特定・修正
+6. ローカルで再テスト・成功確認
+7. コミット・プッシュ・GitHub Actions検証
+
+**代替推奨**: オプション1（ブラウザコンソールログキャプチャ追加）
+- ローカル環境が利用できない場合
+- CI環境での動作を直接確認したい場合
 
 ---
 
