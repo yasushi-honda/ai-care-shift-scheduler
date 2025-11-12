@@ -1,4 +1,4 @@
-import { onUserDeleted } from 'firebase-functions/v2/identity';
+import * as functions from 'firebase-functions';
 import * as admin from 'firebase-admin';
 
 /**
@@ -14,11 +14,11 @@ import * as admin from 'firebase-admin';
  * Firestoreの users collection とデータ整合性を保つために、
  * 対応するドキュメントも削除する。
  *
- * @param event - Firebase Authentication削除イベント
+ * @param user - 削除されたユーザー情報
  */
-export const onUserDelete = onUserDeleted(async (event) => {
-  const { uid, email } = event.data;
-  const userEmail = email || 'unknown';
+export const onUserDelete = functions.auth.user().onDelete(async (user) => {
+  const uid = user.uid;
+  const userEmail = user.email || 'unknown';
   const db = admin.firestore();
 
   console.log(`🗑️ User deleted from Authentication: ${uid} (${userEmail})`);
