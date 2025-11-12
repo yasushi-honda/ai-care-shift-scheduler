@@ -57,6 +57,13 @@ if (isLocalhost && import.meta.env.DEV) {
   connectFirestoreEmulator(db, 'localhost', 8080);
 
   console.log('🔧 Firebase Emulator接続完了（Auth: http://localhost:9099, Firestore: http://localhost:8080）');
+
+  // Phase 18.2 Step 4c: E2Eテスト用にauthをグローバルオブジェクトとして公開
+  // Playwrightのpage.evaluate()からアクセス可能にする
+  if (typeof window !== 'undefined') {
+    (window as any).__firebaseAuth = auth;
+    (window as any).__firebaseDb = db;
+  }
 }
 
 // エクスポート

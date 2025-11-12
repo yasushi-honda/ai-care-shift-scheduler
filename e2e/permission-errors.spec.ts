@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { ConsoleMonitor } from './helpers/console-monitor';
-import { isEmulatorEnvironment } from './helpers/auth-helper';
+import { isEmulatorEnvironment, signInWithEmulator } from './helpers/auth-helper';
 
 /**
  * Permission error自動検出E2Eテスト
@@ -31,9 +31,18 @@ test.describe('Permission error自動検出 - 管理画面', () => {
 
     if (isEmulator) {
       console.log('🟢 Emulator環境でテスト実行');
-      // TODO: Step 4b-4cでEmulator認証を実装
+
+      // Phase 18.2 Step 4c: Emulator環境で自動認証
+      try {
+        await signInWithEmulator(page);
+        console.log('✅ Emulator認証完了');
+      } catch (error) {
+        console.error('❌ Emulator認証失敗:', error);
+        throw error;
+      }
     } else {
       console.log('🟡 本番環境でテスト実行');
+      // 本番環境では、手動で認証済みと想定
     }
 
     // コンソール監視を開始

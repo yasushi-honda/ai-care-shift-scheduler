@@ -19,41 +19,96 @@ export function isEmulatorEnvironment(baseURL: string): boolean {
 /**
  * Emulator環境でテストユーザーとして認証
  *
+ * Phase 18.2 Step 4c: Emulator REST API + Firebase SDK認証
+ *
  * @param page Playwrightページオブジェクト
- * @param userId テストユーザーID（デフォルト: test-super-admin）
- * @param email テストユーザーのメールアドレス
+ * @param email テストユーザーのメールアドレス（デフォルト: test@example.com）
+ * @param password テストユーザーのパスワード（デフォルト: password123）
  */
 export async function signInWithEmulator(
   page: Page,
-  userId: string = 'test-super-admin',
-  email: string = 'test@example.com'
+  email: string = 'test@example.com',
+  password: string = 'password123'
 ): Promise<void> {
-  // Firebase Auth Emulatorの自動認証機能を使用
-  // page.evaluate()でブラウザ側のFirebase SDKを操作
+  console.log(`🔐 Emulator環境で認証開始: ${email}`);
 
+  // Step 1: Auth Emulator REST APIでテストユーザーを作成
+  // Emulator環境では、signUpがidempotent（既存ユーザーでもエラーにならない）
   await page.evaluate(
-    async ({ uid, userEmail }) => {
-      // Firebase SDKがロードされるまで待機
-      if (typeof window !== 'undefined' && (window as any).firebase) {
-        const auth = (window as any).firebase.auth();
+    async ({ testEmail, testPassword }) => {
+      // Firebase Auth Emulator REST API endpoint
+      const emulatorUrl = 'http://localhost:9099/identitytoolkit.googleapis.com/v1/accounts:signUp?key=test-api-key';
 
-        // Emulator環境の場合、connectAuthEmulatorが呼ばれているはず
-        // （src/lib/firebase.tsで設定済み）
+      try {
+        const response = await fetch(emulatorUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email: testEmail,
+            password: testPassword,
+            returnSecureToken: true,
+          }),
+        });
 
-        // カスタムトークンは使用せず、Emulatorの自動ログイン機能を利用
-        // Emulator環境では、任意のUIDでsignInWithCustomToken()が可能
-
-        // 注意: これは簡易的な実装です
-        // 実際のプロダクション環境では使用しないでください
-
-        console.log(`🔐 Emulator環境で認証: ${userEmail} (${uid})`);
+        if (!response.ok) {
+          // ユーザーが既に存在する場合もOK（Emulator環境では問題なし）
+          console.log(`ℹ️ Auth Emulator signUp response: ${response.status}`);
+        } else {
+          console.log(`✅ テストユーザー作成成功: ${testEmail}`);
+        }
+      } catch (error) {
+        console.warn(`⚠️ テストユーザー作成エラー（既存ユーザーの可能性）: ${error}`);
       }
     },
-    { uid: userId, userEmail: email }
+    { testEmail: email, testPassword: password }
   );
 
-  // 認証処理の完了を待つ（簡易的なwait）
+  // Step 2: ページに移動してFirebase SDKがロードされることを確認
+  await page.goto('/');
+  await page.waitForLoadState('domcontentloaded');
+
+  // 少し待ってFirebase SDKの初期化を完了させる
   await page.waitForTimeout(1000);
+
+  // Step 3: page.evaluate()でFirebase SDKのログイン処理を実行
+  const signInSuccess = await page.evaluate(
+    async ({ testEmail, testPassword }) => {
+      try {
+        // firebase.tsでグローバルに公開された__firebaseAuthを使用
+        const auth = (window as any).__firebaseAuth;
+
+        if (!auth) {
+          console.error('❌ Firebase Auth がグローバルオブジェクトに存在しません');
+          return false;
+        }
+
+        // Firebase Auth SDKのsignInWithEmailAndPasswordを動的インポート
+        // Viteの開発サーバーでは、node_modulesからESMとして提供される
+        const authModule = await import('firebase/auth');
+        const { signInWithEmailAndPassword } = authModule;
+
+        // ログイン実行
+        const userCredential = await signInWithEmailAndPassword(auth, testEmail, testPassword);
+
+        console.log(`✅ Emulator認証成功: ${userCredential.user.email} (UID: ${userCredential.user.uid})`);
+        return true;
+      } catch (error: any) {
+        console.error(`❌ Emulator認証失敗: ${error.message}`);
+        console.error(error);
+        return false;
+      }
+    },
+    { testEmail: email, testPassword: password }
+  );
+
+  if (!signInSuccess) {
+    throw new Error(`Emulator認証に失敗しました: ${email}`);
+  }
+
+  // 認証処理の完了を待つ
+  await page.waitForTimeout(2000);
+
+  console.log(`✅ Emulator認証完了: ${email}`);
 }
 
 /**
