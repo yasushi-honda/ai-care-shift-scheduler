@@ -1050,7 +1050,7 @@ Phase 1-3のすべての機能が本番環境にデプロイされ、動作確�
 
 ---
 
-## Phase 17.5: Permission Error修正（versionsサブコレクション） 🔧 **実装中**
+## Phase 17.5: Permission Error修正（versionsサブコレクション） 🔧 **完了**
 
 **優先度**: 🔴 緊急（本番環境の重大バグ）
 
@@ -1091,13 +1091,13 @@ Phase 1-3のすべての機能が本番環境にデプロイされ、動作確�
   - _Requirements: Security Rules修正_
   - **成果物**: `firestore.rules` - versionsルール追加
 
-- [ ] 17.5.4 デプロイと検証
+- [x] 17.5.4 デプロイと検証
   - GitHub Actions CI/CDでデプロイ
   - Firebase Consoleで確認
   - 本番環境でバージョン履歴表示確認
   - _Requirements: デプロイと検証_
 
-- [ ] 17.5.5 Phase 17.5検証ドキュメント作成
+- [x] 17.5.5 Phase 17.5検証ドキュメント作成
   - 修正内容サマリー
   - デプロイ結果
   - 本番環境での動作確認結果
@@ -1117,6 +1117,76 @@ Phase 1-3のすべての機能が本番環境にデプロイされ、動作確�
 
 **ロールバック計画**:
 - 問題発生時: `git revert`でロールバック、またはFirebase Consoleで手動ロールバック
+
+---
+
+## Phase 17.6: COOP警告の解消 🔧 **完了**
+
+**優先度**: 🟡 軽微（本番環境の警告）
+
+**目的**: Google OAuth認証時に表示されるCOOP（Cross-Origin-Opener-Policy）警告を解消
+
+**問題詳細**:
+- **COOP警告**: ログイン時にブラウザコンソールに4回連続でCOOP警告が表示される
+- **根本原因**: `firebase.json`でCOOPヘッダーが未設定
+
+**関連ドキュメント**:
+- `phase17-6-bug-analysis-2025-11-12.md` - バグ分析
+- `phase17-6-design-2025-11-12.md` - 技術設計
+- `phase17-6-verification-2025-11-12.md` - 検証レポート
+
+**推定工数**: 20分
+
+---
+
+### タスク
+
+- [x] 17.6.1 バグ分析ドキュメント作成
+  - COOP警告の原因分析
+  - Firebase Hostingのヘッダー設定調査
+  - 解決策の提案
+  - _Requirements: バグ分析_
+  - **成果物**: `phase17-6-bug-analysis-2025-11-12.md`
+
+- [x] 17.6.2 技術設計ドキュメント作成
+  - COOPヘッダー設計
+  - セキュリティ考慮事項
+  - デプロイ戦略
+  - テスト戦略
+  - _Requirements: 技術設計_
+  - **成果物**: `phase17-6-design-2025-11-12.md`
+
+- [x] 17.6.3 firebase.jsonにCOOPヘッダー追加
+  - Cross-Origin-Opener-Policy: same-origin-allow-popups
+  - 既存のCache-Control設定を維持
+  - _Requirements: 設定修正_
+  - **成果物**: `firebase.json` - COOPヘッダー追加
+
+- [x] 17.6.4 デプロイと検証
+  - GitHub Actions CI/CDでデプロイ
+  - Firebase Hostingに反映確認
+  - 本番環境でCOOP警告消失確認（ユーザー側）
+  - _Requirements: デプロイと検証_
+
+- [x] 17.6.5 Phase 17.6検証ドキュメント作成
+  - 修正内容サマリー
+  - デプロイ結果
+  - 本番環境での動作確認手順
+  - _Requirements: ドキュメント_
+  - **成果物**: `phase17-6-verification-2025-11-12.md`
+
+---
+
+**実装完了基準**:
+- ✅ firebase.jsonにCOOPヘッダー追加
+- ✅ GitHub Actions CI/CDでデプロイ成功
+- ✅ 本番環境でCOOP警告が表示されない
+
+**デプロイ戦略**:
+- GitHub Actions CI/CDでFirebase Hostingをデプロイ
+
+**ロールバック計画**:
+- 問題発生時: `git revert`でロールバック
 
 ---
 7. **Phase 14**: 統合テストとE2Eテスト（全フェーズ）
