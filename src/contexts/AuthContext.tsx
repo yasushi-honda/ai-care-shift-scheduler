@@ -92,6 +92,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setCurrentUser(user);
 
         if (user) {
+          // Firestoreの認証トークンを強制的に更新
+          // これにより、Firestoreの request.auth が完全に初期化される
+          try {
+            await user.getIdToken(true);
+            console.log('✅ Firestore auth token refreshed');
+          } catch (tokenError) {
+            console.error('❌ Failed to refresh auth token:', tokenError);
+            // トークン更新失敗時は続行（既存の動作を維持）
+          }
+
           // Firestoreからユーザープロファイルを取得
           try {
             const userDoc = await getDoc(doc(db, 'users', user.uid));
