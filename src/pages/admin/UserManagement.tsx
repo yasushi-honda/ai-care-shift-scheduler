@@ -1,9 +1,72 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useMemo, memo } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { getAllUsers, UserSummary } from '../../services/userService';
 import { Button } from '../../components/Button';
 import { assertResultError } from '../../../types';
+
+/**
+ * UserRow
+ *
+ * Phase 19.1.5: React.memo()で最適化されたユーザーテーブル行コンポーネント
+ * - 不要な再レンダリングを抑制
+ * - userが変更されない限り再レンダリングしない
+ */
+interface UserRowProps {
+  user: UserSummary;
+}
+
+const UserRow = memo<UserRowProps>(({ user }) => {
+  function formatDate(timestamp: any): string {
+    if (!timestamp) return '-';
+    const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
+    return date.toLocaleDateString('ja-JP', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  }
+
+  return (
+    <tr key={user.userId} className="hover:bg-gray-50">
+      <td className="px-6 py-4 whitespace-nowrap">
+        <div className="flex items-center">
+          <img
+            src={user.photoURL}
+            alt={user.name}
+            className="h-10 w-10 rounded-full mr-3"
+          />
+          <div className="text-sm font-medium text-gray-900">
+            {user.name}
+          </div>
+        </div>
+      </td>
+      <td className="px-6 py-4 whitespace-nowrap">
+        <div className="text-sm text-gray-500">{user.email}</div>
+      </td>
+      <td className="px-6 py-4 whitespace-nowrap">
+        <div className="text-sm text-gray-500">
+          {user.facilitiesCount}件
+        </div>
+      </td>
+      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+        {formatDate(user.lastLoginAt)}
+      </td>
+      <td className="px-6 py-4 whitespace-nowrap text-sm">
+        <Link
+          to={`/admin/users/${user.userId}`}
+          className="text-blue-600 hover:text-blue-800 font-medium"
+        >
+          詳細を見る →
+        </Link>
+      </td>
+    </tr>
+  );
+});
+
+UserRow.displayName = 'UserRow';
 
 /**
  * UserManagement
@@ -41,17 +104,16 @@ export function UserManagement(): React.ReactElement {
     loadUsers();
   }, [loadUsers]);
 
-  function formatDate(timestamp: any): string {
-    if (!timestamp) return '-';
-    const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
-    return date.toLocaleDateString('ja-JP', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  }
+  // Phase 19.1.5: useMemo()で統計計算をメモ化
+  const totalUsers = useMemo(() => users.length, [users.length]);
+
+  const averageFacilities = useMemo(
+    () =>
+      users.length > 0
+        ? (users.reduce((sum, u) => sum + u.facilitiesCount, 0) / users.length).toFixed(1)
+        : '0',
+    [users]
+  );
 
   if (loading) {
     return (
@@ -127,63 +189,27 @@ export function UserManagement(): React.ReactElement {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
+              {/* Phase 19.1.5: React.memo()でメモ化されたUserRowを使用 */}
               {users.map((user) => (
-                <tr key={user.userId} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center">
-                      <img
-                        src={user.photoURL}
-                        alt={user.name}
-                        className="h-10 w-10 rounded-full mr-3"
-                      />
-                      <div className="text-sm font-medium text-gray-900">
-                        {user.name}
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-500">{user.email}</div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-500">
-                      {user.facilitiesCount}件
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {formatDate(user.lastLoginAt)}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm">
-                    <Link
-                      to={`/admin/users/${user.userId}`}
-                      className="text-blue-600 hover:text-blue-800 font-medium"
-                    >
-                      詳細を見る →
-                    </Link>
-                  </td>
-                </tr>
+                <UserRow key={user.userId} user={user} />
               ))}
             </tbody>
           </table>
         </div>
       )}
 
-      {/* 統計サマリー */}
+      {/* Phase 19.1.5: useMemo()でメモ化された統計サマリー */}
       <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="bg-blue-50 rounded-lg p-4">
           <div className="text-sm text-blue-600 font-medium">総ユーザー数</div>
-          <div className="text-2xl font-bold text-blue-900">{users.length}</div>
+          <div className="text-2xl font-bold text-blue-900">{totalUsers}</div>
         </div>
         <div className="bg-green-50 rounded-lg p-4">
           <div className="text-sm text-green-600 font-medium">
             平均所属施設数
           </div>
           <div className="text-2xl font-bold text-green-900">
-            {users.length > 0
-              ? (
-                  users.reduce((sum, u) => sum + u.facilitiesCount, 0) /
-                  users.length
-                ).toFixed(1)
-              : 0}
+            {averageFacilities}
           </div>
         </div>
       </div>

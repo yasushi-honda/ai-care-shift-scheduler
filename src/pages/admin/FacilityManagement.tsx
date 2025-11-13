@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useMemo, memo } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { Facility, assertResultError } from '../../../types';
@@ -9,6 +9,65 @@ import {
   FacilityStats,
 } from '../../services/facilityService';
 import { Button } from '../../components/Button';
+
+/**
+ * FacilityRow
+ *
+ * Phase 19.1.5: React.memo()で最適化された施設テーブル行コンポーネント
+ * - 不要な再レンダリングを抑制
+ * - facilityとstatsが変更されない限り再レンダリングしない
+ */
+interface FacilityRowProps {
+  facility: Facility;
+  stats: FacilityStats | undefined;
+}
+
+const FacilityRow = memo<FacilityRowProps>(({ facility, stats }) => {
+  function formatDate(timestamp: any): string {
+    if (!timestamp) return '-';
+    const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
+    return date.toLocaleDateString('ja-JP', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    });
+  }
+
+  return (
+    <tr key={facility.facilityId} className="hover:bg-gray-50">
+      <td className="px-6 py-4 whitespace-nowrap">
+        <div className="text-sm font-medium text-gray-900">
+          {facility.name}
+        </div>
+        <div className="text-xs text-gray-500">
+          ID: {facility.facilityId.slice(0, 8)}...
+        </div>
+      </td>
+      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+        {formatDate(facility.createdAt)}
+      </td>
+      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+        {facility.members?.length || 0}人
+      </td>
+      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+        {stats ? `${stats.totalStaff}人` : '-'}
+      </td>
+      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+        {stats ? `${stats.totalSchedules}件` : '-'}
+      </td>
+      <td className="px-6 py-4 whitespace-nowrap text-sm">
+        <Link
+          to={`/admin/facilities/${facility.facilityId}`}
+          className="text-blue-600 hover:text-blue-800 font-medium"
+        >
+          詳細を見る →
+        </Link>
+      </td>
+    </tr>
+  );
+});
+
+FacilityRow.displayName = 'FacilityRow';
 
 /**
  * FacilityManagement
@@ -95,15 +154,21 @@ export function FacilityManagement(): React.ReactElement {
     setCreating(false);
   }
 
-  function formatDate(timestamp: any): string {
-    if (!timestamp) return '-';
-    const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
-    return date.toLocaleDateString('ja-JP', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-    });
-  }
+  // Phase 19.1.5: useMemo()で統計計算をメモ化
+  const totalFacilities = useMemo(() => facilities.length, [facilities.length]);
+
+  const totalMembers = useMemo(
+    () => facilities.reduce((sum, f) => sum + (f.members?.length || 0), 0),
+    [facilities]
+  );
+
+  const totalStaff = useMemo(
+    () => Array.from(stats.values()).reduce<number>(
+      (sum: number, s: FacilityStats) => sum + s.totalStaff,
+      0
+    ),
+    [stats]
+  );
 
   if (loading) {
     return (
@@ -253,63 +318,31 @@ export function FacilityManagement(): React.ReactElement {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {facilities.map((facility) => {
-                const facilityStats = stats.get(facility.facilityId);
-                return (
-                  <tr key={facility.facilityId} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-medium text-gray-900">
-                        {facility.name}
-                      </div>
-                      <div className="text-xs text-gray-500">
-                        ID: {facility.facilityId.slice(0, 8)}...
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {formatDate(facility.createdAt)}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {facility.members?.length || 0}人
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {facilityStats ? `${facilityStats.totalStaff}人` : '-'}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {facilityStats
-                        ? `${facilityStats.totalSchedules}件`
-                        : '-'}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm">
-                      <Link
-                        to={`/admin/facilities/${facility.facilityId}`}
-                        className="text-blue-600 hover:text-blue-800 font-medium"
-                      >
-                        詳細を見る →
-                      </Link>
-                    </td>
-                  </tr>
-                );
-              })}
+              {/* Phase 19.1.5: React.memo()でメモ化されたFacilityRowを使用 */}
+              {facilities.map((facility) => (
+                <FacilityRow
+                  key={facility.facilityId}
+                  facility={facility}
+                  stats={stats.get(facility.facilityId)}
+                />
+              ))}
             </tbody>
           </table>
         </div>
       )}
 
-      {/* 統計サマリー */}
+      {/* Phase 19.1.5: useMemo()でメモ化された統計サマリー */}
       <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="bg-blue-50 rounded-lg p-4">
           <div className="text-sm text-blue-600 font-medium">総施設数</div>
           <div className="text-2xl font-bold text-blue-900">
-            {facilities.length}
+            {totalFacilities}
           </div>
         </div>
         <div className="bg-green-50 rounded-lg p-4">
           <div className="text-sm text-green-600 font-medium">総メンバー数</div>
           <div className="text-2xl font-bold text-green-900">
-            {facilities.reduce(
-              (sum, f) => sum + (f.members?.length || 0),
-              0
-            )}
+            {totalMembers}
           </div>
         </div>
         <div className="bg-purple-50 rounded-lg p-4">
@@ -317,10 +350,7 @@ export function FacilityManagement(): React.ReactElement {
             総スタッフ数
           </div>
           <div className="text-2xl font-bold text-purple-900">
-            {Array.from(stats.values()).reduce<number>(
-              (sum: number, s: FacilityStats) => sum + s.totalStaff,
-              0
-            )}
+            {totalStaff}
           </div>
         </div>
       </div>
