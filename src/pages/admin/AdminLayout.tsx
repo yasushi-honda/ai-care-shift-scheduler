@@ -123,10 +123,11 @@ export function AdminLayout(): React.ReactElement {
         <div className="px-4 md:px-6 py-4 flex items-center justify-between">
           <div className="flex items-center space-x-2 md:space-x-4">
             {/* Phase 19.2.1: ハンバーガーメニューボタン（モバイルのみ） */}
+            {/* Phase 19.2.2: タッチターゲット拡大 - min-h/w-[44px]、active:scale-95 */}
             <button
               ref={hamburgerButtonRef}
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              className="md:hidden p-2 rounded-lg hover:bg-gray-100 transition-colors"
+              className="md:hidden p-2 min-h-[44px] min-w-[44px] rounded-lg hover:bg-gray-100 active:bg-gray-200 active:scale-95 transition-all duration-200 flex items-center justify-center"
               aria-label="メニュー"
             >
               <svg
@@ -172,10 +173,11 @@ export function AdminLayout(): React.ReactElement {
                 super-admin
               </span>
             </div>
+            {/* Phase 19.2.2: タッチターゲット拡大 - min-h-[44px] */}
             <button
               onClick={handleSignOut}
               disabled={isSigningOut}
-              className="px-3 md:px-4 py-2 text-xs md:text-sm bg-gray-200 text-gray-700 rounded hover:bg-gray-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-3 md:px-4 py-2 min-h-[44px] text-xs md:text-sm bg-gray-200 text-gray-700 rounded hover:bg-gray-300 active:bg-gray-400 active:scale-95 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isSigningOut ? 'ログアウト中...' : 'ログアウト'}
             </button>

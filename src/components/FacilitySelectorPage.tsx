@@ -61,12 +61,13 @@ export function FacilitySelectorPage() {
         </div>
 
         {/* 施設リスト */}
+        {/* Phase 19.2.2: タッチターゲット拡大 - min-h-[44px]、タッチフィードバック */}
         <div className="space-y-3 mb-6">
           {userProfile.facilities.map((facility) => (
             <button
               key={facility.facilityId}
               onClick={() => handleFacilitySelect(facility.facilityId)}
-              className="w-full p-4 border border-gray-300 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors text-left"
+              className="w-full min-h-[44px] p-4 border border-gray-300 rounded-lg hover:border-blue-500 hover:bg-blue-50 active:bg-blue-100 active:scale-[0.98] transition-all duration-200 text-left"
             >
               <div className="flex items-center justify-between">
                 <div className="flex-1">
@@ -96,10 +97,11 @@ export function FacilitySelectorPage() {
         </div>
 
         {/* アクション */}
+        {/* Phase 19.2.2: タッチターゲット拡大 - min-h-[44px] */}
         <div className="border-t border-gray-200 pt-6">
           <button
             onClick={handleLogout}
-            className="w-full bg-white text-gray-700 px-4 py-2 rounded-md border border-gray-300 hover:bg-gray-50 transition-colors"
+            className="w-full min-h-[44px] bg-white text-gray-700 px-4 py-2 rounded-md border border-gray-300 hover:bg-gray-50 active:bg-gray-100 active:scale-[0.98] transition-all duration-200"
           >
             ログアウト
           </button>

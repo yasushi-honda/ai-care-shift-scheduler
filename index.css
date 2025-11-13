@@ -18,3 +18,34 @@
     animation: slide-in 0.3s ease-out;
   }
 }
+
+/**
+ * Phase 19.2.2: タッチ操作最適化 - グローバルタッチフィードバックスタイル
+ * - タップ時の視覚的フィードバック強化
+ * - -webkit-tap-highlight-color: タップハイライト色のカスタマイズ
+ * - touch-action: タッチ操作の最適化
+ */
+@layer base {
+  /* すべてのインタラクティブ要素にタッチフィードバック */
+  button,
+  a,
+  [role="button"],
+  [role="link"] {
+    -webkit-tap-highlight-color: rgba(59, 130, 246, 0.2); /* 青色半透明 */
+    touch-action: manipulation; /* ダブルタップズーム無効化、シングルタップ高速化 */
+  }
+
+  /* フォーム要素のタッチ最適化 */
+  input,
+  select,
+  textarea {
+    touch-action: manipulation;
+  }
+
+  /* スクロール要素のタッチ最適化（慣性スクロール） */
+  [class*="overflow-"],
+  .overflow-auto,
+  .overflow-scroll {
+    -webkit-overflow-scrolling: touch; /* iOS慣性スクロール有効化 */
+  }
+}
