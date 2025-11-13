@@ -20,6 +20,14 @@ export function AuditLogs(): React.ReactElement {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // ページネーション状態（IDベース）
+  const [lastId, setLastId] = useState<string | null>(null);
+  const [firstId, setFirstId] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [hasNext, setHasNext] = useState(false);
+  const [hasPrev, setHasPrev] = useState(false);
+  const PAGE_SIZE = 50;
+
   // フィルター状態
   const [filterUserId, setFilterUserId] = useState('');
   const [filterAction, setFilterAction] = useState<AuditLogAction | ''>('');
@@ -35,7 +43,7 @@ export function AuditLogs(): React.ReactElement {
     loadLogs();
   }, [filterUserId, filterAction, filterResourceType, filterFacilityId]);
 
-  const loadLogs = async () => {
+  const loadLogs = async (direction: 'next' | 'prev' | 'initial' = 'initial') => {
     setLoading(true);
     setError(null);
 
@@ -45,13 +53,22 @@ export function AuditLogs(): React.ReactElement {
       resourceType?: string;
       facilityId?: string | null;
       limit?: number;
-    } = { limit: 100 };
+      startAfterId?: string;
+      startBeforeId?: string;
+    } = { limit: PAGE_SIZE + 1 }; // hasMore判定のため+1件取得
 
     if (filterUserId) filters.userId = filterUserId;
     if (filterAction) filters.action = filterAction;
     if (filterResourceType) filters.resourceType = filterResourceType;
     if (filterFacilityId !== '') {
       filters.facilityId = filterFacilityId || null;
+    }
+
+    // ページネーション処理（IDベース）
+    if (direction === 'next' && lastId) {
+      filters.startAfterId = lastId;
+    } else if (direction === 'prev' && firstId) {
+      filters.startBeforeId = firstId;
     }
 
     const result = await AuditLogService.getAuditLogs(filters);
@@ -63,7 +80,51 @@ export function AuditLogs(): React.ReactElement {
       return;
     }
 
-    setLogs(result.data);
+    // hasNext/hasPrev判定と表示データの設定
+    const hasMoreData = result.data.length > PAGE_SIZE;
+
+    if (result.data.length > PAGE_SIZE) {
+      // 次ページがある場合：最初のPAGE_SIZE件のみ表示
+      const displayLogs = result.data.slice(0, PAGE_SIZE);
+      setLogs(displayLogs);
+      setFirstId(displayLogs[0].id);
+      setLastId(displayLogs[displayLogs.length - 1].id);
+    } else if (result.data.length > 0) {
+      // 次ページがない場合：全件表示
+      setLogs(result.data);
+      setFirstId(result.data[0].id);
+      setLastId(result.data[result.data.length - 1].id);
+    } else {
+      // データなし
+      setLogs([]);
+      setFirstId(null);
+      setLastId(null);
+    }
+
+    // ページネーション可否を方向別に設定
+    if (direction === 'next') {
+      // 次に進んだ：hasNextを判定、hasPrevは常にtrue
+      setHasNext(hasMoreData);
+      setHasPrev(true);
+    } else if (direction === 'prev') {
+      // 前に戻った：hasPrevを判定、hasNextは常にtrue
+      setHasPrev(hasMoreData);
+      setHasNext(true);
+    } else {
+      // 初期ロード：hasNextを判定、hasPrevはfalse
+      setHasNext(hasMoreData);
+      setHasPrev(false);
+    }
+
+    // ページ番号を更新
+    if (direction === 'next') {
+      setCurrentPage((prev) => prev + 1);
+    } else if (direction === 'prev') {
+      setCurrentPage((prev) => Math.max(1, prev - 1));
+    } else {
+      setCurrentPage(1);
+    }
+
     setLoading(false);
   };
 
@@ -387,10 +448,36 @@ export function AuditLogs(): React.ReactElement {
           </div>
         )}
 
-        {/* ページ情報 */}
+        {/* ページネーション */}
         {!loading && !error && logs.length > 0 && (
-          <div className="px-4 py-3 bg-gray-50 border-t border-gray-200 text-sm text-gray-600">
-            {logs.length}件のログを表示中
+          <div className="px-4 py-3 bg-gray-50 border-t border-gray-200 flex items-center justify-between">
+            <div className="text-sm text-gray-600">
+              ページ {currentPage} ({logs.length}件表示中)
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={() => loadLogs('prev')}
+                disabled={!hasPrev}
+                className={`px-4 py-2 text-sm font-medium rounded transition-colors ${
+                  !hasPrev
+                    ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                    : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+                }`}
+              >
+                前へ
+              </button>
+              <button
+                onClick={() => loadLogs('next')}
+                disabled={!hasNext}
+                className={`px-4 py-2 text-sm font-medium rounded transition-colors ${
+                  !hasNext
+                    ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                    : 'bg-blue-600 text-white hover:bg-blue-700'
+                }`}
+              >
+                次へ
+              </button>
+            </div>
           </div>
         )}
       </div>

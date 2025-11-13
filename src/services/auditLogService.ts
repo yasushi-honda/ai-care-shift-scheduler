@@ -8,6 +8,11 @@ import {
   limit as firestoreLimit,
   getDocs,
   QueryConstraint,
+  startAfter,
+  endBefore,
+  limitToLast,
+  getDoc,
+  doc,
 } from 'firebase/firestore';
 import { db, auth } from '../../firebase';
 import { AuditLog, AuditLogAction, AuditLogError, Result } from '../../types';
@@ -135,9 +140,11 @@ export const AuditLogService = {
   },
 
   /**
-   * 監査ログを取得
+   * 監査ログを取得（ページネーション対応）
    *
    * @param filters フィルター条件
+   * @param filters.startAfterId 前方ページネーション用のドキュメントID
+   * @param filters.startBeforeId 後方ページネーション用のドキュメントID
    * @returns 監査ログリストまたはエラー
    */
   async getAuditLogs(filters: {
@@ -146,8 +153,21 @@ export const AuditLogService = {
     action?: AuditLogAction;
     resourceType?: string;
     limit?: number;
+    startAfterId?: string;
+    startBeforeId?: string;
   }): Promise<Result<AuditLog[], AuditLogError>> {
     try {
+      // パラメータバリデーション: startAfterIdとstartBeforeIdの同時指定を禁止
+      if (filters.startAfterId && filters.startBeforeId) {
+        return {
+          success: false,
+          error: {
+            code: 'VALIDATION_ERROR',
+            message: 'startAfterIdとstartBeforeIdは同時に指定できません',
+          },
+        };
+      }
+
       const constraints: QueryConstraint[] = [];
 
       // フィルター条件を構築
@@ -170,14 +190,44 @@ export const AuditLogService = {
       // タイムスタンプで降順ソート（最新が先）
       constraints.push(orderBy('timestamp', 'desc'));
 
-      // 件数制限
-      if (filters.limit) {
-        constraints.push(firestoreLimit(filters.limit));
+      // IDベースのページネーション
+      if (filters.startAfterId) {
+        // 前方ページネーション: startAfterIdのドキュメントを取得してstartAfterで使用
+        const startDoc = await getDoc(doc(db, 'auditLogs', filters.startAfterId));
+        if (!startDoc.exists()) {
+          return {
+            success: false,
+            error: {
+              code: 'VALIDATION_ERROR',
+              message: '指定されたstartAfterIdのドキュメントが見つかりません',
+            },
+          };
+        }
+        constraints.push(startAfter(startDoc));
+        constraints.push(firestoreLimit(filters.limit || 50));
+      } else if (filters.startBeforeId) {
+        // 後方ページネーション: startBeforeIdのドキュメントを取得してendBeforeで使用
+        const startDoc = await getDoc(doc(db, 'auditLogs', filters.startBeforeId));
+        if (!startDoc.exists()) {
+          return {
+            success: false,
+            error: {
+              code: 'VALIDATION_ERROR',
+              message: '指定されたstartBeforeIdのドキュメントが見つかりません',
+            },
+          };
+        }
+        constraints.push(endBefore(startDoc));
+        constraints.push(limitToLast(filters.limit || 50));
+      } else {
+        // 初期ロード
+        constraints.push(firestoreLimit(filters.limit || 50));
       }
 
       const q = query(collection(db, 'auditLogs'), ...constraints);
       const snapshot = await getDocs(q);
 
+      // シリアライズ可能なデータのみを返す
       const logs: AuditLog[] = snapshot.docs.map((doc) => {
         const data = doc.data();
         return {
