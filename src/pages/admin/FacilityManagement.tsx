@@ -11,6 +11,20 @@ import {
 import { Button } from '../../components/Button';
 
 /**
+ * Helper function: 日付フォーマット
+ * Phase 19.1.5: モジュールスコープに配置してメモ化効果を最大化
+ */
+function formatFacilityDate(timestamp: any): string {
+  if (!timestamp) return '-';
+  const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
+  return date.toLocaleDateString('ja-JP', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  });
+}
+
+/**
  * FacilityRow
  *
  * Phase 19.1.5: React.memo()で最適化された施設テーブル行コンポーネント
@@ -23,18 +37,8 @@ interface FacilityRowProps {
 }
 
 const FacilityRow = memo<FacilityRowProps>(({ facility, stats }) => {
-  function formatDate(timestamp: any): string {
-    if (!timestamp) return '-';
-    const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
-    return date.toLocaleDateString('ja-JP', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-    });
-  }
-
   return (
-    <tr key={facility.facilityId} className="hover:bg-gray-50">
+    <tr className="hover:bg-gray-50">
       <td className="px-6 py-4 whitespace-nowrap">
         <div className="text-sm font-medium text-gray-900">
           {facility.name}
@@ -44,7 +48,7 @@ const FacilityRow = memo<FacilityRowProps>(({ facility, stats }) => {
         </div>
       </td>
       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-        {formatDate(facility.createdAt)}
+        {formatFacilityDate(facility.createdAt)}
       </td>
       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
         {facility.members?.length || 0}人

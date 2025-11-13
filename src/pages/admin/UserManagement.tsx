@@ -6,6 +6,22 @@ import { Button } from '../../components/Button';
 import { assertResultError } from '../../../types';
 
 /**
+ * Helper function: 日付フォーマット
+ * Phase 19.1.5: モジュールスコープに配置してメモ化効果を最大化
+ */
+function formatUserDate(timestamp: any): string {
+  if (!timestamp) return '-';
+  const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
+  return date.toLocaleDateString('ja-JP', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
+
+/**
  * UserRow
  *
  * Phase 19.1.5: React.memo()で最適化されたユーザーテーブル行コンポーネント
@@ -17,24 +33,17 @@ interface UserRowProps {
 }
 
 const UserRow = memo<UserRowProps>(({ user }) => {
-  function formatDate(timestamp: any): string {
-    if (!timestamp) return '-';
-    const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
-    return date.toLocaleDateString('ja-JP', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  }
+  // Phase 19.1.5: photoURLのフォールバック追加
+  const defaultAvatar = `https://ui-avatars.com/api/?name=${encodeURIComponent(
+    user.name
+  )}&background=3b82f6&color=fff`;
 
   return (
-    <tr key={user.userId} className="hover:bg-gray-50">
+    <tr className="hover:bg-gray-50">
       <td className="px-6 py-4 whitespace-nowrap">
         <div className="flex items-center">
           <img
-            src={user.photoURL}
+            src={user.photoURL || defaultAvatar}
             alt={user.name}
             className="h-10 w-10 rounded-full mr-3"
           />
@@ -52,7 +61,7 @@ const UserRow = memo<UserRowProps>(({ user }) => {
         </div>
       </td>
       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-        {formatDate(user.lastLoginAt)}
+        {formatUserDate(user.lastLoginAt)}
       </td>
       <td className="px-6 py-4 whitespace-nowrap text-sm">
         <Link
