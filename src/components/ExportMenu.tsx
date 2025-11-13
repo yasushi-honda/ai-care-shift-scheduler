@@ -79,7 +79,7 @@ export const ExportMenu: React.FC<ExportMenuProps> = ({
   onExportComplete,
 }) => {
   const { currentUser } = useAuth();
-  const { addToast } = useToast();
+  const { showError, showSuccess } = useToast();
   const [isExporting, setIsExporting] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
 
@@ -88,12 +88,12 @@ export const ExportMenu: React.FC<ExportMenuProps> = ({
    */
   const handleExport = async (format: 'csv' | 'pdf') => {
     if (!currentUser) {
-      addToast('ログインが必要です', 'error');
+      showError('ログインが必要です');
       return;
     }
 
     if (!data) {
-      addToast('エクスポートするデータがありません', 'error');
+      showError('エクスポートするデータがありません');
       return;
     }
 
@@ -134,7 +134,7 @@ export const ExportMenu: React.FC<ExportMenuProps> = ({
       });
 
       // 成功通知
-      addToast(`${getDataTypeName(type)}を${format.toUpperCase()}形式でエクスポートしました`, 'success');
+      showSuccess(`${getDataTypeName(type)}を${format.toUpperCase()}形式でエクスポートしました`);
 
       // コールバック実行
       if (onExportComplete && auditLogResult.success) {
@@ -163,9 +163,8 @@ export const ExportMenu: React.FC<ExportMenuProps> = ({
       });
 
       // エラー通知
-      addToast(
-        `エクスポートに失敗しました: ${error instanceof Error ? error.message : '不明なエラー'}`,
-        'error'
+      showError(
+        `エクスポートに失敗しました: ${error instanceof Error ? error.message : '不明なエラー'}`
       );
     } finally {
       setIsExporting(false);
@@ -176,7 +175,7 @@ export const ExportMenu: React.FC<ExportMenuProps> = ({
     <div className={`relative ${className}`}>
       <Button
         onClick={() => setShowDropdown(!showDropdown)}
-        variant="secondary"
+        variant="primary"
         disabled={isExporting}
         icon={
           <svg

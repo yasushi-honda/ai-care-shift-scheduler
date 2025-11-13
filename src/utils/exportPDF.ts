@@ -14,8 +14,6 @@
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { Schedule, Staff, StaffSchedule } from '../../types';
-import { format } from 'date-fns';
-import { ja } from 'date-fns/locale';
 
 // ==================== 日本語フォントロード ====================
 
@@ -84,6 +82,21 @@ async function applyJapaneseFont(doc: jsPDF): Promise<boolean> {
 }
 
 /**
+ * 日付を日本語形式でフォーマット（yyyy年MM月dd日 HH:mm）
+ *
+ * @param date - Dateオブジェクト
+ * @returns フォーマット済み日付文字列
+ */
+function formatDateTimeJP(date: Date): string {
+  const year = date.getFullYear();
+  const month = date.getMonth() + 1;
+  const day = date.getDate();
+  const hours = String(date.getHours()).padStart(2, '0');
+  const minutes = String(date.getMinutes()).padStart(2, '0');
+  return `${year}年${month}月${day}日 ${hours}:${minutes}`;
+}
+
+/**
  * シフト表をPDF生成
  *
  * フォーマット:
@@ -128,7 +141,7 @@ export async function exportScheduleToPDF(
   const targetMonthFormatted = formatTargetMonth(schedule.targetMonth);
   doc.text(`対象月: ${targetMonthFormatted}`, marginLeft, marginTop + 20);
   doc.text(
-    `出力日時: ${format(new Date(), 'yyyy年MM月dd日 HH:mm', { locale: ja })}`,
+    `出力日時: ${formatDateTimeJP(new Date())}`,
     marginLeft + 70,
     marginTop + 20
   );
@@ -230,7 +243,7 @@ export async function exportStaffToPDF(
   // 出力日時
   doc.setFontSize(10);
   doc.text(
-    `出力日時: ${format(new Date(), 'yyyy年MM月dd日 HH:mm', { locale: ja })}`,
+    `出力日時: ${formatDateTimeJP(new Date())}`,
     marginLeft,
     marginTop + 20
   );

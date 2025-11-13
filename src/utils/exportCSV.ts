@@ -12,7 +12,6 @@
 
 import { unparse } from 'papaparse';
 import { Schedule, Staff, LeaveRequestDocument, StaffSchedule } from '../../types';
-import { format } from 'date-fns';
 
 /**
  * シフトデータをCSVエクスポート
@@ -229,7 +228,13 @@ function formatTimestamp(timestamp: any): string {
 
   try {
     const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
-    return format(date, 'yyyy-MM-dd HH:mm:ss');
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    const seconds = String(date.getSeconds()).padStart(2, '0');
+    return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
   } catch (error) {
     return '-';
   }
@@ -261,7 +266,11 @@ export function generateFilename(
   facilityName?: string,
   extension: string = 'csv'
 ): string {
-  const timestamp = format(new Date(), 'yyyyMMdd');
+  const date = new Date();
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  const timestamp = `${year}${month}${day}`;
   const facility = facilityName ? `_${facilityName}` : '';
   return `${prefix}${facility}_${timestamp}.${extension}`;
 }
