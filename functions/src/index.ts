@@ -24,3 +24,6 @@ export { archiveAuditLogs } from './archiveAuditLogs';
 export { backupFacilityData } from './backupFacilityData';
 export { restoreFacilityData } from './restoreFacilityData';
 export { scheduledBackup } from './scheduledBackup';
+
+// Phase 19.3.3: 使用状況レポート機能
+export { scheduledMonthlyReport, generateMonthlyReport } from './generateMonthlyReport';

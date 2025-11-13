@@ -202,6 +202,16 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    // reports collection (Phase 19.3.3で実装)
+    // 月次レポート保存先: /reports/monthly/data/{reportId}
+    match /reports/{reportType}/{document=**} {
+      // super-adminのみ読み取り可能
+      allow read: if isAuthenticated() && isSuperAdmin();
+
+      // Cloud Functionsのみ書き込み可能（クライアントからは書き込み禁止）
+      allow write: if false;
+    }
+
     // デフォルトルール: 上記以外のコレクションはアクセス拒否
     match /{document=**} {
       allow read, write: if false;
