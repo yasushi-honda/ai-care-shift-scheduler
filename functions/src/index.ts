@@ -19,3 +19,8 @@ export { assignSuperAdminOnFirstUser, updateLastLogin } from './auth-onCreate';
 export { onUserDelete } from './onUserDelete';
 export { fixFirstUserRole } from './fix-facility-role';
 export { archiveAuditLogs } from './archiveAuditLogs';
+
+// Phase 19.3.2: バックアップ・リストア機能
+export { backupFacilityData } from './backupFacilityData';
+export { restoreFacilityData } from './restoreFacilityData';
+export { scheduledBackup } from './scheduledBackup';

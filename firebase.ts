@@ -1,6 +1,8 @@
 import { initializeApp } from 'firebase/app';
 import { getAuth, GoogleAuthProvider, setPersistence, browserLocalPersistence, connectAuthEmulator } from 'firebase/auth';
 import { getFirestore, connectFirestoreEmulator } from 'firebase/firestore';
+import { getFunctions, connectFunctionsEmulator } from 'firebase/functions';
+import { getStorage, connectStorageEmulator } from 'firebase/storage';
 
 // Firebase設定（環境変数から取得）
 const firebaseConfig = {
@@ -43,6 +45,12 @@ googleProvider.setCustomParameters({
 // Cloud Firestoreの初期化
 const db = getFirestore(app);
 
+// Cloud Functionsの初期化
+const functions = getFunctions(app, 'us-central1');
+
+// Cloud Storageの初期化
+const storage = getStorage(app);
+
 // Firebase Emulator接続（Phase 18.2: E2Eテスト対応）
 // localhost環境かつ開発モードの場合、Emulatorに接続
 const isLocalhost = typeof window !== 'undefined' &&
@@ -66,7 +74,13 @@ if (isLocalhost) {
   // Firestore Emulator接続（http://localhost:8080）
   connectFirestoreEmulator(db, 'localhost', 8080);
 
-  console.log('🔧 Firebase Emulator接続完了（Auth: http://localhost:9099, Firestore: http://localhost:8080）');
+  // Functions Emulator接続（http://localhost:5001）
+  connectFunctionsEmulator(functions, 'localhost', 5001);
+
+  // Storage Emulator接続（http://localhost:9199）
+  connectStorageEmulator(storage, 'localhost', 9199);
+
+  console.log('🔧 Firebase Emulator接続完了（Auth: http://localhost:9099, Firestore: http://localhost:8080, Functions: http://localhost:5001, Storage: http://localhost:9199）');
 
   // Phase 18.2 Step 4c: E2Eテスト用にauthをグローバルオブジェクトとして公開
   // Playwrightのpage.evaluate()からアクセス可能にする
@@ -87,5 +101,5 @@ if (isLocalhost) {
 }
 
 // エクスポート
-export { auth, googleProvider, db, authReady };
+export { auth, googleProvider, db, functions, storage, authReady };
 export default app;

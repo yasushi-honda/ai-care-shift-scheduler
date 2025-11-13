@@ -2,6 +2,19 @@ rules_version = '2';
 
 service firebase.storage {
   match /b/{bucket}/o {
+    // Phase 19.3.2: バックアップファイル
+    match /backups/{facilityId}/{filename} {
+      // 読み取り: 該当施設のadmin/super-admin
+      allow read: if request.auth != null &&
+                     (request.auth.token.role == 'super-admin' ||
+                      (request.auth.token.facilityId == facilityId &&
+                       request.auth.token.role == 'admin'));
+
+      // 書き込み: Cloud Functionsのみ（service account）
+      // フロントエンドからの直接書き込みは禁止
+      allow write: if false; // Cloud Functions経由のみ
+    }
+
     // 開発用: 基本的な制約付きアクセス
     // ⚠️ 警告: Phase 2で認証を実装予定
     match /{allPaths=**} {
