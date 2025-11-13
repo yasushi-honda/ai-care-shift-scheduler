@@ -185,7 +185,10 @@ export function AdminLayout(): React.ReactElement {
 
       <div className="flex relative">
         {/* Phase 19.2.1: デスクトップサイドバー（md以上で表示） */}
-        <aside className="hidden md:block w-64 bg-white shadow-sm min-h-[calc(100vh-73px)]">
+        <aside
+          className="hidden md:block w-64 bg-white shadow-sm"
+          style={{ minHeight: `calc(100vh - ${HEADER_HEIGHT_PX}px)` }}
+        >
           <nav className="p-4 space-y-2">
             {navigationItems.map((item) => {
               const isActive = location.pathname === item.path;
