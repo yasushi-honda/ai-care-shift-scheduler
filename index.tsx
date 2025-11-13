@@ -1,4 +1,5 @@
 import './index.css';
+import './firebase';  // Phase 18.2 Step 6: Firebase初期化を確実に実行（React マウント前）
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
