@@ -24,6 +24,7 @@ const UserManagement = lazy(() => import('./src/pages/admin/UserManagement'));
 const UserDetail = lazy(() => import('./src/pages/admin/UserDetail'));
 const AuditLogs = lazy(() => import('./src/pages/admin/AuditLogs'));
 const SecurityAlerts = lazy(() => import('./src/pages/admin/SecurityAlerts'));
+const BackupManagement = lazy(() => import('./src/pages/admin/BackupManagement'));
 
 const rootElement = document.getElementById('root');
 if (!rootElement) {
@@ -75,6 +76,7 @@ root.render(
                     <Route path="users/:userId" element={<UserDetail />} />
                     <Route path="audit-logs" element={<AuditLogs />} />
                     <Route path="security-alerts" element={<SecurityAlerts />} />
+                    <Route path="backup" element={<BackupManagement />} />
                   </Route>
                 </Routes>
               </Suspense>
