@@ -15,6 +15,24 @@ import { onCall, HttpsError } from 'firebase-functions/v2/https';
 import * as admin from 'firebase-admin';
 
 /**
+ * 監査ログの型定義
+ */
+interface AuditLog {
+  id: string;
+  facilityId: string;
+  userId: string;
+  timestamp: admin.firestore.Timestamp;
+  action: string;
+  resourceType: string;
+  result?: string;
+  details?: {
+    duration?: number;
+    [key: string]: any;
+  };
+  [key: string]: any;
+}
+
+/**
  * 月次レポートの型定義
  */
 interface MonthlyReport {
@@ -59,10 +77,10 @@ async function generateReportForPeriod(
     .where('timestamp', '<=', admin.firestore.Timestamp.fromDate(endDate))
     .get();
 
-  const logs = logsSnapshot.docs.map((doc) => ({
+  const logs: AuditLog[] = logsSnapshot.docs.map((doc) => ({
     id: doc.id,
     ...doc.data(),
-  }));
+  } as AuditLog));
 
   console.log(`Loaded ${logs.length} audit logs`);
 
@@ -74,6 +92,16 @@ async function generateReportForPeriod(
   let shiftTotalDuration = 0;
 
   for (const log of logs) {
+    // バリデーション: 必須フィールドのチェック
+    if (!log.facilityId || !log.userId || !log.timestamp) {
+      console.warn(`Skipping invalid log entry: ${log.id}`, {
+        hasFacilityId: !!log.facilityId,
+        hasUserId: !!log.userId,
+        hasTimestamp: !!log.timestamp,
+      });
+      continue;
+    }
+
     // 施設別統計
     if (!facilityStats[log.facilityId]) {
       facilityStats[log.facilityId] = { actions: 0, users: new Set() };
@@ -97,7 +125,10 @@ async function generateReportForPeriod(
     if (log.action === 'CREATE' && log.resourceType === 'schedule') {
       shiftTotal++;
       if (log.result === 'success') shiftSuccess++;
-      if (log.details?.duration) shiftTotalDuration += log.details.duration;
+      // durationが数値であることを確認
+      if (log.details?.duration && typeof log.details.duration === 'number') {
+        shiftTotalDuration += log.details.duration;
+      }
     }
   }
 
@@ -225,7 +256,7 @@ export const generateMonthlyReport = onCall<
       throw new HttpsError('unauthenticated', '認証が必要です');
     }
 
-    if (request.auth.token.role !== 'super-admin') {
+    if (!request.auth.token || request.auth.token.role !== 'super-admin') {
       throw new HttpsError(
         'permission-denied',
         'レポート生成権限がありません（super-adminのみ実行可能）'
