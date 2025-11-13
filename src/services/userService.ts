@@ -7,6 +7,8 @@ import {
   updateDoc,
   query,
   orderBy,
+  limit,
+  startAfter,
   arrayUnion,
   arrayRemove,
   Timestamp,
@@ -191,11 +193,17 @@ export async function createOrUpdateUser(
 /**
  * 全ユーザーを取得（super-admin専用）
  *
+ * Phase 19.1.2: ページネーションサポート追加
+ *
  * @param currentUserId - 現在のユーザーID
+ * @param options - オプション（ページネーション）
+ * @param options.limit - 取得する最大件数
+ * @param options.startAfter - このuserIdの後から取得を開始
  * @returns Result<UserSummary[], UserError>
  */
 export async function getAllUsers(
-  currentUserId: string
+  currentUserId: string,
+  options?: { limit?: number; startAfter?: string }
 ): Promise<Result<UserSummary[], UserError>> {
   try {
     // super-admin権限チェック
@@ -211,7 +219,22 @@ export async function getAllUsers(
     }
 
     const usersRef = collection(db, 'users') as CollectionReference<User>;
-    const q = query(usersRef, orderBy('lastLoginAt', 'desc'));
+
+    // Phase 19.1.2: ページネーション対応のクエリ構築
+    let q = query(usersRef, orderBy('lastLoginAt', 'desc'));
+
+    // startAfterが指定されている場合、そのドキュメントの後から取得
+    if (options?.startAfter) {
+      const startAfterDoc = await getDoc(doc(db, 'users', options.startAfter));
+      if (startAfterDoc.exists()) {
+        q = query(usersRef, orderBy('lastLoginAt', 'desc'), startAfter(startAfterDoc));
+      }
+    }
+
+    // limitが指定されている場合、取得件数を制限
+    if (options?.limit) {
+      q = query(q, limit(options.limit));
+    }
 
     const snapshot = await getDocs(q);
     const users: UserSummary[] = snapshot.docs.map((doc) => {

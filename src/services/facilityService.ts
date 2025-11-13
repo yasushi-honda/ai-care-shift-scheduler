@@ -7,6 +7,8 @@ import {
   query,
   orderBy,
   limit,
+  startAfter,
+  where,
   Timestamp,
   CollectionReference,
 } from 'firebase/firestore';
@@ -32,11 +34,17 @@ export interface FacilityStats {
 /**
  * 全施設を取得（super-admin専用）
  *
+ * Phase 19.1.2: ページネーションサポート追加
+ *
  * @param currentUserId - 現在のユーザーID
+ * @param options - オプション（ページネーション）
+ * @param options.limit - 取得する最大件数
+ * @param options.startAfter - このfacilityIdの後から取得を開始
  * @returns Result<Facility[], FacilityError>
  */
 export async function getAllFacilities(
-  currentUserId: string
+  currentUserId: string,
+  options?: { limit?: number; startAfter?: string }
 ): Promise<Result<Facility[], FacilityError>> {
   try {
     // super-admin権限チェック
@@ -52,7 +60,22 @@ export async function getAllFacilities(
     }
 
     const facilitiesRef = collection(db, 'facilities') as CollectionReference<Facility>;
-    const q = query(facilitiesRef, orderBy('createdAt', 'desc'));
+
+    // Phase 19.1.2: ページネーション対応のクエリ構築
+    let q = query(facilitiesRef, orderBy('createdAt', 'desc'));
+
+    // startAfterが指定されている場合、そのドキュメントの後から取得
+    if (options?.startAfter) {
+      const startAfterDoc = await getDoc(doc(db, 'facilities', options.startAfter));
+      if (startAfterDoc.exists()) {
+        q = query(facilitiesRef, orderBy('createdAt', 'desc'), startAfter(startAfterDoc));
+      }
+    }
+
+    // limitが指定されている場合、取得件数を制限
+    if (options?.limit) {
+      q = query(q, limit(options.limit));
+    }
 
     const snapshot = await getDocs(q);
     const facilities: Facility[] = snapshot.docs.map((doc) => ({
