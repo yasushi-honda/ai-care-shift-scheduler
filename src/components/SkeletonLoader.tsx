@@ -65,16 +65,19 @@ export interface SkeletonLoaderProps {
 
 /**
  * 基本スケルトン要素
+ * Phase 19.2.4: CodeRabbit対応 - style prop追加
  */
 const SkeletonBase: React.FC<{
   className?: string;
   noAnimation?: boolean;
-}> = ({ className = '', noAnimation = false }) => {
+  style?: React.CSSProperties;
+}> = ({ className = '', noAnimation = false, style }) => {
   return (
     <div
       className={`bg-gray-200 rounded ${
         noAnimation ? '' : 'animate-pulse'
       } ${className}`}
+      style={style}
       role="status"
       aria-label="読み込み中"
     >

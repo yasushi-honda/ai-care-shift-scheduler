@@ -131,10 +131,11 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
       )}
 
       {/* プログレスバー本体 */}
+      {/* Phase 19.2.4: CodeRabbit対応 - 不確定状態ではaria-valuenowを省略 */}
       <div
         className={`w-full bg-gray-200 rounded-full overflow-hidden ${sizeClasses[size]}`}
         role="progressbar"
-        aria-valuenow={clampedValue}
+        {...(clampedValue !== undefined && { 'aria-valuenow': clampedValue })}
         aria-valuemin={0}
         aria-valuemax={100}
         aria-label={label || (clampedValue !== undefined ? `${Math.round(clampedValue)}%完了` : '処理中')}
@@ -222,11 +223,12 @@ export const CircularProgress: React.FC<CircularProgressProps> = ({
     info: 'text-cyan-600',
   };
 
+  // Phase 19.2.4: CodeRabbit対応 - 不確定状態ではaria-valuenowを省略
   return (
     <div
       className={`inline-flex items-center justify-center ${className}`}
       role="progressbar"
-      aria-valuenow={clampedValue}
+      {...(clampedValue !== undefined && { 'aria-valuenow': clampedValue })}
       aria-valuemin={0}
       aria-valuemax={100}
       aria-label={clampedValue !== undefined ? `${Math.round(clampedValue)}%完了` : '処理中'}

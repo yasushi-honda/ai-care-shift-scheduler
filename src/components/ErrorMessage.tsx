@@ -77,6 +77,13 @@ export interface ErrorMessageProps {
    * 閉じるボタンのコールバック
    */
   onDismiss?: () => void;
+
+  /**
+   * 閉じるボタンのaria-label（i18n対応）
+   * デフォルト: '閉じる'
+   * Phase 19.2.4: CodeRabbit対応 - i18n対応
+   */
+  dismissLabel?: string;
 }
 
 /**
@@ -94,6 +101,7 @@ export const ErrorMessage: React.FC<ErrorMessageProps> = ({
   compact = false,
   dismissible = false,
   onDismiss,
+  dismissLabel = '閉じる',
 }) => {
   // バリエーションに応じたスタイル
   const variantStyles = {
@@ -124,6 +132,32 @@ export const ErrorMessage: React.FC<ErrorMessageProps> = ({
   };
 
   const styles = variantStyles[variant];
+
+  /**
+   * Phase 19.2.4: CodeRabbit対応 - ボタンスタイリング関数抽出
+   * ネストされた三項演算子を可読性の高いヘルパー関数に置き換え
+   */
+  const getButtonClassName = (actionVariant: 'primary' | 'secondary' | undefined) => {
+    const baseClasses = 'px-4 py-2 text-sm font-medium rounded-lg transition-colors';
+
+    if (actionVariant === 'primary') {
+      const primaryColors = {
+        error: 'bg-red-600 hover:bg-red-700',
+        warning: 'bg-yellow-600 hover:bg-yellow-700',
+        info: 'bg-blue-600 hover:bg-blue-700',
+        success: 'bg-green-600 hover:bg-green-700',
+      };
+      return `${baseClasses} ${primaryColors[variant]} text-white`;
+    }
+
+    const secondaryColors = {
+      error: 'border-red-300 text-red-700 hover:bg-red-50',
+      warning: 'border-yellow-300 text-yellow-700 hover:bg-yellow-50',
+      info: 'border-blue-300 text-blue-700 hover:bg-blue-50',
+      success: 'border-green-300 text-green-700 hover:bg-green-50',
+    };
+    return `${baseClasses} bg-white border ${secondaryColors[variant]}`;
+  };
 
   // アイコンのSVG
   const Icon = () => {
@@ -235,33 +269,14 @@ export const ErrorMessage: React.FC<ErrorMessageProps> = ({
               )}
 
               {/* アクションボタン */}
+              {/* Phase 19.2.4: CodeRabbit対応 - ヘルパー関数使用、安定したキー */}
               {actions && actions.length > 0 && (
                 <div className="mt-4 flex gap-3">
-                  {actions.map((action, idx) => (
+                  {actions.map((action) => (
                     <button
-                      key={idx}
+                      key={action.label}
                       onClick={action.onClick}
-                      className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
-                        action.variant === 'primary'
-                          ? `${
-                              variant === 'error'
-                                ? 'bg-red-600 hover:bg-red-700'
-                                : variant === 'warning'
-                                ? 'bg-yellow-600 hover:bg-yellow-700'
-                                : variant === 'info'
-                                ? 'bg-blue-600 hover:bg-blue-700'
-                                : 'bg-green-600 hover:bg-green-700'
-                            } text-white`
-                          : `bg-white border ${
-                              variant === 'error'
-                                ? 'border-red-300 text-red-700 hover:bg-red-50'
-                                : variant === 'warning'
-                                ? 'border-yellow-300 text-yellow-700 hover:bg-yellow-50'
-                                : variant === 'info'
-                                ? 'border-blue-300 text-blue-700 hover:bg-blue-50'
-                                : 'border-green-300 text-green-700 hover:bg-green-50'
-                            }`
-                      }`}
+                      className={getButtonClassName(action.variant)}
                     >
                       {action.label}
                     </button>
@@ -278,7 +293,7 @@ export const ErrorMessage: React.FC<ErrorMessageProps> = ({
             <button
               onClick={onDismiss}
               className="inline-flex text-gray-400 hover:text-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 rounded"
-              aria-label="閉じる"
+              aria-label={dismissLabel}
             >
               <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
                 <path
