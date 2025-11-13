@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { assertResultError } from '../../../types';
@@ -21,6 +21,27 @@ export function AdminLayout(): React.ReactElement {
   const { signOut, userProfile } = useAuth();
   const [isSigningOut, setIsSigningOut] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  // Phase 19.2.1: モバイルメニューのキーボード・アクセシビリティ対応
+  useEffect(() => {
+    if (!isMobileMenuOpen) return;
+
+    // Escapeキーでメニューを閉じる
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setIsMobileMenuOpen(false);
+      }
+    };
+
+    // メニュー表示中はbodyのスクロールを無効化
+    document.addEventListener('keydown', handleEscape);
+    document.body.style.overflow = 'hidden';
+
+    return () => {
+      document.removeEventListener('keydown', handleEscape);
+      document.body.style.overflow = '';
+    };
+  }, [isMobileMenuOpen]);
 
   const handleSignOut = async () => {
     setIsSigningOut(true);
@@ -144,7 +165,12 @@ export function AdminLayout(): React.ReactElement {
             />
 
             {/* スライドインメニュー */}
-            <aside className="fixed top-[73px] left-0 bottom-0 w-64 bg-white shadow-lg z-50 md:hidden overflow-y-auto">
+            <aside
+              className="fixed top-[73px] left-0 bottom-0 w-64 bg-white shadow-lg z-50 md:hidden overflow-y-auto"
+              role="dialog"
+              aria-modal="true"
+              aria-label="モバイルナビゲーションメニュー"
+            >
               <nav className="p-4 space-y-2">
                 {navigationItems.map((item) => {
                   const isActive = location.pathname === item.path;
