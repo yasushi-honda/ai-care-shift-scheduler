@@ -285,11 +285,11 @@ async function exportPDF(
   let filename: string;
 
   if (type === 'schedule') {
-    const pdf = exportScheduleToPDF(data as Schedule, facilityName);
+    const pdf = await exportScheduleToPDF(data as Schedule, facilityName);
     filename = generateFilename('シフト表', facilityName, 'pdf');
     downloadPDF(pdf, filename);
   } else if (type === 'staff') {
-    const pdf = exportStaffToPDF(data as Staff[], facilityName);
+    const pdf = await exportStaffToPDF(data as Staff[], facilityName);
     filename = generateFilename('スタッフ一覧', facilityName, 'pdf');
     downloadPDF(pdf, filename);
   } else {

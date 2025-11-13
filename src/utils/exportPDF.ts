@@ -2,12 +2,13 @@
  * exportPDF.ts
  *
  * Phase 19.3.1: エクスポート機能 - PDF エクスポートユーティリティ
+ * Phase 19.3.1.1: 日本語フォント対応
  *
  * 特徴:
  * - シフト表、スタッフ情報のPDF生成
  * - jsPDFとjspdf-autotableを使用
  * - 印刷用フォーマット（A4サイズ）
- * - 日本語対応
+ * - 日本語フォント対応（NotoSansJP）
  */
 
 import jsPDF from 'jspdf';
@@ -15,6 +16,72 @@ import autoTable from 'jspdf-autotable';
 import { Schedule, Staff, StaffSchedule } from '../../types';
 import { format } from 'date-fns';
 import { ja } from 'date-fns/locale';
+
+// ==================== 日本語フォントロード ====================
+
+/**
+ * 日本語フォントを動的にロード
+ *
+ * @returns Base64エンコードされたフォントデータ、失敗時はnull
+ */
+async function loadJapaneseFont(): Promise<string | null> {
+  try {
+    const response = await fetch('/fonts/NotoSansJP-Regular.otf');
+    if (!response.ok) {
+      throw new Error(`Failed to fetch font: ${response.status}`);
+    }
+    const fontBlob = await response.blob();
+    return await blobToBase64(fontBlob);
+  } catch (error) {
+    console.error('Failed to load Japanese font:', error);
+    return null;
+  }
+}
+
+/**
+ * BlobをBase64文字列に変換
+ *
+ * @param blob - 変換するBlob
+ * @returns Base64エンコードされた文字列
+ */
+function blobToBase64(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const base64 = reader.result as string;
+      // "data:application/octet-stream;base64," プレフィックスを削除
+      const base64String = base64.split(',')[1];
+      resolve(base64String);
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
+}
+
+/**
+ * jsPDFに日本語フォントを適用
+ *
+ * @param doc - jsPDFオブジェクト
+ * @returns フォント適用成功時true、失敗時false
+ */
+async function applyJapaneseFont(doc: jsPDF): Promise<boolean> {
+  const fontBase64 = await loadJapaneseFont();
+
+  if (!fontBase64) {
+    console.warn('Japanese font not available, using default font');
+    return false;
+  }
+
+  try {
+    doc.addFileToVFS('NotoSansJP-Regular.otf', fontBase64);
+    doc.addFont('NotoSansJP-Regular.otf', 'NotoSansJP', 'normal');
+    doc.setFont('NotoSansJP');
+    return true;
+  } catch (error) {
+    console.error('Failed to apply Japanese font:', error);
+    return false;
+  }
+}
 
 /**
  * シフト表をPDF生成
@@ -29,10 +96,10 @@ import { ja } from 'date-fns/locale';
  * @param facilityName - 施設名
  * @returns jsPDFオブジェクト
  */
-export function exportScheduleToPDF(
+export async function exportScheduleToPDF(
   schedule: Schedule,
   facilityName: string
-): jsPDF {
+): Promise<jsPDF> {
   if (!schedule.staffSchedules || schedule.staffSchedules.length === 0) {
     throw new Error('シフトデータが存在しません');
   }
@@ -43,6 +110,9 @@ export function exportScheduleToPDF(
     unit: 'mm',
     format: 'a4',
   });
+
+  // 日本語フォントを適用
+  await applyJapaneseFont(doc);
 
   // ヘッダー情報
   const headerHeight = 30;
@@ -130,10 +200,10 @@ export function exportScheduleToPDF(
  * @param facilityName - 施設名
  * @returns jsPDFオブジェクト
  */
-export function exportStaffToPDF(
+export async function exportStaffToPDF(
   staffList: Staff[],
   facilityName: string
-): jsPDF {
+): Promise<jsPDF> {
   if (!staffList || staffList.length === 0) {
     throw new Error('スタッフデータが存在しません');
   }
@@ -144,6 +214,9 @@ export function exportStaffToPDF(
     unit: 'mm',
     format: 'a4',
   });
+
+  // 日本語フォントを適用
+  await applyJapaneseFont(doc);
 
   // ヘッダー情報
   const headerHeight = 30;
