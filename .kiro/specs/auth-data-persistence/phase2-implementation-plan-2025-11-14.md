@@ -165,8 +165,9 @@ Phase 19完了後に残された技術的負債のうち、**Firestoreクエリ�
 
 **追加する状態変数**:
 ```typescript
-const [lastVisible, setLastVisible] = useState<DocumentSnapshot | null>(null);
-const [firstVisible, setFirstVisible] = useState<DocumentSnapshot | null>(null);
+// DocumentSnapshotは非シリアライズ可能なため、IDベースのアプローチを使用
+const [lastId, setLastId] = useState<string | null>(null);
+const [firstId, setFirstId] = useState<string | null>(null);
 const [currentPage, setCurrentPage] = useState(1);
 const [hasMore, setHasMore] = useState(false);
 const PAGE_SIZE = 50;
@@ -184,8 +185,8 @@ const loadLogs = async (direction: 'next' | 'prev' | 'initial' = 'initial') => {
     resourceType?: string;
     facilityId?: string | null;
     limit?: number;
-    startAfter?: DocumentSnapshot;
-    startBefore?: DocumentSnapshot;
+    startAfterId?: string;
+    startBeforeId?: string;
   } = { limit: PAGE_SIZE };
 
   if (filterUserId) filters.userId = filterUserId;
@@ -195,11 +196,11 @@ const loadLogs = async (direction: 'next' | 'prev' | 'initial' = 'initial') => {
     filters.facilityId = filterFacilityId || null;
   }
 
-  // ページネーション処理
-  if (direction === 'next' && lastVisible) {
-    filters.startAfter = lastVisible;
-  } else if (direction === 'prev' && firstVisible) {
-    filters.startBefore = firstVisible;
+  // ページネーション処理（IDベース）
+  if (direction === 'next' && lastId) {
+    filters.startAfterId = lastId;
+  } else if (direction === 'prev' && firstId) {
+    filters.startBeforeId = firstId;
   }
 
   const result = await AuditLogService.getAuditLogs(filters);
@@ -213,10 +214,10 @@ const loadLogs = async (direction: 'next' | 'prev' | 'initial' = 'initial') => {
 
   setLogs(result.data);
 
-  // DocumentSnapshotを保存（次のページ用）
+  // ログIDを保存（次のページ用）
   if (result.data.length > 0) {
-    setFirstVisible(result.data[0]);
-    setLastVisible(result.data[result.data.length - 1]);
+    setFirstId(result.data[0].id);
+    setLastId(result.data[result.data.length - 1].id);
     setHasMore(result.data.length === PAGE_SIZE);
   } else {
     setHasMore(false);
@@ -335,8 +336,8 @@ const loadReports = async (startMonth: string, endMonth: string) => {
 ### 4.2 getAuditLogs関数の拡張
 
 **追加パラメータ**:
-- `startAfter?: DocumentSnapshot`
-- `startBefore?: DocumentSnapshot`
+- `startAfterId?: string` - 前方ページネーション用のドキュメントID
+- `startBeforeId?: string` - 後方ページネーション用のドキュメントID
 
 **実装例**:
 ```typescript
@@ -346,8 +347,8 @@ public static async getAuditLogs(filters: {
   resourceType?: string;
   facilityId?: string | null;
   limit?: number;
-  startAfter?: DocumentSnapshot;
-  startBefore?: DocumentSnapshot;
+  startAfterId?: string;
+  startBeforeId?: string;
 }): Promise<Result<AuditLogDocument[]>> {
   try {
     const db = getFirestore();
@@ -370,25 +371,32 @@ public static async getAuditLogs(filters: {
     // ソート（必須）
     q = query(q, orderBy('timestamp', 'desc'));
 
-    // ページネーション
-    if (filters.startAfter) {
-      q = query(q, startAfter(filters.startAfter));
-    } else if (filters.startBefore) {
-      q = query(q, endBefore(filters.startBefore), limitToLast(filters.limit || 50));
-    }
-
-    // リミット
-    if (!filters.startBefore) {
+    // IDベースのページネーション
+    if (filters.startAfterId) {
+      // 前方ページネーション: startAfterIdのドキュメントを取得してstartAfterで使用
+      const startDoc = await getDoc(doc(db, 'auditLogs', filters.startAfterId));
+      if (startDoc.exists()) {
+        q = query(q, startAfter(startDoc));
+      }
+      q = query(q, limit(filters.limit || 50));
+    } else if (filters.startBeforeId) {
+      // 後方ページネーション: startBeforeIdのドキュメントを取得してendBeforeで使用
+      const startDoc = await getDoc(doc(db, 'auditLogs', filters.startBeforeId));
+      if (startDoc.exists()) {
+        q = query(q, endBefore(startDoc));
+      }
+      q = query(q, limitToLast(filters.limit || 50));
+    } else {
+      // 初期ロード
       q = query(q, limit(filters.limit || 50));
     }
 
     const snapshot = await getDocs(q);
 
+    // シリアライズ可能なデータのみを返す
     const logs: AuditLogDocument[] = snapshot.docs.map(doc => ({
       id: doc.id,
-      ...doc.data(),
-      // DocumentSnapshotも保存して返す（ページネーション用）
-      _snapshot: doc
+      ...doc.data()
     } as AuditLogDocument));
 
     return createSuccess(logs);
@@ -497,9 +505,11 @@ console.log(`Page load time: ${endTime - startTime}ms`);
 
 **問題**: DocumentSnapshotはシリアライズできないため、Reactの状態管理が複雑になる
 
-**対策**:
-- DocumentSnapshotをコンポーネント外（useRef）に保存
-- または、`_lastId`などの識別子のみを保存してクエリを再構築
+**対策** ✅ **実装済み**:
+- IDベースのアプローチを採用
+- `lastId`, `firstId`をReact stateに保存
+- クエリ時にIDからDocumentSnapshotを再構築
+- シリアライズ可能なデータのみをstateで管理
 
 ### 7.2 リスク2: 「前へ」ボタンの実装の複雑さ
 
@@ -543,6 +553,9 @@ console.log(`Page load time: ${endTime - startTime}ms`);
 - ✅ CodeRabbitレビューで指摘がない
 - ✅ コードがDRY原則に従っている（ページネーションロジックの共通化）
 - ✅ 適切なエラーハンドリングがされている
+- ✅ DocumentSnapshotオブジェクトがReact stateに保存されていない
+- ✅ ページネーションカーソルがシリアライズ可能な識別子のみを使用
+- ✅ React Strict Modeでref/state変更に関する警告が出ない
 
 ---
 
