@@ -1,7 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { assertResultError } from '../../../types';
+
+/**
+ * Phase 19.2.1.5: 定数定義
+ */
+const HEADER_HEIGHT_PX = 73; // ヘッダーの高さ（px）
 
 /**
  * AdminLayout
@@ -14,6 +19,10 @@ import { assertResultError } from '../../../types';
  * Phase 19.2.1: レスポンシブデザイン対応
  * - モバイルでハンバーガーメニュー
  * - サイドバーはmd以上で表示、モバイルではオーバーレイ
+ *
+ * Phase 19.2.1.5: アクセシビリティ・コード品質改善
+ * - フォーカストラップ実装
+ * - マジックナンバー解消（HEADER_HEIGHT_PX定数化）
  */
 export function AdminLayout(): React.ReactElement {
   const location = useLocation();
@@ -21,6 +30,8 @@ export function AdminLayout(): React.ReactElement {
   const { signOut, userProfile } = useAuth();
   const [isSigningOut, setIsSigningOut] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const mobileMenuRef = useRef<HTMLElement>(null);
+  const hamburgerButtonRef = useRef<HTMLButtonElement>(null);
 
   // Phase 19.2.1: モバイルメニューのキーボード・アクセシビリティ対応
   useEffect(() => {
@@ -40,6 +51,49 @@ export function AdminLayout(): React.ReactElement {
     return () => {
       document.removeEventListener('keydown', handleEscape);
       document.body.style.overflow = '';
+    };
+  }, [isMobileMenuOpen]);
+
+  // Phase 19.2.1.5: フォーカストラップ実装
+  useEffect(() => {
+    if (!isMobileMenuOpen || !mobileMenuRef.current) return;
+
+    // フォーカス可能な要素を取得
+    const focusableElements = mobileMenuRef.current.querySelectorAll<HTMLElement>(
+      'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+    );
+
+    const firstElement = focusableElements[0];
+    const lastElement = focusableElements[focusableElements.length - 1];
+
+    // 最初の要素にフォーカス
+    firstElement?.focus();
+
+    // Tabキーでフォーカスをトラップ
+    const handleTab = (e: KeyboardEvent) => {
+      if (e.key !== 'Tab') return;
+
+      if (e.shiftKey) {
+        // Shift+Tab: 最初の要素から最後の要素へ
+        if (document.activeElement === firstElement) {
+          e.preventDefault();
+          lastElement?.focus();
+        }
+      } else {
+        // Tab: 最後の要素から最初の要素へ
+        if (document.activeElement === lastElement) {
+          e.preventDefault();
+          firstElement?.focus();
+        }
+      }
+    };
+
+    document.addEventListener('keydown', handleTab);
+
+    return () => {
+      document.removeEventListener('keydown', handleTab);
+      // メニューが閉じたら、ハンバーガーボタンにフォーカスを戻す
+      hamburgerButtonRef.current?.focus();
     };
   }, [isMobileMenuOpen]);
 
@@ -70,6 +124,7 @@ export function AdminLayout(): React.ReactElement {
           <div className="flex items-center space-x-2 md:space-x-4">
             {/* Phase 19.2.1: ハンバーガーメニューボタン（モバイルのみ） */}
             <button
+              ref={hamburgerButtonRef}
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
               className="md:hidden p-2 rounded-lg hover:bg-gray-100 transition-colors"
               aria-label="メニュー"
@@ -166,7 +221,9 @@ export function AdminLayout(): React.ReactElement {
 
             {/* スライドインメニュー */}
             <aside
-              className="fixed top-[73px] left-0 bottom-0 w-64 bg-white shadow-lg z-50 md:hidden overflow-y-auto"
+              ref={mobileMenuRef}
+              className="fixed left-0 bottom-0 w-64 bg-white shadow-lg z-50 md:hidden overflow-y-auto"
+              style={{ top: `${HEADER_HEIGHT_PX}px` }}
               role="dialog"
               aria-modal="true"
               aria-label="モバイルナビゲーションメニュー"

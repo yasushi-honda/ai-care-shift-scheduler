@@ -178,8 +178,10 @@ export function UserManagement(): React.ReactElement {
       ) : (
         <div className="bg-white rounded-lg shadow-sm overflow-hidden">
           {/* Phase 19.2.1: モバイル対応 - 横スクロール */}
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
+          {/* Phase 19.2.1.5: 横スクロールヒント追加 */}
+          <div className="relative">
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -206,6 +208,11 @@ export function UserManagement(): React.ReactElement {
               ))}
             </tbody>
           </table>
+            </div>
+            {/* Phase 19.2.1.5: モバイル横スクロールヒント */}
+            <div className="md:hidden px-4 py-2 bg-gray-50 border-t border-gray-200 text-xs text-gray-500 text-center">
+              ← 横にスクロールできます →
+            </div>
           </div>
         </div>
       )}
