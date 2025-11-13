@@ -226,35 +226,40 @@ export function FacilityManagement(): React.ReactElement {
       </div>
 
       {/* 新規施設作成フォーム（モーダル） */}
+      {/* Phase 19.2.3: フォームアクセシビリティ改善 - role, aria-labelledby, aria-describedby */}
       {showCreateForm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" role="dialog" aria-modal="true" aria-labelledby="create-facility-title">
           <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">
+            <h2 id="create-facility-title" className="text-xl font-semibold text-gray-900 mb-4">
               新規施設作成
             </h2>
 
             <form onSubmit={handleCreateFacility}>
               <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  施設名 <span className="text-red-500">*</span>
+                <label htmlFor="facility-name-input" className="block text-sm font-medium text-gray-700 mb-2">
+                  施設名 <span className="text-red-500" aria-label="必須">*</span>
                 </label>
                 <input
+                  id="facility-name-input"
                   type="text"
                   value={newFacilityName}
                   onChange={(e) => setNewFacilityName(e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                   placeholder="例: 〇〇介護施設"
                   required
+                  aria-required="true"
+                  aria-describedby="facility-name-description"
+                  aria-invalid={createError ? 'true' : 'false'}
                   maxLength={100}
                   autoFocus
                 />
-                <p className="text-xs text-gray-500 mt-1">
+                <p id="facility-name-description" className="text-xs text-gray-500 mt-1">
                   100文字以内で入力してください
                 </p>
               </div>
 
               {createError && (
-                <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded text-sm text-red-600">
+                <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded text-sm text-red-600" role="alert" aria-live="assertive">
                   {createError}
                 </div>
               )}

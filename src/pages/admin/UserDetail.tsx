@@ -274,23 +274,27 @@ export function UserDetail(): React.ReactElement {
       </div>
 
       {/* アクセス権限付与フォーム（モーダル） */}
+      {/* Phase 19.2.3: フォームアクセシビリティ改善 - role, aria-labelledby, aria-describedby */}
       {showGrantForm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" role="dialog" aria-modal="true" aria-labelledby="grant-access-title">
           <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">
+            <h2 id="grant-access-title" className="text-xl font-semibold text-gray-900 mb-4">
               アクセス権限付与
             </h2>
 
             <form onSubmit={handleGrantAccess}>
               <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  施設 <span className="text-red-500">*</span>
+                <label htmlFor="facility-select" className="block text-sm font-medium text-gray-700 mb-2">
+                  施設 <span className="text-red-500" aria-label="必須">*</span>
                 </label>
                 <select
+                  id="facility-select"
                   value={selectedFacilityId}
                   onChange={(e) => setSelectedFacilityId(e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                   required
+                  aria-required="true"
+                  aria-invalid={grantError ? 'true' : 'false'}
                 >
                   <option value="">施設を選択</option>
                   {availableFacilities.map((facility) => (
@@ -302,14 +306,16 @@ export function UserDetail(): React.ReactElement {
               </div>
 
               <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  ロール <span className="text-red-500">*</span>
+                <label htmlFor="role-select" className="block text-sm font-medium text-gray-700 mb-2">
+                  ロール <span className="text-red-500" aria-label="必須">*</span>
                 </label>
                 <select
+                  id="role-select"
                   value={selectedRole}
                   onChange={(e) => setSelectedRole(e.target.value as FacilityRole)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                   required
+                  aria-required="true"
                 >
                   <option value={FacilityRole.Viewer}>閲覧者 (Viewer)</option>
                   <option value={FacilityRole.Editor}>編集者 (Editor)</option>
@@ -321,7 +327,7 @@ export function UserDetail(): React.ReactElement {
               </div>
 
               {grantError && (
-                <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded text-sm text-red-600">
+                <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded text-sm text-red-600" role="alert" aria-live="assertive">
                   {grantError}
                 </div>
               )}

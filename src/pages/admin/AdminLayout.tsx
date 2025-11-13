@@ -187,9 +187,12 @@ export function AdminLayout(): React.ReactElement {
 
       <div className="flex relative">
         {/* Phase 19.2.1: デスクトップサイドバー（md以上で表示） */}
+        {/* Phase 19.2.3: ランドマークロール追加 - role="navigation" */}
         <aside
           className="hidden md:block w-64 bg-white shadow-sm"
           style={{ minHeight: `calc(100vh - ${HEADER_HEIGHT_PX}px)` }}
+          role="navigation"
+          aria-label="メインナビゲーション"
         >
           <nav className="p-4 space-y-2">
             {navigationItems.map((item) => {
@@ -225,6 +228,7 @@ export function AdminLayout(): React.ReactElement {
             />
 
             {/* スライドインメニュー */}
+            {/* Phase 19.2.3: ランドマークロール追加 - role="navigation"はaria-modal内で使用可能 */}
             <aside
               ref={mobileMenuRef}
               className="fixed left-0 bottom-0 w-64 bg-white shadow-lg z-50 md:hidden overflow-y-auto"
@@ -233,7 +237,7 @@ export function AdminLayout(): React.ReactElement {
               aria-modal="true"
               aria-label="モバイルナビゲーションメニュー"
             >
-              <nav className="p-4 space-y-2">
+              <nav className="p-4 space-y-2" role="navigation" aria-label="モバイルメニュー">
                 {navigationItems.map((item) => {
                   const isActive = location.pathname === item.path;
                   return (
@@ -260,7 +264,8 @@ export function AdminLayout(): React.ReactElement {
         )}
 
         {/* Phase 19.2.1: メインコンテンツエリア（モバイル対応パディング） */}
-        <main className="flex-1 p-4 md:p-8">
+        {/* Phase 19.2.3: ランドマークロール追加 - role="main"は自動適用されるが明示 */}
+        <main className="flex-1 p-4 md:p-8" role="main" aria-label="メインコンテンツ">
           <Outlet />
         </main>
       </div>

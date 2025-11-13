@@ -362,16 +362,17 @@ export function FacilityDetail(): React.ReactElement {
       </div>
 
       {/* 招待モーダル */}
+      {/* Phase 19.2.3: フォームアクセシビリティ改善 - role, aria-labelledby, aria-live */}
       {showInviteModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" role="dialog" aria-modal="true" aria-labelledby="invite-member-title">
           <div className="bg-white rounded-lg shadow-xl p-6 max-w-md w-full mx-4">
-            <h3 className="text-xl font-bold text-gray-900 mb-4">
+            <h3 id="invite-member-title" className="text-xl font-bold text-gray-900 mb-4">
               メンバーを招待
             </h3>
 
             {/* 成功メッセージ */}
             {inviteSuccess && (
-              <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg">
+              <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg" role="status" aria-live="polite">
                 <p className="text-sm text-green-800 whitespace-pre-wrap">
                   {inviteSuccess}
                 </p>
@@ -380,7 +381,7 @@ export function FacilityDetail(): React.ReactElement {
 
             {/* エラーメッセージ */}
             {inviteError && (
-              <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+              <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg" role="alert" aria-live="assertive">
                 <p className="text-sm text-red-800">{inviteError}</p>
               </div>
             )}
@@ -388,24 +389,27 @@ export function FacilityDetail(): React.ReactElement {
             {/* フォーム */}
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label htmlFor="invite-email-input" className="block text-sm font-medium text-gray-700 mb-1">
                   メールアドレス
                 </label>
                 <input
+                  id="invite-email-input"
                   type="email"
                   value={inviteEmail}
                   onChange={(e) => setInviteEmail(e.target.value)}
                   placeholder="example@example.com"
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                   disabled={inviting}
+                  aria-invalid={inviteError ? 'true' : 'false'}
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label htmlFor="invite-role-select" className="block text-sm font-medium text-gray-700 mb-1">
                   ロール
                 </label>
                 <select
+                  id="invite-role-select"
                   value={inviteRole}
                   onChange={(e) =>
                     setInviteRole(e.target.value as 'editor' | 'viewer')
