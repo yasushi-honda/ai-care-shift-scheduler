@@ -19,6 +19,39 @@ export default defineConfig(({ mode }) => {
           '@': path.resolve(__dirname, '.'),
         }
       },
+      // Phase 19.1.3: ビルド最適化設定
+      build: {
+        // ソースマップ生成（プロダクションでは無効化）
+        sourcemap: mode === 'development',
+        // 本番ビルド時の最適化（esbuildはterserより高速）
+        minify: 'esbuild',
+        // esbuild minifyオプション
+        target: 'es2015',
+        // チャンク分割戦略
+        rollupOptions: {
+          output: {
+            // ベンダーライブラリを分離してキャッシュ効率を向上
+            manualChunks: {
+              // React関連
+              'react-vendor': ['react', 'react-dom', 'react-router-dom'],
+              // Firebase関連
+              'firebase-vendor': ['firebase/app', 'firebase/auth', 'firebase/firestore'],
+            },
+            // ファイル名にハッシュを含める（長期キャッシュのため）
+            chunkFileNames: 'assets/[name]-[hash].js',
+            entryFileNames: 'assets/[name]-[hash].js',
+            assetFileNames: 'assets/[name]-[hash].[ext]',
+          },
+        },
+        // チャンクサイズ警告の閾値（KB）
+        chunkSizeWarningLimit: 500,
+        // CSS Code Splitting
+        cssCodeSplit: true,
+      },
+      // 最適化オプション
+      optimizeDeps: {
+        include: ['react', 'react-dom', 'react-router-dom', 'firebase/app', 'firebase/auth', 'firebase/firestore'],
+      },
       test: {
         globals: true,
         environment: 'happy-dom',
