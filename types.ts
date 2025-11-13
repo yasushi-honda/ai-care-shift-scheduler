@@ -257,6 +257,7 @@ export enum AuditLogAction {
   LOGOUT = 'LOGOUT',
   GRANT_ROLE = 'GRANT_ROLE',
   REVOKE_ROLE = 'REVOKE_ROLE',
+  EXPORT = 'EXPORT', // Phase 19.3.1: データエクスポート操作
 }
 
 // 監査ログエントリ（Firestore /auditLogs/{logId}）
