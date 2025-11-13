@@ -115,6 +115,7 @@ export function AdminLayout(): React.ReactElement {
     { path: '/admin/audit-logs', label: '監査ログ', icon: '📋' },
     { path: '/admin/security-alerts', label: 'セキュリティアラート', icon: '🚨' },
     { path: '/admin/backup', label: 'バックアップ管理', icon: '💾' },
+    { path: '/admin/usage-reports', label: '使用状況レポート', icon: '📊' },
   ];
 
   return (
