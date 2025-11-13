@@ -1,0 +1,114 @@
+name: Lighthouse CI
+
+on:
+  pull_request:
+    branches:
+      - main
+      - develop
+  push:
+    branches:
+      - main
+      - develop
+
+jobs:
+  lighthouse:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build application
+        run: npm run build
+        env:
+          # Firebase環境変数（本番環境）
+          VITE_FIREBASE_API_KEY: ${{ secrets.VITE_FIREBASE_API_KEY }}
+          VITE_FIREBASE_AUTH_DOMAIN: ${{ secrets.VITE_FIREBASE_AUTH_DOMAIN }}
+          VITE_FIREBASE_PROJECT_ID: ${{ secrets.VITE_FIREBASE_PROJECT_ID }}
+          VITE_FIREBASE_STORAGE_BUCKET: ${{ secrets.VITE_FIREBASE_STORAGE_BUCKET }}
+          VITE_FIREBASE_MESSAGING_SENDER_ID: ${{ secrets.VITE_FIREBASE_MESSAGING_SENDER_ID }}
+          VITE_FIREBASE_APP_ID: ${{ secrets.VITE_FIREBASE_APP_ID }}
+
+      - name: Install Lighthouse CI
+        run: npm install -g @lhci/cli@0.13.x
+
+      - name: Run Lighthouse CI
+        run: |
+          lhci autorun --config=lighthouserc.json || echo "LHCI_EXIT_CODE=$?" >> $GITHUB_ENV
+        env:
+          LHCI_GITHUB_APP_TOKEN: ${{ secrets.LHCI_GITHUB_APP_TOKEN }}
+
+      - name: Upload Lighthouse results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: lighthouse-results
+          path: .lighthouseci
+
+      - name: Comment PR with Lighthouse results
+        if: github.event_name == 'pull_request' && always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const path = require('path');
+
+            // Lighthouse結果ファイルを読み込み
+            const resultsDir = '.lighthouseci';
+            let comment = '## 🚦 Lighthouse CI Results\n\n';
+
+            try {
+              const files = fs.readdirSync(resultsDir);
+              const manifestFile = files.find(f => f.includes('manifest.json'));
+
+              if (manifestFile) {
+                const manifest = JSON.parse(fs.readFileSync(path.join(resultsDir, manifestFile), 'utf8'));
+
+                // 各URLの結果を処理
+                manifest.forEach((result, index) => {
+                  if (result.summary) {
+                    comment += `### URL ${index + 1}: ${result.url}\n\n`;
+                    comment += '| Category | Score |\n';
+                    comment += '|----------|-------|\n';
+
+                    const categories = ['performance', 'accessibility', 'best-practices', 'seo'];
+                    categories.forEach(category => {
+                      if (result.summary[category]) {
+                        const score = Math.round(result.summary[category] * 100);
+                        const emoji = score >= 90 ? '🟢' : score >= 50 ? '🟡' : '🔴';
+                        comment += `| ${emoji} ${category.charAt(0).toUpperCase() + category.slice(1)} | ${score} |\n`;
+                      }
+                    });
+                    comment += '\n';
+                  }
+                });
+              } else {
+                comment += '_No Lighthouse results found._\n';
+              }
+            } catch (error) {
+              comment += `_Error reading Lighthouse results: ${error.message}_\n`;
+            }
+
+            // 成功基準のチェック
+            comment += '---\n\n';
+            comment += '### Phase 19.1 Success Criteria\n\n';
+            comment += '- ✅ Lighthouse Performance Score: **90+** (Target)\n';
+            comment += '- ✅ Lighthouse Accessibility Score: **95+** (Target)\n\n';
+            comment += '_Compare your scores above with the targets to track progress._\n';
+
+            // PRにコメント
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });

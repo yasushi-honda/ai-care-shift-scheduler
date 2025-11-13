@@ -19,6 +19,7 @@ import { UserDetail } from './src/pages/admin/UserDetail';
 import { AuditLogs } from './src/pages/admin/AuditLogs';
 import { SecurityAlerts } from './src/pages/admin/SecurityAlerts';
 import { InviteAccept } from './src/pages/InviteAccept';
+import { reportWebVitals } from './src/utils/webVitals';  // Phase 19.1.1: Web Vitals測定
 
 const rootElement = document.getElementById('root');
 if (!rootElement) {
@@ -79,3 +80,6 @@ root.render(
     </AuthProvider>
   </React.StrictMode>
 );
+
+// Phase 19.1.1: Web Vitals測定を開始（本番環境でもパフォーマンス測定）
+reportWebVitals();
