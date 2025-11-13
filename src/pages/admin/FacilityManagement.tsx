@@ -228,8 +228,8 @@ export function FacilityManagement(): React.ReactElement {
       {/* 新規施設作成フォーム（モーダル） */}
       {/* Phase 19.2.3: フォームアクセシビリティ改善 - role, aria-labelledby, aria-describedby */}
       {showCreateForm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" role="dialog" aria-modal="true" aria-labelledby="create-facility-title">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4" role="dialog" aria-modal="true" aria-labelledby="create-facility-title">
             <h2 id="create-facility-title" className="text-xl font-semibold text-gray-900 mb-4">
               新規施設作成
             </h2>

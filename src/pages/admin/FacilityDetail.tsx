@@ -364,8 +364,8 @@ export function FacilityDetail(): React.ReactElement {
       {/* 招待モーダル */}
       {/* Phase 19.2.3: フォームアクセシビリティ改善 - role, aria-labelledby, aria-live */}
       {showInviteModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" role="dialog" aria-modal="true" aria-labelledby="invite-member-title">
-          <div className="bg-white rounded-lg shadow-xl p-6 max-w-md w-full mx-4">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl p-6 max-w-md w-full mx-4" role="dialog" aria-modal="true" aria-labelledby="invite-member-title">
             <h3 id="invite-member-title" className="text-xl font-bold text-gray-900 mb-4">
               メンバーを招待
             </h3>

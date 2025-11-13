@@ -276,8 +276,8 @@ export function UserDetail(): React.ReactElement {
       {/* アクセス権限付与フォーム（モーダル） */}
       {/* Phase 19.2.3: フォームアクセシビリティ改善 - role, aria-labelledby, aria-describedby */}
       {showGrantForm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" role="dialog" aria-modal="true" aria-labelledby="grant-access-title">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4" role="dialog" aria-modal="true" aria-labelledby="grant-access-title">
             <h2 id="grant-access-title" className="text-xl font-semibold text-gray-900 mb-4">
               アクセス権限付与
             </h2>
