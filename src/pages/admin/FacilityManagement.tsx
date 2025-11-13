@@ -9,6 +9,7 @@ import {
   FacilityStats,
 } from '../../services/facilityService';
 import { Button } from '../../components/Button';
+import { SkeletonLoader } from '../../components/SkeletonLoader';
 
 /**
  * Helper function: 日付フォーマット
@@ -174,12 +175,32 @@ export function FacilityManagement(): React.ReactElement {
     [stats]
   );
 
+  // Phase 19.2.4: スケルトンローディング適用
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-4"></div>
-          <p className="text-gray-600">読み込み中...</p>
+      <div>
+        {/* ヘッダー（スケルトン） */}
+        <div className="flex items-center justify-between mb-8">
+          <div>
+            <SkeletonLoader variant="text" width="200px" height="2rem" className="mb-2" />
+            <SkeletonLoader variant="text" width="300px" height="1rem" />
+          </div>
+          <SkeletonLoader variant="rect" width="150px" height="44px" />
+        </div>
+
+        {/* テーブル（スケルトン） */}
+        <div className="bg-white rounded-lg shadow-sm overflow-hidden p-6">
+          <SkeletonLoader variant="table" count={5} columns={6} />
+        </div>
+
+        {/* サマリー統計（スケルトン） */}
+        <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-4">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="bg-gray-50 rounded-lg p-4">
+              <SkeletonLoader variant="text" width="100px" height="1rem" className="mb-2" />
+              <SkeletonLoader variant="text" width="60px" height="2rem" />
+            </div>
+          ))}
         </div>
       </div>
     );

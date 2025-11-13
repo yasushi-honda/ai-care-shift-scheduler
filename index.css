@@ -17,6 +17,55 @@
   .animate-slide-in {
     animation: slide-in 0.3s ease-out;
   }
+
+  /**
+   * Phase 19.2.4: プログレスバーアニメーション
+   */
+  @keyframes progress-stripes {
+    0% {
+      background-position: 1rem 0;
+    }
+    100% {
+      background-position: 0 0;
+    }
+  }
+
+  @keyframes progress-indeterminate {
+    0% {
+      transform: translateX(-100%);
+    }
+    50% {
+      transform: translateX(0);
+    }
+    100% {
+      transform: translateX(300%);
+    }
+  }
+
+  /**
+   * Phase 19.2.4: トーストアニメーション
+   */
+  @keyframes toast-enter {
+    0% {
+      transform: translateX(100%);
+      opacity: 0;
+    }
+    100% {
+      transform: translateX(0);
+      opacity: 1;
+    }
+  }
+
+  @keyframes toast-exit {
+    0% {
+      transform: translateX(0) scale(1);
+      opacity: 1;
+    }
+    100% {
+      transform: translateX(20px) scale(0.95);
+      opacity: 0;
+    }
+  }
 }
 
 /**
