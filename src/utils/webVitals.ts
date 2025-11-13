@@ -130,11 +130,14 @@ export function reportWebVitals(): void {
  * カスタムパフォーマンスマーク
  *
  * 特定の処理のパフォーマンスを測定する際に使用。
+ * measurePerformance()が自動的にendMarkを作成するため、
+ * 通常はstartMarkのみをマークします。
  *
  * @example
  * ```typescript
  * markPerformance('facility-list-load-start');
  * // ... 施設一覧を読み込み
+ * // Note: endMarkは measurePerformance() が自動的に作成します
  * const duration = measurePerformance('facility-list-load-start', 'facility-list-load-end');
  * console.log(`Facility list load time: ${duration}ms`);
  * ```
@@ -185,16 +188,23 @@ export function measurePerformance(startMark: string, endMark: string): number {
  * パフォーマンスオブザーバーを使用した詳細測定
  *
  * Resource Timing、Navigation Timing、Paint Timingなどを測定。
+ * メモリリークを防ぐため、cleanup関数を返します。
+ *
+ * @returns cleanup関数（コンポーネントアンマウント時やアプリ終了時に呼び出す）
  *
  * @example
  * ```typescript
- * observePerformance(['resource', 'navigation', 'paint']);
+ * const cleanup = observePerformance(['resource', 'navigation', 'paint']);
+ * // Later, when component unmounts or app closes:
+ * cleanup();
  * ```
  */
-export function observePerformance(types: Array<'resource' | 'navigation' | 'paint'>): void {
+export function observePerformance(types: Array<'resource' | 'navigation' | 'paint'>): () => void {
   if (typeof PerformanceObserver === 'undefined') {
-    return;
+    return () => {};
   }
+
+  const observers: PerformanceObserver[] = [];
 
   types.forEach((type) => {
     try {
@@ -207,10 +217,17 @@ export function observePerformance(types: Array<'resource' | 'navigation' | 'pai
       });
 
       observer.observe({ type, buffered: true });
+      observers.push(observer);
     } catch (error) {
       console.error(`Failed to observe ${type}:`, error);
     }
   });
+
+  // Return cleanup function
+  return () => {
+    observers.forEach(observer => observer.disconnect());
+    observers.length = 0;
+  };
 }
 
 export default reportWebVitals;

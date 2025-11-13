@@ -106,9 +106,16 @@ jobs:
             comment += '_Compare your scores above with the targets to track progress._\n';
 
             // PRにコメント
-            github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: comment
-            });
+            try {
+              await github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: comment
+              });
+            } catch (error) {
+              core.error(`Failed to post Lighthouse comment: ${error.message}`);
+              if (error.stack) {
+                core.error(`Stack trace: ${error.stack}`);
+              }
+            }
