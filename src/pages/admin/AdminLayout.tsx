@@ -10,12 +10,17 @@ import { assertResultError } from '../../../types';
  * - サイドバーナビゲーション（施設管理、ユーザー管理、監査ログ）
  * - ヘッダー（ユーザー情報、ログアウトボタン）
  * - メインコンテンツエリア（Outlet）
+ *
+ * Phase 19.2.1: レスポンシブデザイン対応
+ * - モバイルでハンバーガーメニュー
+ * - サイドバーはmd以上で表示、モバイルではオーバーレイ
  */
 export function AdminLayout(): React.ReactElement {
   const location = useLocation();
   const navigate = useNavigate();
   const { signOut, userProfile } = useAuth();
   const [isSigningOut, setIsSigningOut] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const handleSignOut = async () => {
     setIsSigningOut(true);
@@ -38,22 +43,54 @@ export function AdminLayout(): React.ReactElement {
 
   return (
     <div className="min-h-screen bg-gray-100">
-      {/* ヘッダー */}
+      {/* Phase 19.2.1: レスポンシブヘッダー */}
       <header className="bg-white shadow-sm border-b border-gray-200">
-        <div className="px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center space-x-4">
-            <Link to="/admin" className="text-xl font-bold text-gray-900">
+        <div className="px-4 md:px-6 py-4 flex items-center justify-between">
+          <div className="flex items-center space-x-2 md:space-x-4">
+            {/* Phase 19.2.1: ハンバーガーメニューボタン（モバイルのみ） */}
+            <button
+              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+              className="md:hidden p-2 rounded-lg hover:bg-gray-100 transition-colors"
+              aria-label="メニュー"
+            >
+              <svg
+                className="w-6 h-6 text-gray-700"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                {isMobileMenuOpen ? (
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M6 18L18 6M6 6l12 12"
+                  />
+                ) : (
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M4 6h16M4 12h16M4 18h16"
+                  />
+                )}
+              </svg>
+            </button>
+
+            <Link to="/admin" className="text-lg md:text-xl font-bold text-gray-900">
               管理画面
             </Link>
             <Link
               to="/"
-              className="text-sm text-blue-600 hover:text-blue-800 transition-colors"
+              className="hidden sm:block text-sm text-blue-600 hover:text-blue-800 transition-colors"
             >
               ← メインアプリに戻る
             </Link>
           </div>
-          <div className="flex items-center space-x-4">
-            <div className="text-sm text-gray-700">
+
+          {/* Phase 19.2.1: レスポンシブユーザー情報 */}
+          <div className="flex items-center space-x-2 md:space-x-4">
+            <div className="hidden sm:block text-sm text-gray-700">
               <span className="font-medium">{userProfile?.name || 'ユーザー'}</span>
               <span className="ml-2 px-2 py-1 bg-purple-100 text-purple-800 text-xs font-semibold rounded">
                 super-admin
@@ -62,7 +99,7 @@ export function AdminLayout(): React.ReactElement {
             <button
               onClick={handleSignOut}
               disabled={isSigningOut}
-              className="px-4 py-2 text-sm bg-gray-200 text-gray-700 rounded hover:bg-gray-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-3 md:px-4 py-2 text-xs md:text-sm bg-gray-200 text-gray-700 rounded hover:bg-gray-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isSigningOut ? 'ログアウト中...' : 'ログアウト'}
             </button>
@@ -70,9 +107,9 @@ export function AdminLayout(): React.ReactElement {
         </div>
       </header>
 
-      <div className="flex">
-        {/* サイドバーナビゲーション */}
-        <aside className="w-64 bg-white shadow-sm min-h-[calc(100vh-73px)]">
+      <div className="flex relative">
+        {/* Phase 19.2.1: デスクトップサイドバー（md以上で表示） */}
+        <aside className="hidden md:block w-64 bg-white shadow-sm min-h-[calc(100vh-73px)]">
           <nav className="p-4 space-y-2">
             {navigationItems.map((item) => {
               const isActive = location.pathname === item.path;
@@ -96,8 +133,46 @@ export function AdminLayout(): React.ReactElement {
           </nav>
         </aside>
 
-        {/* メインコンテンツエリア */}
-        <main className="flex-1 p-8">
+        {/* Phase 19.2.1: モバイルオーバーレイサイドバー */}
+        {isMobileMenuOpen && (
+          <>
+            {/* バックドロップ（背景オーバーレイ） */}
+            <div
+              className="fixed inset-0 bg-black bg-opacity-50 z-40 md:hidden"
+              onClick={() => setIsMobileMenuOpen(false)}
+              aria-hidden="true"
+            />
+
+            {/* スライドインメニュー */}
+            <aside className="fixed top-[73px] left-0 bottom-0 w-64 bg-white shadow-lg z-50 md:hidden overflow-y-auto">
+              <nav className="p-4 space-y-2">
+                {navigationItems.map((item) => {
+                  const isActive = location.pathname === item.path;
+                  return (
+                    <Link
+                      key={item.path}
+                      to={item.path}
+                      onClick={() => setIsMobileMenuOpen(false)}
+                      className={`
+                        flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors
+                        ${isActive
+                          ? 'bg-blue-50 text-blue-700 font-medium'
+                          : 'text-gray-700 hover:bg-gray-100'
+                        }
+                      `}
+                    >
+                      <span className="text-xl">{item.icon}</span>
+                      <span>{item.label}</span>
+                    </Link>
+                  );
+                })}
+              </nav>
+            </aside>
+          </>
+        )}
+
+        {/* Phase 19.2.1: メインコンテンツエリア（モバイル対応パディング） */}
+        <main className="flex-1 p-4 md:p-8">
           <Outlet />
         </main>
       </div>

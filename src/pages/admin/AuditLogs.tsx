@@ -417,7 +417,8 @@ export function AuditLogs(): React.ReactElement {
 
             <div className="px-6 py-4 space-y-4">
               {/* 基本情報 */}
-              <div className="grid grid-cols-2 gap-4">
+              {/* Phase 19.2.1: モバイル対応 - レスポンシブグリッド */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <div className="text-sm font-medium text-gray-500">日時</div>
                   <div className="mt-1 text-sm text-gray-900">
