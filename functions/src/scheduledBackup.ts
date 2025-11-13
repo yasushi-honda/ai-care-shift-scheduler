@@ -122,8 +122,8 @@ export const scheduledBackup = onSchedule(
           const file = bucket.file(filename);
 
           await file.save(backupJson, {
-            contentType: 'application/json',
             metadata: {
+              contentType: 'application/json',
               metadata: {
                 facilityId,
                 backupId,

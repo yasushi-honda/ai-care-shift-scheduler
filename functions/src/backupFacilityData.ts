@@ -156,8 +156,8 @@ export const backupFacilityData = onCall<BackupRequest, Promise<BackupResponse>>
       const file = bucket.file(filename);
 
       await file.save(backupJson, {
-        contentType: 'application/json',
         metadata: {
+          contentType: 'application/json',
           metadata: {
             facilityId,
             backupId,

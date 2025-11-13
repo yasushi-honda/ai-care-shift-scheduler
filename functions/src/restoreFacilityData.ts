@@ -86,16 +86,67 @@ export const restoreFacilityData = onCall<RestoreRequest, Promise<RestoreRespons
         throw new HttpsError('invalid-argument', 'バックアップの施設IDが一致しません');
       }
 
-      // 4. バッチ処理で復元（Firestoreの制限: 500ドキュメント/バッチ）
+      const facilityRef = db.collection('facilities').doc(facilityId);
+
+      // 4. 既存サブコレクションデータの削除（クリーンアップフェーズ）
+      console.log(`Cleaning up existing data for ${facilityId}`);
+      const collectionsToClean = ['staff', 'schedules', 'leaveRequests'];
+
+      for (const collectionName of collectionsToClean) {
+        const snapshot = await facilityRef.collection(collectionName).get();
+        let deleteBatch = db.batch();
+        let deleteCount = 0;
+
+        for (const doc of snapshot.docs) {
+          deleteBatch.delete(doc.ref);
+          deleteCount++;
+
+          if (deleteCount >= 450) {
+            await deleteBatch.commit();
+            deleteBatch = db.batch();
+            deleteCount = 0;
+          }
+        }
+
+        if (deleteCount > 0) {
+          await deleteBatch.commit();
+        }
+      }
+
+      // スケジュールのバージョンサブコレクションも削除
+      const schedulesSnapshot = await facilityRef.collection('schedules').get();
+      for (const scheduleDoc of schedulesSnapshot.docs) {
+        const versionsSnapshot = await scheduleDoc.ref.collection('versions').get();
+        let deleteBatch = db.batch();
+        let deleteCount = 0;
+
+        for (const versionDoc of versionsSnapshot.docs) {
+          deleteBatch.delete(versionDoc.ref);
+          deleteCount++;
+
+          if (deleteCount >= 450) {
+            await deleteBatch.commit();
+            deleteBatch = db.batch();
+            deleteCount = 0;
+          }
+        }
+
+        if (deleteCount > 0) {
+          await deleteBatch.commit();
+        }
+      }
+
+      console.log(`Cleanup completed for ${facilityId}`);
+
+      // 5. バッチ処理で復元（Firestoreの制限: 500ドキュメント/バッチ）
       let batch = db.batch();
       let operationCount = 0;
 
-      // 4.1 施設情報を復元
-      const facilityRef = db.collection('facilities').doc(facilityId);
+      // 5.1 施設情報を復元
       batch.set(facilityRef, backupData.data.facility, { merge: true });
       operationCount++;
 
-      // 4.2 スタッフを復元
+      // 5.2 スタッフを復元
       for (const staffData of backupData.data.staff) {
         const staffRef = facilityRef.collection('staff').doc(staffData.id);
         batch.set(staffRef, staffData);
@@ -109,7 +160,7 @@ export const restoreFacilityData = onCall<RestoreRequest, Promise<RestoreRespons
         }
       }
 
-      // 4.3 スケジュールを復元
+      // 5.3 スケジュールを復元
       for (const scheduleData of backupData.data.schedules) {
         const scheduleRef = facilityRef.collection('schedules').doc(scheduleData.id);
         batch.set(scheduleRef, scheduleData);
@@ -122,7 +173,14 @@ export const restoreFacilityData = onCall<RestoreRequest, Promise<RestoreRespons
         }
       }
 
-      // 4.4 スケジュールバージョンを復元
+      // スケジュールのコミットを保証（バージョン復元前に親ドキュメントを確実に作成）
+      if (operationCount > 0) {
+        await batch.commit();
+        batch = db.batch();
+        operationCount = 0;
+      }
+
+      // 5.4 スケジュールバージョンを復元
       for (const versionData of backupData.data.scheduleVersions) {
         const versionRef = facilityRef
           .collection('schedules')
@@ -139,7 +197,7 @@ export const restoreFacilityData = onCall<RestoreRequest, Promise<RestoreRespons
         }
       }
 
-      // 4.5 休暇申請を復元
+      // 5.5 休暇申請を復元
       for (const leaveRequestData of backupData.data.leaveRequests) {
         const leaveRequestRef = facilityRef.collection('leaveRequests').doc(leaveRequestData.id);
         batch.set(leaveRequestRef, leaveRequestData);
