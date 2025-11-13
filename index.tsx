@@ -1,25 +1,29 @@
 import './index.css';
 import './firebase';  // Phase 18.2 Step 6: Firebase初期化を確実に実行（React マウント前）
-import React from 'react';
+import React, { Suspense, lazy } from 'react';
 import ReactDOM from 'react-dom/client';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
-import App from './App';
 import { AuthProvider } from './src/contexts/AuthContext';
 import { ToastProvider, ToastContainer } from './src/contexts/ToastContext';
 import { LoadingProvider, LoadingOverlay } from './src/contexts/LoadingContext';
 import { ProtectedRoute } from './src/components/ProtectedRoute';
 import { AdminProtectedRoute } from './src/components/AdminProtectedRoute';
-import { Forbidden } from './src/pages/Forbidden';
-import { AdminLayout } from './src/pages/admin/AdminLayout';
-import { AdminDashboard } from './src/pages/admin/AdminDashboard';
-import { FacilityManagement } from './src/pages/admin/FacilityManagement';
-import { FacilityDetail } from './src/pages/admin/FacilityDetail';
-import { UserManagement } from './src/pages/admin/UserManagement';
-import { UserDetail } from './src/pages/admin/UserDetail';
-import { AuditLogs } from './src/pages/admin/AuditLogs';
-import { SecurityAlerts } from './src/pages/admin/SecurityAlerts';
-import { InviteAccept } from './src/pages/InviteAccept';
+import { PageLoadingFallback } from './src/components/LoadingFallback';
+import { ChunkLoadErrorBoundary } from './src/components/ChunkLoadErrorBoundary';
 import { reportWebVitals } from './src/utils/webVitals';  // Phase 19.1.1: Web Vitals測定
+
+// Phase 19.1.4: Code Splitting - 動的インポート
+const App = lazy(() => import('./App'));
+const Forbidden = lazy(() => import('./src/pages/Forbidden'));
+const InviteAccept = lazy(() => import('./src/pages/InviteAccept'));
+const AdminLayout = lazy(() => import('./src/pages/admin/AdminLayout'));
+const AdminDashboard = lazy(() => import('./src/pages/admin/AdminDashboard'));
+const FacilityManagement = lazy(() => import('./src/pages/admin/FacilityManagement'));
+const FacilityDetail = lazy(() => import('./src/pages/admin/FacilityDetail'));
+const UserManagement = lazy(() => import('./src/pages/admin/UserManagement'));
+const UserDetail = lazy(() => import('./src/pages/admin/UserDetail'));
+const AuditLogs = lazy(() => import('./src/pages/admin/AuditLogs'));
+const SecurityAlerts = lazy(() => import('./src/pages/admin/SecurityAlerts'));
 
 const rootElement = document.getElementById('root');
 if (!rootElement) {
@@ -33,43 +37,48 @@ root.render(
       <ToastProvider>
         <LoadingProvider>
           <BrowserRouter>
-            <Routes>
-              {/* メインアプリケーション */}
-              <Route
-                path="/"
-                element={
-                  <ProtectedRoute>
-                    <App />
-                  </ProtectedRoute>
-                }
-              />
+            {/* Phase 19.1.4: ErrorBoundary + Suspense でラッピング */}
+            <ChunkLoadErrorBoundary>
+              <Suspense fallback={<PageLoadingFallback />}>
+                <Routes>
+                  {/* メインアプリケーション */}
+                  <Route
+                    path="/"
+                    element={
+                      <ProtectedRoute>
+                        <App />
+                      </ProtectedRoute>
+                    }
+                  />
 
-              {/* 403エラーページ */}
-              <Route path="/forbidden" element={<Forbidden />} />
+                  {/* 403エラーページ */}
+                  <Route path="/forbidden" element={<Forbidden />} />
 
-              {/* 招待受け入れページ（認証不要） */}
-              <Route path="/invite" element={<InviteAccept />} />
+                  {/* 招待受け入れページ（認証不要） */}
+                  <Route path="/invite" element={<InviteAccept />} />
 
-              {/* 管理画面（super-admin専用） */}
-              <Route
-                path="/admin"
-                element={
-                  <ProtectedRoute>
-                    <AdminProtectedRoute>
-                      <AdminLayout />
-                    </AdminProtectedRoute>
-                  </ProtectedRoute>
-                }
-              >
-                <Route index element={<AdminDashboard />} />
-                <Route path="facilities" element={<FacilityManagement />} />
-                <Route path="facilities/:facilityId" element={<FacilityDetail />} />
-                <Route path="users" element={<UserManagement />} />
-                <Route path="users/:userId" element={<UserDetail />} />
-                <Route path="audit-logs" element={<AuditLogs />} />
-                <Route path="security-alerts" element={<SecurityAlerts />} />
-              </Route>
-            </Routes>
+                  {/* 管理画面（super-admin専用） */}
+                  <Route
+                    path="/admin"
+                    element={
+                      <ProtectedRoute>
+                        <AdminProtectedRoute>
+                          <AdminLayout />
+                        </AdminProtectedRoute>
+                      </ProtectedRoute>
+                    }
+                  >
+                    <Route index element={<AdminDashboard />} />
+                    <Route path="facilities" element={<FacilityManagement />} />
+                    <Route path="facilities/:facilityId" element={<FacilityDetail />} />
+                    <Route path="users" element={<UserManagement />} />
+                    <Route path="users/:userId" element={<UserDetail />} />
+                    <Route path="audit-logs" element={<AuditLogs />} />
+                    <Route path="security-alerts" element={<SecurityAlerts />} />
+                  </Route>
+                </Routes>
+              </Suspense>
+            </ChunkLoadErrorBoundary>
 
             {/* グローバルコンポーネント */}
             <ToastContainer />
