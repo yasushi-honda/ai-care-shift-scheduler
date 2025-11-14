@@ -1,6 +1,6 @@
 import { initializeApp } from 'firebase/app';
 import { getAuth, GoogleAuthProvider, setPersistence, browserLocalPersistence, connectAuthEmulator, signInWithEmailAndPassword } from 'firebase/auth';
-import { getFirestore, connectFirestoreEmulator, doc, setDoc, getDoc, Timestamp } from 'firebase/firestore'; // Phase 19, 22: E2Eテスト用にFirestore SDK関数追加
+import { getFirestore, connectFirestoreEmulator, doc, setDoc, getDoc, Timestamp, collection, getDocs, query, where } from 'firebase/firestore'; // Phase 19, 22: E2Eテスト用にFirestore SDK関数追加
 import { getFunctions, connectFunctionsEmulator } from 'firebase/functions';
 import { getStorage, connectStorageEmulator } from 'firebase/storage';
 
@@ -94,6 +94,11 @@ if (isLocalhost) {
     (window as any).__firebaseSetDoc = setDoc;
     (window as any).__firebaseGetDoc = getDoc;
     (window as any).__firebaseTimestamp = Timestamp;
+    // Phase 22: 招待フローE2Eテスト用にcollection, getDocs, query, whereを追加
+    (window as any).__firebaseCollection = collection;
+    (window as any).__firebaseGetDocs = getDocs;
+    (window as any).__firebaseQuery = query;
+    (window as any).__firebaseWhere = where;
 
     console.log('✅ [Firebase Debug] グローバルオブジェクト公開成功:', {
       hasAuth: !!(window as any).__firebaseAuth,
@@ -103,6 +108,10 @@ if (isLocalhost) {
       hasSetDoc: !!(window as any).__firebaseSetDoc,
       hasGetDoc: !!(window as any).__firebaseGetDoc,
       hasTimestamp: !!(window as any).__firebaseTimestamp,
+      hasCollection: !!(window as any).__firebaseCollection,
+      hasGetDocs: !!(window as any).__firebaseGetDocs,
+      hasQuery: !!(window as any).__firebaseQuery,
+      hasWhere: !!(window as any).__firebaseWhere,
     });
   }
 } else {

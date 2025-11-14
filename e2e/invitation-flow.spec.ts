@@ -223,24 +223,190 @@ test.describe('招待フロー - 招待送信（Emulator）', () => {
     await clearEmulatorAuth();
   });
 
-  test.skip('施設詳細ページで招待モーダルを開ける', async ({ page }) => {
-    // TODO Phase 22: 実装予定
-    // 1. Super-adminでログイン
-    // 2. 施設詳細ページにアクセス
-    // 3. 「メンバーを招待」ボタンクリック
-    // 4. モーダル表示確認
-    // 5. メールアドレス入力フィールド確認
-    // 6. ロール選択（editor/viewer）確認
+  test('施設詳細ページで招待モーダルを開ける', async ({ page }) => {
+    // 1. テスト用施設データ作成（Emulator環境 - Admin SDK使用）
+    const facilityId = 'test-facility-invitation-modal';
+    const facilityName = 'テスト施設（招待モーダル）';
+
+    // Admin SDKで施設ドキュメント作成（firestore-helperのパターンを踏襲）
+    const admin = await import('firebase-admin');
+    if (!admin.apps.length) {
+      admin.initializeApp({
+        projectId: 'ai-care-shift-scheduler',
+      });
+    }
+    process.env.FIRESTORE_EMULATOR_HOST = 'localhost:8080';
+
+    const facilityData = {
+      id: facilityId,
+      name: facilityName,
+      address: 'テスト住所',
+      contactEmail: 'test@example.com',
+      contactPhone: '000-0000-0000',
+      createdAt: admin.firestore.Timestamp.now(),
+      updatedAt: admin.firestore.Timestamp.now(),
+    };
+
+    await admin.firestore().collection('facilities').doc(facilityId).set(facilityData);
+
+    // 2. Super-adminユーザーでログイン（Emulator環境）
+    await setupAuthenticatedUser(page, {
+      email: 'super-admin@example.com',
+      password: 'password123',
+      displayName: 'Super Admin User',
+      role: 'super-admin',
+      facilities: [{ facilityId, role: 'super-admin' }],
+    });
+
+    // 3. 施設詳細ページにアクセス
+    await page.goto(`/admin/facility/${facilityId}`);
+
+    // 4. 「+ メンバー追加」ボタンクリック
+    const inviteButton = page.getByRole('button', { name: /メンバー追加/ });
+    await expect(inviteButton).toBeVisible({ timeout: 10000 });
+    await inviteButton.click();
+
+    // 5. モーダル表示確認
+    await expect(page.getByRole('dialog')).toBeVisible({ timeout: 5000 });
+    await expect(page.getByText('メンバーを招待')).toBeVisible({ timeout: 5000 });
+
+    // 6. メールアドレス入力フィールド確認
+    const emailInput = page.locator('#invite-email-input');
+    await expect(emailInput).toBeVisible({ timeout: 5000 });
+    await expect(emailInput).toBeEnabled();
+
+    // 7. ロール選択確認（editor/viewer）
+    const roleSelect = page.locator('#invite-role-select');
+    await expect(roleSelect).toBeVisible({ timeout: 5000 });
+    await expect(roleSelect).toBeEnabled();
+
+    // ロール選択肢を確認（editor, viewer）
+    const options = await roleSelect.locator('option').allTextContents();
+    expect(options).toContain('編集者（シフト編集可能）');
+    expect(options).toContain('閲覧者（閲覧のみ）');
   });
 
-  test.skip('招待を送信すると、招待リンクが生成される', async ({ page }) => {
-    // TODO Phase 22: 実装予定
-    // 1. Super-adminでログイン
-    // 2. 施設詳細ページで招待モーダルを開く
-    // 3. メールアドレス入力: new-user@example.com
-    // 4. ロール選択: editor
-    // 5. 「招待を送信」ボタンクリック
-    // 6. 成功メッセージと招待リンク表示確認
-    // 7. Firestoreに招待ドキュメントが作成されたことを確認
+  test('招待を送信すると、招待リンクが生成される', async ({ page }) => {
+    // 1. テスト用施設データ作成（Emulator環境 - Admin SDK使用）
+    const facilityId = 'test-facility-send-invitation';
+    const facilityName = 'テスト施設（招待送信）';
+
+    // Admin SDKで施設ドキュメント作成
+    const admin = await import('firebase-admin');
+    if (!admin.apps.length) {
+      admin.initializeApp({
+        projectId: 'ai-care-shift-scheduler',
+      });
+    }
+    process.env.FIRESTORE_EMULATOR_HOST = 'localhost:8080';
+
+    const facilityData = {
+      id: facilityId,
+      name: facilityName,
+      address: 'テスト住所',
+      contactEmail: 'test@example.com',
+      contactPhone: '000-0000-0000',
+      createdAt: admin.firestore.Timestamp.now(),
+      updatedAt: admin.firestore.Timestamp.now(),
+    };
+
+    await admin.firestore().collection('facilities').doc(facilityId).set(facilityData);
+
+    // 2. Super-adminユーザーでログイン（Emulator環境）
+    await setupAuthenticatedUser(page, {
+      email: 'super-admin-invite-sender@example.com',
+      password: 'password123',
+      displayName: 'Super Admin Invite Sender',
+      role: 'super-admin',
+      facilities: [{ facilityId, role: 'super-admin' }],
+    });
+
+    // 3. 施設詳細ページにアクセス
+    await page.goto(`/admin/facility/${facilityId}`);
+
+    // 4. 「+ メンバー追加」ボタンクリック
+    const inviteButton = page.getByRole('button', { name: /メンバー追加/ });
+    await expect(inviteButton).toBeVisible({ timeout: 10000 });
+    await inviteButton.click();
+
+    // モーダル表示確認
+    await expect(page.getByRole('dialog')).toBeVisible({ timeout: 5000 });
+
+    // 5. メールアドレス入力: new-user@example.com
+    const emailInput = page.locator('#invite-email-input');
+    await emailInput.fill('new-user@example.com');
+
+    // 6. ロール選択: editor
+    const roleSelect = page.locator('#invite-role-select');
+    await roleSelect.selectOption('editor');
+
+    // 7. 「招待を送信」ボタンクリック
+    const sendButton = page.getByRole('button', { name: '招待を送信' });
+    await sendButton.click();
+
+    // 8. 成功メッセージと招待リンク表示確認
+    // 成功メッセージ: "招待を送信しました！以下のリンクを new-user@example.com に共有してください："
+    await expect(page.getByText(/招待を送信しました/)).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText(/new-user@example\.com/)).toBeVisible({ timeout: 5000 });
+
+    // 招待リンク表示確認（/invite?token= を含む）
+    await expect(page.getByText(/\/invite\?token=/)).toBeVisible({ timeout: 5000 });
+
+    // 9. Firestoreに招待ドキュメントが作成されたことを確認
+    const invitationCreated = await page.evaluate(
+      async ({ testFacilityId, testEmail }) => {
+        try {
+          const db = (window as any).__firebaseDb;
+          const collection = (window as any).__firebaseCollection;
+          const getDocs = (window as any).__firebaseGetDocs;
+          const query = (window as any).__firebaseQuery;
+          const where = (window as any).__firebaseWhere;
+
+          if (!db || !collection || !getDocs || !query || !where) {
+            console.error('❌ Firestore SDK がグローバルオブジェクトに存在しません');
+            return false;
+          }
+
+          // トップレベルinvitationsコレクションから検索
+          const invitationsRef = collection(db, 'invitations');
+          const q = query(
+            invitationsRef,
+            where('email', '==', testEmail),
+            where('facilityId', '==', testFacilityId)
+          );
+          const snapshot = await getDocs(q);
+
+          if (snapshot.empty) {
+            console.error('❌ 招待ドキュメントが存在しません');
+            return false;
+          }
+
+          const invitationData = snapshot.docs[0].data();
+          console.log('✅ 招待ドキュメント作成確認:', {
+            email: invitationData.email,
+            role: invitationData.role,
+            facilityId: invitationData.facilityId,
+            status: invitationData.status,
+          });
+
+          // 期待される値を確認
+          if (invitationData.email === testEmail &&
+              invitationData.role === 'editor' &&
+              invitationData.facilityId === testFacilityId &&
+              invitationData.status === 'pending') {
+            return true;
+          } else {
+            console.error('❌ 招待ドキュメントのデータが不正:', invitationData);
+            return false;
+          }
+        } catch (error: any) {
+          console.error(`❌ Firestore確認エラー: ${error.message}`);
+          return false;
+        }
+      },
+      { testFacilityId: facilityId, testEmail: 'new-user@example.com' }
+    );
+
+    expect(invitationCreated).toBe(true);
   });
 });
