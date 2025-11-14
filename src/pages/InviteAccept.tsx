@@ -13,7 +13,7 @@ import { assertResultError } from '../../types';
  * - ユーザーがログインしていない場合はログインを促す
  * - ユーザーがログイン後、自動的に招待を受け入れて施設へのアクセスを付与
  */
-export function InviteAccept(): React.ReactElement {
+export default function InviteAccept(): React.ReactElement {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { currentUser, signInWithGoogle } = useAuth();
