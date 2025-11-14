@@ -161,3 +161,145 @@ export async function getCurrentUserId(page: Page): Promise<string | null> {
     return null;
   });
 }
+
+/**
+ * Firebase Auth Emulatorにテストユーザーを作成（Phase 17-1）
+ *
+ * @param params ユーザー作成パラメータ
+ * @returns ユーザーID
+ */
+export async function createEmulatorUser(params: {
+  email: string;
+  password: string;
+  displayName: string;
+  customClaims?: Record<string, unknown>;
+}): Promise<string> {
+  console.log(`🔐 Emulatorユーザー作成: ${params.email}`);
+
+  const response = await fetch(
+    'http://localhost:9099/identitytoolkit.googleapis.com/v1/accounts:signUp?key=test-api-key',
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        email: params.email,
+        password: params.password,
+        displayName: params.displayName,
+        returnSecureToken: true,
+      }),
+    }
+  );
+
+  if (!response.ok) {
+    throw new Error(`Failed to create emulator user: ${response.statusText}`);
+  }
+
+  const data = await response.json();
+  const uid = data.localId;
+
+  // Custom Claimsを設定
+  if (params.customClaims) {
+    await setEmulatorCustomClaims(uid, params.customClaims);
+  }
+
+  console.log(`✅ Emulatorユーザー作成成功: ${params.email} (UID: ${uid})`);
+  return uid;
+}
+
+/**
+ * Firebase Auth EmulatorのユーザーにCustom Claimsを設定（Phase 17-1）
+ *
+ * @param uid ユーザーID
+ * @param customClaims Custom Claims（role等）
+ */
+export async function setEmulatorCustomClaims(
+  uid: string,
+  customClaims: Record<string, unknown>
+): Promise<void> {
+  console.log(`🔐 Custom Claims設定: UID=${uid}`, customClaims);
+
+  const response = await fetch(
+    `http://localhost:9099/emulator/v1/projects/ai-care-shift-scheduler/accounts/${uid}`,
+    {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        customAttributes: JSON.stringify(customClaims),
+      }),
+    }
+  );
+
+  if (!response.ok) {
+    throw new Error(`Failed to set custom claims: ${response.statusText}`);
+  }
+
+  console.log(`✅ Custom Claims設定成功: UID=${uid}`);
+}
+
+/**
+ * Emulator環境をクリーンアップ（全ユーザー削除）（Phase 17-1）
+ *
+ * テスト間での状態リセットに使用
+ */
+export async function clearEmulatorAuth(): Promise<void> {
+  console.log(`🧹 Emulator Auth クリーンアップ開始`);
+
+  const response = await fetch(
+    'http://localhost:9099/emulator/v1/projects/ai-care-shift-scheduler/accounts',
+    {
+      method: 'DELETE',
+    }
+  );
+
+  if (!response.ok) {
+    console.warn(`⚠️ Emulator Auth クリーンアップ失敗: ${response.statusText}`);
+    return;
+  }
+
+  console.log(`✅ Emulator Auth クリーンアップ完了`);
+}
+
+/**
+ * Emulator環境でロール付きテストユーザーを作成してログイン（Phase 17-1）
+ *
+ * RBAC権限テストで使用
+ *
+ * @param page Playwrightページオブジェクト
+ * @param params ユーザー作成+ログインパラメータ
+ * @returns ユーザーID
+ */
+export async function setupAuthenticatedUser(
+  page: Page,
+  params: {
+    email: string;
+    password: string;
+    displayName: string;
+    role?: 'super-admin' | 'admin' | 'editor' | 'viewer';
+    facilities?: string[];
+  }
+): Promise<string> {
+  console.log(`🔐 認証済みユーザーセットアップ開始: ${params.email} (role: ${params.role || 'none'})`);
+
+  // Custom Claimsを構築
+  const customClaims: Record<string, unknown> = {};
+  if (params.role) {
+    customClaims.role = params.role;
+  }
+  if (params.facilities && params.facilities.length > 0) {
+    customClaims.facilities = params.facilities;
+  }
+
+  // ユーザー作成
+  const uid = await createEmulatorUser({
+    email: params.email,
+    password: params.password,
+    displayName: params.displayName,
+    customClaims: Object.keys(customClaims).length > 0 ? customClaims : undefined,
+  });
+
+  // ログイン
+  await signInWithEmulator(page, params.email, params.password);
+
+  console.log(`✅ 認証済みユーザーセットアップ完了: ${params.email} (UID: ${uid})`);
+  return uid;
+}

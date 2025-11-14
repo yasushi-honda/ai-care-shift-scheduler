@@ -20,7 +20,8 @@ export default defineConfig({
   },
 
   // 失敗時のリトライ（CI環境のみ）
-  fullyParallel: true,
+  // Firebase Auth Emulator使用時は並列実行を無効化（Phase 17-1）
+  fullyParallel: false,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
 

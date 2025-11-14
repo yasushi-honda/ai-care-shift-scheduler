@@ -1,13 +1,17 @@
 import { test, expect } from '@playwright/test';
+import { setupAuthenticatedUser, clearEmulatorAuth } from './helpers/auth-helper';
 
 /**
  * 認証フローE2Eテスト
  * Phase 14.1: 認証フロー検証
+ * Phase 17-1: Firebase Auth Emulator導入により自動テスト化
  *
- * Google OAuth認証フローの完全自動化は困難なため、以下のアプローチを採用：
- * 1. ログアウト機能: 自動E2Eテスト（このファイル）
- * 2. Google OAuthログイン: 手動テストガイド（phase14-1-auth-flow-manual-test-guide-2025-11-02.md）
- * 3. 認証済み状態のテスト: Firebase Auth Emulator使用（Phase 17以降で検討）
+ * テスト環境：
+ * - Firebase Auth Emulator使用（http://localhost:9099）
+ * - Firestore Emulator使用（http://localhost:8080）
+ *
+ * 実行方法：
+ * npm run test:e2e:emulator
  */
 
 test.describe('認証フロー - ログアウト機能', () => {
@@ -29,43 +33,84 @@ test.describe('認証フロー - ログアウト機能', () => {
   });
 });
 
-test.describe('認証フロー - ユーザー状態確認', () => {
-  test.skip('認証後、ユーザー名が表示される', async ({ page }) => {
-    // このテストは認証済み前提のため、Firebase Auth Emulatorまたはモックが必要
-    // Phase 17以降でFirebase Auth Emulatorを導入して実装予定
-    await page.goto('/');
-
-    // ユーザー名表示を確認
-    await expect(page.getByText(/ようこそ/)).toBeVisible({ timeout: 5000 });
+test.describe('認証フロー - ユーザー状態確認（Emulator）', () => {
+  test.beforeEach(async () => {
+    // Emulator環境をクリーンアップ
+    await clearEmulatorAuth();
   });
 
-  test.skip('認証後、ユーザーアイコンが表示される', async ({ page }) => {
-    // このテストは認証済み前提のため、Firebase Auth Emulatorまたはモックが必要
-    // Phase 17以降でFirebase Auth Emulatorを導入して実装予定
+  test('認証後、ユーザー名が表示される', async ({ page }) => {
+    // Emulator環境でテストユーザーを作成してログイン
+    await setupAuthenticatedUser(page, {
+      email: 'test-user@example.com',
+      password: 'password123',
+      displayName: 'Test User',
+      role: 'super-admin',
+    });
+
+    // ダッシュボードに遷移
     await page.goto('/');
 
-    // ユーザーアイコン表示を確認
-    const userIcon = page.locator('[data-testid="user-icon"]');
-    await expect(userIcon).toBeVisible({ timeout: 5000 });
+    // ユーザー名表示を確認（ヘッダーまたはサイドバーに表示されると想定）
+    await expect(page.getByText(/Test User/)).toBeVisible({ timeout: 5000 });
+  });
+
+  test('認証後、ユーザーアイコンまたは表示名が確認できる', async ({ page }) => {
+    // Emulator環境でテストユーザーを作成してログイン
+    await setupAuthenticatedUser(page, {
+      email: 'test-user2@example.com',
+      password: 'password123',
+      displayName: 'Another User',
+      role: 'super-admin',
+    });
+
+    // ダッシュボードに遷移
+    await page.goto('/');
+
+    // ユーザーアイコンまたは表示名が存在することを確認
+    // Note: UIデザインに応じて調整が必要
+    const hasUserIcon = await page.locator('[data-testid="user-icon"]').isVisible().catch(() => false);
+    const hasDisplayName = await page.getByText(/Another User/).isVisible().catch(() => false);
+
+    expect(hasUserIcon || hasDisplayName).toBeTruthy();
   });
 });
 
-test.describe('認証フロー - アクセス権限なし画面', () => {
-  test.skip('アクセス権限がない場合、Forbiddenページが表示される', async ({ page }) => {
-    // このテストは認証済み＋権限なしの状態を作る必要がある
-    // Firebase Auth Emulatorを使用してテスト用ユーザーを作成する必要がある
-    // Phase 17以降で実装予定
-    await page.goto('/forbidden');
+test.describe('認証フロー - アクセス権限なし画面（Emulator）', () => {
+  test.beforeEach(async () => {
+    // Emulator環境をクリーンアップ
+    await clearEmulatorAuth();
+  });
 
+  test('アクセス権限がない場合、Forbiddenページが表示される', async ({ page }) => {
+    // 権限なしユーザーでログイン（roleなし）
+    await setupAuthenticatedUser(page, {
+      email: 'no-permission@example.com',
+      password: 'password123',
+      displayName: 'No Permission User',
+      // roleを設定しない = 権限なし
+    });
+
+    // 管理画面にアクセス試行
+    await page.goto('/admin');
+
+    // Forbiddenページにリダイレクトされることを確認
+    await expect(page).toHaveURL('/forbidden', { timeout: 5000 });
     await expect(page.getByRole('heading', { name: 'アクセス権限がありません' })).toBeVisible();
   });
 
-  test.skip('Forbiddenページに「管理者に連絡」メッセージが表示される', async ({ page }) => {
-    // このテストは認証済み＋権限なしの状態を作る必要がある
-    // Firebase Auth Emulatorを使用してテスト用ユーザーを作成する必要がある
-    // Phase 17以降で実装予定
+  test('Forbiddenページに「管理者に連絡」メッセージが表示される', async ({ page }) => {
+    // 権限なしユーザーでログイン
+    await setupAuthenticatedUser(page, {
+      email: 'no-permission2@example.com',
+      password: 'password123',
+      displayName: 'No Permission User 2',
+    });
+
+    // 直接Forbiddenページに遷移
     await page.goto('/forbidden');
 
-    await expect(page.getByText(/管理者に連絡/)).toBeVisible();
+    // メッセージ表示を確認
+    await expect(page.getByText(/管理者に連絡/)).toBeVisible({ timeout: 5000 });
   });
 });

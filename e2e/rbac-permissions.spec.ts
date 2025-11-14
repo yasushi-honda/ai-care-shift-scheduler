@@ -1,13 +1,17 @@
 import { test, expect } from '@playwright/test';
+import { setupAuthenticatedUser, clearEmulatorAuth } from './helpers/auth-helper';
 
 /**
  * RBAC権限チェックE2Eテスト
  * Phase 14.3: RBAC権限チェック検証
+ * Phase 17-1: Firebase Auth Emulator導入により自動テスト化
  *
- * Google OAuth認証フローの完全自動化は困難なため、以下のアプローチを採用：
- * 1. Forbiddenページの表示テスト: 自動E2Eテスト（このファイル）
- * 2. 各ロールの権限チェック: 手動テストガイド（phase14-3-rbac-manual-test-guide-2025-11-02.md）
- * 3. Firebase Auth Emulatorを使用したテスト: Phase 17以降で検討
+ * テスト環境：
+ * - Firebase Auth Emulator使用（http://localhost:9099）
+ * - Firestore Emulator使用（http://localhost:8080）
+ *
+ * 実行方法：
+ * npm run test:e2e:emulator
  */
 
 test.describe('RBAC権限チェック - アクセス権限なし画面（Forbidden）', () => {
@@ -50,88 +54,79 @@ test.describe('RBAC権限チェック - アクセス権限なし画面（Forbidd
   });
 });
 
-test.describe('RBAC権限チェック - 各ロール（Firebase Auth Emulator必要）', () => {
-  test.skip('super-adminは管理画面にアクセスできる', async ({ page }) => {
-    // このテストはFirebase Auth Emulatorまたはモックが必要
-    // Phase 17以降でFirebase Auth Emulatorを導入して実装予定
-
-    // 実装予定の内容:
-    // 1. Firebase Auth Emulatorでsuper-adminユーザーを作成
-    // 2. ログイン処理
-    // 3. 管理画面（/admin）にアクセス
-    // 4. 「施設管理」「ユーザー管理」タブが表示されることを確認
+test.describe('RBAC権限チェック - 各ロール（Emulator）', () => {
+  test.beforeEach(async () => {
+    // Emulator環境をクリーンアップ
+    await clearEmulatorAuth();
   });
 
-  test.skip('adminはシフト作成・編集ができる', async ({ page }) => {
-    // このテストはFirebase Auth Emulatorまたはモックが必要
-    // Phase 17以降で実装予定
+  test('super-adminは管理画面にアクセスできる', async ({ page }) => {
+    // super-adminユーザーを作成してログイン
+    await setupAuthenticatedUser(page, {
+      email: 'super-admin@example.com',
+      password: 'password123',
+      displayName: 'Super Admin User',
+      role: 'super-admin',
+    });
 
-    // 実装予定の内容:
-    // 1. Firebase Auth Emulatorでadminユーザーを作成
-    // 2. 施設に所属させる（facilities配列にadmin権限で追加）
-    // 3. ログイン処理
-    // 4. 「シフト作成実行」ボタンが表示されることを確認
-    // 5. デモシフトを作成
-    // 6. シフト編集ができることを確認
+    // 管理画面にアクセス
+    await page.goto('/admin');
+
+    // 管理画面が表示されることを確認（Forbiddenにリダイレクトされない）
+    await expect(page).not.toHaveURL('/forbidden', { timeout: 3000 });
+
+    // 管理画面の要素が表示されることを確認（例: 「施設管理」タブ）
+    // Note: 実際のUI実装に応じて調整が必要
+    const hasFacilityTab = await page.getByText(/施設管理/).isVisible().catch(() => false);
+    const hasUserTab = await page.getByText(/ユーザー管理/).isVisible().catch(() => false);
+    const hasAdminContent = await page.locator('[data-testid="admin-panel"]').isVisible().catch(() => false);
+
+    expect(hasFacilityTab || hasUserTab || hasAdminContent).toBeTruthy();
+  });
+
+  test('権限なしユーザーはForbiddenページが表示される', async ({ page }) => {
+    // 権限なしユーザーを作成してログイン（roleなし）
+    await setupAuthenticatedUser(page, {
+      email: 'no-permission@example.com',
+      password: 'password123',
+      displayName: 'No Permission User',
+      // roleを設定しない = 権限なし
+    });
+
+    // 管理画面にアクセス試行
+    await page.goto('/admin');
+
+    // Forbiddenページにリダイレクトされることを確認
+    await expect(page).toHaveURL('/forbidden', { timeout: 5000 });
+
+    // 「アクセス権限がありません」が表示されることを確認
+    await expect(page.getByText(/アクセス/)).toBeVisible();
+  });
+
+  // 以下のテストは、実際のUI実装を詳しく確認する必要があるため、Phase 17-2以降で実装
+
+  test.skip('adminはシフト作成・編集ができる', async ({ page }) => {
+    // Phase 17-2以降で実装予定
+    // 施設データのセットアップが必要
   });
 
   test.skip('editorはシフト作成・編集ができるが、スタッフ編集はできない', async ({ page }) => {
-    // このテストはFirebase Auth Emulatorまたはモックが必要
-    // Phase 17以降で実装予定
-
-    // 実装予定の内容:
-    // 1. Firebase Auth Emulatorでeditorユーザーを作成
-    // 2. 施設に所属させる（facilities配列にeditor権限で追加）
-    // 3. ログイン処理
-    // 4. シフト作成・編集ができることを確認
-    // 5. スタッフ追加・編集・削除ボタンが表示されないか、無効化されていることを確認
+    // Phase 17-2以降で実装予定
+    // 施設データのセットアップと詳細なUI要素チェックが必要
   });
 
   test.skip('viewerはすべて閲覧のみで、編集操作が拒否される', async ({ page }) => {
-    // このテストはFirebase Auth Emulatorまたはモックが必要
-    // Phase 17以降で実装予定
-
-    // 実装予定の内容:
-    // 1. Firebase Auth Emulatorでviewerユーザーを作成
-    // 2. 施設に所属させる（facilities配列にviewer権限で追加）
-    // 3. ログイン処理
-    // 4. シフト表が表示されることを確認
-    // 5. 「シフト作成実行」ボタンが表示されないか、無効化されていることを確認
-    // 6. スタッフ編集・削除ボタンが表示されないか、無効化されていることを確認
-  });
-
-  test.skip('権限なしユーザーはForbiddenページが表示される', async ({ page }) => {
-    // このテストはFirebase Auth Emulatorまたはモックが必要
-    // Phase 17以降で実装予定
-
-    // 実装予定の内容:
-    // 1. Firebase Auth Emulatorで権限なしユーザーを作成（facilities: []）
-    // 2. ログイン処理
-    // 3. /forbidden ページにリダイレクトされることを確認
-    // 4. 「アクセス権限がありません」が表示されることを確認
+    // Phase 17-2以降で実装予定
+    // 施設データのセットアップと詳細なUI要素チェックが必要
   });
 
   test.skip('adminは他の施設のデータにアクセスできない', async ({ page }) => {
-    // このテストはFirebase Auth Emulatorまたはモックが必要
-    // Phase 17以降で実装予定
-
-    // 実装予定の内容:
-    // 1. Firebase Auth Emulatorでadminユーザーを作成（施設Aのみに所属）
-    // 2. 別の施設Bのデータに直接アクセスを試みる
-    // 3. アクセスが拒否されることを確認（Firestore Security Rulesで拒否）
-    // 4. エラーメッセージが表示されることを確認
+    // Phase 17-2以降で実装予定
+    // 複数施設のセットアップとFirestore Security Rulesテストが必要
   });
 
   test.skip('adminはメンバー招待でeditor/viewerのみ選択できる', async ({ page }) => {
-    // このテストはFirebase Auth Emulatorまたはモックが必要
-    // Phase 17以降で実装予定
-
-    // 実装予定の内容:
-    // 1. Firebase Auth Emulatorでadminユーザーを作成
-    // 2. ログイン処理
-    // 3. 施設詳細ページにアクセス
-    // 4. 「メンバーを招待」ボタンをクリック
-    // 5. ロール選択ドロップダウンに「editor」「viewer」のみが表示されることを確認
-    // 6. 「admin」「super-admin」が選択できないことを確認
+    // Phase 17-2以降で実装予定
+    // 施設詳細ページとメンバー招待UIの詳細な確認が必要
   });
 });

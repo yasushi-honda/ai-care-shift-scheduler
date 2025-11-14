@@ -1,13 +1,22 @@
 import { test, expect } from '@playwright/test';
+// import { setupAuthenticatedUser, clearEmulatorAuth } from './helpers/auth-helper';
 
 /**
  * データCRUD操作E2Eテスト
  * Phase 14.2: データCRUD操作検証
+ * Phase 17-1: Firebase Auth Emulator導入（詳細テストはPhase 17-2以降で実装）
  *
- * Google OAuth認証フローの完全自動化は困難なため、以下のアプローチを採用：
- * 1. UI要素の表示テスト: 自動E2Eテスト（このファイル）
- * 2. CRUD操作の実行テスト: 手動テストガイド（phase14-2-crud-manual-test-guide-2025-11-02.md）
- * 3. Firebase Auth Emulatorを使用したテスト: Phase 17以降で検討
+ * 現状:
+ * - 認証なしで実行できる基本的なUI表示テストのみ実装済み
+ * - CRUD操作の詳細テスト（15テストケース）は Phase 17-2以降で実装予定
+ *
+ * Phase 17-2で実装予定の内容:
+ * - Emulator環境でのFirestoreデータセットアップ
+ * - スタッフ/シフト/休暇申請/要件設定のCRUD操作テスト
+ * - バージョン履歴・復元機能テスト
+ *
+ * 実行方法（Phase 17-2以降）:
+ * npm run test:e2e:emulator
  */
 
 test.describe('データCRUD操作 - スタッフ管理UI', () => {
