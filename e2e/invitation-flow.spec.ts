@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { setupAuthenticatedUser, clearEmulatorAuth } from './helpers/auth-helper';
+import { createInvitationInEmulator, clearEmulatorFirestore } from './helpers/firestore-helper';
 
 /**
  * 招待フローE2Eテスト
@@ -17,14 +18,43 @@ test.describe('招待フロー - 招待受け入れ（Emulator）', () => {
   test.beforeEach(async () => {
     // Emulator環境をクリーンアップ
     await clearEmulatorAuth();
+    await clearEmulatorFirestore();
   });
 
-  test.skip('未ログインユーザーが招待リンクにアクセスすると、ログイン画面が表示される', async ({ page }) => {
-    // TODO Phase 22: 実装予定
+  test('未ログインユーザーが招待リンクにアクセスすると、ログイン画面が表示される', async ({ page }) => {
+    // ブラウザコンソールログをキャプチャ
+    page.on('console', (msg) => {
+      const text = msg.text();
+      console.log(`[Browser Console ${msg.type()}] ${text}`);
+    });
+
     // 1. Firestoreに招待ドキュメント作成（Emulator環境）
+    const token = 'test-token-12345';
+    const email = 'invited-user@example.com';
+    const role = 'editor';
+    const facilityId = 'test-facility-001';
+    const createdBy = 'test-admin-uid';
+
+    await createInvitationInEmulator({
+      email,
+      role,
+      token,
+      facilityId,
+      createdBy,
+    });
+
     // 2. 招待リンク（/invite?token=xxx）にアクセス
+    await page.goto(`/invite?token=${token}`);
+
     // 3. 招待情報表示確認（メールアドレス、ロール）
+    // メールアドレス表示確認
+    await expect(page.getByText(email)).toBeVisible({ timeout: 10000 });
+
+    // ロール表示確認（editorは「編集者」と表示される）
+    await expect(page.getByText(/編集者/)).toBeVisible({ timeout: 5000 });
+
     // 4. 「Googleでログイン」ボタン表示確認
+    await expect(page.getByRole('button', { name: 'Googleでログイン' })).toBeVisible({ timeout: 5000 });
   });
 
   test.skip('ログイン後、自動的に招待が受け入れられる', async ({ page }) => {
