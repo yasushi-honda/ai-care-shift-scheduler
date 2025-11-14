@@ -61,6 +61,18 @@ interface ActionTypeStats {
   count: number;
 }
 
+// キャッシュデータの型
+interface CachedReport {
+  data: {
+    facilityStats: FacilityStats[];
+    userStats: UserStats[];
+    shiftStats: ShiftStats | null;
+    dailyStats: DailyStats[];
+    actionTypeStats: ActionTypeStats[];
+  };
+  timestamp: number;
+}
+
 /**
  * 期間から開始日・終了日を計算
  */
@@ -113,7 +125,7 @@ function timestampToDate(timestamp: any): Date {
 
 export function UsageReports(): React.ReactElement {
   // 状態管理
-  const [period, setPeriod] = useState<PeriodType>('thisMonth');
+  const [period, setPeriod] = useState<PeriodType>('last3Months'); // Phase 2-4: デフォルトを直近3ヶ月に変更
   const [customStartDate, setCustomStartDate] = useState<string>('');
   const [customEndDate, setCustomEndDate] = useState<string>('');
   const [loading, setLoading] = useState(true);
@@ -125,53 +137,132 @@ export function UsageReports(): React.ReactElement {
   const [dailyStats, setDailyStats] = useState<DailyStats[]>([]);
   const [actionTypeStats, setActionTypeStats] = useState<ActionTypeStats[]>([]);
 
-  // データ取得
-  useEffect(() => {
-    loadUsageData();
-  }, [period, customStartDate, customEndDate]);
+  // Phase 2-4: キャッシュ機能（5分間有効）
+  const [reportCache, setReportCache] = useState<Map<string, CachedReport>>(new Map());
+  const CACHE_DURATION = 5 * 60 * 1000; // 5分
+  const [refreshKey, setRefreshKey] = useState(0); // 手動更新用
 
   /**
-   * 使用状況データを読み込み
+   * 期限切れキャッシュエントリを削除（メモリリーク防止）
    */
-  const loadUsageData = async () => {
-    try {
-      setLoading(true);
-
-      // 期間を計算
-      const [startDate, endDate] = getPeriodDates(
-        period,
-        customStartDate ? new Date(customStartDate) : undefined,
-        customEndDate ? new Date(customEndDate) : undefined
-      );
-
-      console.log('Loading usage data:', { startDate, endDate });
-
-      // 監査ログを取得
-      const logsQuery = query(
-        collection(db, 'auditLogs'),
-        where('timestamp', '>=', Timestamp.fromDate(startDate)),
-        where('timestamp', '<=', Timestamp.fromDate(endDate)),
-        orderBy('timestamp', 'desc')
-      );
-
-      const logsSnapshot = await getDocs(logsQuery);
-      const logs: AuditLog[] = logsSnapshot.docs.map(
-        (doc) => ({ id: doc.id, ...doc.data() } as AuditLog)
-      );
-
-      console.log(`Loaded ${logs.length} audit logs`);
-
-      // 統計データを計算
-      calculateStats(logs);
-    } catch (error) {
-      console.error('Failed to load usage data:', error);
-    } finally {
-      setLoading(false);
-    }
+  const cleanupCache = () => {
+    setReportCache(prev => {
+      const now = Date.now();
+      const cleaned = new Map<string, CachedReport>(prev);
+      for (const [key, value] of cleaned.entries()) {
+        if (now - value.timestamp >= CACHE_DURATION) {
+          cleaned.delete(key);
+        }
+      }
+      return cleaned;
+    });
   };
 
+  // データ取得（Phase 2-4: Race condition対策でuseEffect内に実装）
+  useEffect(() => {
+    let isActive = true;
+
+    const loadUsageData = async () => {
+      try {
+        if (!isActive) return;
+        setLoading(true);
+
+        // 期間を計算
+        const [startDate, endDate] = getPeriodDates(
+          period,
+          customStartDate ? new Date(customStartDate) : undefined,
+          customEndDate ? new Date(customEndDate) : undefined
+        );
+
+        // キャッシュキーを生成
+        const cacheKey = `${formatDate(startDate)}-${formatDate(endDate)}`;
+        const cached = reportCache.get(cacheKey);
+
+        // キャッシュチェック
+        if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
+          console.log('Using cached report data:', cacheKey);
+          if (!isActive) return;
+          setFacilityStats(cached.data.facilityStats);
+          setUserStats(cached.data.userStats);
+          setShiftStats(cached.data.shiftStats);
+          setDailyStats(cached.data.dailyStats);
+          setActionTypeStats(cached.data.actionTypeStats);
+          setLoading(false);
+          return;
+        }
+
+        console.log('Loading usage data:', { startDate, endDate });
+
+        // 監査ログを取得
+        const logsQuery = query(
+          collection(db, 'auditLogs'),
+          where('timestamp', '>=', Timestamp.fromDate(startDate)),
+          where('timestamp', '<=', Timestamp.fromDate(endDate)),
+          orderBy('timestamp', 'desc')
+        );
+
+        const logsSnapshot = await getDocs(logsQuery);
+        const logs: AuditLog[] = logsSnapshot.docs.map(
+          (doc) => ({ id: doc.id, ...doc.data() } as AuditLog)
+        );
+
+        console.log(`Loaded ${logs.length} audit logs`);
+
+        // 統計データを計算
+        const statsData = calculateStats(logs);
+
+        // isActiveチェック: 期間変更により新しいリクエストが開始されていたら更新しない
+        if (!isActive) return;
+
+        // ステートを更新
+        setFacilityStats(statsData.facilityStats);
+        setUserStats(statsData.userStats);
+        setShiftStats(statsData.shiftStats);
+        setDailyStats(statsData.dailyStats);
+        setActionTypeStats(statsData.actionTypeStats);
+
+        // 期限切れキャッシュをクリーンアップして新しいエントリを保存（単一操作でRace condition回避）
+        setReportCache(prev => {
+          const now = Date.now();
+          const cleaned = new Map<string, CachedReport>(prev);
+          // 期限切れエントリを削除
+          for (const [key, value] of cleaned.entries()) {
+            if (now - value.timestamp >= CACHE_DURATION) {
+              cleaned.delete(key);
+            }
+          }
+          // 新しいエントリを追加
+          cleaned.set(cacheKey, {
+            data: statsData,
+            timestamp: now,
+          });
+          return cleaned;
+        });
+      } catch (error) {
+        console.error('Failed to load usage data:', error);
+      } finally {
+        if (isActive) {
+          setLoading(false);
+        }
+      }
+    };
+
+    loadUsageData();
+
+    return () => {
+      isActive = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [period, customStartDate, customEndDate, refreshKey]);
+
+  // 定期的なキャッシュクリーンアップ（60秒ごと）
+  useEffect(() => {
+    const interval = setInterval(cleanupCache, 60 * 1000);
+    return () => clearInterval(interval);
+  }, []);
+
   /**
-   * 統計データを計算
+   * 統計データを計算（Phase 2-4: 計算結果を返すように修正）
    */
   const calculateStats = (logs: AuditLog[]) => {
     // 施設別統計
@@ -193,7 +284,7 @@ export function UsageReports(): React.ReactElement {
         uniqueUsers: stats.users.size,
       })
     );
-    setFacilityStats(facilityStatsData.sort((a, b) => b.totalActions - a.totalActions));
+    const facilityStats = facilityStatsData.sort((a, b) => b.totalActions - a.totalActions);
 
     // ユーザー別統計
     const userMap = new Map<string, { actions: number; lastActive: Date }>();
@@ -220,7 +311,7 @@ export function UsageReports(): React.ReactElement {
         lastActive: stats.lastActive,
       })
     );
-    setUserStats(userStatsData.sort((a, b) => b.totalActions - a.totalActions));
+    const userStats = userStatsData.sort((a, b) => b.totalActions - a.totalActions);
 
     // シフト生成統計
     const shiftLogs = logs.filter(
@@ -233,13 +324,13 @@ export function UsageReports(): React.ReactElement {
       0
     );
 
-    setShiftStats({
+    const shiftStats = {
       total: shiftLogs.length,
       success: shiftSuccess,
       failure: shiftFailure,
       successRate: shiftLogs.length > 0 ? (shiftSuccess / shiftLogs.length) * 100 : 0,
       avgDuration: shiftLogs.length > 0 ? totalDuration / shiftLogs.length : 0,
-    });
+    };
 
     // 日別統計
     const dailyMap = new Map<string, number>();
@@ -248,10 +339,9 @@ export function UsageReports(): React.ReactElement {
       dailyMap.set(dateStr, (dailyMap.get(dateStr) || 0) + 1);
     });
 
-    const dailyStatsData: DailyStats[] = Array.from(dailyMap.entries())
+    const dailyStats: DailyStats[] = Array.from(dailyMap.entries())
       .map(([date, actions]) => ({ date, actions }))
       .sort((a, b) => a.date.localeCompare(b.date));
-    setDailyStats(dailyStatsData);
 
     // アクション種別統計
     const actionMap = new Map<string, number>();
@@ -259,10 +349,18 @@ export function UsageReports(): React.ReactElement {
       actionMap.set(log.action, (actionMap.get(log.action) || 0) + 1);
     });
 
-    const actionTypeStatsData: ActionTypeStats[] = Array.from(actionMap.entries())
+    const actionTypeStats: ActionTypeStats[] = Array.from(actionMap.entries())
       .map(([action, count]) => ({ action, count }))
       .sort((a, b) => b.count - a.count);
-    setActionTypeStats(actionTypeStatsData);
+
+    // Phase 2-4: 計算結果を返す
+    return {
+      facilityStats,
+      userStats,
+      shiftStats,
+      dailyStats,
+      actionTypeStats,
+    };
   };
 
   /**
@@ -348,7 +446,7 @@ export function UsageReports(): React.ReactElement {
           )}
 
           <button
-            onClick={loadUsageData}
+            onClick={() => setRefreshKey(prev => prev + 1)}
             disabled={loading}
             className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
