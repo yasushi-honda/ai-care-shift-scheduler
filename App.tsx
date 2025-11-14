@@ -828,6 +828,7 @@ const App: React.FC = () => {
     } else {
       assertResultError(result);
       console.error('Sign out failed:', result.error);
+      showError(`ログアウトに失敗しました: ${result.error.message}`);
       setIsSigningOut(false);
     }
   };
