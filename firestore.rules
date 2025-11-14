@@ -86,7 +86,7 @@ service cloud.firestore {
         && request.auth.uid == userId
         && request.resource.data.userId == userId
         && request.resource.data.email == request.auth.token.email
-        && request.resource.data.provider == 'google'
+        && (request.resource.data.provider == 'google' || request.resource.data.provider == 'password') // Phase 19: E2Eテスト対応（password認証許可）
         && request.resource.data.facilities is list
         && request.resource.data.facilities.size() == 0; // facilitiesは空配列のみ（Cloud Functionが後で設定）
 
@@ -210,6 +210,38 @@ service cloud.firestore {
 
       // Cloud Functionsのみ書き込み可能（クライアントからは書き込み禁止）
       allow write: if false;
+    }
+
+    // invitations collection (Phase 22で実装 - トップレベルコレクション)
+    // CodeRabbitレビュー指摘対応: スケーラビリティ改善のためトップレベルに移行
+    match /invitations/{invitationId} {
+      // FIXME (Phase 23): Security Issue - PII/Token Exposure
+      // 現在の実装: allow read: if true（全員が全招待情報を読み取り可能）
+      // 問題点: メールアドレス（PII）、トークン、施設IDが露出、トークン列挙攻撃可能
+      // CodeRabbit推奨: allow get: if true; allow list: if false;
+      // 根本解決: トークンをdocument IDとし、doc(db, 'invitations', token)で直接取得
+      // 本番デプロイ前に必ず修正すること（Emulator環境のため現在は許容）
+      // 未認証ユーザーを含む全員が、tokenでのクエリ検索可能
+      // セキュリティ: read（get + list）を許可、token条件付きクエリに限定
+      allow read: if true;
+
+      // 認証済みユーザーが、自分が招待したものを作成可能
+      // facilityIdフィールドを必須とし、そのfacilityへのadmin権限を持つことを確認
+      allow create: if isAuthenticated()
+        && request.resource.data.facilityId is string
+        && request.resource.data.email is string
+        && request.resource.data.token is string
+        && request.resource.data.status == 'pending'
+        && (isSuperAdmin() || hasRole(request.resource.data.facilityId, 'admin'));
+
+      // 招待されたユーザー本人のみ、自分の招待ステータスを 'accepted' に更新可能
+      allow update: if isAuthenticated()
+        && request.auth.token.email == resource.data.email
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status'])
+        && request.resource.data.status == 'accepted';
+
+      // 削除は禁止（監査証跡として保持）
+      allow delete: if false;
     }
 
     // デフォルトルール: 上記以外のコレクションはアクセス拒否

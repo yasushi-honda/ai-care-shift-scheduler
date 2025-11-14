@@ -108,11 +108,10 @@ export async function createInvitation(
       new Date(now.toDate().getTime() + 7 * 24 * 60 * 60 * 1000) // 7日後
     );
 
-    // 招待ドキュメントを作成
-    const invitationRef = doc(
-      collection(db, 'facilities', facilityId, 'invitations')
-    );
-    const invitationId = invitationRef.id;
+    // 招待ドキュメントを作成（Phase 22: トップレベルコレクションに移行）
+    // トップレベルinvitationsコレクションに作成（facilityIdフィールド追加）
+    const topLevelInvitationRef = doc(collection(db, 'invitations'));
+    const invitationId = topLevelInvitationRef.id;
 
     const invitation: Invitation = {
       id: invitationId,
@@ -125,7 +124,21 @@ export async function createInvitation(
       expiresAt,
     };
 
-    await setDoc(invitationRef, invitation);
+    // トップレベルコレクションにはfacilityIdフィールドを追加
+    const topLevelInvitationData = {
+      ...invitation,
+      facilityId, // トップレベルコレクション用フィールド
+    };
+
+    // トップレベルコレクションに作成
+    await setDoc(topLevelInvitationRef, topLevelInvitationData);
+
+    // 後方互換性のため、サブコレクションにも作成
+    const subcollectionInvitationRef = doc(
+      collection(db, 'facilities', facilityId, 'invitations'),
+      invitationId // 同じIDを使用
+    );
+    await setDoc(subcollectionInvitationRef, invitation);
 
     // 招待リンクを生成
     const invitationLink = generateInvitationLink(token);
@@ -155,6 +168,9 @@ export async function createInvitation(
 /**
  * トークンから招待情報を取得
  *
+ * Phase 22: トップレベルinvitationsコレクションからO(1)クエリで取得
+ * CodeRabbitレビュー指摘対応：スケーラビリティ問題を解決
+ *
  * @param token - 招待トークン
  * @returns 招待情報とfacilityId
  */
@@ -172,50 +188,49 @@ export async function getInvitationByToken(
       };
     }
 
-    // 全施設の招待コレクションからトークンで検索
-    // TODO: SCALABILITY ISSUE - O(n×m) complexity
-    // CodeRabbitレビュー指摘事項：
-    // 現在の実装は全施設を反復し、各施設のinvitationsサブコレクションをクエリします。
-    // これはO(n×m)の複雑性を持ち、施設数が増えると以下の問題が発生します：
-    // - Firestoreコスト増加（読み取りごとに課金）
-    // - レスポンス時間の遅延
-    // - タイムアウトリスク
-    //
-    // 推奨される改善策：
-    // 1. トップレベルのinvitationsコレクションを作成し、facilityIdフィールドを追加
-    // 2. tokenにインデックスを設定
-    // 3. または、token → facilityIdマッピング用の別コレクションを作成
-    //
-    // 現時点では小規模システムのため許容範囲として実装を保留
+    // Phase 22: トップレベルinvitationsコレクションからtokenで検索（インデックス付きクエリ）
+    // NOTE: where()クエリはFirestoreインデックス使用でO(log n)。真のO(1)はdoc()による直接取得のみ。
+    // Security Rules: 未認証ユーザーも読み取り可能（招待リンクアクセス時）
+    const invitationsQuery = query(
+      collection(db, 'invitations'),
+      where('token', '==', token)
+    );
 
-    const facilitiesSnapshot = await getDocs(collection(db, 'facilities'));
+    const invitationsSnapshot = await getDocs(invitationsQuery);
 
-    for (const facilityDoc of facilitiesSnapshot.docs) {
-      const facilityId = facilityDoc.id;
-      const invitationsQuery = query(
-        collection(db, 'facilities', facilityId, 'invitations'),
-        where('token', '==', token)
-      );
-
-      const invitationsSnapshot = await getDocs(invitationsQuery);
-
-      if (!invitationsSnapshot.empty) {
-        const invitationDoc = invitationsSnapshot.docs[0];
-        const invitation = invitationDoc.data() as Invitation;
-
-        return {
-          success: true,
-          data: { invitation, facilityId },
-        };
-      }
+    if (invitationsSnapshot.empty) {
+      return {
+        success: false,
+        error: {
+          code: 'NOT_FOUND',
+          message: '招待が見つかりません',
+        },
+      };
     }
 
+    const invitationDoc = invitationsSnapshot.docs[0];
+    const invitationData = invitationDoc.data();
+
+    // トップレベルコレクションからfacilityIdを取得
+    const facilityId = invitationData.facilityId as string;
+
+    // CodeRabbit指摘対応: facilityIdの存在確認（データ不整合・マイグレーション問題対策）
+    if (!facilityId) {
+      return {
+        success: false,
+        error: {
+          code: 'FIRESTORE_ERROR',
+          message: '招待データが不正です（facilityIdが見つかりません）',
+        },
+      };
+    }
+
+    // Invitation型に変換（facilityIdフィールドを除外）
+    const { facilityId: _, ...invitation } = invitationData;
+
     return {
-      success: false,
-      error: {
-        code: 'NOT_FOUND',
-        message: '招待が見つかりません',
-      },
+      success: true,
+      data: { invitation: invitation as Invitation, facilityId },
     };
   } catch (error: any) {
     console.error('Error getting invitation by token:', error);
@@ -272,7 +287,18 @@ export async function verifyInvitationToken(
   const expiresAt = invitation.expiresAt.toDate();
 
   if (now > expiresAt) {
-    // 期限切れの場合、ステータスを更新
+    // 期限切れの場合、ステータスを更新（Phase 22: 両方のコレクションを更新）
+    // トップレベルコレクション
+    const topLevelQuery = query(
+      collection(db, 'invitations'),
+      where('token', '==', invitation.token)
+    );
+    const topLevelSnapshot = await getDocs(topLevelQuery);
+    if (!topLevelSnapshot.empty) {
+      await updateDoc(topLevelSnapshot.docs[0].ref, { status: 'expired' as InvitationStatus });
+    }
+
+    // サブコレクション（後方互換性）
     const invitationRef = doc(
       db,
       'facilities',
@@ -280,7 +306,6 @@ export async function verifyInvitationToken(
       'invitations',
       invitation.id
     );
-
     await updateDoc(invitationRef, { status: 'expired' as InvitationStatus });
 
     return {
@@ -365,7 +390,18 @@ export async function acceptInvitation(
       // 既にアクセス権限がある場合は成功とみなす
       if (grantResult.error.code === 'VALIDATION_ERROR' &&
           grantResult.error.message.includes('すでに')) {
-        // 招待ステータスを更新
+        // 招待ステータスを更新（Phase 22: 両方のコレクションを更新）
+        // トップレベルコレクション
+        const topLevelQuery = query(
+          collection(db, 'invitations'),
+          where('token', '==', token)
+        );
+        const topLevelSnapshot = await getDocs(topLevelQuery);
+        if (!topLevelSnapshot.empty) {
+          await updateDoc(topLevelSnapshot.docs[0].ref, { status: 'accepted' as InvitationStatus });
+        }
+
+        // サブコレクション（後方互換性）
         const invitationRef = doc(
           db,
           'facilities',
@@ -387,7 +423,18 @@ export async function acceptInvitation(
       };
     }
 
-    // 招待ステータスを 'accepted' に更新
+    // 招待ステータスを 'accepted' に更新（Phase 22: 両方のコレクションを更新）
+    // トップレベルコレクション
+    const topLevelQuery = query(
+      collection(db, 'invitations'),
+      where('token', '==', token)
+    );
+    const topLevelSnapshot = await getDocs(topLevelQuery);
+    if (!topLevelSnapshot.empty) {
+      await updateDoc(topLevelSnapshot.docs[0].ref, { status: 'accepted' as InvitationStatus });
+    }
+
+    // サブコレクション（後方互換性）
     const invitationRef = doc(
       db,
       'facilities',
@@ -395,7 +442,6 @@ export async function acceptInvitation(
       'invitations',
       invitation.id
     );
-
     await updateDoc(invitationRef, { status: 'accepted' as InvitationStatus });
 
     console.log('招待を受け入れました:', {
