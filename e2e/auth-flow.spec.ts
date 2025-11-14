@@ -40,6 +40,14 @@ test.describe('認証フロー - ユーザー状態確認（Emulator）', () => 
   });
 
   test('認証後、ユーザー名が表示される', async ({ page }) => {
+    // Phase 18-2: ブラウザコンソールログキャプチャ
+    const consoleMessages: string[] = [];
+    page.on('console', (msg) => {
+      const text = msg.text();
+      consoleMessages.push(`[${msg.type()}] ${text}`);
+      console.log(`[Browser Console ${msg.type()}] ${text}`);
+    });
+
     // Emulator環境でテストユーザーを作成してログイン
     await setupAuthenticatedUser(page, {
       email: 'test-user@example.com',

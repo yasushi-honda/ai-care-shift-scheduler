@@ -8,6 +8,34 @@
  */
 
 import { Page } from '@playwright/test';
+import admin from 'firebase-admin';
+
+// Admin SDK初期化状態
+let adminInitialized = false;
+
+/**
+ * Admin SDKを初期化（Emulator環境）
+ *
+ * Phase 18-2: Admin SDK使用への変更
+ */
+function initializeAdminSDK(): void {
+  if (adminInitialized) {
+    return;
+  }
+
+  // Admin SDKが既に初期化されている場合はスキップ
+  if (!admin.apps.length) {
+    admin.initializeApp({
+      projectId: 'ai-care-shift-scheduler',
+    });
+  }
+
+  // Emulator環境設定
+  process.env.FIREBASE_AUTH_EMULATOR_HOST = 'localhost:9099';
+
+  adminInitialized = true;
+  console.log('🔧 Firebase Admin SDK初期化完了（auth-helper内）');
+}
 
 /**
  * Emulator環境かどうかを判定
@@ -93,12 +121,17 @@ export async function signInWithEmulator(
 
         console.log('✅ [Auth Debug] Firebase Auth取得成功');
 
-        // Firebase Auth SDKのsignInWithEmailAndPasswordを動的インポート
-        // Viteの開発サーバーでは、node_modulesからESMとして提供される
-        console.log('🔍 [Auth Debug] Firebase Auth SDK動的インポート開始');
-        const authModule = await import('firebase/auth');
-        const { signInWithEmailAndPassword } = authModule;
-        console.log('✅ [Auth Debug] Firebase Auth SDK動的インポート成功');
+        // Phase 18.2 Step 6: グローバルオブジェクトからsignInWithEmailAndPasswordを取得
+        // firebase.tsでグローバルに公開された関数を使用
+        console.log('🔍 [Auth Debug] Firebase Auth SDK関数取得開始');
+        const signInWithEmailAndPassword = (window as any).__firebaseSignInWithEmailAndPassword;
+
+        if (!signInWithEmailAndPassword) {
+          console.error('❌ signInWithEmailAndPassword がグローバルオブジェクトに存在しません');
+          console.error('🔍 [Auth Debug] window.__firebaseSignInWithEmailAndPassword is undefined');
+          return false;
+        }
+        console.log('✅ [Auth Debug] Firebase Auth SDK関数取得成功');
 
         // ログイン実行
         console.log(`🔍 [Auth Debug] ログイン実行開始: ${testEmail}`);
@@ -209,6 +242,8 @@ export async function createEmulatorUser(params: {
 /**
  * Firebase Auth EmulatorのユーザーにCustom Claimsを設定（Phase 17-1）
  *
+ * Phase 18-2: Firebase Admin SDK使用に変更
+ *
  * @param uid ユーザーID
  * @param customClaims Custom Claims（role等）
  */
@@ -218,22 +253,18 @@ export async function setEmulatorCustomClaims(
 ): Promise<void> {
   console.log(`🔐 Custom Claims設定: UID=${uid}`, customClaims);
 
-  const response = await fetch(
-    `http://localhost:9099/emulator/v1/projects/ai-care-shift-scheduler/accounts/${uid}`,
-    {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        customAttributes: JSON.stringify(customClaims),
-      }),
-    }
-  );
+  try {
+    // Admin SDK初期化（未初期化の場合のみ）
+    initializeAdminSDK();
 
-  if (!response.ok) {
-    throw new Error(`Failed to set custom claims: ${response.statusText}`);
+    // Admin SDK経由でCustom Claims設定
+    await admin.auth().setCustomUserClaims(uid, customClaims);
+
+    console.log(`✅ Custom Claims設定成功: UID=${uid}`);
+  } catch (error: any) {
+    console.error(`❌ Custom Claims設定失敗: ${error.message}`);
+    throw new Error(`Failed to set custom claims: ${error.message}`);
   }
-
-  console.log(`✅ Custom Claims設定成功: UID=${uid}`);
 }
 
 /**

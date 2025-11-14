@@ -1,5 +1,5 @@
 import { initializeApp } from 'firebase/app';
-import { getAuth, GoogleAuthProvider, setPersistence, browserLocalPersistence, connectAuthEmulator } from 'firebase/auth';
+import { getAuth, GoogleAuthProvider, setPersistence, browserLocalPersistence, connectAuthEmulator, signInWithEmailAndPassword } from 'firebase/auth';
 import { getFirestore, connectFirestoreEmulator } from 'firebase/firestore';
 import { getFunctions, connectFunctionsEmulator } from 'firebase/functions';
 import { getStorage, connectStorageEmulator } from 'firebase/storage';
@@ -87,9 +87,12 @@ if (isLocalhost) {
   if (typeof window !== 'undefined') {
     (window as any).__firebaseAuth = auth;
     (window as any).__firebaseDb = db;
+    // Phase 18.2 Step 6: signInWithEmailAndPasswordもグローバルに公開
+    (window as any).__firebaseSignInWithEmailAndPassword = signInWithEmailAndPassword;
     console.log('✅ [Firebase Debug] グローバルオブジェクト公開成功:', {
       hasAuth: !!(window as any).__firebaseAuth,
       hasDb: !!(window as any).__firebaseDb,
+      hasSignIn: !!(window as any).__firebaseSignInWithEmailAndPassword,
     });
   }
 } else {

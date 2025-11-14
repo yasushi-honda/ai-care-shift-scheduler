@@ -8,6 +8,19 @@
  */
 
 import { chromium, FullConfig } from '@playwright/test';
+import admin from 'firebase-admin';
+
+// Firebase Admin SDKインスタンス（プライベート変数）
+let _adminAuth: admin.auth.Auth | null = null;
+
+/**
+ * Admin Auth インスタンスを取得
+ *
+ * @returns Admin Auth インスタンス（未初期化の場合null）
+ */
+export function getAdminAuth(): admin.auth.Auth | null {
+  return _adminAuth;
+}
 
 /**
  * Global Setup関数
@@ -32,9 +45,26 @@ async function globalSetup(config: FullConfig) {
     console.log('  📌 Firestore Emulator: http://localhost:8080');
     console.log('  📌 Emulator UI: http://localhost:4000');
 
-    // Emulator環境の検証
-    // 注意: この時点ではEmulatorが起動していることを前提とする
-    // （firebase emulators:exec で実行される場合は自動的に起動済み）
+    // Firebase Admin SDK初期化（Emulator環境）
+    try {
+      // Admin SDKが既に初期化されている場合はスキップ
+      if (!admin.apps.length) {
+        admin.initializeApp({
+          projectId: 'ai-care-shift-scheduler',
+        });
+      }
+
+      // Auth Emulator接続
+      _adminAuth = admin.auth();
+
+      // Emulator環境設定
+      process.env.FIREBASE_AUTH_EMULATOR_HOST = 'localhost:9099';
+
+      console.log('  ✅ Firebase Admin SDK初期化完了');
+    } catch (error) {
+      console.error('  ❌ Firebase Admin SDK初期化失敗:', error);
+      throw error;
+    }
 
     console.log('  ✅ Emulator環境準備完了');
   } else {
