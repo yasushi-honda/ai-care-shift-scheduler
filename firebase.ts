@@ -1,6 +1,6 @@
 import { initializeApp } from 'firebase/app';
 import { getAuth, GoogleAuthProvider, setPersistence, browserLocalPersistence, connectAuthEmulator, signInWithEmailAndPassword } from 'firebase/auth';
-import { getFirestore, connectFirestoreEmulator } from 'firebase/firestore';
+import { getFirestore, connectFirestoreEmulator, doc, setDoc, getDoc, Timestamp } from 'firebase/firestore'; // Phase 19, 22: E2Eテスト用にFirestore SDK関数追加
 import { getFunctions, connectFunctionsEmulator } from 'firebase/functions';
 import { getStorage, connectStorageEmulator } from 'firebase/storage';
 
@@ -89,10 +89,20 @@ if (isLocalhost) {
     (window as any).__firebaseDb = db;
     // Phase 18.2 Step 6: signInWithEmailAndPasswordもグローバルに公開
     (window as any).__firebaseSignInWithEmailAndPassword = signInWithEmailAndPassword;
+    // Phase 19, 22: Firestore SDK関数をグローバルに公開
+    (window as any).__firebaseDoc = doc;
+    (window as any).__firebaseSetDoc = setDoc;
+    (window as any).__firebaseGetDoc = getDoc;
+    (window as any).__firebaseTimestamp = Timestamp;
+
     console.log('✅ [Firebase Debug] グローバルオブジェクト公開成功:', {
       hasAuth: !!(window as any).__firebaseAuth,
       hasDb: !!(window as any).__firebaseDb,
       hasSignIn: !!(window as any).__firebaseSignInWithEmailAndPassword,
+      hasDoc: !!(window as any).__firebaseDoc,
+      hasSetDoc: !!(window as any).__firebaseSetDoc,
+      hasGetDoc: !!(window as any).__firebaseGetDoc,
+      hasTimestamp: !!(window as any).__firebaseTimestamp,
     });
   }
 } else {

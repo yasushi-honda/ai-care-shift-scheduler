@@ -57,14 +57,98 @@ test.describe('招待フロー - 招待受け入れ（Emulator）', () => {
     await expect(page.getByRole('button', { name: 'Googleでログイン' })).toBeVisible({ timeout: 5000 });
   });
 
-  test.skip('ログイン後、自動的に招待が受け入れられる', async ({ page }) => {
-    // TODO Phase 22: 実装予定
-    // 1. Firestoreに招待ドキュメント作成
-    // 2. Emulatorでテストユーザーログイン
+  test('ログイン後、自動的に招待が受け入れられる', async ({ page }) => {
+    // ブラウザコンソールログをキャプチャ
+    page.on('console', (msg) => {
+      const text = msg.text();
+      console.log(`[Browser Console ${msg.type()}] ${text}`);
+    });
+
+    // 1. Firestoreに招待ドキュメント作成（Emulator環境）
+    const token = 'test-token-auto-accept-67890';
+    const email = 'auto-accept-user@example.com';
+    const role = 'viewer';
+    const facilityId = 'test-facility-002';
+    const createdBy = 'test-admin-uid';
+
+    const invitationId = await createInvitationInEmulator({
+      email,
+      role,
+      token,
+      facilityId,
+      createdBy,
+    });
+
+    // 2. Emulatorでテストユーザー作成＆ログイン
+    const uid = await setupAuthenticatedUser(page, {
+      email,
+      password: 'password123',
+      displayName: 'Auto Accept User',
+      // 初期状態ではこの施設へのアクセス権限なし（招待受け入れ後に追加される）
+      facilities: [],
+    });
+
     // 3. 招待リンクにアクセス
-    // 4. 自動的に招待受け入れ処理実行確認
+    await page.goto(`/invite?token=${token}`);
+
+    // 4. 自動的に招待受け入れ処理が実行され、ローディング表示確認
+    // 「招待を受け入れています...」というテキストが短時間表示される可能性があるが、
+    // 処理が速いため、リダイレクトまで待つ
+
     // 5. ホーム画面（/）にリダイレクト確認
+    // リダイレクトを待つ（最大10秒）
+    await page.waitForURL('/', { timeout: 10000 });
+
+    // URLが "/" であることを確認
+    expect(page.url()).toMatch(/\/$/);
+
     // 6. Firestoreユーザードキュメントに施設が追加されたことを確認
+    // page.evaluate()でFirestore SDK経由で確認
+    const facilityAdded = await page.evaluate(
+      async ({ testUid, testFacilityId, testRole }) => {
+        try {
+          const db = (window as any).__firebaseDb;
+          const doc = (window as any).__firebaseDoc;
+          const getDoc = (window as any).__firebaseGetDoc;
+
+          if (!db || !doc || !getDoc) {
+            console.error('❌ Firestore SDK がグローバルオブジェクトに存在しません');
+            return false;
+          }
+
+          // ユーザードキュメント取得
+          const userRef = doc(db, 'users', testUid);
+          const userDoc = await getDoc(userRef);
+
+          if (!userDoc.exists()) {
+            console.error('❌ ユーザードキュメントが存在しません');
+            return false;
+          }
+
+          const userData = userDoc.data();
+          const facilities = userData.facilities || [];
+
+          // 施設が追加されているか確認
+          const facilityExists = facilities.some(
+            (f: any) => f.facilityId === testFacilityId && f.role === testRole
+          );
+
+          if (facilityExists) {
+            console.log(`✅ 施設が追加されています: ${testFacilityId} (role: ${testRole})`);
+            return true;
+          } else {
+            console.error(`❌ 施設が追加されていません: ${testFacilityId}`, { facilities });
+            return false;
+          }
+        } catch (error: any) {
+          console.error(`❌ Firestore確認エラー: ${error.message}`);
+          return false;
+        }
+      },
+      { testUid: uid, testFacilityId: facilityId, testRole: role }
+    );
+
+    expect(facilityAdded).toBe(true);
   });
 
   test('無効なトークンの場合、エラーメッセージが表示される', async ({ page }) => {
