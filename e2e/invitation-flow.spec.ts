@@ -169,12 +169,51 @@ test.describe('招待フロー - 招待受け入れ（Emulator）', () => {
     await expect(page.getByRole('button', { name: 'ホームに戻る' })).toBeVisible({ timeout: 5000 });
   });
 
-  test.skip('ログインユーザーのメールアドレスが招待と異なる場合、エラーが表示される', async ({ page }) => {
-    // TODO Phase 22: 実装予定
-    // 1. test-user-a@example.com 宛の招待ドキュメント作成
-    // 2. test-user-b@example.com でログイン
+  test('ログインユーザーのメールアドレスが招待と異なる場合、エラーが表示される', async ({ page }) => {
+    // ブラウザコンソールログをキャプチャ
+    page.on('console', (msg) => {
+      const text = msg.text();
+      console.log(`[Browser Console ${msg.type()}] ${text}`);
+    });
+
+    // 1. test-user-a@example.com 宛の招待ドキュメント作成（Emulator環境）
+    const token = 'test-token-email-mismatch-99999';
+    const invitedEmail = 'test-user-a@example.com';
+    const role = 'editor';
+    const facilityId = 'test-facility-003';
+    const createdBy = 'test-admin-uid';
+
+    await createInvitationInEmulator({
+      email: invitedEmail,
+      role,
+      token,
+      facilityId,
+      createdBy,
+    });
+
+    // 2. test-user-b@example.com でログイン（Emulator環境）
+    const loginEmail = 'test-user-b@example.com';
+    await setupAuthenticatedUser(page, {
+      email: loginEmail,
+      password: 'password123',
+      displayName: 'Test User B',
+      facilities: [], // 招待受け入れ前の状態
+    });
+
     // 3. 招待リンクにアクセス
+    await page.goto(`/invite?token=${token}`);
+
     // 4. メールアドレス不一致エラーメッセージ表示確認
+    // エラーメッセージ: "この招待は test-user-a@example.com 宛です。現在ログインしているアカウント（test-user-b@example.com）とは異なります。"
+    await expect(page.getByText(/この招待は test-user-a@example\.com 宛です/)).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText(/現在ログインしているアカウント/)).toBeVisible({ timeout: 5000 });
+    await expect(page.getByText(/test-user-b@example\.com/)).toBeVisible({ timeout: 5000 });
+
+    // 5. 「ホームに戻る」ボタン表示確認（canRetry: false のため「ページを更新する」ボタンは表示されない）
+    await expect(page.getByRole('button', { name: 'ホームに戻る' })).toBeVisible({ timeout: 5000 });
+
+    // 6. 「ページを更新する」ボタンが表示されないことを確認
+    await expect(page.getByRole('button', { name: 'ページを更新する' })).not.toBeVisible();
   });
 });
 
