@@ -164,6 +164,86 @@ describe('ScheduleService', () => {
         expect(docData.staffSchedules[0].monthlyShifts.length).toBe(2);
       }
     });
+
+    it('should return validation error for invalid targetMonth format', async () => {
+      const invalidSchedule = { ...mockScheduleData, targetMonth: '202501' }; // Invalid format
+      const result = await ScheduleService.saveSchedule(
+        mockFacilityId,
+        mockUserId,
+        invalidSchedule
+      );
+
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        assertResultError(result);
+        expect(result.error.code).toBe('VALIDATION_ERROR');
+        expect(result.error.message).toContain('対象月のフォーマットが不正です');
+      }
+    });
+
+    it('should return validation error when staffSchedules is not an array', async () => {
+      const invalidSchedule = { ...mockScheduleData, staffSchedules: null as any };
+      const result = await ScheduleService.saveSchedule(
+        mockFacilityId,
+        mockUserId,
+        invalidSchedule
+      );
+
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        assertResultError(result);
+        expect(result.error.code).toBe('VALIDATION_ERROR');
+        expect(result.error.message).toContain('スタッフスケジュールは必須です');
+      }
+    });
+
+    it('should return validation error when staffSchedules is empty', async () => {
+      const invalidSchedule = { ...mockScheduleData, staffSchedules: [] };
+      const result = await ScheduleService.saveSchedule(
+        mockFacilityId,
+        mockUserId,
+        invalidSchedule
+      );
+
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        assertResultError(result);
+        expect(result.error.code).toBe('VALIDATION_ERROR');
+        expect(result.error.message).toContain('スタッフスケジュールが空です');
+      }
+    });
+
+    it('should return PERMISSION_DENIED error when permission denied', async () => {
+      vi.mocked(firestore.addDoc).mockRejectedValue({ code: 'permission-denied' });
+
+      const result = await ScheduleService.saveSchedule(
+        mockFacilityId,
+        mockUserId,
+        mockScheduleData
+      );
+
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        assertResultError(result);
+        expect(result.error.code).toBe('PERMISSION_DENIED');
+      }
+    });
+
+    it('should return FIRESTORE_ERROR when Firestore error occurs', async () => {
+      vi.mocked(firestore.addDoc).mockRejectedValue(new Error('Firestore error'));
+
+      const result = await ScheduleService.saveSchedule(
+        mockFacilityId,
+        mockUserId,
+        mockScheduleData
+      );
+
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        assertResultError(result);
+        expect(result.error.code).toBe('FIRESTORE_ERROR');
+      }
+    });
   });
 
   describe('subscribeToSchedules', () => {
@@ -285,6 +365,46 @@ describe('ScheduleService', () => {
       expect(callback).toHaveBeenCalled();
 
       // クリーンアップ
+      unsubscribe();
+    });
+
+    it('should call callback with error when facilityId is empty', () => {
+      const callback = vi.fn();
+
+      const unsubscribe = ScheduleService.subscribeToSchedules(
+        '',
+        mockTargetMonth,
+        callback
+      );
+
+      // コールバックがエラーと共に呼ばれることを確認
+      expect(callback).toHaveBeenCalledWith(
+        [],
+        expect.objectContaining({ message: '施設IDは必須です' })
+      );
+
+      // unsubscribeがno-op関数であることを確認
+      expect(typeof unsubscribe).toBe('function');
+      unsubscribe();
+    });
+
+    it('should call callback with error when targetMonth is empty', () => {
+      const callback = vi.fn();
+
+      const unsubscribe = ScheduleService.subscribeToSchedules(
+        mockFacilityId,
+        '',
+        callback
+      );
+
+      // コールバックがエラーと共に呼ばれることを確認
+      expect(callback).toHaveBeenCalledWith(
+        [],
+        expect.objectContaining({ message: '対象月は必須です' })
+      );
+
+      // unsubscribeがno-op関数であることを確認
+      expect(typeof unsubscribe).toBe('function');
       unsubscribe();
     });
   });
