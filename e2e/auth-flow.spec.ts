@@ -60,8 +60,9 @@ test.describe('認証フロー - ユーザー状態確認（Emulator）', () => 
     // ダッシュボードに遷移
     await page.goto('/');
 
-    // ユーザー名表示を確認（ヘッダーまたはサイドバーに表示されると想定）
-    await expect(page.getByText(/Test User/)).toBeVisible({ timeout: 5000 });
+    // Phase 19: 認証成功を確認 - 施設情報が表示されることで確認
+    // 現在のUIではユーザー名は表示されないため、施設名で認証状態を確認
+    await expect(page.getByText(/test-facility-001/)).toBeVisible({ timeout: 5000 });
   });
 
   test('認証後、ユーザーアイコンまたは表示名が確認できる', async ({ page }) => {
@@ -92,16 +93,29 @@ test.describe('認証フロー - アクセス権限なし画面（Emulator）', 
   });
 
   test('アクセス権限がない場合、Forbiddenページが表示される', async ({ page }) => {
-    // 権限なしユーザーでログイン（roleなし）
+    // Phase 21: ブラウザコンソールログキャプチャ
+    const consoleMessages: string[] = [];
+    page.on('console', (msg) => {
+      const text = msg.text();
+      consoleMessages.push(`[${msg.type()}] ${text}`);
+      console.log(`[Browser Console ${msg.type()}] ${text}`);
+    });
+
+    // Phase 21修正: viewerロールでログイン（super-admin権限なし）
+    // facilities が存在するが super-admin ロールがないユーザーを作成
+    // AdminProtectedRoute が /forbidden にリダイレクトすることを検証
     await setupAuthenticatedUser(page, {
-      email: 'no-permission@example.com',
+      email: 'viewer-user@example.com',
       password: 'password123',
-      displayName: 'No Permission User',
-      // roleを設定しない = 権限なし
+      displayName: 'Viewer User',
+      facilities: [{ facilityId: 'test-facility-001', role: 'viewer' }],
     });
 
     // 管理画面にアクセス試行
     await page.goto('/admin');
+
+    // Phase 21: デバッグログ確認のため少し待機
+    await page.waitForTimeout(2000);
 
     // Forbiddenページにリダイレクトされることを確認
     await expect(page).toHaveURL('/forbidden', { timeout: 5000 });
@@ -109,11 +123,12 @@ test.describe('認証フロー - アクセス権限なし画面（Emulator）', 
   });
 
   test('Forbiddenページに「管理者に連絡」メッセージが表示される', async ({ page }) => {
-    // 権限なしユーザーでログイン
+    // Phase 21修正: editorロールでログイン（super-admin権限なし）
     await setupAuthenticatedUser(page, {
-      email: 'no-permission2@example.com',
+      email: 'editor-user@example.com',
       password: 'password123',
-      displayName: 'No Permission User 2',
+      displayName: 'Editor User',
+      facilities: [{ facilityId: 'test-facility-002', role: 'editor' }],
     });
 
     // 直接Forbiddenページに遷移

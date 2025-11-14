@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import {
   Role, Qualification, TimeSlotPreference, LeaveType,
   type Staff, type ShiftRequirement, type StaffSchedule, type GeneratedShift, type LeaveRequest, type WorkLogs, type WorkLogDetails, type ScheduleVersion, type LeaveRequestDocument, type Facility,
@@ -43,10 +43,12 @@ function convertToLeaveRequest(documents: LeaveRequestDocument[]): LeaveRequest 
 }
 
 const App: React.FC = () => {
-  const { selectedFacilityId, currentUser, isSuperAdmin, userProfile, selectFacility } = useAuth();
+  const { selectedFacilityId, currentUser, isSuperAdmin, userProfile, selectFacility, signOut } = useAuth();
   const { showSuccess, showError } = useToast();
+  const navigate = useNavigate();
   const [facilities, setFacilities] = useState<Map<string, Facility>>(new Map());
   const [loadingFacilities, setLoadingFacilities] = useState(true);
+  const [isSigningOut, setIsSigningOut] = useState(false);
   const [staffList, setStaffList] = useState<Staff[]>([]);
   const [loadingStaff, setLoadingStaff] = useState(true);
   const [staffError, setStaffError] = useState<string | null>(null);
@@ -817,6 +819,19 @@ const App: React.FC = () => {
     }
   };
 
+  // Phase 20: ログアウトハンドラー
+  const handleSignOut = async () => {
+    setIsSigningOut(true);
+    const result = await signOut();
+    if (result.success) {
+      navigate('/');
+    } else {
+      assertResultError(result);
+      console.error('Sign out failed:', result.error);
+      setIsSigningOut(false);
+    }
+  };
+
   const ViewSwitcher = () => (
     <div className="flex border-b border-slate-300">
       <button 
@@ -844,6 +859,12 @@ const App: React.FC = () => {
               <p className="text-sm text-indigo-200 mt-1">介護・福祉事業所向け</p>
             </div>
             <div className="flex items-center gap-2">
+              {/* Phase 20: ユーザー名表示 */}
+              {userProfile && (
+                <div className="hidden sm:block text-xs text-indigo-100">
+                  <span className="font-medium">{userProfile.name || 'ユーザー'}</span>
+                </div>
+              )}
               <a
                 href="/manual.html"
                 target="_blank"
@@ -861,6 +882,16 @@ const App: React.FC = () => {
                 >
                   ⚙️ 管理
                 </Link>
+              )}
+              {/* Phase 20: ログアウトボタン */}
+              {currentUser && (
+                <button
+                  onClick={handleSignOut}
+                  disabled={isSigningOut}
+                  className="px-3 py-2 bg-white bg-opacity-20 hover:bg-opacity-30 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isSigningOut ? 'ログアウト中...' : 'ログアウト'}
+                </button>
               )}
             </div>
           </div>

@@ -7,7 +7,7 @@ import { Button } from '../components/Button';
  *
  * super-admin権限を持たないユーザーが管理画面にアクセスしようとした際に表示されるページ
  */
-export function Forbidden(): React.ReactElement {
+export default function Forbidden(): React.ReactElement {
   const navigate = useNavigate();
 
   return (
@@ -16,7 +16,7 @@ export function Forbidden(): React.ReactElement {
         <div className="mb-8">
           <div className="text-6xl font-bold text-red-600 mb-4">403</div>
           <h1 className="text-2xl font-semibold text-gray-900 mb-2">
-            アクセスが拒否されました
+            アクセス権限がありません
           </h1>
           <p className="text-gray-600">
             このページにアクセスする権限がありません。
@@ -33,6 +33,9 @@ export function Forbidden(): React.ReactElement {
           </Button>
           <p className="text-sm text-gray-500">
             管理画面にアクセスするにはsuper-admin権限が必要です。
+          </p>
+          <p className="text-sm text-gray-600 mt-4">
+            アクセス権限が必要な場合は、管理者に連絡してください。
           </p>
         </div>
       </div>

@@ -306,18 +306,35 @@ export async function setupAuthenticatedUser(
     password: string;
     displayName: string;
     role?: 'super-admin' | 'admin' | 'editor' | 'viewer';
-    facilities?: string[];
+    facilities?: { facilityId: string; role: 'super-admin' | 'admin' | 'editor' | 'viewer' }[];
   }
 ): Promise<string> {
   console.log(`🔐 認証済みユーザーセットアップ開始: ${params.email} (role: ${params.role || 'none'})`);
+
+  // Firestore用のfacilities配列を構築
+  // roleが指定されている場合、ダミー施設IDで自動生成
+  let facilitiesArray: { facilityId: string; role: 'super-admin' | 'admin' | 'editor' | 'viewer' }[] = [];
+
+  if (params.facilities && params.facilities.length > 0) {
+    // facilitiesが明示的に指定されている場合はそれを使用
+    facilitiesArray = params.facilities;
+  } else if (params.role) {
+    // roleのみ指定されている場合、ダミー施設IDで自動生成
+    facilitiesArray = [
+      {
+        facilityId: 'test-facility-001',
+        role: params.role,
+      }
+    ];
+  }
 
   // Custom Claimsを構築
   const customClaims: Record<string, unknown> = {};
   if (params.role) {
     customClaims.role = params.role;
   }
-  if (params.facilities && params.facilities.length > 0) {
-    customClaims.facilities = params.facilities;
+  if (facilitiesArray.length > 0) {
+    customClaims.facilities = facilitiesArray.map(f => f.facilityId);
   }
 
   // ユーザー作成
@@ -330,6 +347,77 @@ export async function setupAuthenticatedUser(
 
   // ログイン
   await signInWithEmulator(page, params.email, params.password);
+
+  // Phase 19: ログイン後、ブラウザ側で認証済みユーザーとしてFirestoreドキュメント作成
+  // これにより、Firestore Rulesの request.auth が設定され、permission errorを回避
+  const docCreated = await page.evaluate(
+    async ({ testUid, testEmail, testDisplayName, testFacilitiesArray }) => {
+      try {
+        // firebase.tsでグローバルに公開された__firebaseDbを使用
+        const db = (window as any).__firebaseDb;
+        if (!db) {
+          console.error('❌ Firestore が グローバルオブジェクトに存在しません');
+          return false;
+        }
+
+        // Firestore SDK関数をグローバルオブジェクトから取得（firebase.tsで公開済み）
+        const doc = (window as any).__firebaseDoc;
+        const setDoc = (window as any).__firebaseSetDoc;
+        const Timestamp = (window as any).__firebaseTimestamp;
+
+        if (!doc || !setDoc || !Timestamp) {
+          console.error('❌ Firestore SDK関数がグローバルオブジェクトに存在しません');
+          return false;
+        }
+
+        // Phase 19: E2Eテスト環境でのFirestoreユーザードキュメント作成
+        // Firestore Rulesでは、create時にfacilitiesは空配列のみ許可（本番環境のセキュリティ）
+        // そのため、2段階アプローチを採用：
+        // 1. まず空のfacilitiesでドキュメント作成（createルールを満たす）
+        // 2. その後updateでfacilitiesを設定（updateルール: facilitiesフィールドのみ変更を許可）
+
+        const userRef = doc(db, 'users', testUid);
+        const now = Timestamp.now();
+
+        // Step 1: 空のfacilitiesでユーザードキュメント作成
+        await setDoc(userRef, {
+          userId: testUid,
+          email: testEmail,
+          name: testDisplayName,
+          photoURL: '',
+          provider: 'password', // E2Eテスト環境ではpassword認証
+          facilities: [], // 初回作成時は空配列（Firestore Rulesの要件）
+          createdAt: now,
+          lastLoginAt: now,
+        });
+
+        console.log(`✅ Firestoreユーザードキュメント作成成功 (Step 1): ${testEmail}`);
+
+        // Step 2: facilitiesを設定（updateルールに従う）
+        if (testFacilitiesArray && testFacilitiesArray.length > 0) {
+          await setDoc(userRef, {
+            facilities: testFacilitiesArray,
+          }, { merge: true }); // mergeオプションでfacilitiesフィールドのみ更新
+
+          console.log(`✅ Firestoreユーザーfacilities更新成功 (Step 2): ${testEmail}`, { facilities: testFacilitiesArray });
+        }
+
+        return true;
+      } catch (error: any) {
+        console.error(`❌ Firestoreユーザードキュメント作成失敗: ${error.message}`);
+        return false;
+      }
+    },
+    { testUid: uid, testEmail: params.email, testDisplayName: params.displayName, testFacilitiesArray: facilitiesArray }
+  );
+
+  if (!docCreated) {
+    throw new Error(`Firestoreユーザードキュメント作成に失敗しました: ${params.email}`);
+  }
+
+  // Phase 21: Firestoreドキュメント作成後の待機時間を追加
+  // ページ遷移前にFirestoreの書き込みが確実にコミットされることを保証
+  await page.waitForTimeout(1500);
 
   console.log(`✅ 認証済みユーザーセットアップ完了: ${params.email} (UID: ${uid})`);
   return uid;
