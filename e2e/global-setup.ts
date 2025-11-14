@@ -47,6 +47,9 @@ async function globalSetup(config: FullConfig) {
 
     // Firebase Admin SDK初期化（Emulator環境）
     try {
+      // Emulator環境設定（Admin SDK初期化前に設定）
+      process.env.FIREBASE_AUTH_EMULATOR_HOST = 'localhost:9099';
+
       // Admin SDKが既に初期化されている場合はスキップ
       if (!admin.apps.length) {
         admin.initializeApp({
@@ -56,9 +59,6 @@ async function globalSetup(config: FullConfig) {
 
       // Auth Emulator接続
       _adminAuth = admin.auth();
-
-      // Emulator環境設定
-      process.env.FIREBASE_AUTH_EMULATOR_HOST = 'localhost:9099';
 
       console.log('  ✅ Firebase Admin SDK初期化完了');
     } catch (error) {

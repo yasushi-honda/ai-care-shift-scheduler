@@ -47,6 +47,7 @@ test.describe('認証フロー - ユーザー状態確認（Emulator）', () => 
       consoleMessages.push(`[${msg.type()}] ${text}`);
       console.log(`[Browser Console ${msg.type()}] ${text}`);
     });
+    // TODO Phase 19: consoleMessagesを検証（エラーがないことを確認）
 
     // Emulator環境でテストユーザーを作成してログイン
     await setupAuthenticatedUser(page, {
