@@ -11,6 +11,9 @@ import {
   getDocs,
   QueryConstraint,
   getDoc,
+  startAfter,
+  endBefore,
+  limitToLast,
 } from 'firebase/firestore';
 import { db, auth } from '../../firebase';
 import {
@@ -113,9 +116,11 @@ export const SecurityAlertService = {
   },
 
   /**
-   * セキュリティアラート一覧を取得
+   * セキュリティアラート一覧を取得（ページネーション対応）
    *
    * @param filters フィルター条件
+   * @param filters.startAfterId 前方ページネーション用のドキュメントID
+   * @param filters.startBeforeId 後方ページネーション用のドキュメントID
    * @returns アラートリストまたはエラー
    */
   async getAlerts(filters: {
@@ -125,6 +130,8 @@ export const SecurityAlertService = {
     userId?: string;
     facilityId?: string | null;
     limit?: number;
+    startAfterId?: string;
+    startBeforeId?: string;
   }): Promise<Result<SecurityAlert[], SecurityAlertError>> {
     try {
       const currentUser = auth.currentUser;
@@ -134,6 +141,17 @@ export const SecurityAlertService = {
           error: {
             code: 'PERMISSION_DENIED',
             message: '認証が必要です',
+          },
+        };
+      }
+
+      // パラメータバリデーション: startAfterIdとstartBeforeIdの同時指定を禁止
+      if (filters.startAfterId && filters.startBeforeId) {
+        return {
+          success: false,
+          error: {
+            code: 'VALIDATION_ERROR',
+            message: 'startAfterIdとstartBeforeIdは同時に指定できません',
           },
         };
       }
@@ -164,9 +182,38 @@ export const SecurityAlertService = {
       // 検出日時で降順ソート（最新が先）
       constraints.push(orderBy('detectedAt', 'desc'));
 
-      // 件数制限
-      if (filters.limit) {
-        constraints.push(firestoreLimit(filters.limit));
+      // IDベースのページネーション
+      if (filters.startAfterId) {
+        // 前方ページネーション: startAfterIdのドキュメントを取得してstartAfterで使用
+        const startDoc = await getDoc(doc(db, 'securityAlerts', filters.startAfterId));
+        if (!startDoc.exists()) {
+          return {
+            success: false,
+            error: {
+              code: 'VALIDATION_ERROR',
+              message: '指定されたstartAfterIdのドキュメントが見つかりません',
+            },
+          };
+        }
+        constraints.push(startAfter(startDoc));
+        constraints.push(firestoreLimit(filters.limit || 25));
+      } else if (filters.startBeforeId) {
+        // 後方ページネーション: startBeforeIdのドキュメントを取得してendBeforeで使用
+        const startDoc = await getDoc(doc(db, 'securityAlerts', filters.startBeforeId));
+        if (!startDoc.exists()) {
+          return {
+            success: false,
+            error: {
+              code: 'VALIDATION_ERROR',
+              message: '指定されたstartBeforeIdのドキュメントが見つかりません',
+            },
+          };
+        }
+        constraints.push(endBefore(startDoc));
+        constraints.push(limitToLast(filters.limit || 25));
+      } else {
+        // 初期ロード
+        constraints.push(firestoreLimit(filters.limit || 25));
       }
 
       const q = query(collection(db, 'securityAlerts'), ...constraints);

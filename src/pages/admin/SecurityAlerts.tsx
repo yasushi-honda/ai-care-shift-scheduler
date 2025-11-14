@@ -29,6 +29,14 @@ export function SecurityAlerts(): React.ReactElement {
   const [error, setError] = useState<string | null>(null);
   const [scanning, setScanning] = useState(false);
 
+  // ページネーション状態（IDベース）
+  const [lastId, setLastId] = useState<string | null>(null);
+  const [firstId, setFirstId] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [hasNext, setHasNext] = useState(false);
+  const [hasPrev, setHasPrev] = useState(false);
+  const PAGE_SIZE = 25;
+
   // フィルター状態
   const [filterStatus, setFilterStatus] = useState<SecurityAlertStatus | ''>('');
   const [filterType, setFilterType] = useState<SecurityAlertType | ''>('');
@@ -44,7 +52,7 @@ export function SecurityAlerts(): React.ReactElement {
     loadAlerts();
   }, [filterStatus, filterType, filterSeverity]);
 
-  const loadAlerts = async () => {
+  const loadAlerts = async (direction: 'next' | 'prev' | 'initial' = 'initial') => {
     setLoading(true);
     setError(null);
 
@@ -53,11 +61,20 @@ export function SecurityAlerts(): React.ReactElement {
       type?: SecurityAlertType;
       severity?: SecurityAlertSeverity;
       limit?: number;
-    } = { limit: 100 };
+      startAfterId?: string;
+      startBeforeId?: string;
+    } = { limit: PAGE_SIZE + 1 }; // hasMore判定のため+1件取得
 
     if (filterStatus) filters.status = filterStatus;
     if (filterType) filters.type = filterType;
     if (filterSeverity) filters.severity = filterSeverity;
+
+    // ページネーション処理（IDベース）
+    if (direction === 'next' && lastId) {
+      filters.startAfterId = lastId;
+    } else if (direction === 'prev' && firstId) {
+      filters.startBeforeId = firstId;
+    }
 
     const result = await SecurityAlertService.getAlerts(filters);
 
@@ -68,7 +85,51 @@ export function SecurityAlerts(): React.ReactElement {
       return;
     }
 
-    setAlerts(result.data);
+    // hasNext/hasPrev判定と表示データの設定
+    const hasMoreData = result.data.length > PAGE_SIZE;
+
+    if (result.data.length > PAGE_SIZE) {
+      // 次ページがある場合：最初のPAGE_SIZE件のみ表示
+      const displayAlerts = result.data.slice(0, PAGE_SIZE);
+      setAlerts(displayAlerts);
+      setFirstId(displayAlerts[0].id);
+      setLastId(displayAlerts[displayAlerts.length - 1].id);
+    } else if (result.data.length > 0) {
+      // 次ページがない場合：全件表示
+      setAlerts(result.data);
+      setFirstId(result.data[0].id);
+      setLastId(result.data[result.data.length - 1].id);
+    } else {
+      // データなし
+      setAlerts([]);
+      setFirstId(null);
+      setLastId(null);
+    }
+
+    // ページネーション可否を方向別に設定
+    if (direction === 'next') {
+      // 次に進んだ：hasNextを判定、hasPrevは常にtrue
+      setHasNext(hasMoreData);
+      setHasPrev(true);
+    } else if (direction === 'prev') {
+      // 前に戻った：hasPrevを判定、hasNextは常にtrue
+      setHasPrev(hasMoreData);
+      setHasNext(true);
+    } else {
+      // 初期ロード：hasNextを判定、hasPrevはfalse
+      setHasNext(hasMoreData);
+      setHasPrev(false);
+    }
+
+    // ページ番号を更新
+    if (direction === 'next') {
+      setCurrentPage((prev) => prev + 1);
+    } else if (direction === 'prev') {
+      setCurrentPage((prev) => Math.max(1, prev - 1));
+    } else {
+      setCurrentPage(1);
+    }
+
     setLoading(false);
   };
 
@@ -387,10 +448,28 @@ export function SecurityAlerts(): React.ReactElement {
           </div>
         )}
 
-        {/* ページ情報 */}
+        {/* ページネーション */}
         {!loading && !error && alerts.length > 0 && (
-          <div className="px-4 py-3 bg-gray-50 border-t border-gray-200 text-sm text-gray-600">
-            {alerts.length}件のアラートを表示中
+          <div className="px-4 py-3 bg-gray-50 border-t border-gray-200 flex items-center justify-between">
+            <div className="text-sm text-gray-600">
+              ページ {currentPage} ({alerts.length}件を表示中、1ページあたり{PAGE_SIZE}件)
+            </div>
+            <div className="flex items-center space-x-2">
+              <button
+                onClick={() => loadAlerts('prev')}
+                disabled={!hasPrev || loading}
+                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                ← 前へ
+              </button>
+              <button
+                onClick={() => loadAlerts('next')}
+                disabled={!hasNext || loading}
+                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                次へ →
+              </button>
+            </div>
           </div>
         )}
       </div>

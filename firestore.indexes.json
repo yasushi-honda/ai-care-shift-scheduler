@@ -107,7 +107,7 @@
       "queryScope": "COLLECTION",
       "fields": [
         {
-          "fieldPath": "createdAt",
+          "fieldPath": "detectedAt",
           "order": "DESCENDING"
         },
         {
