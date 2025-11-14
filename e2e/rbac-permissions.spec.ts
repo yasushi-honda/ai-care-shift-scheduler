@@ -125,8 +125,73 @@ test.describe('RBAC権限チェック - 各ロール（Emulator）', () => {
     // 複数施設のセットアップとFirestore Security Rulesテストが必要
   });
 
-  test.skip('adminはメンバー招待でeditor/viewerのみ選択できる', async ({ page }) => {
-    // Phase 17-2以降で実装予定
-    // 施設詳細ページとメンバー招待UIの詳細な確認が必要
+  test('adminはメンバー招待でeditor/viewerのみ選択できる', async ({ page }) => {
+    // Phase 22: Task 3実装
+    // adminロールでログインし、招待モーダルでeditor/viewerのみ選択可能なことを確認
+
+    // 1. テスト用施設データ作成（Emulator環境 - Admin SDK使用）
+    const facilityId = 'test-facility-admin-invitation';
+    const facilityName = 'テスト施設（Admin招待権限）';
+
+    // Admin SDKで施設ドキュメント作成（invitation-flow.spec.tsのパターンを踏襲）
+    // CodeRabbit指摘対応: Admin SDK初期化前に環境変数を設定
+    process.env.FIRESTORE_EMULATOR_HOST = 'localhost:8080';
+
+    const admin = await import('firebase-admin');
+    if (!admin.apps.length) {
+      admin.initializeApp({
+        projectId: 'ai-care-shift-scheduler',
+      });
+    }
+
+    const facilityData = {
+      id: facilityId,
+      name: facilityName,
+      address: 'テスト住所',
+      contactEmail: 'test@example.com',
+      contactPhone: '000-0000-0000',
+      createdAt: admin.firestore.Timestamp.now(),
+      updatedAt: admin.firestore.Timestamp.now(),
+    };
+
+    await admin.firestore().collection('facilities').doc(facilityId).set(facilityData);
+
+    // 2. adminロールでログイン（super-adminではなくadminでテスト）
+    await setupAuthenticatedUser(page, {
+      email: 'admin-invite-test@example.com',
+      password: 'password123',
+      displayName: 'Admin Invite Tester',
+      role: 'admin',
+      facilities: [{ facilityId, role: 'admin' }],
+    });
+
+    // 3. 施設詳細ページにアクセス
+    await page.goto(`/admin/facility/${facilityId}`);
+
+    // 4. 「+ メンバー追加」ボタンクリック
+    const inviteButton = page.getByRole('button', { name: /メンバー追加/ });
+    await expect(inviteButton).toBeVisible({ timeout: 10000 });
+    await inviteButton.click();
+
+    // 5. モーダル表示確認
+    await expect(page.getByRole('dialog')).toBeVisible({ timeout: 5000 });
+
+    // 6. ロール選択ドロップダウン確認
+    const roleSelect = page.locator('#invite-role-select');
+    await expect(roleSelect).toBeVisible({ timeout: 5000 });
+
+    // 7. 選択肢を取得（editor, viewerのみ存在することを確認）
+    const options = await roleSelect.locator('option').allTextContents();
+
+    // editorとviewerが選択肢に含まれることを確認
+    expect(options).toContain('編集者（シフト編集可能）');
+    expect(options).toContain('閲覧者（閲覧のみ）');
+
+    // adminとsuper-adminが選択肢に含まれないことを確認
+    expect(options).not.toContain('管理者');
+    expect(options).not.toContain('システム管理者');
+
+    // 選択肢が2つのみであることを確認（editor, viewer）
+    expect(options.length).toBe(2);
   });
 });
