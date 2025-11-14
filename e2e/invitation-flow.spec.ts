@@ -229,13 +229,15 @@ test.describe('招待フロー - 招待送信（Emulator）', () => {
     const facilityName = 'テスト施設（招待モーダル）';
 
     // Admin SDKで施設ドキュメント作成（firestore-helperのパターンを踏襲）
+    // Admin SDK初期化前に環境変数を設定
+    process.env.FIRESTORE_EMULATOR_HOST = 'localhost:8080';
+
     const admin = await import('firebase-admin');
     if (!admin.apps.length) {
       admin.initializeApp({
         projectId: 'ai-care-shift-scheduler',
       });
     }
-    process.env.FIRESTORE_EMULATOR_HOST = 'localhost:8080';
 
     const facilityData = {
       id: facilityId,
@@ -292,13 +294,15 @@ test.describe('招待フロー - 招待送信（Emulator）', () => {
     const facilityName = 'テスト施設（招待送信）';
 
     // Admin SDKで施設ドキュメント作成
+    // Admin SDK初期化前に環境変数を設定
+    process.env.FIRESTORE_EMULATOR_HOST = 'localhost:8080';
+
     const admin = await import('firebase-admin');
     if (!admin.apps.length) {
       admin.initializeApp({
         projectId: 'ai-care-shift-scheduler',
       });
     }
-    process.env.FIRESTORE_EMULATOR_HOST = 'localhost:8080';
 
     const facilityData = {
       id: facilityId,
