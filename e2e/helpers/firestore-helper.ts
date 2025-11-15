@@ -80,6 +80,16 @@ export async function createInvitationInEmulator(params: {
     // Admin SDKはSecurity Rulesをバイパスするため、権限エラーは発生しない
     await admin.firestore().collection('invitations').doc(invitationId).set(invitationData);
 
+    // Phase 22: サブコレクションにも招待ドキュメント作成（後方互換性）
+    // acceptInvitation関数がサブコレクションも更新するため
+    const facilityInvitationRef = admin.firestore()
+      .collection('facilities')
+      .doc(params.facilityId)
+      .collection('invitations')
+      .doc(invitationId);
+
+    await facilityInvitationRef.set(invitationData);
+
     console.log(`✅ Emulator招待ドキュメント作成成功: ${params.email} (ID: ${invitationId})`);
     return invitationId;
   } catch (error: any) {
@@ -104,6 +114,49 @@ export async function deleteInvitationInEmulator(invitationId: string): Promise<
     console.log(`✅ Emulator招待ドキュメント削除成功: ${invitationId}`);
   } catch (error: any) {
     console.warn(`⚠️ Emulator招待ドキュメント削除失敗: ${error.message}`);
+  }
+}
+
+/**
+ * Emulator環境のFirestore Admin SDKを使用してfacilityドキュメントを作成
+ *
+ * @param params 施設ドキュメント作成パラメータ
+ * @returns 作成された施設ドキュメントID
+ */
+export async function createFacilityInEmulator(params: {
+  facilityId: string;
+  name: string;
+  adminUserId: string;
+}): Promise<string> {
+  console.log(`🏢 Emulator施設ドキュメント作成: ${params.name} (ID: ${params.facilityId})`);
+
+  // Admin SDK初期化（未初期化の場合のみ）
+  initializeAdminSDK();
+
+  const now = admin.firestore.Timestamp.now();
+
+  const facilityData = {
+    id: params.facilityId,
+    name: params.name,
+    settings: {
+      maxStaff: 50,
+      shiftTypes: ['早番', '日勤', '遅番', '夜勤'],
+    },
+    members: [],
+    createdAt: now,
+    updatedAt: now,
+    createdBy: params.adminUserId,
+  };
+
+  try {
+    // Admin SDK経由でfacilitiesコレクションにドキュメント作成
+    await admin.firestore().collection('facilities').doc(params.facilityId).set(facilityData);
+
+    console.log(`✅ Emulator施設ドキュメント作成成功: ${params.name} (ID: ${params.facilityId})`);
+    return params.facilityId;
+  } catch (error: any) {
+    console.error(`❌ Emulator施設ドキュメント作成失敗: ${error.message}`);
+    throw new Error(`Failed to create facility in emulator: ${error.message}`);
   }
 }
 

@@ -21,6 +21,7 @@ export default function InviteAccept(): React.ReactElement {
   const [loading, setLoading] = useState(true);
   const [verifying, setVerifying] = useState(true);
   const [accepting, setAccepting] = useState(false);
+  const [acceptCompleted, setAcceptCompleted] = useState(false); // Phase 22: 招待受け入れ完了フラグ
   const [error, setError] = useState<{ message: string; canRetry: boolean } | null>(null);
   const [invitationInfo, setInvitationInfo] = useState<{
     email: string;
@@ -87,7 +88,8 @@ export default function InviteAccept(): React.ReactElement {
   // ユーザーがログインしている場合、自動的に招待を受け入れる
   useEffect(() => {
     const acceptInvite = async () => {
-      if (!currentUser || !token || verifying || accepting || !invitationInfo) {
+      // Phase 22: 招待受け入れ完了済みの場合はスキップ（無限ループ防止）
+      if (!currentUser || !token || verifying || accepting || acceptCompleted || !invitationInfo) {
         return;
       }
 
@@ -114,16 +116,21 @@ export default function InviteAccept(): React.ReactElement {
 
       if (!result.success) {
         assertResultError(result);
-        // 招待受け入れ固有のエラーメッセージをユーザーフレンドリーに変換
+
+        // Phase 22: 既に受け入れ済みの招待の場合もホームにリダイレクト
+        if (result.error.code === 'VALIDATION_ERROR' && result.error.message?.includes('すでに')) {
+          setAcceptCompleted(true); // 完了フラグ設定
+          navigate('/', { replace: true });
+          return;
+        }
+
+        // その他のエラーメッセージをユーザーフレンドリーに変換
         let friendlyMessage = '';
         let canRetry = true;
 
         if (result.error.code === 'PERMISSION_DENIED') {
           friendlyMessage = 'アクセス権限がありません。\nページを更新してもう一度お試しください。\n問題が解決しない場合は、招待を送った方にご連絡ください。';
           canRetry = true;
-        } else if (result.error.code === 'VALIDATION_ERROR' && result.error.message?.includes('すでに')) {
-          friendlyMessage = 'あなたは既にこの施設にアクセスできます。\nホーム画面から施設を選択してください。';
-          canRetry = false;
         } else {
           const errorMsg = handleError(result.error, '招待の受け入れ');
           friendlyMessage = errorMsg.message;
@@ -135,11 +142,12 @@ export default function InviteAccept(): React.ReactElement {
       }
 
       // 成功：メイン画面にリダイレクト
+      setAcceptCompleted(true); // Phase 22: 完了フラグ設定（リダイレクト前）
       navigate('/', { replace: true });
     };
 
     acceptInvite();
-  }, [currentUser, token, verifying, accepting, invitationInfo, navigate]);
+  }, [currentUser, token, verifying, accepting, acceptCompleted, invitationInfo, navigate]);
 
   // ログインボタンのハンドラー
   const handleLogin = async () => {

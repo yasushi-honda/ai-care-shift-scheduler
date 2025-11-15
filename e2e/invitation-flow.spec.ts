@@ -1,6 +1,10 @@
 import { test, expect } from '@playwright/test';
 import { setupAuthenticatedUser, clearEmulatorAuth } from './helpers/auth-helper';
-import { createInvitationInEmulator, clearEmulatorFirestore } from './helpers/firestore-helper';
+import {
+  createInvitationInEmulator,
+  createFacilityInEmulator,
+  clearEmulatorFirestore
+} from './helpers/firestore-helper';
 
 /**
  * 招待フローE2Eテスト
@@ -64,13 +68,21 @@ test.describe('招待フロー - 招待受け入れ（Emulator）', () => {
       console.log(`[Browser Console ${msg.type()}] ${text}`);
     });
 
-    // 1. Firestoreに招待ドキュメント作成（Emulator環境）
+    // 1. Firestoreに施設ドキュメントと招待ドキュメント作成（Emulator環境）
     const token = 'test-token-auto-accept-67890';
     const email = 'auto-accept-user@example.com';
     const role = 'viewer';
     const facilityId = 'test-facility-002';
     const createdBy = 'test-admin-uid';
 
+    // 施設ドキュメント作成
+    await createFacilityInEmulator({
+      facilityId,
+      name: 'テスト施設002',
+      adminUserId: createdBy,
+    });
+
+    // 招待ドキュメント作成
     const invitationId = await createInvitationInEmulator({
       email,
       role,
