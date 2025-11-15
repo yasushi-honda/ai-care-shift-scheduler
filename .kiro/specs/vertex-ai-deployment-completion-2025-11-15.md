@@ -32,6 +32,14 @@
 - プロジェクトオーナー権限で`cloudscheduler.googleapis.com` APIを有効化
 - Cloud Functionsデプロイの前提条件を満たす
 
+**なぜ必要か**:
+- プロジェクトは`onSchedule`（定期実行関数）を使用しています
+  - ファイル: `functions/src/generateMonthlyReport.ts`
+  - 機能: 月次レポート自動生成（Phase 19.3.3実装済み）
+  - 実行頻度: 毎月1日 午前9時（JST）
+- Firebase Functions v2の`onSchedule`は内部的にCloud Scheduler APIを使用
+- そのため、scheduled functionsがなくてもデプロイ時にAPIの有効化が必要
+
 ### 2. Cloud Functionsデプロイ完了
 - 新しいVertex AI設定（asia-northeast1 + gemini-2.5-flash）を本番環境に反映
 - デプロイ成功を検証
