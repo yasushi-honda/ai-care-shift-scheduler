@@ -204,6 +204,7 @@ export default function InvitationModal({
                   type="text"
                   value={invitationLink}
                   readOnly
+                  data-testid="invitation-link-input"
                   className="flex-1 px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-sm"
                 />
                 <button

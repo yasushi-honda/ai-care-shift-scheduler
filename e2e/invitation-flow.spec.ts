@@ -359,9 +359,8 @@ test.describe('招待フロー - 招待送信（Emulator）', () => {
 
     // 招待リンク表示確認（/invite?token= を含む）
     // リンクはtextboxのvalue属性に格納されている
-    // モーダル内の全textboxを取得し、招待リンクのものを検証
-    const allTextboxes = await page.getByRole('dialog').getByRole('textbox').all();
-    const linkTextbox = allTextboxes[allTextboxes.length - 1]; // 最後のtextboxが招待リンク
+    // data-testidで安定して招待リンク入力欄を特定（CodeRabbit推奨）
+    const linkTextbox = page.getByTestId('invitation-link-input');
     await expect(linkTextbox).toBeVisible({ timeout: 5000 });
     const linkValue = await linkTextbox.inputValue();
     expect(linkValue).toContain('/invite?token=');
