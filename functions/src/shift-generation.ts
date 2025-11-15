@@ -12,7 +12,7 @@ import { generateSkeleton, generateDetailedShifts, parseGeminiJsonResponse } fro
  * Vertex AI モデル名（GA版、安定版）
  * 注: -latestサフィックスは不安定なプレビュー版を指すため使用しない
  */
-const VERTEX_AI_MODEL = 'gemini-2.5-flash-lite';
+const VERTEX_AI_MODEL = 'gemini-2.5-flash';
 
 /**
  * 入力サイズ制限
@@ -194,7 +194,7 @@ export const generateShift = onRequest(
 
         const vertexAI = new VertexAI({
           project: projectId,
-          location: 'us-central1',
+          location: 'asia-northeast1',
         });
 
         const model = vertexAI.getGenerativeModel({

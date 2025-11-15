@@ -14,7 +14,7 @@ import type {
   ScheduleSkeleton
 } from './types';
 
-const VERTEX_AI_MODEL = 'gemini-2.5-flash-lite';
+const VERTEX_AI_MODEL = 'gemini-2.5-flash';
 const BATCH_SIZE = 10; // 詳細生成時のバッチサイズ（10名 × 30日 = 300セル）
 
 /**
@@ -205,7 +205,7 @@ export async function generateSkeleton(
 
   const vertexAI = new VertexAI({
     project: projectId,
-    location: 'us-central1',
+    location: 'asia-northeast1',
   });
 
   const model = vertexAI.getGenerativeModel({
@@ -283,7 +283,7 @@ export async function generateDetailedShifts(
 
   const vertexAI = new VertexAI({
     project: projectId,
-    location: 'us-central1',
+    location: 'asia-northeast1',
   });
 
   const model = vertexAI.getGenerativeModel({
