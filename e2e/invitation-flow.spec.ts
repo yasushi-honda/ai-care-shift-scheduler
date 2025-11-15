@@ -236,32 +236,15 @@ test.describe('招待フロー - 招待送信（Emulator）', () => {
   });
 
   test('施設詳細ページで招待モーダルを開ける', async ({ page }) => {
-    // 1. テスト用施設データ作成（Emulator環境 - Admin SDK使用）
+    // 1. テスト用施設データ作成（Emulator環境 - createFacilityInEmulatorヘルパー使用）
     const facilityId = 'test-facility-invitation-modal';
     const facilityName = 'テスト施設（招待モーダル）';
 
-    // Admin SDKで施設ドキュメント作成（firestore-helperのパターンを踏襲）
-    // Admin SDK初期化前に環境変数を設定
-    process.env.FIRESTORE_EMULATOR_HOST = 'localhost:8080';
-
-    const { default: admin } = await import('firebase-admin');
-    if (!admin.apps.length) {
-      admin.initializeApp({
-        projectId: 'ai-care-shift-scheduler',
-      });
-    }
-
-    const facilityData = {
-      id: facilityId,
+    await createFacilityInEmulator({
+      facilityId,
       name: facilityName,
-      address: 'テスト住所',
-      contactEmail: 'test@example.com',
-      contactPhone: '000-0000-0000',
-      createdAt: admin.firestore.Timestamp.now(),
-      updatedAt: admin.firestore.Timestamp.now(),
-    };
-
-    await admin.firestore().collection('facilities').doc(facilityId).set(facilityData);
+      adminUserId: 'test-admin-user-id',
+    });
 
     // 2. Super-adminユーザーでログイン（Emulator環境）
     await setupAuthenticatedUser(page, {
@@ -273,7 +256,18 @@ test.describe('招待フロー - 招待送信（Emulator）', () => {
     });
 
     // 3. 施設詳細ページにアクセス
-    await page.goto(`/admin/facility/${facilityId}`);
+    await page.goto(`/admin/facilities/${facilityId}`);
+
+    // ページロード待ち
+    await page.waitForLoadState('domcontentloaded');
+
+    // デバッグ: エラー境界チェック
+    const hasError = await page.locator('text=エラーが発生しました').isVisible().catch(() => false);
+    if (hasError) {
+      const errorDetails = await page.textContent('body');
+      console.error('Error boundary displayed:', errorDetails);
+      throw new Error('FacilityDetail page shows error boundary');
+    }
 
     // 4. 「+ メンバー追加」ボタンクリック
     const inviteButton = page.getByRole('button', { name: /メンバー追加/ });
@@ -301,32 +295,15 @@ test.describe('招待フロー - 招待送信（Emulator）', () => {
   });
 
   test('招待を送信すると、招待リンクが生成される', async ({ page }) => {
-    // 1. テスト用施設データ作成（Emulator環境 - Admin SDK使用）
+    // 1. テスト用施設データ作成（Emulator環境 - createFacilityInEmulatorヘルパー使用）
     const facilityId = 'test-facility-send-invitation';
     const facilityName = 'テスト施設（招待送信）';
 
-    // Admin SDKで施設ドキュメント作成
-    // Admin SDK初期化前に環境変数を設定
-    process.env.FIRESTORE_EMULATOR_HOST = 'localhost:8080';
-
-    const { default: admin } = await import('firebase-admin');
-    if (!admin.apps.length) {
-      admin.initializeApp({
-        projectId: 'ai-care-shift-scheduler',
-      });
-    }
-
-    const facilityData = {
-      id: facilityId,
+    await createFacilityInEmulator({
+      facilityId,
       name: facilityName,
-      address: 'テスト住所',
-      contactEmail: 'test@example.com',
-      contactPhone: '000-0000-0000',
-      createdAt: admin.firestore.Timestamp.now(),
-      updatedAt: admin.firestore.Timestamp.now(),
-    };
-
-    await admin.firestore().collection('facilities').doc(facilityId).set(facilityData);
+      adminUserId: 'test-admin-user-id',
+    });
 
     // 2. Super-adminユーザーでログイン（Emulator環境）
     await setupAuthenticatedUser(page, {
@@ -338,7 +315,18 @@ test.describe('招待フロー - 招待送信（Emulator）', () => {
     });
 
     // 3. 施設詳細ページにアクセス
-    await page.goto(`/admin/facility/${facilityId}`);
+    await page.goto(`/admin/facilities/${facilityId}`);
+
+    // ページロード待ち
+    await page.waitForLoadState('domcontentloaded');
+
+    // デバッグ: エラー境界チェック
+    const hasError = await page.locator('text=エラーが発生しました').isVisible().catch(() => false);
+    if (hasError) {
+      const errorDetails = await page.textContent('body');
+      console.error('Error boundary displayed:', errorDetails);
+      throw new Error('FacilityDetail page shows error boundary');
+    }
 
     // 4. 「+ メンバー追加」ボタンクリック
     const inviteButton = page.getByRole('button', { name: /メンバー追加/ });

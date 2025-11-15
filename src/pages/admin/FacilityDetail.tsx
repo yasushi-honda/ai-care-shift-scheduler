@@ -6,9 +6,8 @@ import {
   getFacilityStats,
   FacilityStats,
 } from '../../services/facilityService';
-import { createInvitation } from '../../services/invitationService';
 import { useAuth } from '../../contexts/AuthContext';
-import { handleError } from '../../utils/errorHandler';
+import InvitationModal from '../../components/InvitationModal';
 
 /**
  * FacilityDetail
@@ -28,13 +27,8 @@ export function FacilityDetail(): React.ReactElement {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // 招待モーダルの状態
-  const [showInviteModal, setShowInviteModal] = useState(false);
-  const [inviteEmail, setInviteEmail] = useState('');
-  const [inviteRole, setInviteRole] = useState<'editor' | 'viewer'>('editor');
-  const [inviting, setInviting] = useState(false);
-  const [inviteError, setInviteError] = useState<string | null>(null);
-  const [inviteSuccess, setInviteSuccess] = useState<string | null>(null);
+  // Phase 22: InvitationModalコンポーネント使用
+  const [showInvitationModal, setShowInvitationModal] = useState(false);
 
   const loadFacilityDetail = useCallback(async () => {
     if (!facilityId || !currentUser) return;
@@ -109,76 +103,6 @@ export function FacilityDetail(): React.ReactElement {
     }
   }
 
-  // 招待モーダルを開く
-  const handleOpenInviteModal = () => {
-    setShowInviteModal(true);
-    setInviteEmail('');
-    setInviteRole('editor');
-    setInviteError(null);
-    setInviteSuccess(null);
-  };
-
-  // 招待モーダルを閉じる
-  const handleCloseInviteModal = () => {
-    setShowInviteModal(false);
-    setInviteEmail('');
-    setInviteRole('editor');
-    setInviteError(null);
-    setInviteSuccess(null);
-  };
-
-  // 招待を送信
-  const handleSendInvitation = async () => {
-    if (!facilityId || !currentUser) return;
-
-    setInviteError(null);
-    setInviteSuccess(null);
-
-    // メールアドレスのフォーマット検証
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(inviteEmail.trim())) {
-      setInviteError('有効なメールアドレスを入力してください');
-      return;
-    }
-
-    // 既存メンバーチェック
-    const isExistingMember = facility?.members?.some(
-      (m) => m.email && m.email.toLowerCase() === inviteEmail.trim().toLowerCase()
-    );
-    if (isExistingMember) {
-      setInviteError('このメールアドレスのユーザーはすでにメンバーです');
-      return;
-    }
-
-    setInviting(true);
-
-    const result = await createInvitation(
-      facilityId,
-      inviteEmail.trim(),
-      inviteRole,
-      currentUser.uid
-    );
-
-    setInviting(false);
-
-    if (!result.success) {
-      assertResultError(result);
-      const errorMsg = handleError(result.error, '招待の送信');
-      setInviteError(errorMsg.message);
-      return;
-    }
-
-    const { invitationLink } = result.data;
-
-    // 成功メッセージを表示
-    setInviteSuccess(
-      `招待を送信しました！以下のリンクを ${inviteEmail} に共有してください：\n${invitationLink}`
-    );
-
-    // フォームをリセット
-    setInviteEmail('');
-    setInviteRole('editor');
-  };
 
   if (loading) {
     return (
@@ -293,10 +217,13 @@ export function FacilityDetail(): React.ReactElement {
             メンバー一覧
           </h2>
           <button
-            onClick={handleOpenInviteModal}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+            onClick={() => setShowInvitationModal(true)}
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium flex items-center gap-2"
           >
-            + メンバー追加
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+            </svg>
+            メンバー追加
           </button>
         </div>
 
@@ -361,88 +288,13 @@ export function FacilityDetail(): React.ReactElement {
         )}
       </div>
 
-      {/* 招待モーダル */}
-      {/* Phase 19.2.3: フォームアクセシビリティ改善 - role, aria-labelledby, aria-live */}
-      {showInviteModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl p-6 max-w-md w-full mx-4" role="dialog" aria-modal="true" aria-labelledby="invite-member-title">
-            <h3 id="invite-member-title" className="text-xl font-bold text-gray-900 mb-4">
-              メンバーを招待
-            </h3>
-
-            {/* 成功メッセージ */}
-            {inviteSuccess && (
-              <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg" role="status" aria-live="polite">
-                <p className="text-sm text-green-800 whitespace-pre-wrap">
-                  {inviteSuccess}
-                </p>
-              </div>
-            )}
-
-            {/* エラーメッセージ */}
-            {inviteError && (
-              <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg" role="alert" aria-live="assertive">
-                <p className="text-sm text-red-800">{inviteError}</p>
-              </div>
-            )}
-
-            {/* フォーム */}
-            <div className="space-y-4">
-              <div>
-                <label htmlFor="invite-email-input" className="block text-sm font-medium text-gray-700 mb-1">
-                  メールアドレス
-                </label>
-                <input
-                  id="invite-email-input"
-                  type="email"
-                  value={inviteEmail}
-                  onChange={(e) => setInviteEmail(e.target.value)}
-                  placeholder="example@example.com"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  disabled={inviting}
-                  aria-invalid={inviteError ? 'true' : 'false'}
-                />
-              </div>
-
-              <div>
-                <label htmlFor="invite-role-select" className="block text-sm font-medium text-gray-700 mb-1">
-                  ロール
-                </label>
-                <select
-                  id="invite-role-select"
-                  value={inviteRole}
-                  onChange={(e) =>
-                    setInviteRole(e.target.value as 'editor' | 'viewer')
-                  }
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  disabled={inviting}
-                >
-                  <option value="editor">編集者（シフト編集可能）</option>
-                  <option value="viewer">閲覧者（閲覧のみ）</option>
-                </select>
-              </div>
-            </div>
-
-            {/* ボタン */}
-            <div className="flex gap-3 mt-6">
-              <button
-                onClick={handleCloseInviteModal}
-                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium"
-                disabled={inviting}
-              >
-                キャンセル
-              </button>
-              <button
-                onClick={handleSendInvitation}
-                disabled={inviting || !inviteEmail}
-                className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {inviting ? '送信中...' : '招待を送信'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Phase 22: InvitationModalコンポーネント統合 */}
+      <InvitationModal
+        facilityId={facilityId || ''}
+        facilityName={facility.name}
+        isOpen={showInvitationModal}
+        onClose={() => setShowInvitationModal(false)}
+      />
     </div>
   );
 }
