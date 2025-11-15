@@ -232,7 +232,7 @@ test.describe('招待フロー - 招待送信（Emulator）', () => {
     // Admin SDK初期化前に環境変数を設定
     process.env.FIRESTORE_EMULATOR_HOST = 'localhost:8080';
 
-    const admin = await import('firebase-admin');
+    const { default: admin } = await import('firebase-admin');
     if (!admin.apps.length) {
       admin.initializeApp({
         projectId: 'ai-care-shift-scheduler',
@@ -297,7 +297,7 @@ test.describe('招待フロー - 招待送信（Emulator）', () => {
     // Admin SDK初期化前に環境変数を設定
     process.env.FIRESTORE_EMULATOR_HOST = 'localhost:8080';
 
-    const admin = await import('firebase-admin');
+    const { default: admin } = await import('firebase-admin');
     if (!admin.apps.length) {
       admin.initializeApp({
         projectId: 'ai-care-shift-scheduler',
