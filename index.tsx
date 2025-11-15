@@ -16,16 +16,16 @@ import { reportWebVitals } from './src/utils/webVitals';  // Phase 19.1.1: Web V
 const App = lazy(() => import('./App'));
 const Forbidden = lazy(() => import('./src/pages/Forbidden'));
 const InviteAccept = lazy(() => import('./src/pages/InviteAccept'));
-const AdminLayout = lazy(() => import('./src/pages/admin/AdminLayout'));
-const AdminDashboard = lazy(() => import('./src/pages/admin/AdminDashboard'));
-const FacilityManagement = lazy(() => import('./src/pages/admin/FacilityManagement'));
-const FacilityDetail = lazy(() => import('./src/pages/admin/FacilityDetail'));
-const UserManagement = lazy(() => import('./src/pages/admin/UserManagement'));
-const UserDetail = lazy(() => import('./src/pages/admin/UserDetail'));
-const AuditLogs = lazy(() => import('./src/pages/admin/AuditLogs'));
-const SecurityAlerts = lazy(() => import('./src/pages/admin/SecurityAlerts'));
-const BackupManagement = lazy(() => import('./src/pages/admin/BackupManagement'));
-const UsageReports = lazy(() => import('./src/pages/admin/UsageReports'));
+const AdminLayout = lazy(() => import('./src/pages/admin/AdminLayout').then(m => ({ default: m.AdminLayout })));
+const AdminDashboard = lazy(() => import('./src/pages/admin/AdminDashboard').then(m => ({ default: m.AdminDashboard })));
+const FacilityManagement = lazy(() => import('./src/pages/admin/FacilityManagement').then(m => ({ default: m.FacilityManagement })));
+const FacilityDetail = lazy(() => import('./src/pages/admin/FacilityDetail').then(m => ({ default: m.FacilityDetail })));
+const UserManagement = lazy(() => import('./src/pages/admin/UserManagement').then(m => ({ default: m.UserManagement })));
+const UserDetail = lazy(() => import('./src/pages/admin/UserDetail').then(m => ({ default: m.UserDetail })));
+const AuditLogs = lazy(() => import('./src/pages/admin/AuditLogs').then(m => ({ default: m.AuditLogs })));
+const SecurityAlerts = lazy(() => import('./src/pages/admin/SecurityAlerts').then(m => ({ default: m.SecurityAlerts })));
+const BackupManagement = lazy(() => import('./src/pages/admin/BackupManagement').then(m => ({ default: m.BackupManagement })));
+const UsageReports = lazy(() => import('./src/pages/admin/UsageReports').then(m => ({ default: m.UsageReports })));
 
 const rootElement = document.getElementById('root');
 if (!rootElement) {

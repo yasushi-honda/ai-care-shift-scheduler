@@ -135,17 +135,14 @@ export async function createFacilityInEmulator(params: {
 
   const now = admin.firestore.Timestamp.now();
 
+  // Facility型に完全準拠（types.ts:217-223）
   const facilityData = {
-    id: params.facilityId,
+    facilityId: params.facilityId, // ✅ id → facilityId
     name: params.name,
-    settings: {
-      maxStaff: 50,
-      shiftTypes: ['早番', '日勤', '遅番', '夜勤'],
-    },
-    members: [],
     createdAt: now,
-    updatedAt: now,
     createdBy: params.adminUserId,
+    members: [], // ✅ 空配列（初期状態）
+    // ❌ settings, updatedAt フィールドは削除（Facility型に存在しない）
   };
 
   try {

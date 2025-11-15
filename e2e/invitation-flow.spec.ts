@@ -236,6 +236,10 @@ test.describe('招待フロー - 招待送信（Emulator）', () => {
   });
 
   test('施設詳細ページで招待モーダルを開ける', async ({ page }) => {
+    // ブラウザログキャプチャ
+    page.on('console', msg => console.log(`[Browser Console ${msg.type()}]`, msg.text()));
+    page.on('pageerror', err => console.error('[PAGE ERROR]:', err.message, err.stack));
+
     // 1. テスト用施設データ作成（Emulator環境 - createFacilityInEmulatorヘルパー使用）
     const facilityId = 'test-facility-invitation-modal';
     const facilityName = 'テスト施設（招待モーダル）';
@@ -276,7 +280,7 @@ test.describe('招待フロー - 招待送信（Emulator）', () => {
 
     // 5. モーダル表示確認
     await expect(page.getByRole('dialog')).toBeVisible({ timeout: 5000 });
-    await expect(page.getByText('メンバーを招待')).toBeVisible({ timeout: 5000 });
+    await expect(page.getByRole('heading', { name: 'メンバーを招待' })).toBeVisible({ timeout: 5000 });
 
     // 6. メールアドレス入力フィールド確認
     const emailInput = page.locator('#invite-email-input');
@@ -344,17 +348,23 @@ test.describe('招待フロー - 招待送信（Emulator）', () => {
     const roleSelect = page.locator('#invite-role-select');
     await roleSelect.selectOption('editor');
 
-    // 7. 「招待を送信」ボタンクリック
-    const sendButton = page.getByRole('button', { name: '招待を送信' });
+    // 7. 「招待を作成」ボタンクリック
+    const sendButton = page.getByRole('button', { name: '招待を作成' });
     await sendButton.click();
 
     // 8. 成功メッセージと招待リンク表示確認
-    // 成功メッセージ: "招待を送信しました！以下のリンクを new-user@example.com に共有してください："
-    await expect(page.getByText(/招待を送信しました/)).toBeVisible({ timeout: 10000 });
+    // 成功メッセージ: "招待リンクを作成しました" "以下のリンクを new-user@example.com に送信してください"
+    await expect(page.getByText(/招待リンクを作成しました/)).toBeVisible({ timeout: 10000 });
     await expect(page.getByText(/new-user@example\.com/)).toBeVisible({ timeout: 5000 });
 
     // 招待リンク表示確認（/invite?token= を含む）
-    await expect(page.getByText(/\/invite\?token=/)).toBeVisible({ timeout: 5000 });
+    // リンクはtextboxのvalue属性に格納されている
+    // モーダル内の全textboxを取得し、招待リンクのものを検証
+    const allTextboxes = await page.getByRole('dialog').getByRole('textbox').all();
+    const linkTextbox = allTextboxes[allTextboxes.length - 1]; // 最後のtextboxが招待リンク
+    await expect(linkTextbox).toBeVisible({ timeout: 5000 });
+    const linkValue = await linkTextbox.inputValue();
+    expect(linkValue).toContain('/invite?token=');
 
     // 9. Firestoreに招待ドキュメントが作成されたことを確認
     const invitationCreated = await page.evaluate(
