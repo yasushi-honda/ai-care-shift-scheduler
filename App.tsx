@@ -561,26 +561,50 @@ const App: React.FC = () => {
       // AI生成
       const result = await generateShiftSchedule(staffList, requirements, leaveRequests);
 
-      // Firestoreに自動保存（保存成功後、リアルタイムリスナーが自動的にUIを更新）
-      const saveResult = await ScheduleService.saveSchedule(
-        selectedFacilityId,
-        currentUser.uid,
-        {
-          targetMonth: requirements.targetMonth,
-          staffSchedules: result,
-          version: 1,
-          status: 'draft',
-        }
-      );
+      // 既存のスケジュールがあるかチェック
+      if (currentScheduleId) {
+        // 既存スケジュールを更新（バージョン履歴を保持）
+        const updateResult = await ScheduleService.updateSchedule(
+          selectedFacilityId,
+          currentScheduleId,
+          currentUser.uid,
+          {
+            staffSchedules: result,
+            status: 'draft', // 下書き状態を維持
+          }
+        );
 
-      if (!saveResult.success) {
-        assertResultError(saveResult);
-        showError(`保存に失敗しました: ${saveResult.error.message}`);
-        setError(`保存に失敗しました: ${saveResult.error.message}`);
-        return;
+        if (!updateResult.success) {
+          assertResultError(updateResult);
+          showError(`保存に失敗しました: ${updateResult.error.message}`);
+          setError(`保存に失敗しました: ${updateResult.error.message}`);
+          return;
+        }
+
+        showSuccess('シフトを生成し、更新しました');
+      } else {
+        // 新規作成（初回のみ）
+        const saveResult = await ScheduleService.saveSchedule(
+          selectedFacilityId,
+          currentUser.uid,
+          {
+            targetMonth: requirements.targetMonth,
+            staffSchedules: result,
+            version: 1,
+            status: 'draft',
+          }
+        );
+
+        if (!saveResult.success) {
+          assertResultError(saveResult);
+          showError(`保存に失敗しました: ${saveResult.error.message}`);
+          setError(`保存に失敗しました: ${saveResult.error.message}`);
+          return;
+        }
+
+        showSuccess('シフトを生成し、保存しました');
       }
 
-      showSuccess('シフトを生成し、保存しました');
       setViewMode('shift');
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : '不明なエラーが発生しました。';
@@ -590,7 +614,7 @@ const App: React.FC = () => {
       setIsLoading(false);
       setGeneratingSchedule(false);
     }
-  }, [staffList, requirements, leaveRequests, selectedFacilityId, currentUser, showSuccess, showError]);
+  }, [staffList, requirements, leaveRequests, selectedFacilityId, currentUser, currentScheduleId, showSuccess, showError]);
 
   const handleExportCSV = () => {
     if (schedule.length > 0) {
@@ -780,27 +804,51 @@ const App: React.FC = () => {
       return { staffId: staff.id, staffName: staff.name, monthlyShifts };
     });
 
-    // Firestoreに自動保存（保存成功後、リアルタイムリスナーが自動的にUIを更新）
+    // 既存のスケジュールがあるかチェック
     try {
-      const saveResult = await ScheduleService.saveSchedule(
-        selectedFacilityId,
-        currentUser.uid,
-        {
-          targetMonth: requirements.targetMonth,
-          staffSchedules: demoSchedule,
-          version: 1,
-          status: 'draft',
-        }
-      );
+      if (currentScheduleId) {
+        // 既存スケジュールを更新（バージョン履歴を保持）
+        const updateResult = await ScheduleService.updateSchedule(
+          selectedFacilityId,
+          currentScheduleId,
+          currentUser.uid,
+          {
+            staffSchedules: demoSchedule,
+            status: 'draft', // 下書き状態を維持
+          }
+        );
 
-      if (!saveResult.success) {
-        assertResultError(saveResult);
-        showError(`保存に失敗しました: ${saveResult.error.message}`);
-        setError(`保存に失敗しました: ${saveResult.error.message}`);
-        return;
+        if (!updateResult.success) {
+          assertResultError(updateResult);
+          showError(`保存に失敗しました: ${updateResult.error.message}`);
+          setError(`保存に失敗しました: ${updateResult.error.message}`);
+          return;
+        }
+
+        showSuccess('デモシフトを生成し、更新しました');
+      } else {
+        // 新規作成（初回のみ）
+        const saveResult = await ScheduleService.saveSchedule(
+          selectedFacilityId,
+          currentUser.uid,
+          {
+            targetMonth: requirements.targetMonth,
+            staffSchedules: demoSchedule,
+            version: 1,
+            status: 'draft',
+          }
+        );
+
+        if (!saveResult.success) {
+          assertResultError(saveResult);
+          showError(`保存に失敗しました: ${saveResult.error.message}`);
+          setError(`保存に失敗しました: ${saveResult.error.message}`);
+          return;
+        }
+
+        showSuccess('デモシフトを生成し、保存しました');
       }
 
-      showSuccess('デモシフトを生成し、保存しました');
       setViewMode('shift');
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : '保存時にエラーが発生しました';
@@ -809,7 +857,7 @@ const App: React.FC = () => {
     } finally {
       setGeneratingSchedule(false);
     }
-  }, [requirements, staffList, selectedFacilityId, currentUser, showSuccess, showError]);
+  }, [requirements, staffList, selectedFacilityId, currentUser, currentScheduleId, showSuccess, showError]);
 
   // 施設選択ハンドラー
   const handleFacilityChange = (event: React.ChangeEvent<HTMLSelectElement>) => {

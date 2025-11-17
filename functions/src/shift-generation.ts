@@ -1,12 +1,9 @@
 import { onRequest } from 'firebase-functions/v2/https';
 import { VertexAI } from '@google-cloud/vertexai';
-import * as admin from 'firebase-admin';
-import * as crypto from 'crypto';
 import type { Staff, ShiftRequirement, LeaveRequest } from './types';
 import { generateSkeleton, generateDetailedShifts, parseGeminiJsonResponse } from './phased-generation';
 
-// Firebase Admin初期化（index.tsで行うため、ここでは不要）
-// admin.initializeApp();
+// Firebase Admin初期化は index.ts で実施済み
 
 /**
  * Vertex AI モデル名（GA版、安定版）
@@ -120,69 +117,8 @@ export const generateShift = onRequest(
         throw new Error('GCP_PROJECT_ID environment variable is not set');
       }
 
-      // 冪等性キー生成（重複リクエスト防止）
-      // スタッフID、シフト要件、休暇申請をすべて含める
-      const staffIds = staffList.map((s: Staff) => s.id).sort().join(',');
-      const requirementsHash = crypto
-        .createHash('sha256')
-        .update(JSON.stringify(requirements))
-        .digest('hex')
-        .substring(0, 16);
-
-      // leaveRequestsを決定論的にハッシュ化（プロパティ順序を保証）
-      const sortedLeaveRequests = Object.keys(leaveRequests || {})
-        .sort()
-        .reduce((result: Record<string, any>, staffId) => {
-          const leaves = leaveRequests![staffId];
-          result[staffId] = Object.keys(leaves)
-            .sort()
-            .reduce((dateResult: Record<string, any>, date) => {
-              dateResult[date] = leaves[date];
-              return dateResult;
-            }, {});
-          return result;
-        }, {});
-
-      const leaveRequestsHash = crypto
-        .createHash('sha256')
-        .update(JSON.stringify(sortedLeaveRequests))
-        .digest('hex')
-        .substring(0, 16);
-      const idempotencyKey = `${requirements.targetMonth}-${staffIds}-${requirementsHash}-${leaveRequestsHash}`;
-      // 全体をハッシュ化して一意性を保証
-      const idempotencyHash = crypto
-        .createHash('sha256')
-        .update(idempotencyKey)
-        .digest('hex')
-        .substring(0, 32);
-
-      // 既存スケジュールをチェック（冪等性保証）
-      const existingSchedules = await admin.firestore()
-        .collection('schedules')
-        .where('targetMonth', '==', requirements.targetMonth)
-        .where('idempotencyHash', '==', idempotencyHash)
-        .where('status', '==', 'generated')
-        .orderBy('createdAt', 'desc')
-        .limit(1)
-        .get();
-
-      if (!existingSchedules.empty) {
-        const existingDoc = existingSchedules.docs[0];
-        const existingData = existingDoc.data();
-        console.log('💾 既存スケジュールを返却（キャッシュ）:', existingDoc.id);
-
-        res.status(200).json({
-          success: true,
-          scheduleId: existingDoc.id,
-          schedule: existingData.schedule,
-          metadata: {
-            ...existingData.metadata,
-            cached: true,
-            cacheHit: true,
-          },
-        });
-        return;
-      }
+      // キャッシュ機能削除（フロントエンド側でバージョン履歴管理するため）
+      console.log('🚀 AI生成開始（キャッシュなし）');
 
       // スタッフ数に応じて生成方法を選択
       let scheduleData: { schedule: any[] };
@@ -245,28 +181,12 @@ export const generateShift = onRequest(
         console.log('✅ 段階的生成完了');
       }
 
-      // Firestoreに保存（冪等性ハッシュを含む）
-      const docRef = await admin.firestore()
-        .collection('schedules')
-        .add({
-          schedule: scheduleData.schedule,
-          targetMonth: requirements.targetMonth,
-          idempotencyHash, // 重複チェック用
-          createdAt: admin.firestore.FieldValue.serverTimestamp(),
-          staffCount: staffList.length,
-          status: 'generated',
-          metadata: {
-            model: VERTEX_AI_MODEL,
-            tokensUsed: tokensUsed,
-          },
-        });
+      // Firestore保存はフロントエンド側で実施（バージョン履歴管理のため）
+      console.log('✅ AI生成完了（Firestore保存はスキップ）');
 
-      console.log('💾 Firestore保存完了:', docRef.id);
-
-      // 成功レスポンス
+      // 成功レスポンス（scheduleデータのみ返す）
       res.status(200).json({
         success: true,
-        scheduleId: docRef.id,
         schedule: scheduleData.schedule,
         metadata: {
           generatedAt: new Date().toISOString(),

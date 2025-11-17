@@ -106,7 +106,6 @@ export const generateShiftSchedule = async (
     }
 
     console.log('✅ シフト生成成功:', {
-      scheduleId: result.scheduleId,
       staffCount: result.schedule.length,
       tokensUsed: result.metadata?.tokensUsed || 0,
     });
