@@ -1,14 +1,11 @@
 
 import React, { useState } from 'react';
-import type { StaffSchedule, WorkLogs, WorkLogDetails } from '../types';
+import type { StaffSchedule } from '../types';
 import { WEEKDAYS } from '../constants';
-import WorkLogModal from './WorkLogModal';
 
 interface ShiftTableProps {
   schedule: StaffSchedule[];
   targetMonth: string;
-  workLogs: WorkLogs;
-  onWorkLogChange: (staffId: string, date: string, details: WorkLogDetails) => void;
   onShiftChange?: (staffId: string, date: string, newShiftType: string) => void;
 }
 
@@ -34,8 +31,7 @@ const NoteIcon = () => (
 
 const AVAILABLE_SHIFT_TYPES = ['早番', '日勤', '遅番', '夜勤', '休', '明け休み'];
 
-const ShiftTable: React.FC<ShiftTableProps> = ({ schedule, targetMonth, workLogs, onWorkLogChange, onShiftChange }) => {
-  const [editingLog, setEditingLog] = useState<{ staffId: string, staffName: string, date: string, shiftType: string} | null>(null);
+const ShiftTable: React.FC<ShiftTableProps> = ({ schedule, targetMonth, onShiftChange }) => {
   const [editingShift, setEditingShift] = useState<{ staffId: string, date: string } | null>(null);
 
   const handleShiftTypeChange = (staffId: string, date: string, newShiftType: string) => {
@@ -62,13 +58,6 @@ const ShiftTable: React.FC<ShiftTableProps> = ({ schedule, targetMonth, workLogs
   const [year, month] = targetMonth.split('-').map(Number);
   const daysInMonth = new Date(year, month, 0).getDate();
   const dates = Array.from({ length: daysInMonth }, (_, i) => new Date(year, month - 1, i + 1));
-
-  const handleSaveLog = (details: WorkLogDetails) => {
-    if (editingLog) {
-      onWorkLogChange(editingLog.staffId, editingLog.date, details);
-      setEditingLog(null);
-    }
-  };
 
   return (
     <>
@@ -99,26 +88,12 @@ const ShiftTable: React.FC<ShiftTableProps> = ({ schedule, targetMonth, workLogs
                   {staffSchedule.staffName}
                 </td>
                 {staffSchedule.monthlyShifts.map((shift) => {
-                  const isWorkday = shift.shiftType !== '休' && shift.shiftType !== '明け休み';
-                  const log = workLogs[shift.date]?.[staffSchedule.staffId];
                   const isEditing = editingShift?.staffId === staffSchedule.staffId && editingShift?.date === shift.date;
 
+                  const shiftType = shift.plannedShiftType || shift.shiftType || '休';
                   const cellContent = (
-                     <span className={`px-2.5 py-1 inline-flex items-center text-xs leading-5 font-semibold rounded-full ${getShiftColor(shift.shiftType)}`}>
-                      {shift.shiftType}
-                      {log && (
-                        <span className="ml-1.5 opacity-60 relative group">
-                          <NoteIcon />
-                          <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-64 p-3 bg-slate-800 text-white text-xs font-normal rounded-lg shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none z-30 text-left whitespace-pre-wrap">
-                            <h4 className="font-bold border-b border-slate-600 pb-1 mb-1">業務日誌</h4>
-                            <p className="font-semibold text-slate-300">業務内容:</p>
-                            <p className="mb-1">{log.workDetails || '記載なし'}</p>
-                            <p className="font-semibold text-slate-300">特記事項:</p>
-                            <p>{log.notes || '記載なし'}</p>
-                            <div className="absolute left-1/2 -translate-x-1/2 bottom-[-4px] w-2 h-2 bg-slate-800 rotate-45"></div>
-                          </div>
-                        </span>
-                      )}
+                     <span className={`px-2.5 py-1 inline-flex items-center text-xs leading-5 font-semibold rounded-full ${getShiftColor(shiftType)}`}>
+                      {shiftType}
                     </span>
                   );
 
@@ -146,7 +121,6 @@ const ShiftTable: React.FC<ShiftTableProps> = ({ schedule, targetMonth, workLogs
                         <div
                           className="w-full h-full flex items-center justify-center cursor-pointer rounded-md hover:ring-2 hover:ring-care-secondary hover:ring-opacity-50 transition-all"
                           onDoubleClick={() => onShiftChange && setEditingShift({ staffId: staffSchedule.staffId, date: shift.date })}
-                          onClick={() => isWorkday && setEditingLog({ staffId: staffSchedule.staffId, staffName: staffSchedule.staffName, date: shift.date, shiftType: shift.shiftType })}
                         >
                           {cellContent}
                         </div>
@@ -159,15 +133,6 @@ const ShiftTable: React.FC<ShiftTableProps> = ({ schedule, targetMonth, workLogs
           </tbody>
         </table>
       </div>
-      {editingLog && (
-        <WorkLogModal
-          isOpen={!!editingLog}
-          onClose={() => setEditingLog(null)}
-          onSave={handleSaveLog}
-          logData={editingLog}
-          currentLog={workLogs[editingLog.date]?.[editingLog.staffId]}
-        />
-      )}
     </>
   );
 };

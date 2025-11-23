@@ -1,11 +1,10 @@
-import type { StaffSchedule, Staff, ShiftRequirement, WorkLogs } from '../types';
+import type { StaffSchedule, Staff, ShiftRequirement } from '../types';
 import { WEEKDAYS } from '../constants';
 
 const getFormattedScheduleData = (
     schedule: StaffSchedule[],
     staffList: Staff[],
     requirements: ShiftRequirement,
-    workLogs: WorkLogs,
 ) => {
   const staffMap = new Map(staffList.map(s => [s.id, s]));
   const timeSlotMap = new Map(requirements.timeSlots.map(ts => [ts.name, ts]));
@@ -17,7 +16,7 @@ const getFormattedScheduleData = (
       flatSchedule.push({
         date: new Date(shift.date + 'T00:00:00'),
         staffId: staffSchedule.staffId,
-        shiftType: shift.shiftType,
+        shiftType: shift.plannedShiftType || shift.shiftType || '休',
       });
     });
   });
@@ -57,8 +56,6 @@ const getFormattedScheduleData = (
       const diffMs = end.getTime() - start.getTime();
       workHours = (diffMs / (1000 * 60 * 60)) - restHours;
     }
-    
-    const log = workLogs[yyyymmdd]?.[staffId];
 
     return {
       date: yyyymmdd,
@@ -71,8 +68,6 @@ const getFormattedScheduleData = (
       endTime: endTime,
       restHours: restHours,
       workHours: workHours > 0 ? parseFloat(workHours.toFixed(2)) : 0,
-      workDetails: log?.workDetails || '',
-      notes: log?.notes || '',
     };
   }).filter((item): item is NonNullable<typeof item> => item !== null);
 }
@@ -90,15 +85,14 @@ export const exportToCSV = (
   schedule: StaffSchedule[],
   staffList: Staff[],
   requirements: ShiftRequirement,
-  workLogs: WorkLogs,
 ) => {
   const headers = [
-    '日付', '曜日', 'スタッフ名', '役職', '資格', '勤務区分', 
-    '始業時刻', '終業時刻', '休憩時間', '実労働時間', '業務内容', '特記事項'
+    '日付', '曜日', 'スタッフ名', '役職', '資格', '勤務区分',
+    '始業時刻', '終業時刻', '休憩時間', '実労働時間'
   ];
-  
-  const data = getFormattedScheduleData(schedule, staffList, requirements, workLogs);
-  
+
+  const data = getFormattedScheduleData(schedule, staffList, requirements);
+
   const rows = data.map(d => [
     d.date,
     d.dayOfWeek,
@@ -110,8 +104,6 @@ export const exportToCSV = (
     d.endTime,
     d.restHours.toString(),
     d.workHours.toString(),
-    escapeCSVField(d.workDetails),
-    escapeCSVField(d.notes),
   ]);
 
   const csvContent = "data:text/csv;charset=utf-8,\uFEFF" // BOMを追加してExcelでの文字化けを防ぐ

@@ -2,7 +2,7 @@ import React, { useState, useCallback, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
   Role, Qualification, TimeSlotPreference, LeaveType,
-  type Staff, type ShiftRequirement, type StaffSchedule, type GeneratedShift, type LeaveRequest, type WorkLogs, type WorkLogDetails, type ScheduleVersion, type LeaveRequestDocument, type Facility,
+  type Staff, type ShiftRequirement, type StaffSchedule, type GeneratedShift, type LeaveRequest, type ScheduleVersion, type LeaveRequestDocument, type Facility,
   assertResultError, assertResultSuccess
 } from './types';
 import { DEFAULT_TIME_SLOTS } from './constants';
@@ -75,14 +75,6 @@ const App: React.FC = () => {
   const [viewMode, setViewMode] = useState<ViewMode>('shift');
   const [leaveRequests, setLeaveRequests] = useState<LeaveRequest>({});
   const [leaveRequestDocuments, setLeaveRequestDocuments] = useState<LeaveRequestDocument[]>([]);
-  const [workLogs, setWorkLogs] = useState<WorkLogs>({
-    '2025-11-01': {
-      's001': { workDetails: 'バイタルチェック、配薬、記録', notes: '田中様、微熱あり。要経過観察。' }
-    },
-    '2025-11-03': {
-      's002': { workDetails: '入浴介助、レクリエーション担当', notes: '' }
-    }
-  });
   const [staffToDelete, setStaffToDelete] = useState<Staff | null>(null);
   const [openStaffId, setOpenStaffId] = useState<string | null>(null);
   const [versionHistoryModalOpen, setVersionHistoryModalOpen] = useState(false);
@@ -448,19 +440,6 @@ const App: React.FC = () => {
       return newRequests;
     });
 
-    setWorkLogs(prev => {
-      const newLogs = JSON.parse(JSON.stringify(prev));
-      for (const date in newLogs) {
-        if (newLogs[date][staffId]) {
-          delete newLogs[date][staffId];
-          if (Object.keys(newLogs[date]).length === 0) {
-            delete newLogs[date];
-          }
-        }
-      }
-      return newLogs;
-    });
-
     setStaffToDelete(null);
   }, [staffToDelete, selectedFacilityId]);
 
@@ -510,24 +489,6 @@ const App: React.FC = () => {
     }
   }, [selectedFacilityId, staffList, leaveRequestDocuments]);
 
-  const handleWorkLogChange = useCallback((staffId: string, date: string, details: WorkLogDetails) => {
-    setWorkLogs(prev => {
-      const newLogs = JSON.parse(JSON.stringify(prev));
-      if (!newLogs[date]) {
-        newLogs[date] = {};
-      }
-      if (!details.workDetails && !details.notes) {
-        delete newLogs[date][staffId];
-        if (Object.keys(newLogs[date]).length === 0) {
-          delete newLogs[date];
-        }
-      } else {
-        newLogs[date][staffId] = details;
-      }
-      return newLogs;
-    });
-  }, []);
-
   const handleShiftChange = useCallback((staffId: string, date: string, newShiftType: string) => {
     setSchedule(prev => {
       return prev.map(staff => {
@@ -536,7 +497,11 @@ const App: React.FC = () => {
             ...staff,
             monthlyShifts: staff.monthlyShifts.map(shift => {
               if (shift.date === date) {
-                return { ...shift, shiftType: newShiftType };
+                return {
+                  ...shift,
+                  plannedShiftType: newShiftType,
+                  shiftType: newShiftType, // 後方互換性のため
+                };
               }
               return shift;
             }),
@@ -618,7 +583,7 @@ const App: React.FC = () => {
 
   const handleExportCSV = () => {
     if (schedule.length > 0) {
-      exportToCSV(schedule, staffList, requirements, workLogs);
+      exportToCSV(schedule, staffList, requirements);
     } else {
       alert("エクスポートするシフトデータがありません。");
     }
@@ -799,7 +764,11 @@ const App: React.FC = () => {
       for (let i = 1; i <= daysInMonth; i++) {
         const date = `${requirements.targetMonth}-${String(i).padStart(2, '0')}`;
         const randomShiftType = shiftTypes[Math.floor(Math.random() * shiftTypes.length)];
-        monthlyShifts.push({ date, shiftType: randomShiftType });
+        monthlyShifts.push({
+          date,
+          plannedShiftType: randomShiftType,
+          shiftType: randomShiftType, // 後方互換性のため
+        });
       }
       return { staffId: staff.id, staffName: staff.name, monthlyShifts };
     });
@@ -1133,8 +1102,6 @@ const App: React.FC = () => {
               <ShiftTable
                 schedule={schedule}
                 targetMonth={requirements.targetMonth}
-                workLogs={workLogs}
-                onWorkLogChange={handleWorkLogChange}
                 onShiftChange={handleShiftChange}
               />
             )

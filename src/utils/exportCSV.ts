@@ -49,7 +49,7 @@ export function exportScheduleToCSV(
       const shift = staffSchedule.monthlyShifts.find(
         (s) => s.date === formatDateForCSV(date)
       );
-      row[date] = shift ? shift.shiftType : '未定';
+      row[date] = shift ? (shift.plannedShiftType || shift.shiftType || '未定') : '未定';
     });
 
     return row;

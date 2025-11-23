@@ -82,7 +82,24 @@ export interface ShiftRequirement {
 
 export interface GeneratedShift {
   date: string; // YYYY-MM-DD
-  shiftType: string; // e.g., '早番', '日勤', '夜勤', or '休'
+
+  // 予定シフト（必須）
+  plannedShiftType: string; // '早番', '日勤', '遅番', '夜勤', '休', '明け休み'
+  plannedStartTime?: string; // HH:mm（例: "08:30"）
+  plannedEndTime?: string; // HH:mm（例: "17:30"）
+
+  // 実績シフト（任意）
+  actualShiftType?: string; // 実績のシフトタイプ
+  actualStartTime?: string; // HH:mm
+  actualEndTime?: string; // HH:mm
+  breakMinutes?: number; // 休憩時間（分）
+
+  // 備考
+  notes?: string; // 特記事項（欠勤理由、変更理由など）
+
+  // 後方互換性のための旧フィールド（非推奨）
+  /** @deprecated Use plannedShiftType instead */
+  shiftType?: string;
 }
 
 export interface StaffSchedule {
@@ -112,17 +129,6 @@ export interface ScheduleVersion {
   createdBy: string;
   changeDescription: string;
   previousVersion: number;
-}
-
-export interface WorkLogDetails {
-  workDetails: string;
-  notes: string;
-}
-
-export interface WorkLogs {
-  [date: string]: { // YYYY-MM-DD
-    [staffId: string]: WorkLogDetails;
-  };
 }
 
 // ==================== 認証・データ永続化関連の型定義 ====================

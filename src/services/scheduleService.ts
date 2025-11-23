@@ -16,7 +16,34 @@ import {
   runTransaction,
 } from 'firebase/firestore';
 import { db } from '../../firebase';
-import { Schedule, ScheduleError, Result, ScheduleVersion } from '../../types';
+import { Schedule, ScheduleError, Result, ScheduleVersion, GeneratedShift } from '../../types';
+
+/**
+ * 旧データモデル（shiftType）を新データモデル（plannedShiftType）に変換
+ *
+ * 既存データ（shiftTypeのみ）の場合、plannedShiftTypeに変換する
+ * 新データの場合はそのまま返す
+ */
+function migrateGeneratedShift(shift: any): GeneratedShift {
+  // 旧データ（shiftTypeのみ）の場合
+  if (shift.shiftType && !shift.plannedShiftType) {
+    return {
+      date: shift.date,
+      plannedShiftType: shift.shiftType,
+      plannedStartTime: undefined,
+      plannedEndTime: undefined,
+      actualShiftType: undefined,
+      actualStartTime: undefined,
+      actualEndTime: undefined,
+      breakMinutes: undefined,
+      notes: undefined,
+      shiftType: shift.shiftType, // 後方互換性のため保持
+    };
+  }
+
+  // 新データの場合
+  return shift as GeneratedShift;
+}
 
 /**
  * ScheduleService
@@ -61,10 +88,17 @@ export const ScheduleService = {
       (snapshot) => {
         const schedules: Schedule[] = snapshot.docs.map((doc) => {
           const data = doc.data();
+
+          // staffSchedulesの各シフトをマイグレーション
+          const migratedStaffSchedules = data.staffSchedules.map((staffSchedule: any) => ({
+            ...staffSchedule,
+            monthlyShifts: staffSchedule.monthlyShifts.map(migrateGeneratedShift)
+          }));
+
           return {
             id: doc.id,
             targetMonth: data.targetMonth,
-            staffSchedules: data.staffSchedules,
+            staffSchedules: migratedStaffSchedules,
             createdAt: data.createdAt,
             createdBy: data.createdBy,
             updatedAt: data.updatedAt,

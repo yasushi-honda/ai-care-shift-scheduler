@@ -157,7 +157,7 @@ export async function exportScheduleToPDF(
       const shift = staffSchedule.monthlyShifts.find(
         (s) => s.date === date
       );
-      row.push(shift ? shift.shiftType : '-');
+      row.push(shift ? (shift.plannedShiftType || shift.shiftType || '-') : '-');
     });
 
     return row;

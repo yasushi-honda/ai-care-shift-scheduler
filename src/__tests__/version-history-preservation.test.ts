@@ -30,8 +30,8 @@ describe('バージョン履歴保持機能', () => {
       staffId: 'staff-001',
       staffName: 'テストスタッフ1',
       monthlyShifts: [
-        { date: '2025-01-01', shiftType: '日勤' },
-        { date: '2025-01-02', shiftType: '休' },
+        { date: '2025-01-01', plannedShiftType: '日勤', shiftType: '日勤' },
+        { date: '2025-01-02', plannedShiftType: '休', shiftType: '休' },
       ],
     },
   ];
