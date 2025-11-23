@@ -1,12 +1,14 @@
 
 import React, { useState } from 'react';
-import type { StaffSchedule } from '../types';
+import type { StaffSchedule, GeneratedShift } from '../types';
 import { WEEKDAYS } from '../constants';
+import { ShiftEditConfirmModal } from '../src/components/ShiftEditConfirmModal';
 
 interface ShiftTableProps {
   schedule: StaffSchedule[];
   targetMonth: string;
   onShiftChange?: (staffId: string, date: string, newShiftType: string) => void;
+  onShiftUpdate?: (staffId: string, date: string, updatedShift: Partial<GeneratedShift>) => void;
 }
 
 const getShiftColor = (shiftType: string) => {
@@ -31,14 +33,51 @@ const NoteIcon = () => (
 
 const AVAILABLE_SHIFT_TYPES = ['早番', '日勤', '遅番', '夜勤', '休', '明け休み'];
 
-const ShiftTable: React.FC<ShiftTableProps> = ({ schedule, targetMonth, onShiftChange }) => {
+interface EditModalData {
+  date: string;
+  staffId: string;
+  staffName: string;
+  type: 'planned' | 'actual';
+  currentShift: GeneratedShift | null;
+}
+
+const ShiftTable: React.FC<ShiftTableProps> = ({ schedule, targetMonth, onShiftChange, onShiftUpdate }) => {
   const [editingShift, setEditingShift] = useState<{ staffId: string, date: string } | null>(null);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editModalData, setEditModalData] = useState<EditModalData | null>(null);
 
   const handleShiftTypeChange = (staffId: string, date: string, newShiftType: string) => {
     if (onShiftChange) {
       onShiftChange(staffId, date, newShiftType);
     }
     setEditingShift(null);
+  };
+
+  const handleCellClick = (
+    date: string,
+    staffId: string,
+    staffName: string,
+    type: 'planned' | 'actual',
+    currentShift: GeneratedShift | null
+  ) => {
+    setEditModalData({
+      date,
+      staffId,
+      staffName,
+      type,
+      currentShift
+    });
+    setShowEditModal(true);
+  };
+
+  const handleSaveShift = (updatedShift: Partial<GeneratedShift>) => {
+    if (!editModalData || !onShiftUpdate) return;
+
+    onShiftUpdate(
+      editModalData.staffId,
+      editModalData.date,
+      updatedShift
+    );
   };
 
   if (!schedule.length) {
@@ -81,58 +120,110 @@ const ShiftTable: React.FC<ShiftTableProps> = ({ schedule, targetMonth, onShiftC
               })}
             </tr>
           </thead>
-          <tbody className="bg-white divide-y divide-slate-200">
-            {schedule.map(staffSchedule => (
-              <tr key={staffSchedule.staffId} className="hover:bg-slate-50">
-                <td className="px-4 py-2 whitespace-nowrap text-sm font-medium text-slate-800 sticky left-0 bg-white hover:bg-slate-50 z-10 border-r border-slate-200">
-                  {staffSchedule.staffName}
-                </td>
-                {staffSchedule.monthlyShifts.map((shift) => {
-                  const isEditing = editingShift?.staffId === staffSchedule.staffId && editingShift?.date === shift.date;
+          <tbody className="bg-white">
+            {schedule.map(staffSchedule => {
+              // 差異があるかチェックする関数
+              const hasDifference = (shift: GeneratedShift): boolean => {
+                if (!shift.actualShiftType) return false;
 
-                  const shiftType = shift.plannedShiftType || shift.shiftType || '休';
-                  const cellContent = (
-                     <span className={`px-2.5 py-1 inline-flex items-center text-xs leading-5 font-semibold rounded-full ${getShiftColor(shiftType)}`}>
-                      {shiftType}
-                    </span>
-                  );
+                const plannedType = shift.plannedShiftType || shift.shiftType || '休';
+                if (plannedType !== shift.actualShiftType) return true;
 
-                  return (
-                    <td key={`${staffSchedule.staffId}-${shift.date}`} className="px-2 py-1.5 whitespace-nowrap text-center text-sm relative">
-                      {isEditing ? (
-                        <div className="flex flex-col gap-1 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white border-2 border-care-secondary rounded-lg shadow-xl z-40 p-2 min-w-[100px]">
-                          {AVAILABLE_SHIFT_TYPES.map((type) => (
-                            <button
-                              key={type}
-                              onClick={() => handleShiftTypeChange(staffSchedule.staffId, shift.date, type)}
-                              className={`px-3 py-1.5 text-xs font-semibold rounded ${getShiftColor(type)} hover:opacity-80 transition-opacity`}
-                            >
-                              {type}
-                            </button>
-                          ))}
-                          <button
-                            onClick={() => setEditingShift(null)}
-                            className="mt-1 px-3 py-1 text-xs font-medium text-slate-600 bg-slate-100 rounded hover:bg-slate-200 transition-colors"
-                          >
-                            キャンセル
-                          </button>
-                        </div>
-                      ) : (
-                        <div
-                          className="w-full h-full flex items-center justify-center cursor-pointer rounded-md hover:ring-2 hover:ring-care-secondary hover:ring-opacity-50 transition-all"
-                          onDoubleClick={() => onShiftChange && setEditingShift({ staffId: staffSchedule.staffId, date: shift.date })}
-                        >
-                          {cellContent}
-                        </div>
-                      )}
+                if (shift.plannedStartTime !== shift.actualStartTime) return true;
+                if (shift.plannedEndTime !== shift.actualEndTime) return true;
+
+                return false;
+              };
+
+              return (
+                <React.Fragment key={staffSchedule.staffId}>
+                  {/* 予定行 */}
+                  <tr className="border-b border-gray-200">
+                    <td
+                      className="px-4 py-1 text-sm font-medium text-slate-800 sticky left-0 bg-white z-10 border-r border-slate-200"
+                      rowSpan={2}
+                    >
+                      <div className="flex items-center gap-2">
+                        <span>{staffSchedule.staffName}</span>
+                      </div>
                     </td>
-                  )
-                })}
-              </tr>
-            ))}
+                    {staffSchedule.monthlyShifts.map((shift) => {
+                      const plannedShiftType = shift.plannedShiftType || shift.shiftType || '休';
+                      const hasDiff = hasDifference(shift);
+
+                      return (
+                        <td
+                          key={`${staffSchedule.staffId}-${shift.date}-planned`}
+                          className={`px-2 py-1 text-center text-xs cursor-pointer hover:bg-blue-50 border-b border-gray-300 ${hasDiff ? 'ring-2 ring-orange-400 bg-orange-50' : 'bg-white'}`}
+                          onClick={() => handleCellClick(shift.date, staffSchedule.staffId, staffSchedule.staffName, 'planned', shift)}
+                        >
+                          <span className={`inline-flex px-2 py-0.5 rounded-full ${getShiftColor(plannedShiftType)}`}>
+                            {plannedShiftType}
+                          </span>
+                          {shift.plannedStartTime && shift.plannedEndTime && (
+                            <div className="text-[10px] text-gray-600 mt-0.5">
+                              {shift.plannedStartTime}-{shift.plannedEndTime}
+                            </div>
+                          )}
+                        </td>
+                      );
+                    })}
+                  </tr>
+
+                  {/* 実績行 */}
+                  <tr className="border-b border-gray-300">
+                    {staffSchedule.monthlyShifts.map((shift) => {
+                      const actualShiftType = shift.actualShiftType;
+                      const hasDiff = hasDifference(shift);
+                      const isEmpty = !actualShiftType;
+
+                      return (
+                        <td
+                          key={`${staffSchedule.staffId}-${shift.date}-actual`}
+                          className={`px-2 py-1 text-center text-xs cursor-pointer hover:bg-blue-100 border-b border-gray-400 ${
+                            hasDiff ? 'ring-2 ring-orange-400 bg-orange-50' :
+                            isEmpty ? 'bg-gray-100' : 'bg-gray-50'
+                          }`}
+                          onClick={() => handleCellClick(shift.date, staffSchedule.staffId, staffSchedule.staffName, 'actual', shift)}
+                        >
+                          {isEmpty ? (
+                            <span className="text-gray-400 text-[10px]">未入力</span>
+                          ) : (
+                            <>
+                              <span className={`inline-flex px-2 py-0.5 rounded-full ${getShiftColor(actualShiftType)}`}>
+                                {actualShiftType}
+                              </span>
+                              {shift.actualStartTime && shift.actualEndTime && (
+                                <div className="text-[10px] text-gray-600 mt-0.5">
+                                  {shift.actualStartTime}-{shift.actualEndTime}
+                                </div>
+                              )}
+                            </>
+                          )}
+                        </td>
+                      );
+                    })}
+                  </tr>
+                </React.Fragment>
+              );
+            })}
           </tbody>
         </table>
       </div>
+
+      {/* シフト編集モーダル */}
+      {editModalData && (
+        <ShiftEditConfirmModal
+          isOpen={showEditModal}
+          onClose={() => setShowEditModal(false)}
+          date={editModalData.date}
+          staffId={editModalData.staffId}
+          staffName={editModalData.staffName}
+          type={editModalData.type}
+          currentShift={editModalData.currentShift}
+          onSave={handleSaveShift}
+        />
+      )}
     </>
   );
 };

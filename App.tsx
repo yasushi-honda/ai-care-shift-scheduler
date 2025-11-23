@@ -512,6 +512,30 @@ const App: React.FC = () => {
     });
   }, []);
 
+  const handleShiftUpdate = useCallback((staffId: string, date: string, updatedShift: Partial<GeneratedShift>) => {
+    setSchedule(prev => {
+      return prev.map(staff => {
+        if (staff.staffId === staffId) {
+          return {
+            ...staff,
+            monthlyShifts: staff.monthlyShifts.map(shift => {
+              if (shift.date === date) {
+                return {
+                  ...shift,
+                  ...updatedShift,
+                  // 後方互換性: plannedShiftTypeが更新された場合はshiftTypeも更新
+                  ...(updatedShift.plannedShiftType && { shiftType: updatedShift.plannedShiftType })
+                };
+              }
+              return shift;
+            }),
+          };
+        }
+        return staff;
+      });
+    });
+  }, []);
+
   const handleGenerateClick = useCallback(async () => {
     if (!selectedFacilityId || !currentUser) {
       showError('施設またはユーザー情報が取得できません');
@@ -1103,6 +1127,7 @@ const App: React.FC = () => {
                 schedule={schedule}
                 targetMonth={requirements.targetMonth}
                 onShiftChange={handleShiftChange}
+                onShiftUpdate={handleShiftUpdate}
               />
             )
           ) : (
