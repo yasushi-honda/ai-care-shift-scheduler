@@ -70,14 +70,25 @@ test.describe('予実2段書き編集機能', () => {
     const breakInput = page.locator('input[type="number"]');
     await breakInput.fill('60');
 
+    // 確認ダイアログハンドラを先に登録（race condition回避）
+    page.once('dialog', dialog => dialog.accept());
+
     // 確認ボタンをクリック
     await page.getByRole('button', { name: '確認' }).click();
 
-    // 確認ダイアログで「OK」をクリック
-    page.on('dialog', dialog => dialog.accept());
-
     // モーダルが閉じることを確認
     await expect(page.getByText('シフト編集 - 予定')).not.toBeVisible({ timeout: 2000 });
+
+    // 保存された値を検証
+    await firstPlannedCell.click();
+    await expect(page.getByText('シフト編集 - 予定')).toBeVisible({ timeout: 2000 });
+    await expect(page.locator('select').first()).toHaveValue('早番');
+    await expect(page.locator('input[type="time"]').first()).toHaveValue('08:00');
+    await expect(page.locator('input[type="time"]').nth(1)).toHaveValue('16:00');
+    await expect(page.locator('input[type="number"]')).toHaveValue('60');
+
+    // モーダルを閉じる
+    await page.getByRole('button', { name: 'キャンセル' }).click();
   });
 
   test('実績シフトを編集して保存できる', async ({ page }) => {
@@ -107,14 +118,26 @@ test.describe('予実2段書き編集機能', () => {
     const notesTextarea = page.locator('textarea');
     await notesTextarea.fill('テスト実績入力');
 
+    // 確認ダイアログハンドラを先に登録（race condition回避）
+    page.once('dialog', dialog => dialog.accept());
+
     // 確認ボタンをクリック
     await page.getByRole('button', { name: '確認' }).click();
 
-    // 確認ダイアログで「OK」をクリック
-    page.on('dialog', dialog => dialog.accept());
-
     // モーダルが閉じることを確認
     await expect(page.getByText('シフト編集 - 実績')).not.toBeVisible({ timeout: 2000 });
+
+    // 保存された値を検証
+    await firstActualCell.click();
+    await expect(page.getByText('シフト編集 - 実績')).toBeVisible({ timeout: 2000 });
+    await expect(page.locator('select').first()).toHaveValue('日勤');
+    await expect(page.locator('input[type="time"]').first()).toHaveValue('09:00');
+    await expect(page.locator('input[type="time"]').nth(1)).toHaveValue('18:00');
+    await expect(page.locator('input[type="number"]')).toHaveValue('60');
+    await expect(page.locator('textarea')).toHaveValue('テスト実績入力');
+
+    // モーダルを閉じる
+    await page.getByRole('button', { name: 'キャンセル' }).click();
   });
 
   test('モーダルでキャンセルボタンをクリックすると変更が破棄される', async ({ page }) => {

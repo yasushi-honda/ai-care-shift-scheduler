@@ -134,14 +134,14 @@ export function ShiftEditConfirmModal({
             plannedShiftType: shiftType,
             plannedStartTime: startTime || undefined,
             plannedEndTime: endTime || undefined,
-            breakMinutes: breakMinutes || undefined,
+            breakMinutes: breakMinutes ?? undefined,
             notes: notes || undefined
           }
         : {
             actualShiftType: shiftType,
             actualStartTime: startTime || undefined,
             actualEndTime: endTime || undefined,
-            breakMinutes: breakMinutes || undefined,
+            breakMinutes: breakMinutes ?? undefined,
             notes: notes || undefined
           };
 
