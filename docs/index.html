@@ -82,6 +82,52 @@
             padding: 1.5rem;
             margin: 1.5rem 0;
             box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+            overflow-x: auto;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        .mermaid:hover {
+            box-shadow: 0 3px 8px rgba(0,0,0,0.15);
+        }
+        .mermaid svg {
+            max-width: 100%;
+            height: auto;
+        }
+        .mermaid-modal {
+            display: none;
+            position: fixed;
+            z-index: 9999;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.9);
+        }
+        .mermaid-modal-content {
+            margin: 2% auto;
+            display: block;
+            width: 95%;
+            max-width: 95%;
+        }
+        .mermaid-modal-close {
+            position: absolute;
+            top: 15px;
+            right: 35px;
+            color: #f1f1f1;
+            font-size: 40px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .mermaid-modal-close:hover {
+            color: #bbb;
+        }
+        .zoom-hint {
+            font-size: 0.9rem;
+            color: #586069;
+            font-style: italic;
+            margin-top: 0.5rem;
+            text-align: center;
         }
         .site-footer {
             padding-top: 2rem;
@@ -107,9 +153,44 @@
         mermaid.initialize({
           startOnLoad: true,
           theme: 'default',
-          securityLevel: 'loose'
+          securityLevel: 'loose',
+          flowchart: {
+            useMaxWidth: false,
+            htmlLabels: true
+          },
+          gantt: {
+            useMaxWidth: false
+          }
         });
-        mermaid.run();
+        mermaid.run().then(() => {
+          setupZoomableImages();
+        });
+      }
+
+      function setupZoomableImages() {
+        const modal = document.createElement('div');
+        modal.className = 'mermaid-modal';
+        modal.innerHTML = '<span class="mermaid-modal-close">&times;</span><div class="mermaid-modal-content"></div>';
+        document.body.appendChild(modal);
+
+        const closeBtn = modal.querySelector('.mermaid-modal-close');
+        const modalContent = modal.querySelector('.mermaid-modal-content');
+
+        document.querySelectorAll('.mermaid').forEach(diagram => {
+          diagram.addEventListener('click', function() {
+            const svg = this.querySelector('svg');
+            if (svg) {
+              modalContent.innerHTML = '';
+              modalContent.appendChild(svg.cloneNode(true));
+              modal.style.display = 'block';
+            }
+          });
+        });
+
+        closeBtn.onclick = () => modal.style.display = 'none';
+        modal.onclick = (e) => {
+          if (e.target === modal) modal.style.display = 'none';
+        };
       }
     </script>
 </head>
