@@ -23,6 +23,8 @@ import LeaveRequestCalendar from './components/LeaveRequestCalendar';
 import ConfirmModal from './components/ConfirmModal';
 import VersionHistoryModal from './components/VersionHistoryModal';
 import { Button } from './src/components/Button';
+import { BulkCopyPlannedToActualModal } from './src/components/BulkCopyPlannedToActualModal';
+import { bulkCopyPlannedToActual, type BulkCopyOptions } from './src/utils/bulkCopyPlannedToActual';
 
 type ViewMode = 'shift' | 'leaveRequest';
 
@@ -80,6 +82,7 @@ const App: React.FC = () => {
   const [versionHistoryModalOpen, setVersionHistoryModalOpen] = useState(false);
   const [versions, setVersions] = useState<ScheduleVersion[]>([]);
   const [versionLoading, setVersionLoading] = useState(false);
+  const [bulkCopyModalOpen, setBulkCopyModalOpen] = useState(false);
 
   // ユーザーがアクセスできる施設情報をロード
   useEffect(() => {
@@ -535,6 +538,52 @@ const App: React.FC = () => {
       });
     });
   }, []);
+
+  const handleBulkCopyExecute = useCallback(async (options: BulkCopyOptions) => {
+    if (!selectedFacilityId || !currentUser || !currentScheduleId) {
+      showError('保存に必要な情報が不足しています');
+      return;
+    }
+
+    if (isLoading) {
+      return;
+    }
+
+    const previousSchedule = schedule;
+
+    // Firestoreに自動保存
+    setIsLoading(true);
+    try {
+      const updatedSchedule = bulkCopyPlannedToActual(schedule, options);
+      setSchedule(updatedSchedule);
+
+      const result = await ScheduleService.updateSchedule(
+        selectedFacilityId,
+        currentScheduleId,
+        currentUser.uid,
+        {
+          staffSchedules: updatedSchedule,
+          status: currentScheduleStatus,
+        }
+      );
+
+      if (!result.success) {
+        assertResultError(result);
+        setSchedule(previousSchedule);
+        showError(`保存に失敗しました: ${result.error.message}`);
+        return;
+      }
+
+      showSuccess('予定を実績にコピーし、保存しました');
+      setBulkCopyModalOpen(false);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : '保存時にエラーが発生しました';
+      setSchedule(previousSchedule);
+      showError(errorMessage);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [schedule, selectedFacilityId, currentUser, currentScheduleId, currentScheduleStatus, isLoading, showSuccess, showError]);
 
   const handleGenerateClick = useCallback(async () => {
     if (!selectedFacilityId || !currentUser) {
@@ -1128,6 +1177,7 @@ const App: React.FC = () => {
                 targetMonth={requirements.targetMonth}
                 onShiftChange={handleShiftChange}
                 onShiftUpdate={handleShiftUpdate}
+                onBulkCopyClick={() => setBulkCopyModalOpen(true)}
               />
             )
           ) : (
@@ -1162,6 +1212,14 @@ const App: React.FC = () => {
         versions={versions}
         onRestore={handleRestoreVersion}
         loading={versionLoading}
+      />
+
+      <BulkCopyPlannedToActualModal
+        isOpen={bulkCopyModalOpen}
+        onClose={() => setBulkCopyModalOpen(false)}
+        schedules={schedule}
+        targetMonth={requirements.targetMonth}
+        onExecute={handleBulkCopyExecute}
       />
     </div>
   );
