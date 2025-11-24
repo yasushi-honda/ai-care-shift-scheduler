@@ -112,9 +112,48 @@
             background: white;
             padding: 2rem;
             border-radius: 8px;
+            position: relative;
+            overflow: hidden;
         }
         .mermaid-modal-content svg {
             background: white;
+            transition: transform 0.2s ease;
+            cursor: move;
+        }
+        .zoom-controls {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            display: flex;
+            gap: 0.5rem;
+            z-index: 10000;
+        }
+        .zoom-btn {
+            background: #0366d6;
+            color: white;
+            border: none;
+            width: 40px;
+            height: 40px;
+            border-radius: 4px;
+            font-size: 20px;
+            cursor: pointer;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            transition: background 0.2s;
+        }
+        .zoom-btn:hover {
+            background: #0256c7;
+        }
+        .zoom-btn:active {
+            transform: scale(0.95);
+        }
+        .zoom-level {
+            background: rgba(0,0,0,0.7);
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
         }
         .mermaid-modal-close {
             position: absolute;
@@ -176,17 +215,68 @@
       function setupZoomableImages() {
         const modal = document.createElement('div');
         modal.className = 'mermaid-modal';
-        modal.innerHTML = '<span class="mermaid-modal-close">&times;</span><div class="mermaid-modal-content"></div>';
+        modal.innerHTML = `
+          <span class="mermaid-modal-close">&times;</span>
+          <div class="mermaid-modal-content">
+            <div class="zoom-controls">
+              <button class="zoom-btn zoom-in" title="拡大">+</button>
+              <button class="zoom-btn zoom-out" title="縮小">−</button>
+              <button class="zoom-btn zoom-reset" title="リセット">⟲</button>
+              <div class="zoom-level">100%</div>
+            </div>
+          </div>
+        `;
         document.body.appendChild(modal);
 
         const closeBtn = modal.querySelector('.mermaid-modal-close');
         const modalContent = modal.querySelector('.mermaid-modal-content');
+        const zoomInBtn = modal.querySelector('.zoom-in');
+        const zoomOutBtn = modal.querySelector('.zoom-out');
+        const zoomResetBtn = modal.querySelector('.zoom-reset');
+        const zoomLevelDisplay = modal.querySelector('.zoom-level');
+
+        let currentScale = 1;
+        let currentSvg = null;
+        let isDragging = false;
+        let startX, startY, translateX = 0, translateY = 0;
+
+        function updateZoom() {
+          if (currentSvg) {
+            currentSvg.style.transform = `scale(${currentScale}) translate(${translateX}px, ${translateY}px)`;
+            zoomLevelDisplay.textContent = `${Math.round(currentScale * 100)}%`;
+          }
+        }
+
+        function zoomIn() {
+          currentScale = Math.min(currentScale + 0.2, 3);
+          updateZoom();
+        }
+
+        function zoomOut() {
+          currentScale = Math.max(currentScale - 0.2, 0.5);
+          updateZoom();
+        }
+
+        function resetZoom() {
+          currentScale = 1;
+          translateX = 0;
+          translateY = 0;
+          updateZoom();
+        }
+
+        zoomInBtn.onclick = zoomIn;
+        zoomOutBtn.onclick = zoomOut;
+        zoomResetBtn.onclick = resetZoom;
 
         document.querySelectorAll('.mermaid').forEach(diagram => {
           diagram.addEventListener('click', function() {
             const svg = this.querySelector('svg');
             if (svg) {
+              // コントロール以外をクリア
+              const controls = modalContent.querySelector('.zoom-controls');
               modalContent.innerHTML = '';
+              modalContent.appendChild(controls);
+
               const clonedSvg = svg.cloneNode(true);
 
               // ダークモード対応：SVGの背景を白に設定
@@ -199,15 +289,62 @@
                 el.style.color = '#000';
               });
 
+              currentSvg = clonedSvg;
+              currentScale = 1;
+              translateX = 0;
+              translateY = 0;
+
+              // ドラッグ機能
+              clonedSvg.addEventListener('mousedown', (e) => {
+                if (e.button === 0) {
+                  isDragging = true;
+                  startX = e.clientX - translateX;
+                  startY = e.clientY - translateY;
+                  clonedSvg.style.cursor = 'grabbing';
+                }
+              });
+
+              document.addEventListener('mousemove', (e) => {
+                if (isDragging) {
+                  translateX = e.clientX - startX;
+                  translateY = e.clientY - startY;
+                  updateZoom();
+                }
+              });
+
+              document.addEventListener('mouseup', () => {
+                if (isDragging) {
+                  isDragging = false;
+                  if (currentSvg) currentSvg.style.cursor = 'move';
+                }
+              });
+
+              // ホイールでズーム
+              modalContent.addEventListener('wheel', (e) => {
+                e.preventDefault();
+                if (e.deltaY < 0) {
+                  zoomIn();
+                } else {
+                  zoomOut();
+                }
+              }, { passive: false });
+
               modalContent.appendChild(clonedSvg);
               modal.style.display = 'block';
+              updateZoom();
             }
           });
         });
 
-        closeBtn.onclick = () => modal.style.display = 'none';
+        closeBtn.onclick = () => {
+          modal.style.display = 'none';
+          resetZoom();
+        };
         modal.onclick = (e) => {
-          if (e.target === modal) modal.style.display = 'none';
+          if (e.target === modal) {
+            modal.style.display = 'none';
+            resetZoom();
+          }
         };
       }
     </script>
