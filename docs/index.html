@@ -109,6 +109,12 @@
             display: block;
             width: 95%;
             max-width: 95%;
+            background: white;
+            padding: 2rem;
+            border-radius: 8px;
+        }
+        .mermaid-modal-content svg {
+            background: white;
         }
         .mermaid-modal-close {
             position: absolute;
@@ -181,7 +187,19 @@
             const svg = this.querySelector('svg');
             if (svg) {
               modalContent.innerHTML = '';
-              modalContent.appendChild(svg.cloneNode(true));
+              const clonedSvg = svg.cloneNode(true);
+
+              // ダークモード対応：SVGの背景を白に設定
+              clonedSvg.style.backgroundColor = 'white';
+
+              // テキストの色を強制的に黒にする
+              const textElements = clonedSvg.querySelectorAll('text, .nodeLabel, .edgeLabel');
+              textElements.forEach(el => {
+                el.style.fill = '#000';
+                el.style.color = '#000';
+              });
+
+              modalContent.appendChild(clonedSvg);
               modal.style.display = 'block';
             }
           });
