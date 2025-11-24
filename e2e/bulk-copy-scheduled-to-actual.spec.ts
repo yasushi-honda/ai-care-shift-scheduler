@@ -93,15 +93,17 @@ test.describe('Phase 26.1: 改善2「一括コピー」機能', () => {
     expect(startDate).toBeTruthy();
     expect(endDate).toBeTruthy();
 
-    // 確認ダイアログハンドラを先に登録
-    page.once('dialog', async dialog => {
-      console.log('[TC2-2] 確認ダイアログメッセージ:', dialog.message());
-      expect(dialog.message()).toContain('件'); // 「〇〇件の予定を実績にコピーします」
-      await dialog.accept();
-    });
+    // 確認ダイアログハンドラを登録
+    const dialogPromise = page.waitForEvent('dialog');
 
     // 実行ボタンをクリック
     await page.getByRole('button', { name: '実行' }).click();
+
+    // ダイアログを処理
+    const dialog = await dialogPromise;
+    console.log('[TC2-2] 確認ダイアログメッセージ:', dialog.message());
+    expect(dialog.message()).toContain('件'); // 「〇〇件の予定を実績にコピーします」
+    await dialog.accept();
 
     // モーダルが閉じることを確認（処理完了）
     await expect(page.getByText('予定を実績にコピー')).not.toBeVisible({ timeout: 10000 });
@@ -131,14 +133,16 @@ test.describe('Phase 26.1: 改善2「一括コピー」機能', () => {
 
     console.log('[TC2-3] カスタム期間:', { customStartDate, customEndDate });
 
-    // 確認ダイアログハンドラを先に登録
-    page.once('dialog', async dialog => {
-      console.log('[TC2-3] 確認ダイアログメッセージ:', dialog.message());
-      await dialog.accept();
-    });
+    // 確認ダイアログハンドラを登録
+    const dialogPromise = page.waitForEvent('dialog');
 
     // 実行ボタンをクリック
     await page.getByRole('button', { name: '実行' }).click();
+
+    // ダイアログを処理
+    const dialog = await dialogPromise;
+    console.log('[TC2-3] 確認ダイアログメッセージ:', dialog.message());
+    await dialog.accept();
 
     // モーダルが閉じることを確認
     await expect(page.getByText('予定を実績にコピー')).not.toBeVisible({ timeout: 10000 });
@@ -172,15 +176,17 @@ test.describe('Phase 26.1: 改善2「一括コピー」機能', () => {
     expect(checkedCount).toBe(0);
     console.log('[TC2-4] スタッフ選択を全解除しました');
 
-    // アラートダイアログハンドラを先に登録
-    page.once('dialog', async dialog => {
-      console.log('[TC2-4] アラートメッセージ:', dialog.message());
-      expect(dialog.message()).toContain('スタッフを1名以上選択してください');
-      await dialog.accept();
-    });
+    // アラートダイアログハンドラを登録
+    const dialogPromise = page.waitForEvent('dialog');
 
     // 実行ボタンをクリック
     await page.getByRole('button', { name: '実行' }).click();
+
+    // ダイアログを処理
+    const dialog = await dialogPromise;
+    console.log('[TC2-4] アラートメッセージ:', dialog.message());
+    expect(dialog.message()).toContain('スタッフを1名以上選択してください');
+    await dialog.accept();
 
     // モーダルは閉じない（エラー状態）
     await expect(page.getByText('予定を実績にコピー')).toBeVisible({ timeout: 2000 });
@@ -204,15 +210,17 @@ test.describe('Phase 26.1: 改善2「一括コピー」機能', () => {
     // 開始日をクリアする
     await page.locator('input[name="start"]').clear();
 
-    // アラートダイアログハンドラを先に登録
-    page.once('dialog', async dialog => {
-      console.log('[TC2-5] アラートメッセージ:', dialog.message());
-      expect(dialog.message()).toContain('日付'); // 「開始日と終了日を入力してください」等
-      await dialog.accept();
-    });
+    // アラートダイアログハンドラを登録
+    const dialogPromise = page.waitForEvent('dialog');
 
     // 実行ボタンをクリック
     await page.getByRole('button', { name: '実行' }).click();
+
+    // ダイアログを処理
+    const dialog = await dialogPromise;
+    console.log('[TC2-5] アラートメッセージ:', dialog.message());
+    expect(dialog.message()).toContain('日付'); // 「開始日と終了日を入力してください」等
+    await dialog.accept();
 
     // モーダルは閉じない（エラー状態）
     await expect(page.getByText('予定を実績にコピー')).toBeVisible({ timeout: 2000 });
@@ -245,15 +253,17 @@ test.describe('Phase 26.1: 改善2「一括コピー」機能', () => {
 
     console.log('[TC2-6] 無効な日付範囲:', { invalidStartDate, invalidEndDate });
 
-    // アラートダイアログハンドラを先に登録
-    page.once('dialog', async dialog => {
-      console.log('[TC2-6] アラートメッセージ:', dialog.message());
-      expect(dialog.message()).toContain('開始日'); // 「開始日は終了日より前にしてください」等
-      await dialog.accept();
-    });
+    // アラートダイアログハンドラを登録
+    const dialogPromise = page.waitForEvent('dialog');
 
     // 実行ボタンをクリック
     await page.getByRole('button', { name: '実行' }).click();
+
+    // ダイアログを処理
+    const dialog = await dialogPromise;
+    console.log('[TC2-6] アラートメッセージ:', dialog.message());
+    expect(dialog.message()).toContain('開始日'); // 「開始日は終了日より前にしてください」等
+    await dialog.accept();
 
     // モーダルは閉じない（エラー状態）
     await expect(page.getByText('予定を実績にコピー')).toBeVisible({ timeout: 2000 });

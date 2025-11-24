@@ -82,8 +82,9 @@ test.describe('Phase 26.1: 改善1「予定と同じ」ボタン', () => {
     console.log('[TC1-1] ✅ 予定シフト内容がフォームにコピーされました');
 
     // Step 4: 確認ダイアログを承認して保存
-    page.once('dialog', dialog => dialog.accept());
+    const dialogPromise = page.waitForEvent('dialog');
     await page.getByRole('button', { name: '確認' }).click();
+    await (await dialogPromise).accept();
 
     // モーダルが閉じることを確認
     await expect(page.getByText('シフト編集 - 実績')).not.toBeVisible({ timeout: 3000 });
@@ -127,8 +128,9 @@ test.describe('Phase 26.1: 改善1「予定と同じ」ボタン', () => {
     await page.locator('input[type="time"]').nth(1).fill('19:00');
 
     // 保存
-    page.once('dialog', dialog => dialog.accept());
+    const dialogPromise1 = page.waitForEvent('dialog');
     await page.getByRole('button', { name: '確認' }).click();
+    await (await dialogPromise1).accept();
     await expect(page.getByText('シフト編集 - 実績')).not.toBeVisible({ timeout: 3000 });
 
     // Step 2: 実績シフトを再度開いて「予定と同じ」ボタンをクリック
@@ -148,8 +150,9 @@ test.describe('Phase 26.1: 改善1「予定と同じ」ボタン', () => {
     console.log('[TC1-3] ✅ 実績シフトが予定の内容で上書きされました');
 
     // 保存
-    page.once('dialog', dialog => dialog.accept());
+    const dialogPromise2 = page.waitForEvent('dialog');
     await page.getByRole('button', { name: '確認' }).click();
+    await (await dialogPromise2).accept();
   });
 
   /**
