@@ -109,11 +109,12 @@
             display: block;
             width: 95%;
             max-width: 95%;
+            max-height: 90vh;
             background: white;
             padding: 2rem;
             border-radius: 8px;
             position: relative;
-            overflow: hidden;
+            overflow: auto;
         }
         .mermaid-modal-content svg {
             background: white;
@@ -318,16 +319,6 @@
                   if (currentSvg) currentSvg.style.cursor = 'move';
                 }
               });
-
-              // ホイールでズーム
-              modalContent.addEventListener('wheel', (e) => {
-                e.preventDefault();
-                if (e.deltaY < 0) {
-                  zoomIn();
-                } else {
-                  zoomOut();
-                }
-              }, { passive: false });
 
               modalContent.appendChild(clonedSvg);
               modal.style.display = 'block';
