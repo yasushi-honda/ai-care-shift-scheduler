@@ -117,11 +117,12 @@
             display: block;
             width: 95%;
             max-width: 95%;
+            max-height: 90vh;
             background: white;
             padding: 2rem;
             border-radius: 8px;
             position: relative;
-            overflow: hidden;
+            overflow: auto;
         }
         .mermaid-modal-content svg {
             background: white;
@@ -350,18 +351,9 @@
                 }
               });
 
-              // ホイールでズーム
-              modalContent.addEventListener('wheel', (e) => {
-                e.preventDefault();
-                if (e.deltaY < 0) {
-                  zoomIn();
-                } else {
-                  zoomOut();
-                }
-              }, { passive: false });
-
               modalContent.appendChild(clonedSvg);
               modal.style.display = 'block';
+              document.body.style.overflow = 'hidden';
               updateZoom();
             }
           });
@@ -369,11 +361,13 @@
 
         closeBtn.onclick = () => {
           modal.style.display = 'none';
+          document.body.style.overflow = '';
           resetZoom();
         };
         modal.onclick = (e) => {
           if (e.target === modal) {
             modal.style.display = 'none';
+            document.body.style.overflow = '';
             resetZoom();
           }
         };
