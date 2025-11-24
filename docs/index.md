@@ -31,7 +31,6 @@ title: AI Care Shift Scheduler - ドキュメント
 
 ## リンク
 
-- [GitHubリポジトリ](https://github.com/yasushi-honda/ai-care-shift-scheduler)
 - [本番環境（Firebase Hosting）](https://ai-care-shift-scheduler.web.app)
 
 ---
