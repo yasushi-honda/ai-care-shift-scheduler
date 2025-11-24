@@ -11,7 +11,7 @@ title: シフト管理システム - 改善実績
 
 ## 改善の全体像
 
-```mermaid
+<div class="mermaid">
 graph TB
     Start[実績入力の課題<br/>月間50分の作業]
 
@@ -29,13 +29,13 @@ graph TB
     style Result1 fill:#E8F5E9
     style Result2 fill:#E8F5E9
     style Result3 fill:#FFF8DC
-```
+</div>
 
 ---
 
 ## 実装状況
 
-```mermaid
+<div class="mermaid">
 gantt
     title 改善機能の実装スケジュール
     dateFormat YYYY-MM-DD
@@ -46,7 +46,7 @@ gantt
 
     section 未実装
     改善3 ダブルクリック機能: impl3, 2025-11-25, 1d
-```
+</div>
 
 **完了**: 改善1・改善2（2025年11月24日時点）
 **未実装**: 改善3
@@ -59,14 +59,14 @@ gantt
 
 実績入力時に予定通りだった場合、ワンクリックで入力完了。
 
-```mermaid
+<div class="mermaid">
 flowchart LR
     A[実績入力画面] --> B{予定通り？}
     B -->|はい| C[ボタンクリック<br/>→ 完了]
     B -->|いいえ| D[手動入力]
 
     style C fill:#ccffcc
-```
+</div>
 
 **効果**: 月間作業時間 50分 → 25分（50%削減）
 
@@ -76,7 +76,7 @@ flowchart LR
 
 複数スタッフの実績を一度にまとめて入力。
 
-```mermaid
+<div class="mermaid">
 flowchart TD
     A[シフト表] --> B[一括コピーボタン]
     B --> C[スタッフ選択]
@@ -85,7 +85,7 @@ flowchart TD
     E --> F[完了]
 
     style F fill:#ccffcc
-```
+</div>
 
 **効果**: 月間作業時間 50分 → 7分（86%削減）
 
@@ -103,7 +103,7 @@ flowchart TD
 
 ## 削減効果の推移
 
-```mermaid
+<div class="mermaid">
 gantt
     title 月間作業時間の推移
     dateFormat YYYY-MM-DD
@@ -116,7 +116,7 @@ gantt
 
     section 改善2適用後
     7分に短縮: done, imp2, 2025-11-24, 7m
-```
+</div>
 
 ---
 

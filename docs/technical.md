@@ -11,7 +11,7 @@ Phase 25 ユーザビリティ改善の技術詳細とダイアグラム集で�
 
 ## WBS（作業分解構造）
 
-```mermaid
+<div class="mermaid">
 graph TB
     A[Phase 25.2.5<br/>ユーザビリティ改善]
 
@@ -46,13 +46,13 @@ graph TB
     style B fill:#90EE90
     style C fill:#90EE90
     style D fill:#FFE4B5
-```
+</div>
 
 ---
 
 ## ガントチャート（実装スケジュール）
 
-```mermaid
+<div class="mermaid">
 gantt
     title Phase 25 ユーザビリティ改善 実装スケジュール
     dateFormat YYYY-MM-DD
@@ -81,13 +81,13 @@ gantt
     CodeRabbitレビュー1 : done, task2-review1, after task2-test, 30m
     修正・レビュー2-4 : done, task2-review2, after task2-review1, 2h
     Git管理・CI/CD : done, task2-deploy, after task2-review2, 30m
-```
+</div>
 
 ---
 
 ## システム構成図
 
-```mermaid
+<div class="mermaid">
 graph TB
     subgraph "ユーザー層"
         U[ユーザー<br/>施設管理者・スタッフ]
@@ -153,13 +153,13 @@ graph TB
     style GUACUtil fill:#F0FFE6
     style SS fill:#E6F0FF
     style FS fill:#F0E6FF
-```
+</div>
 
 ---
 
 ## データフロー図
 
-```mermaid
+<div class="mermaid">
 sequenceDiagram
     actor User as ユーザー
     participant ST as ShiftTable
@@ -194,13 +194,13 @@ sequenceDiagram
     APP-->>User: 成功メッセージ
 
     Note over APP,FS: エラー時はrollback
-```
+</div>
 
 ---
 
 ## コンポーネント関係図
 
-```mermaid
+<div class="mermaid">
 graph LR
     subgraph "App.tsx（状態管理）"
         APP[App Component<br/>- schedule<br/>- bulkCopyModalOpen<br/>- handleBulkCopyExecute]
@@ -248,13 +248,13 @@ graph LR
     style BCPTAUtil fill:#F0FFE6
     style CPTAUtil fill:#F0FFE6
     style GUACUtil fill:#F0FFE6
-```
+</div>
 
 ---
 
 ## ユーザーインタラクションフロー
 
-```mermaid
+<div class="mermaid">
 flowchart TD
     Start([ユーザーがシフト表を表示])
 
@@ -295,7 +295,7 @@ flowchart TD
     style Start fill:#E6F3FF
     style End fill:#90EE90
     style EndError fill:#FFB6C1
-```
+</div>
 
 ---
 
