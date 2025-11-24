@@ -1,12 +1,10 @@
 theme: jekyll-theme-cayman
-title: AI Care Shift Scheduler
-description: 介護シフト管理アプリケーション - 技術ドキュメント
-show_downloads: true
+title: シフト管理システム
+description: 実績入力の効率化
+show_downloads: false
 github:
-  repository_url: https://github.com/yasushi-honda/ai-care-shift-scheduler
+  is_project_page: false
 markdown: kramdown
 kramdown:
   parse_block_html: true
   syntax_highlighter: rouge
-plugins:
-  - jekyll-mermaid
