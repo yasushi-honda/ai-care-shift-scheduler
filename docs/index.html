@@ -376,9 +376,10 @@ timeline
     section ユーザビリティ改善（2025年11月）
         改善1 予定と同じボタン : 50%効率化
         改善2 一括コピー機能 : 86%効率化
+        Phase 26.1 E2Eテスト追加 : 品質保証強化
     section 今後の計画
+        Phase 26.2 モバイル最適化 : スマホ対応強化
         改善3 ダブルクリック : さらなる効率化
-        モバイル最適化 : スマホ対応強化
         </div>
 
         <hr>
@@ -399,9 +400,10 @@ graph LR
         B2 --> B3[制約条件最適化]
     end
 
-    subgraph "Phase 18-25 改善・拡張"
+    subgraph "Phase 18-26 改善・拡張"
         C1[実績入力効率化] --> C2[一括操作機能]
-        C2 --> C3[継続的改善]
+        C2 --> C3[E2Eテスト追加]
+        C3 --> C4[品質保証強化]
     end
 
     A3 --> B1
@@ -418,10 +420,10 @@ graph LR
     style C3 fill:#E8F5E9
         </div>
 
-        <p><strong>開発フェーズ</strong>: 25以上のマイルストーン<br>
+        <p><strong>開発フェーズ</strong>: 26以上のマイルストーン（Phase 26.1完了）<br>
         <strong>総開発期間</strong>: 約2ヶ月（継続中）<br>
-        <strong>主要機能数</strong>: 認証、シフト管理、AI生成、実績入力、権限管理など<br>
-        <strong>技術スタック</strong>: React, TypeScript, Firebase, Gemini AI</p>
+        <strong>主要機能数</strong>: 認証、シフト管理、AI生成、実績入力、権限管理、E2Eテストなど<br>
+        <strong>技術スタック</strong>: React, TypeScript, Firebase, Gemini AI, Playwright（E2E）</p>
 
         <hr>
 
@@ -438,14 +440,16 @@ gantt
     基盤構築（Phase 0-12）: done, phase1, 2025-10-23, 2025-11-05
     AI統合（Phase 13-17）: done, phase2, 2025-11-06, 2025-11-15
     改善1・2（Phase 18-25）: done, phase3, 2025-11-16, 2025-11-24
+    E2Eテスト追加（Phase 26.1）: done, phase4, 2025-11-24, 4h
 
     section 進行中
-    改善3 ダブルクリック: active, phase4, 2025-11-25, 3d
+    Phase 26完了記録・GitHub Pages更新: active, phase5, 2025-11-24, 1h
 
     section 計画中（12月）
-    モバイル最適化: phase5, 2025-12-01, 7d
-    レポート機能強化: phase6, 2025-12-08, 7d
-    通知機能追加: phase7, 2025-12-15, 7d
+    モバイル最適化（Phase 26.2）: phase6, 2025-11-25, 7d
+    改善3 ダブルクリック: phase7, 2025-12-01, 3d
+    レポート機能強化: phase8, 2025-12-08, 7d
+    通知機能追加: phase9, 2025-12-15, 7d
         </div>
 
         <hr>
