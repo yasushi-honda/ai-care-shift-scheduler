@@ -14,9 +14,23 @@
     <!-- Mermaid -->
     <script type="module">
       import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
-      mermaid.initialize({
-        startOnLoad: true,
-        theme: 'default'
+
+      // Wait for DOM to load
+      document.addEventListener('DOMContentLoaded', () => {
+        // Extract Mermaid code from <p> tags if wrapped by Jekyll
+        document.querySelectorAll('.mermaid').forEach(el => {
+          const textContent = el.textContent || el.innerText;
+          el.textContent = textContent;
+          el.removeAttribute('data-processed');
+        });
+
+        mermaid.initialize({
+          startOnLoad: true,
+          theme: 'default'
+        });
+
+        // Force render
+        mermaid.run();
       });
     </script>
   </head>
