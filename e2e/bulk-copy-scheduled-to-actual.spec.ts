@@ -80,7 +80,13 @@ test.describe('Phase 26.1: 改善2「一括コピー」機能', () => {
     // デモシフト作成時、デフォルトで実績未入力のスタッフが自動選択されていることを確認
     // チェックボックスがチェック済みであることを確認
     const checkboxes = page.locator('input[type="checkbox"]');
-    const checkedCount = await checkboxes.filter({ checked: true }).count();
+    const checkboxCount = await checkboxes.count();
+    let checkedCount = 0;
+    for (let i = 0; i < checkboxCount; i++) {
+      if (await checkboxes.nth(i).isChecked()) {
+        checkedCount++;
+      }
+    }
     console.log('[TC2-2] 選択済みスタッフ数:', checkedCount);
     expect(checkedCount).toBeGreaterThan(0); // 少なくとも1名は選択されている
 
@@ -172,8 +178,14 @@ test.describe('Phase 26.1: 改善2「一括コピー」機能', () => {
     }
 
     // 選択解除を確認
-    const checkedCount = await checkboxes.filter({ checked: true }).count();
-    expect(checkedCount).toBe(0);
+    const totalCheckboxes = await checkboxes.count();
+    let remainingChecked = 0;
+    for (let i = 0; i < totalCheckboxes; i++) {
+      if (await checkboxes.nth(i).isChecked()) {
+        remainingChecked++;
+      }
+    }
+    expect(remainingChecked).toBe(0);
     console.log('[TC2-4] スタッフ選択を全解除しました');
 
     // アラートダイアログハンドラを登録
