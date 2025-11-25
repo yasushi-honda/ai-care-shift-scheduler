@@ -57,14 +57,12 @@ test.describe('ダブルクリックシフト編集', () => {
     // ダブルクリック
     await shiftCell.dblclick();
 
-    // シフトタイプが変更されることを確認（即座に）
-    await page.waitForTimeout(100);
-    const newText = await shiftCell.textContent();
-
-    // テキストが変更されていることを確認
-    // 注: 実際のシフトタイプによってはサイクルで同じ値に戻る可能性があるため
-    // ここでは変更の可能性をテスト
-    console.log(`Before: ${initialText}, After: ${newText}`);
+    // シフトタイプが変更されることを確認（ポーリングで待機）
+    await expect(async () => {
+      const newText = await shiftCell.textContent();
+      expect(newText).not.toBe(initialText);
+      expect(newText).toBeTruthy();
+    }).toPass({ timeout: 2000 });
   });
 
   test('ダブルクリック後にモーダルが表示されない', async ({ page }) => {
@@ -96,13 +94,14 @@ test.describe('ダブルクリックシフト編集', () => {
     // 「早番」のセルを見つける
     const earlyShiftCell = page.locator('td:has-text("早番")').first();
 
-    if (await earlyShiftCell.isVisible()) {
-      // ダブルクリックで「日勤」に変更
-      await earlyShiftCell.dblclick();
-      await page.waitForTimeout(100);
+    // 「早番」が存在しない場合はスキップ（テストデータに依存）
+    const isVisible = await earlyShiftCell.isVisible().catch(() => false);
+    test.skip(!isVisible, '「早番」セルが見つからないためスキップ');
 
-      // 「日勤」になっていることを確認
-      await expect(earlyShiftCell.locator('span')).toContainText('日勤');
-    }
+    // ダブルクリックで「日勤」に変更
+    await earlyShiftCell.dblclick();
+
+    // 「日勤」になっていることを確認（ポーリングで待機）
+    await expect(earlyShiftCell.locator('span')).toContainText('日勤', { timeout: 2000 });
   });
 });

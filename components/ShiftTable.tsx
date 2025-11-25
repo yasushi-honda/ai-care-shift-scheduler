@@ -1,5 +1,5 @@
 
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import type { StaffSchedule, GeneratedShift } from '../types';
 import { WEEKDAYS } from '../constants';
 import { ShiftEditConfirmModal } from '../src/components/ShiftEditConfirmModal';
@@ -69,7 +69,18 @@ const ShiftTable: React.FC<ShiftTableProps> = ({ schedule, targetMonth, onShiftC
   const [editModalData, setEditModalData] = useState<EditModalData | null>(null);
 
   // シングル/ダブルクリック判定用タイマー
-  const clickTimerRef = useRef<{ [key: string]: NodeJS.Timeout | null }>({});
+  const clickTimerRef = useRef<Record<string, ReturnType<typeof setTimeout> | null>>({});
+
+  // コンポーネントアンマウント時にタイマーをクリーンアップ
+  useEffect(() => {
+    const timers = clickTimerRef.current;
+    return () => {
+      Object.keys(timers).forEach(key => {
+        const timer = timers[key];
+        if (timer) clearTimeout(timer);
+      });
+    };
+  }, []);
 
   const handleShiftTypeChange = (staffId: string, date: string, newShiftType: string) => {
     if (onShiftChange) {
