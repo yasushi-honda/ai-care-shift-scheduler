@@ -539,6 +539,45 @@ const App: React.FC = () => {
     });
   }, []);
 
+  /**
+   * ダブルクリックでシフトタイプを素早く変更するハンドラー
+   * Phase 28: ダブルクリック機能追加
+   */
+  const handleQuickShiftChange = useCallback((
+    staffId: string,
+    date: string,
+    type: 'planned' | 'actual',
+    newShiftType: string
+  ) => {
+    setSchedule(prev => {
+      return prev.map(staff => {
+        if (staff.staffId === staffId) {
+          return {
+            ...staff,
+            monthlyShifts: staff.monthlyShifts.map(shift => {
+              if (shift.date === date) {
+                if (type === 'planned') {
+                  return {
+                    ...shift,
+                    plannedShiftType: newShiftType,
+                    shiftType: newShiftType, // 後方互換性のため
+                  };
+                } else {
+                  return {
+                    ...shift,
+                    actualShiftType: newShiftType,
+                  };
+                }
+              }
+              return shift;
+            }),
+          };
+        }
+        return staff;
+      });
+    });
+  }, []);
+
   const handleBulkCopyExecute = useCallback(async (options: BulkCopyOptions) => {
     if (!selectedFacilityId || !currentUser || !currentScheduleId) {
       showError('保存に必要な情報が不足しています');
@@ -1178,6 +1217,7 @@ const App: React.FC = () => {
                 onShiftChange={handleShiftChange}
                 onShiftUpdate={handleShiftUpdate}
                 onBulkCopyClick={() => setBulkCopyModalOpen(true)}
+                onQuickShiftChange={handleQuickShiftChange}
               />
             )
           ) : (

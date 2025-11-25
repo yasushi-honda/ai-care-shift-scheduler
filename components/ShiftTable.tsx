@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useRef, useCallback } from 'react';
 import type { StaffSchedule, GeneratedShift } from '../types';
 import { WEEKDAYS } from '../constants';
 import { ShiftEditConfirmModal } from '../src/components/ShiftEditConfirmModal';
@@ -10,6 +10,8 @@ interface ShiftTableProps {
   onShiftChange?: (staffId: string, date: string, newShiftType: string) => void;
   onShiftUpdate?: (staffId: string, date: string, updatedShift: Partial<GeneratedShift>) => void;
   onBulkCopyClick?: () => void;
+  /** ダブルクリックでシフトタイプを素早く変更する */
+  onQuickShiftChange?: (staffId: string, date: string, type: 'planned' | 'actual', newShiftType: string) => void;
 }
 
 const getShiftColor = (shiftType: string) => {
@@ -32,7 +34,26 @@ const NoteIcon = () => (
 );
 
 
+/**
+ * シフトタイプのサイクル順序
+ * ダブルクリックで次のシフトタイプに切り替える
+ */
+const SHIFT_CYCLE = ['早番', '日勤', '遅番', '夜勤', '休', '明け休み'];
+
+/**
+ * 次のシフトタイプを取得
+ */
+const getNextShiftType = (currentType: string | undefined): string => {
+  if (!currentType) return SHIFT_CYCLE[0];
+  const index = SHIFT_CYCLE.indexOf(currentType);
+  if (index === -1) return SHIFT_CYCLE[0];
+  return SHIFT_CYCLE[(index + 1) % SHIFT_CYCLE.length];
+};
+
 const AVAILABLE_SHIFT_TYPES = ['早番', '日勤', '遅番', '夜勤', '休', '明け休み'];
+
+/** クリック判定のタイムアウト（ミリ秒） */
+const DOUBLE_CLICK_DELAY = 250;
 
 interface EditModalData {
   date: string;
@@ -42,10 +63,13 @@ interface EditModalData {
   currentShift: GeneratedShift | null;
 }
 
-const ShiftTable: React.FC<ShiftTableProps> = ({ schedule, targetMonth, onShiftChange, onShiftUpdate, onBulkCopyClick }) => {
+const ShiftTable: React.FC<ShiftTableProps> = ({ schedule, targetMonth, onShiftChange, onShiftUpdate, onBulkCopyClick, onQuickShiftChange }) => {
   const [editingShift, setEditingShift] = useState<{ staffId: string, date: string } | null>(null);
   const [showEditModal, setShowEditModal] = useState(false);
   const [editModalData, setEditModalData] = useState<EditModalData | null>(null);
+
+  // シングル/ダブルクリック判定用タイマー
+  const clickTimerRef = useRef<{ [key: string]: NodeJS.Timeout | null }>({});
 
   const handleShiftTypeChange = (staffId: string, date: string, newShiftType: string) => {
     if (onShiftChange) {
@@ -54,7 +78,10 @@ const ShiftTable: React.FC<ShiftTableProps> = ({ schedule, targetMonth, onShiftC
     setEditingShift(null);
   };
 
-  const handleCellClick = (
+  /**
+   * シングルクリック: モーダル表示
+   */
+  const openEditModal = useCallback((
     date: string,
     staffId: string,
     staffName: string,
@@ -69,7 +96,54 @@ const ShiftTable: React.FC<ShiftTableProps> = ({ schedule, targetMonth, onShiftC
       currentShift
     });
     setShowEditModal(true);
-  };
+  }, []);
+
+  /**
+   * ダブルクリック: シフトタイプをサイクル切り替え
+   */
+  const handleDoubleClick = useCallback((
+    staffId: string,
+    date: string,
+    type: 'planned' | 'actual',
+    currentShiftType: string | undefined
+  ) => {
+    if (!onQuickShiftChange) return;
+
+    const nextType = getNextShiftType(currentShiftType);
+    onQuickShiftChange(staffId, date, type, nextType);
+  }, [onQuickShiftChange]);
+
+  /**
+   * セルクリックハンドラー
+   * シングルクリック: モーダル表示（遅延実行）
+   * ダブルクリック: シフトサイクル（即座実行）
+   */
+  const handleCellClick = useCallback((
+    date: string,
+    staffId: string,
+    staffName: string,
+    type: 'planned' | 'actual',
+    currentShift: GeneratedShift | null
+  ) => {
+    const cellKey = `${staffId}-${date}-${type}`;
+    const currentShiftType = type === 'planned'
+      ? (currentShift?.plannedShiftType || currentShift?.shiftType)
+      : currentShift?.actualShiftType;
+
+    // 既存タイマーがあればダブルクリック
+    if (clickTimerRef.current[cellKey]) {
+      clearTimeout(clickTimerRef.current[cellKey]!);
+      clickTimerRef.current[cellKey] = null;
+      handleDoubleClick(staffId, date, type, currentShiftType);
+      return;
+    }
+
+    // シングルクリック（遅延実行）
+    clickTimerRef.current[cellKey] = setTimeout(() => {
+      clickTimerRef.current[cellKey] = null;
+      openEditModal(date, staffId, staffName, type, currentShift);
+    }, DOUBLE_CLICK_DELAY);
+  }, [handleDoubleClick, openEditModal]);
 
   const handleSaveShift = (updatedShift: Partial<GeneratedShift>) => {
     if (!editModalData || !onShiftUpdate) return;
