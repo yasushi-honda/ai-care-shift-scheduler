@@ -11,12 +11,12 @@ export default defineConfig({
   // Global Setup（Phase 18.2: Emulator環境準備）
   globalSetup: './e2e/global-setup.ts',
 
-  // 全テストのタイムアウト（30秒）
-  timeout: 30 * 1000,
+  // 全テストのタイムアウト（CI環境では60秒、ローカルでは30秒）
+  timeout: process.env.CI ? 60 * 1000 : 30 * 1000,
 
-  // 各expectのタイムアウト（5秒）
+  // 各expectのタイムアウト（CI環境では10秒、ローカルでは5秒）
   expect: {
-    timeout: 5000,
+    timeout: process.env.CI ? 10000 : 5000,
   },
 
   // 失敗時のリトライ（CI環境のみ）

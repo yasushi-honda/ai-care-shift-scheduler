@@ -93,10 +93,168 @@ jobs:
           echo "🔗 リポジトリ: ${{ github.repository }}" >> $GITHUB_STEP_SUMMARY
           echo "🌿 ブランチ: ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
 
-  # Firebase全体をデプロイ（mainブランチのみ）
+  # E2Eテスト（Firebase Emulator使用）
+  e2e-test:
+    name: E2Eテスト
+    runs-on: ubuntu-latest
+    needs: build-and-test
+
+    permissions:
+      contents: read
+
+    steps:
+      # 1. リポジトリのチェックアウト
+      - name: チェックアウト
+        uses: actions/checkout@v4
+
+      # 2. Node.jsのセットアップ
+      - name: Node.js ${{ env.NODE_VERSION }} をセットアップ
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      # 3. Javaのセットアップ（Firebase Emulator用）
+      - name: Javaをセットアップ
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      # 4. 依存関係のインストール
+      - name: 依存関係をインストール
+        run: npm ci
+
+      # 5. Playwrightブラウザのインストール
+      - name: Playwrightブラウザをインストール
+        run: npx playwright install --with-deps chromium
+
+      # 6. Firebase CLIのインストール
+      - name: Firebase CLIをインストール
+        run: npm install -g firebase-tools
+
+      # 7. E2Eテスト実行（Firebase Emulator + 開発サーバー）
+      - name: E2Eテスト実行
+        run: |
+          # 環境変数設定
+          export FIREBASE_AUTH_EMULATOR_HOST=localhost:9099
+          export FIRESTORE_EMULATOR_HOST=localhost:8080
+          export CI=true
+
+          # Firebase Emulatorをバックグラウンドで起動
+          firebase emulators:start --only auth,firestore --project ai-care-shift-scheduler &
+          EMULATOR_PID=$!
+
+          # Emulator起動待機（最大60秒）+ エラーハンドリング
+          echo "⏳ Firebase Emulator起動待機中..."
+          AUTH_READY=false
+          for i in {1..60}; do
+            # プロセスが生存しているか確認
+            if ! kill -0 $EMULATOR_PID 2>/dev/null; then
+              echo "❌ Firebase Emulatorプロセスが終了しました"
+              exit 1
+            fi
+            if curl -s http://localhost:9099/ > /dev/null 2>&1; then
+              echo "✅ Auth Emulator起動完了"
+              AUTH_READY=true
+              break
+            fi
+            sleep 1
+          done
+
+          if [ "$AUTH_READY" != "true" ]; then
+            echo "❌ Auth Emulator起動タイムアウト（60秒）"
+            kill $EMULATOR_PID 2>/dev/null || true
+            exit 1
+          fi
+
+          FIRESTORE_READY=false
+          for i in {1..60}; do
+            if curl -s http://localhost:8080/ > /dev/null 2>&1; then
+              echo "✅ Firestore Emulator起動完了"
+              FIRESTORE_READY=true
+              break
+            fi
+            sleep 1
+          done
+
+          if [ "$FIRESTORE_READY" != "true" ]; then
+            echo "❌ Firestore Emulator起動タイムアウト（60秒）"
+            kill $EMULATOR_PID 2>/dev/null || true
+            exit 1
+          fi
+
+          # 開発サーバーをバックグラウンドで起動
+          npm run dev &
+          DEV_PID=$!
+
+          # 開発サーバー起動待機（最大60秒）+ エラーハンドリング
+          echo "⏳ 開発サーバー起動待機中..."
+          DEV_READY=false
+          for i in {1..60}; do
+            if ! kill -0 $DEV_PID 2>/dev/null; then
+              echo "❌ 開発サーバープロセスが終了しました"
+              kill $EMULATOR_PID 2>/dev/null || true
+              exit 1
+            fi
+            if curl -s http://localhost:5173/ > /dev/null 2>&1; then
+              echo "✅ 開発サーバー起動完了"
+              DEV_READY=true
+              break
+            fi
+            sleep 1
+          done
+
+          if [ "$DEV_READY" != "true" ]; then
+            echo "❌ 開発サーバー起動タイムアウト（60秒）"
+            kill $DEV_PID 2>/dev/null || true
+            kill $EMULATOR_PID 2>/dev/null || true
+            exit 1
+          fi
+
+          # E2Eテスト実行
+          echo "🧪 E2Eテスト実行開始..."
+          PLAYWRIGHT_BASE_URL=http://localhost:5173 npx playwright test --reporter=github,html || TEST_EXIT_CODE=$?
+
+          # クリーンアップ
+          kill $DEV_PID 2>/dev/null || true
+          kill $EMULATOR_PID 2>/dev/null || true
+
+          exit ${TEST_EXIT_CODE:-0}
+        env:
+          VITE_FIREBASE_API_KEY: ${{ secrets.VITE_FIREBASE_API_KEY }}
+          VITE_FIREBASE_AUTH_DOMAIN: ${{ secrets.VITE_FIREBASE_AUTH_DOMAIN }}
+          VITE_FIREBASE_PROJECT_ID: ${{ secrets.VITE_FIREBASE_PROJECT_ID }}
+          VITE_FIREBASE_STORAGE_BUCKET: ${{ secrets.VITE_FIREBASE_STORAGE_BUCKET }}
+          VITE_FIREBASE_MESSAGING_SENDER_ID: ${{ secrets.VITE_FIREBASE_MESSAGING_SENDER_ID }}
+          VITE_FIREBASE_APP_ID: ${{ secrets.VITE_FIREBASE_APP_ID }}
+          VITE_FIREBASE_MEASUREMENT_ID: ${{ secrets.VITE_FIREBASE_MEASUREMENT_ID }}
+
+      # 8. テストレポートのアップロード（常に）
+      - name: テストレポートをアップロード
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7
+
+      # 9. E2Eテスト結果サマリー
+      - name: E2Eテスト結果サマリー
+        if: always()
+        run: |
+          echo "## E2Eテスト結果 🧪" >> $GITHUB_STEP_SUMMARY
+          if [ -f playwright-report/index.html ]; then
+            echo "✅ テストレポート生成完了" >> $GITHUB_STEP_SUMMARY
+            echo "📊 レポートはArtifactsからダウンロード可能" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "⚠️ テストレポートが見つかりません" >> $GITHUB_STEP_SUMMARY
+          fi
+
+  # Firebase全体をデプロイ（mainブランチのみ、E2Eテスト成功後）
   deploy:
     name: Firebaseにデプロイ
-    needs: build-and-test
+    needs: [build-and-test, e2e-test]
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     runs-on: ubuntu-latest
 
