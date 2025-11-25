@@ -698,3 +698,88 @@ test.describe('リドゥ機能', () => {
     expect(currentText).toBe(state2);
   });
 });
+
+/**
+ * Phase 34: Home/Endキーナビゲーションテスト
+ */
+test.describe('Home/Endキーナビゲーション', () => {
+  test.beforeEach(async ({ page }) => {
+    await setupAuthenticatedUser(page, {
+      email: 'homeend-test@example.com',
+      password: 'password123',
+      displayName: 'Home/Endテスト',
+      role: 'admin',
+    });
+
+    await page.goto('/');
+    await page.waitForLoadState('networkidle');
+  });
+
+  test('Homeキーで1日目に移動する', async ({ page }) => {
+    // シフト表が表示されるまで待機
+    const shiftTable = page.locator('table');
+    await expect(shiftTable).toBeVisible({ timeout: 10000 });
+
+    // 中央付近のセルにフォーカス
+    const allCells = page.locator('td[tabindex="0"]');
+    const cellCount = await allCells.count();
+    const middleCell = allCells.nth(Math.floor(cellCount / 2));
+    await middleCell.focus();
+
+    // Homeキーを押す
+    await page.keyboard.press('Home');
+    await page.waitForTimeout(100);
+
+    // フォーカスが1日目のセルに移動したことを確認
+    const focusedCell = page.locator('td[tabindex="0"]:focus');
+    await expect(focusedCell).toBeVisible();
+  });
+
+  test('Endキーで月末日に移動する', async ({ page }) => {
+    // シフト表が表示されるまで待機
+    const shiftTable = page.locator('table');
+    await expect(shiftTable).toBeVisible({ timeout: 10000 });
+
+    // 最初のセルにフォーカス
+    const firstCell = page.locator('td[tabindex="0"]').first();
+    await firstCell.focus();
+
+    // Endキーを押す
+    await page.keyboard.press('End');
+    await page.waitForTimeout(100);
+
+    // フォーカスが移動したことを確認
+    const focusedCell = page.locator('td[tabindex="0"]:focus');
+    await expect(focusedCell).toBeVisible();
+  });
+
+  test('Home→End→Homeの往復移動', async ({ page }) => {
+    // シフト表が表示されるまで待機
+    const shiftTable = page.locator('table');
+    await expect(shiftTable).toBeVisible({ timeout: 10000 });
+
+    // 中央付近のセルにフォーカス
+    const allCells = page.locator('td[tabindex="0"]');
+    const cellCount = await allCells.count();
+    const middleCell = allCells.nth(Math.floor(cellCount / 2));
+    await middleCell.focus();
+
+    // Homeキーで1日目へ
+    await page.keyboard.press('Home');
+    await page.waitForTimeout(100);
+    const afterHome1 = page.locator('td[tabindex="0"]:focus');
+    await expect(afterHome1).toBeVisible();
+
+    // Endキーで月末へ
+    await page.keyboard.press('End');
+    await page.waitForTimeout(100);
+    const afterEnd = page.locator('td[tabindex="0"]:focus');
+    await expect(afterEnd).toBeVisible();
+
+    // Homeキーで再度1日目へ
+    await page.keyboard.press('Home');
+    await page.waitForTimeout(100);
+    const afterHome2 = page.locator('td[tabindex="0"]:focus');
+    await expect(afterHome2).toBeVisible();
+  });
+});

@@ -219,6 +219,15 @@ const ShiftTable: React.FC<ShiftTableProps> = ({ schedule, targetMonth, onShiftC
           newDateIndex = dateIndex + 1;
         }
         break;
+      // Phase 34: Home/Endキーナビゲーション
+      case 'Home':
+        // 行の先頭（1日目）に移動
+        newDateIndex = 0;
+        break;
+      case 'End':
+        // 行の末尾（月末日）に移動
+        newDateIndex = totalDates - 1;
+        break;
       default:
         return false;
     }
@@ -256,8 +265,8 @@ const ShiftTable: React.FC<ShiftTableProps> = ({ schedule, targetMonth, onShiftC
       ? (currentShift?.plannedShiftType || currentShift?.shiftType)
       : currentShift?.actualShiftType;
 
-    // 矢印キーナビゲーション（Phase 32）
-    if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
+    // 矢印キー＋Home/Endナビゲーション（Phase 32, 34）
+    if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(e.key)) {
       handleArrowNavigation(e, staffIndex, dateIndex, type, totalStaff, totalDates);
       return;
     }
