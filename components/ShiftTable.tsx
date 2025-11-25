@@ -71,6 +71,23 @@ const ShiftTable: React.FC<ShiftTableProps> = ({ schedule, targetMonth, onShiftC
   // シングル/ダブルクリック判定用タイマー
   const clickTimerRef = useRef<Record<string, ReturnType<typeof setTimeout> | null>>({});
 
+  /**
+   * Phase 32: 矢印キーナビゲーション用セル参照管理
+   * キー形式: `${staffIndex}-${dateIndex}-${type}`
+   */
+  const cellRefs = useRef<Map<string, HTMLTableCellElement>>(new Map());
+
+  /**
+   * セル参照を登録/解除
+   */
+  const setCellRef = useCallback((key: string, el: HTMLTableCellElement | null) => {
+    if (el) {
+      cellRefs.current.set(key, el);
+    } else {
+      cellRefs.current.delete(key);
+    }
+  }, []);
+
   // コンポーネントアンマウント時にタイマーをクリーンアップ
   useEffect(() => {
     const timers = clickTimerRef.current;
@@ -157,9 +174,71 @@ const ShiftTable: React.FC<ShiftTableProps> = ({ schedule, targetMonth, onShiftC
   }, [handleDoubleClick, openEditModal]);
 
   /**
+   * Phase 32: 矢印キーでセル間移動
+   */
+  const handleArrowNavigation = useCallback((
+    e: React.KeyboardEvent,
+    staffIndex: number,
+    dateIndex: number,
+    type: 'planned' | 'actual',
+    totalStaff: number,
+    totalDates: number
+  ) => {
+    let newStaffIndex = staffIndex;
+    let newDateIndex = dateIndex;
+    let newType = type;
+
+    switch (e.key) {
+      case 'ArrowUp':
+        // 上に移動：同じ日付の前のスタッフ、または実績→予定
+        if (type === 'actual') {
+          newType = 'planned';
+        } else if (staffIndex > 0) {
+          newStaffIndex = staffIndex - 1;
+          newType = 'actual';
+        }
+        break;
+      case 'ArrowDown':
+        // 下に移動：同じ日付の次のスタッフ、または予定→実績
+        if (type === 'planned') {
+          newType = 'actual';
+        } else if (staffIndex < totalStaff - 1) {
+          newStaffIndex = staffIndex + 1;
+          newType = 'planned';
+        }
+        break;
+      case 'ArrowLeft':
+        // 左に移動：前の日付
+        if (dateIndex > 0) {
+          newDateIndex = dateIndex - 1;
+        }
+        break;
+      case 'ArrowRight':
+        // 右に移動：次の日付
+        if (dateIndex < totalDates - 1) {
+          newDateIndex = dateIndex + 1;
+        }
+        break;
+      default:
+        return false;
+    }
+
+    const newKey = `${newStaffIndex}-${newDateIndex}-${newType}`;
+    const targetCell = cellRefs.current.get(newKey);
+
+    if (targetCell) {
+      e.preventDefault();
+      targetCell.focus();
+      return true;
+    }
+    return false;
+  }, []);
+
+  /**
    * キーボードイベントハンドラー
    * Enter: モーダル表示（シングルクリック相当）
    * Space: シフトサイクル（ダブルクリック相当）
+   * Arrow keys: セル間移動（Phase 32）
    */
   const handleKeyDown = useCallback((
     e: React.KeyboardEvent,
@@ -167,11 +246,21 @@ const ShiftTable: React.FC<ShiftTableProps> = ({ schedule, targetMonth, onShiftC
     staffId: string,
     staffName: string,
     type: 'planned' | 'actual',
-    currentShift: GeneratedShift | null
+    currentShift: GeneratedShift | null,
+    staffIndex: number,
+    dateIndex: number,
+    totalStaff: number,
+    totalDates: number
   ) => {
     const currentShiftType = type === 'planned'
       ? (currentShift?.plannedShiftType || currentShift?.shiftType)
       : currentShift?.actualShiftType;
+
+    // 矢印キーナビゲーション（Phase 32）
+    if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
+      handleArrowNavigation(e, staffIndex, dateIndex, type, totalStaff, totalDates);
+      return;
+    }
 
     if (e.key === 'Enter') {
       e.preventDefault();
@@ -180,7 +269,7 @@ const ShiftTable: React.FC<ShiftTableProps> = ({ schedule, targetMonth, onShiftC
       e.preventDefault();
       handleDoubleClick(staffId, date, type, currentShiftType);
     }
-  }, [openEditModal, handleDoubleClick]);
+  }, [openEditModal, handleDoubleClick, handleArrowNavigation]);
 
   const handleSaveShift = (updatedShift: Partial<GeneratedShift>) => {
     if (!editModalData || !onShiftUpdate) return;
@@ -249,7 +338,7 @@ const ShiftTable: React.FC<ShiftTableProps> = ({ schedule, targetMonth, onShiftC
             </tr>
           </thead>
           <tbody className="bg-white">
-            {schedule.map(staffSchedule => {
+            {schedule.map((staffSchedule, staffIndex) => {
               // 差異があるかチェックする関数
               const hasDifference = (shift: GeneratedShift): boolean => {
                 if (!shift.actualShiftType) return false;
@@ -263,6 +352,9 @@ const ShiftTable: React.FC<ShiftTableProps> = ({ schedule, targetMonth, onShiftC
                 return false;
               };
 
+              const totalStaff = schedule.length;
+              const totalDates = staffSchedule.monthlyShifts.length;
+
               return (
                 <React.Fragment key={staffSchedule.staffId}>
                   {/* 予定行 */}
@@ -275,20 +367,22 @@ const ShiftTable: React.FC<ShiftTableProps> = ({ schedule, targetMonth, onShiftC
                         <span>{staffSchedule.staffName}</span>
                       </div>
                     </td>
-                    {staffSchedule.monthlyShifts.map((shift) => {
+                    {staffSchedule.monthlyShifts.map((shift, dateIndex) => {
                       const plannedShiftType = shift.plannedShiftType || shift.shiftType || '休';
                       const hasDiff = hasDifference(shift);
+                      const cellKey = `${staffIndex}-${dateIndex}-planned`;
 
                       return (
                         <td
                           key={`${staffSchedule.staffId}-${shift.date}-planned`}
+                          ref={(el) => setCellRef(cellKey, el)}
                           tabIndex={0}
                           role="button"
                           aria-label={`${staffSchedule.staffName}の${shift.date}の予定: ${plannedShiftType}`}
                           className={`px-2 py-1 text-center text-xs cursor-pointer hover:bg-blue-50 active:scale-95 active:opacity-80 border-b border-gray-300 select-none transition-transform duration-75 focus:outline-none focus:ring-2 focus:ring-blue-500 ${hasDiff ? 'ring-2 ring-orange-400 bg-orange-50' : 'bg-white'}`}
                           style={{ touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent' }}
                           onClick={() => handleCellClick(shift.date, staffSchedule.staffId, staffSchedule.staffName, 'planned', shift)}
-                          onKeyDown={(e) => handleKeyDown(e, shift.date, staffSchedule.staffId, staffSchedule.staffName, 'planned', shift)}
+                          onKeyDown={(e) => handleKeyDown(e, shift.date, staffSchedule.staffId, staffSchedule.staffName, 'planned', shift, staffIndex, dateIndex, totalStaff, totalDates)}
                         >
                           <span className={`inline-flex px-2 py-0.5 rounded-full ${getShiftColor(plannedShiftType)}`}>
                             {plannedShiftType}
@@ -305,14 +399,16 @@ const ShiftTable: React.FC<ShiftTableProps> = ({ schedule, targetMonth, onShiftC
 
                   {/* 実績行 */}
                   <tr className="border-b border-gray-300">
-                    {staffSchedule.monthlyShifts.map((shift) => {
+                    {staffSchedule.monthlyShifts.map((shift, dateIndex) => {
                       const actualShiftType = shift.actualShiftType;
                       const hasDiff = hasDifference(shift);
                       const isEmpty = !actualShiftType;
+                      const cellKey = `${staffIndex}-${dateIndex}-actual`;
 
                       return (
                         <td
                           key={`${staffSchedule.staffId}-${shift.date}-actual`}
+                          ref={(el) => setCellRef(cellKey, el)}
                           tabIndex={0}
                           role="button"
                           aria-label={`${staffSchedule.staffName}の${shift.date}の実績: ${actualShiftType || '未入力'}`}
@@ -322,7 +418,7 @@ const ShiftTable: React.FC<ShiftTableProps> = ({ schedule, targetMonth, onShiftC
                           }`}
                           style={{ touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent' }}
                           onClick={() => handleCellClick(shift.date, staffSchedule.staffId, staffSchedule.staffName, 'actual', shift)}
-                          onKeyDown={(e) => handleKeyDown(e, shift.date, staffSchedule.staffId, staffSchedule.staffName, 'actual', shift)}
+                          onKeyDown={(e) => handleKeyDown(e, shift.date, staffSchedule.staffId, staffSchedule.staffName, 'actual', shift, staffIndex, dateIndex, totalStaff, totalDates)}
                         >
                           {isEmpty ? (
                             <span className="text-gray-400 text-[10px]">未入力</span>

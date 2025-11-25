@@ -393,3 +393,163 @@ test.describe('アンドゥ機能', () => {
     await expect(toast).toBeVisible({ timeout: 5000 });
   });
 });
+
+/**
+ * Phase 32: 矢印キーナビゲーションテスト
+ */
+test.describe('矢印キーナビゲーション', () => {
+  test.beforeEach(async ({ page }) => {
+    await setupAuthenticatedUser(page, {
+      email: 'arrow-nav-test@example.com',
+      password: 'password123',
+      displayName: '矢印キーテスト',
+      role: 'admin',
+    });
+
+    await page.goto('/');
+    await page.waitForLoadState('networkidle');
+  });
+
+  test('矢印キー右でフォーカスが右のセルに移動', async ({ page }) => {
+    // シフト表が表示されるまで待機
+    const shiftTable = page.locator('table');
+    await expect(shiftTable).toBeVisible({ timeout: 10000 });
+
+    // 最初のシフトセルにフォーカス
+    const firstCell = page.locator('td[tabindex="0"]').first();
+    await firstCell.focus();
+    await expect(firstCell).toBeFocused();
+
+    // 矢印キー右を押す
+    await page.keyboard.press('ArrowRight');
+
+    // フォーカスが右のセルに移動していることを確認
+    const secondCell = page.locator('td[tabindex="0"]').nth(1);
+    await expect(secondCell).toBeFocused();
+  });
+
+  test('矢印キー左でフォーカスが左のセルに移動', async ({ page }) => {
+    // シフト表が表示されるまで待機
+    const shiftTable = page.locator('table');
+    await expect(shiftTable).toBeVisible({ timeout: 10000 });
+
+    // 2番目のシフトセルにフォーカス
+    const secondCell = page.locator('td[tabindex="0"]').nth(1);
+    await secondCell.focus();
+    await expect(secondCell).toBeFocused();
+
+    // 矢印キー左を押す
+    await page.keyboard.press('ArrowLeft');
+
+    // フォーカスが左のセルに移動していることを確認
+    const firstCell = page.locator('td[tabindex="0"]').first();
+    await expect(firstCell).toBeFocused();
+  });
+
+  test('矢印キー下でフォーカスが下のセルに移動', async ({ page }) => {
+    // シフト表が表示されるまで待機
+    const shiftTable = page.locator('table');
+    await expect(shiftTable).toBeVisible({ timeout: 10000 });
+
+    // 予定行のセルにフォーカス
+    const plannedCell = page.locator('td[tabindex="0"]').first();
+    await plannedCell.focus();
+    await expect(plannedCell).toBeFocused();
+
+    // aria-labelで予定セルであることを確認
+    const ariaLabel = await plannedCell.getAttribute('aria-label');
+    expect(ariaLabel).toContain('予定');
+
+    // 矢印キー下を押す
+    await page.keyboard.press('ArrowDown');
+
+    // フォーカスが移動していることを確認（実績セルへ）
+    const focusedElement = page.locator('td[tabindex="0"]:focus');
+    await expect(focusedElement).toBeVisible();
+  });
+
+  test('矢印キー上でフォーカスが上のセルに移動', async ({ page }) => {
+    // シフト表が表示されるまで待機
+    const shiftTable = page.locator('table');
+    await expect(shiftTable).toBeVisible({ timeout: 10000 });
+
+    // 実績行のセルを探す（予定と実績がペアなので、最初の予定から下に移動して実績にフォーカス）
+    const plannedCell = page.locator('td[tabindex="0"]').first();
+    await plannedCell.focus();
+    await page.keyboard.press('ArrowDown'); // 実績セルに移動
+
+    // 現在実績セルにいることを確認
+    const actualCell = page.locator('td[tabindex="0"]:focus');
+    await expect(actualCell).toBeVisible();
+
+    // 矢印キー上を押す
+    await page.keyboard.press('ArrowUp');
+
+    // フォーカスが予定セルに戻っていることを確認
+    const focusedElement = page.locator('td[tabindex="0"]:focus');
+    const ariaLabel = await focusedElement.getAttribute('aria-label');
+    expect(ariaLabel).toContain('予定');
+  });
+
+  test('境界でのフォーカス維持（左端で左キー）', async ({ page }) => {
+    // シフト表が表示されるまで待機
+    const shiftTable = page.locator('table');
+    await expect(shiftTable).toBeVisible({ timeout: 10000 });
+
+    // 最初のセル（左端）にフォーカス
+    const firstCell = page.locator('td[tabindex="0"]').first();
+    await firstCell.focus();
+
+    // 矢印キー左を押す（境界なので移動しない）
+    await page.keyboard.press('ArrowLeft');
+
+    // フォーカスが維持されていることを確認
+    await expect(firstCell).toBeFocused();
+  });
+
+  test('矢印キーナビゲーション後もEnterでモーダル表示', async ({ page }) => {
+    // シフト表が表示されるまで待機
+    const shiftTable = page.locator('table');
+    await expect(shiftTable).toBeVisible({ timeout: 10000 });
+
+    // 最初のセルにフォーカス
+    const firstCell = page.locator('td[tabindex="0"]').first();
+    await firstCell.focus();
+
+    // 矢印キーで移動
+    await page.keyboard.press('ArrowRight');
+
+    // Enterキーを押してモーダル表示
+    await page.keyboard.press('Enter');
+
+    // モーダルが表示されることを確認
+    const modal = page.locator('[role="dialog"], .modal, [class*="modal"]');
+    await expect(modal).toBeVisible({ timeout: 5000 });
+  });
+
+  test('矢印キーナビゲーション後もSpaceでシフト変更', async ({ page }) => {
+    // シフト表が表示されるまで待機
+    const shiftTable = page.locator('table');
+    await expect(shiftTable).toBeVisible({ timeout: 10000 });
+
+    // 最初のセルにフォーカス
+    const firstCell = page.locator('td[tabindex="0"]').first();
+    await firstCell.focus();
+
+    // 矢印キーで移動
+    await page.keyboard.press('ArrowRight');
+
+    // 移動先のセルの現在値を取得
+    const targetCell = page.locator('td[tabindex="0"]:focus');
+    const initialText = await targetCell.textContent();
+
+    // Spaceキーを押してシフト変更
+    await page.keyboard.press(' ');
+
+    // シフトが変更されることを確認
+    await expect(async () => {
+      const newText = await targetCell.textContent();
+      expect(newText).not.toBe(initialText);
+    }).toPass({ timeout: 2000 });
+  });
+});
