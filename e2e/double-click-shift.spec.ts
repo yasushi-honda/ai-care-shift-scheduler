@@ -783,3 +783,96 @@ test.describe('Home/Endキーナビゲーション', () => {
     await expect(afterHome2).toBeVisible();
   });
 });
+
+/**
+ * Phase 35: Ctrl+矢印キーナビゲーションテスト
+ */
+test.describe('Ctrl+矢印キーナビゲーション', () => {
+  test.beforeEach(async ({ page }) => {
+    await setupAuthenticatedUser(page, {
+      email: 'ctrlarrow-test@example.com',
+      password: 'password123',
+      displayName: 'Ctrl矢印テスト',
+      role: 'admin',
+    });
+
+    await page.goto('/');
+    await page.waitForLoadState('networkidle');
+  });
+
+  test('Ctrl+↑で最初のスタッフに移動する', async ({ page }) => {
+    // シフト表が表示されるまで待機
+    const shiftTable = page.locator('table');
+    await expect(shiftTable).toBeVisible({ timeout: 10000 });
+
+    // 中央付近のセルにフォーカス
+    const allCells = page.locator('td[tabindex="0"]');
+    const cellCount = await allCells.count();
+    const middleCell = allCells.nth(Math.floor(cellCount / 2));
+    await middleCell.focus();
+
+    // Ctrl+↑を押す
+    await page.keyboard.press('Control+ArrowUp');
+    await page.waitForTimeout(100);
+
+    // フォーカスが移動したことを確認
+    const focusedCell = page.locator('td[tabindex="0"]:focus');
+    await expect(focusedCell).toBeVisible();
+  });
+
+  test('Ctrl+↓で最後のスタッフに移動する', async ({ page }) => {
+    // シフト表が表示されるまで待機
+    const shiftTable = page.locator('table');
+    await expect(shiftTable).toBeVisible({ timeout: 10000 });
+
+    // 最初のセルにフォーカス
+    const firstCell = page.locator('td[tabindex="0"]').first();
+    await firstCell.focus();
+
+    // Ctrl+↓を押す
+    await page.keyboard.press('Control+ArrowDown');
+    await page.waitForTimeout(100);
+
+    // フォーカスが移動したことを確認
+    const focusedCell = page.locator('td[tabindex="0"]:focus');
+    await expect(focusedCell).toBeVisible();
+  });
+
+  test('Ctrl+←で1日目に移動する', async ({ page }) => {
+    // シフト表が表示されるまで待機
+    const shiftTable = page.locator('table');
+    await expect(shiftTable).toBeVisible({ timeout: 10000 });
+
+    // 中央付近のセルにフォーカス
+    const allCells = page.locator('td[tabindex="0"]');
+    const cellCount = await allCells.count();
+    const middleCell = allCells.nth(Math.floor(cellCount / 2));
+    await middleCell.focus();
+
+    // Ctrl+←を押す
+    await page.keyboard.press('Control+ArrowLeft');
+    await page.waitForTimeout(100);
+
+    // フォーカスが移動したことを確認
+    const focusedCell = page.locator('td[tabindex="0"]:focus');
+    await expect(focusedCell).toBeVisible();
+  });
+
+  test('Ctrl+→で月末に移動する', async ({ page }) => {
+    // シフト表が表示されるまで待機
+    const shiftTable = page.locator('table');
+    await expect(shiftTable).toBeVisible({ timeout: 10000 });
+
+    // 最初のセルにフォーカス
+    const firstCell = page.locator('td[tabindex="0"]').first();
+    await firstCell.focus();
+
+    // Ctrl+→を押す
+    await page.keyboard.press('Control+ArrowRight');
+    await page.waitForTimeout(100);
+
+    // フォーカスが移動したことを確認
+    const focusedCell = page.locator('td[tabindex="0"]:focus');
+    await expect(focusedCell).toBeVisible();
+  });
+});

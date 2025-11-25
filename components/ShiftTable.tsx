@@ -188,48 +188,73 @@ const ShiftTable: React.FC<ShiftTableProps> = ({ schedule, targetMonth, onShiftC
     let newDateIndex = dateIndex;
     let newType = type;
 
-    switch (e.key) {
-      case 'ArrowUp':
-        // 上に移動：同じ日付の前のスタッフ、または実績→予定
-        if (type === 'actual') {
+    // Phase 35: Ctrl+矢印でジャンプ移動
+    if ((e.ctrlKey || e.metaKey) && ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
+      switch (e.key) {
+        case 'ArrowUp':
+          // 最初のスタッフに移動
+          newStaffIndex = 0;
           newType = 'planned';
-        } else if (staffIndex > 0) {
-          newStaffIndex = staffIndex - 1;
+          break;
+        case 'ArrowDown':
+          // 最後のスタッフに移動
+          newStaffIndex = totalStaff - 1;
           newType = 'actual';
-        }
-        break;
-      case 'ArrowDown':
-        // 下に移動：同じ日付の次のスタッフ、または予定→実績
-        if (type === 'planned') {
-          newType = 'actual';
-        } else if (staffIndex < totalStaff - 1) {
-          newStaffIndex = staffIndex + 1;
-          newType = 'planned';
-        }
-        break;
-      case 'ArrowLeft':
-        // 左に移動：前の日付
-        if (dateIndex > 0) {
-          newDateIndex = dateIndex - 1;
-        }
-        break;
-      case 'ArrowRight':
-        // 右に移動：次の日付
-        if (dateIndex < totalDates - 1) {
-          newDateIndex = dateIndex + 1;
-        }
-        break;
-      // Phase 34: Home/Endキーナビゲーション
-      case 'Home':
-        // 行の先頭（1日目）に移動
-        newDateIndex = 0;
-        break;
-      case 'End':
-        // 行の末尾（月末日）に移動
-        newDateIndex = totalDates - 1;
-        break;
-      default:
-        return false;
+          break;
+        case 'ArrowLeft':
+          // 1日目に移動（Homeと同等）
+          newDateIndex = 0;
+          break;
+        case 'ArrowRight':
+          // 月末に移動（Endと同等）
+          newDateIndex = totalDates - 1;
+          break;
+      }
+    } else {
+      // 通常の矢印キー処理
+      switch (e.key) {
+        case 'ArrowUp':
+          // 上に移動：同じ日付の前のスタッフ、または実績→予定
+          if (type === 'actual') {
+            newType = 'planned';
+          } else if (staffIndex > 0) {
+            newStaffIndex = staffIndex - 1;
+            newType = 'actual';
+          }
+          break;
+        case 'ArrowDown':
+          // 下に移動：同じ日付の次のスタッフ、または予定→実績
+          if (type === 'planned') {
+            newType = 'actual';
+          } else if (staffIndex < totalStaff - 1) {
+            newStaffIndex = staffIndex + 1;
+            newType = 'planned';
+          }
+          break;
+        case 'ArrowLeft':
+          // 左に移動：前の日付
+          if (dateIndex > 0) {
+            newDateIndex = dateIndex - 1;
+          }
+          break;
+        case 'ArrowRight':
+          // 右に移動：次の日付
+          if (dateIndex < totalDates - 1) {
+            newDateIndex = dateIndex + 1;
+          }
+          break;
+        // Phase 34: Home/Endキーナビゲーション
+        case 'Home':
+          // 行の先頭（1日目）に移動
+          newDateIndex = 0;
+          break;
+        case 'End':
+          // 行の末尾（月末日）に移動
+          newDateIndex = totalDates - 1;
+          break;
+        default:
+          return false;
+      }
     }
 
     const newKey = `${newStaffIndex}-${newDateIndex}-${newType}`;
