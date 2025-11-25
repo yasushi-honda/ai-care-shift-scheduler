@@ -8,8 +8,14 @@
 
     <!-- モバイル判定リダイレクト -->
     <script>
-        if (window.innerWidth < 768 && !window.location.pathname.includes('mobile')) {
-            window.location.href = 'mobile.html';
+        try {
+            const currentFile = window.location.pathname.split('/').pop();
+            const isMobilePage = currentFile === 'mobile.html';
+            if (window.innerWidth < 768 && !isMobilePage) {
+                window.location.href = 'mobile.html';
+            }
+        } catch (e) {
+            console.error('Mobile redirect failed:', e);
         }
     </script>
 
