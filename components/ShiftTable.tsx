@@ -156,6 +156,32 @@ const ShiftTable: React.FC<ShiftTableProps> = ({ schedule, targetMonth, onShiftC
     }, DOUBLE_CLICK_DELAY);
   }, [handleDoubleClick, openEditModal]);
 
+  /**
+   * キーボードイベントハンドラー
+   * Enter: モーダル表示（シングルクリック相当）
+   * Space: シフトサイクル（ダブルクリック相当）
+   */
+  const handleKeyDown = useCallback((
+    e: React.KeyboardEvent,
+    date: string,
+    staffId: string,
+    staffName: string,
+    type: 'planned' | 'actual',
+    currentShift: GeneratedShift | null
+  ) => {
+    const currentShiftType = type === 'planned'
+      ? (currentShift?.plannedShiftType || currentShift?.shiftType)
+      : currentShift?.actualShiftType;
+
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      openEditModal(date, staffId, staffName, type, currentShift);
+    } else if (e.key === ' ') {
+      e.preventDefault();
+      handleDoubleClick(staffId, date, type, currentShiftType);
+    }
+  }, [openEditModal, handleDoubleClick]);
+
   const handleSaveShift = (updatedShift: Partial<GeneratedShift>) => {
     if (!editModalData || !onShiftUpdate) return;
 
@@ -256,9 +282,13 @@ const ShiftTable: React.FC<ShiftTableProps> = ({ schedule, targetMonth, onShiftC
                       return (
                         <td
                           key={`${staffSchedule.staffId}-${shift.date}-planned`}
-                          className={`px-2 py-1 text-center text-xs cursor-pointer hover:bg-blue-50 active:scale-95 active:opacity-80 border-b border-gray-300 select-none transition-transform duration-75 ${hasDiff ? 'ring-2 ring-orange-400 bg-orange-50' : 'bg-white'}`}
+                          tabIndex={0}
+                          role="button"
+                          aria-label={`${staffSchedule.staffName}の${shift.date}の予定: ${plannedShiftType}`}
+                          className={`px-2 py-1 text-center text-xs cursor-pointer hover:bg-blue-50 active:scale-95 active:opacity-80 border-b border-gray-300 select-none transition-transform duration-75 focus:outline-none focus:ring-2 focus:ring-blue-500 ${hasDiff ? 'ring-2 ring-orange-400 bg-orange-50' : 'bg-white'}`}
                           style={{ touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent' }}
                           onClick={() => handleCellClick(shift.date, staffSchedule.staffId, staffSchedule.staffName, 'planned', shift)}
+                          onKeyDown={(e) => handleKeyDown(e, shift.date, staffSchedule.staffId, staffSchedule.staffName, 'planned', shift)}
                         >
                           <span className={`inline-flex px-2 py-0.5 rounded-full ${getShiftColor(plannedShiftType)}`}>
                             {plannedShiftType}
@@ -283,12 +313,16 @@ const ShiftTable: React.FC<ShiftTableProps> = ({ schedule, targetMonth, onShiftC
                       return (
                         <td
                           key={`${staffSchedule.staffId}-${shift.date}-actual`}
-                          className={`px-2 py-1 text-center text-xs cursor-pointer hover:bg-blue-100 active:scale-95 active:opacity-80 border-b border-gray-400 select-none transition-transform duration-75 ${
+                          tabIndex={0}
+                          role="button"
+                          aria-label={`${staffSchedule.staffName}の${shift.date}の実績: ${actualShiftType || '未入力'}`}
+                          className={`px-2 py-1 text-center text-xs cursor-pointer hover:bg-blue-100 active:scale-95 active:opacity-80 border-b border-gray-400 select-none transition-transform duration-75 focus:outline-none focus:ring-2 focus:ring-blue-500 ${
                             hasDiff ? 'ring-2 ring-orange-400 bg-orange-50' :
                             isEmpty ? 'bg-gray-100' : 'bg-gray-50'
                           }`}
                           style={{ touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent' }}
                           onClick={() => handleCellClick(shift.date, staffSchedule.staffId, staffSchedule.staffName, 'actual', shift)}
+                          onKeyDown={(e) => handleKeyDown(e, shift.date, staffSchedule.staffId, staffSchedule.staffName, 'actual', shift)}
                         >
                           {isEmpty ? (
                             <span className="text-gray-400 text-[10px]">未入力</span>

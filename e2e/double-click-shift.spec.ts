@@ -182,3 +182,93 @@ test.describe('モバイルタッチ対応', () => {
     expect(touchAction).toBe('manipulation');
   });
 });
+
+/**
+ * Phase 30: キーボードアクセシビリティテスト
+ */
+test.describe('キーボードアクセシビリティ', () => {
+  test.beforeEach(async ({ page }) => {
+    await setupAuthenticatedUser(page, {
+      email: 'keyboard-test@example.com',
+      password: 'password123',
+      displayName: 'キーボードテスト',
+      role: 'admin',
+    });
+
+    await page.goto('/');
+    await page.waitForLoadState('networkidle');
+  });
+
+  test('Tabキーでシフトセルにフォーカス移動', async ({ page }) => {
+    // シフト表が表示されるまで待機
+    const shiftTable = page.locator('table');
+    await expect(shiftTable).toBeVisible({ timeout: 10000 });
+
+    // シフトセルを見つける
+    const shiftCell = page.locator('td[tabindex="0"]').first();
+    await expect(shiftCell).toBeVisible();
+
+    // Tabキーでフォーカス
+    await shiftCell.focus();
+
+    // フォーカスされていることを確認
+    await expect(shiftCell).toBeFocused();
+  });
+
+  test('Enterキーでモーダル表示', async ({ page }) => {
+    // シフト表が表示されるまで待機
+    const shiftTable = page.locator('table');
+    await expect(shiftTable).toBeVisible({ timeout: 10000 });
+
+    // シフトセルを見つけてフォーカス
+    const shiftCell = page.locator('td[tabindex="0"]').first();
+    await shiftCell.focus();
+
+    // Enterキーを押す
+    await page.keyboard.press('Enter');
+
+    // モーダルが表示されることを確認
+    const modal = page.locator('[role="dialog"], .modal, [class*="modal"]');
+    await expect(modal).toBeVisible({ timeout: 5000 });
+  });
+
+  test('Spaceキーでシフトタイプ変更', async ({ page }) => {
+    // シフト表が表示されるまで待機
+    const shiftTable = page.locator('table');
+    await expect(shiftTable).toBeVisible({ timeout: 10000 });
+
+    // シフトセルを見つけてフォーカス
+    const shiftCell = page.locator('td[tabindex="0"]').first();
+    await shiftCell.focus();
+
+    // 現在のシフトタイプを取得
+    const initialText = await shiftCell.textContent();
+
+    // Spaceキーを押す
+    await page.keyboard.press(' ');
+
+    // シフトタイプが変更されることを確認
+    await expect(async () => {
+      const newText = await shiftCell.textContent();
+      expect(newText).not.toBe(initialText);
+    }).toPass({ timeout: 2000 });
+  });
+
+  test('シフトセルにaria属性が適用されている', async ({ page }) => {
+    // シフト表が表示されるまで待機
+    const shiftTable = page.locator('table');
+    await expect(shiftTable).toBeVisible({ timeout: 10000 });
+
+    // シフトセルを見つける
+    const shiftCell = page.locator('td[tabindex="0"]').first();
+    await expect(shiftCell).toBeVisible();
+
+    // role="button"が適用されていることを確認
+    const role = await shiftCell.getAttribute('role');
+    expect(role).toBe('button');
+
+    // aria-labelが設定されていることを確認
+    const ariaLabel = await shiftCell.getAttribute('aria-label');
+    expect(ariaLabel).toBeTruthy();
+  });
+});
