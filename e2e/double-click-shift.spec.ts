@@ -1,11 +1,11 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, devices } from '@playwright/test';
 import { setupAuthenticatedUser } from './helpers/auth-helper';
 
 /**
- * Phase 28: ダブルクリックシフト編集テスト
+ * Phase 28-29: ダブルクリック/ダブルタップシフト編集テスト
  *
- * シフトセルのダブルクリックでシフトタイプをサイクル切り替え
- * シングルクリックでモーダル表示
+ * シフトセルのダブルクリック/ダブルタップでシフトタイプをサイクル切り替え
+ * シングルクリック/シングルタップでモーダル表示
  */
 test.describe('ダブルクリックシフト編集', () => {
   test.beforeEach(async ({ page }) => {
@@ -103,5 +103,82 @@ test.describe('ダブルクリックシフト編集', () => {
 
     // 「日勤」になっていることを確認（ポーリングで待機）
     await expect(earlyShiftCell.locator('span')).toContainText('日勤', { timeout: 2000 });
+  });
+});
+
+/**
+ * Phase 29: モバイルタッチ対応テスト
+ */
+test.describe('モバイルタッチ対応', () => {
+  // モバイルデバイスをエミュレート
+  test.use({ ...devices['iPhone 13'] });
+
+  test.beforeEach(async ({ page }) => {
+    await setupAuthenticatedUser(page, {
+      email: 'mobile-test@example.com',
+      password: 'password123',
+      displayName: 'モバイルテスト',
+      role: 'admin',
+    });
+
+    await page.goto('/');
+    await page.waitForLoadState('networkidle');
+  });
+
+  test('モバイルでシフトセルがタップ可能', async ({ page }) => {
+    // シフト表が表示されるまで待機
+    const shiftTable = page.locator('table');
+    await expect(shiftTable).toBeVisible({ timeout: 10000 });
+
+    // シフトセルを見つける
+    const shiftCell = page.locator('td[class*="cursor-pointer"]').first();
+    await expect(shiftCell).toBeVisible();
+
+    // タップ（クリック）
+    await shiftCell.tap();
+
+    // モーダルが表示されるまで待機
+    await page.waitForTimeout(400);
+    const modal = page.locator('[role="dialog"], .modal, [class*="modal"]');
+    await expect(modal).toBeVisible({ timeout: 5000 });
+  });
+
+  test('モバイルでダブルタップがシフト変更', async ({ page }) => {
+    // シフト表が表示されるまで待機
+    const shiftTable = page.locator('table');
+    await expect(shiftTable).toBeVisible({ timeout: 10000 });
+
+    // シフトセルを見つける
+    const shiftCell = page.locator('td[class*="cursor-pointer"]').first();
+    await expect(shiftCell).toBeVisible();
+
+    // 現在のシフトタイプを取得
+    const initialText = await shiftCell.textContent();
+
+    // ダブルタップ（2回連続タップ）
+    await shiftCell.tap();
+    await shiftCell.tap();
+
+    // シフトタイプが変更されることを確認
+    await expect(async () => {
+      const newText = await shiftCell.textContent();
+      expect(newText).not.toBe(initialText);
+    }).toPass({ timeout: 2000 });
+  });
+
+  test('シフトセルにタッチ最適化CSSが適用されている', async ({ page }) => {
+    // シフト表が表示されるまで待機
+    const shiftTable = page.locator('table');
+    await expect(shiftTable).toBeVisible({ timeout: 10000 });
+
+    // シフトセルを見つける
+    const shiftCell = page.locator('td[class*="cursor-pointer"]').first();
+    await expect(shiftCell).toBeVisible();
+
+    // touch-action: manipulation が適用されていることを確認
+    const touchAction = await shiftCell.evaluate(el =>
+      window.getComputedStyle(el).touchAction
+    );
+    expect(touchAction).toBe('manipulation');
   });
 });

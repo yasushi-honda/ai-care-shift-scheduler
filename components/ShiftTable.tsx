@@ -256,7 +256,8 @@ const ShiftTable: React.FC<ShiftTableProps> = ({ schedule, targetMonth, onShiftC
                       return (
                         <td
                           key={`${staffSchedule.staffId}-${shift.date}-planned`}
-                          className={`px-2 py-1 text-center text-xs cursor-pointer hover:bg-blue-50 border-b border-gray-300 ${hasDiff ? 'ring-2 ring-orange-400 bg-orange-50' : 'bg-white'}`}
+                          className={`px-2 py-1 text-center text-xs cursor-pointer hover:bg-blue-50 active:scale-95 active:opacity-80 border-b border-gray-300 select-none transition-transform duration-75 ${hasDiff ? 'ring-2 ring-orange-400 bg-orange-50' : 'bg-white'}`}
+                          style={{ touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent' }}
                           onClick={() => handleCellClick(shift.date, staffSchedule.staffId, staffSchedule.staffName, 'planned', shift)}
                         >
                           <span className={`inline-flex px-2 py-0.5 rounded-full ${getShiftColor(plannedShiftType)}`}>
@@ -282,10 +283,11 @@ const ShiftTable: React.FC<ShiftTableProps> = ({ schedule, targetMonth, onShiftC
                       return (
                         <td
                           key={`${staffSchedule.staffId}-${shift.date}-actual`}
-                          className={`px-2 py-1 text-center text-xs cursor-pointer hover:bg-blue-100 border-b border-gray-400 ${
+                          className={`px-2 py-1 text-center text-xs cursor-pointer hover:bg-blue-100 active:scale-95 active:opacity-80 border-b border-gray-400 select-none transition-transform duration-75 ${
                             hasDiff ? 'ring-2 ring-orange-400 bg-orange-50' :
                             isEmpty ? 'bg-gray-100' : 'bg-gray-50'
                           }`}
+                          style={{ touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent' }}
                           onClick={() => handleCellClick(shift.date, staffSchedule.staffId, staffSchedule.staffName, 'actual', shift)}
                         >
                           {isEmpty ? (
