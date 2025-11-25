@@ -553,3 +553,148 @@ test.describe('矢印キーナビゲーション', () => {
     }).toPass({ timeout: 2000 });
   });
 });
+
+/**
+ * Phase 33: リドゥ機能テスト
+ */
+test.describe('リドゥ機能', () => {
+  test.beforeEach(async ({ page }) => {
+    await setupAuthenticatedUser(page, {
+      email: 'redo-test@example.com',
+      password: 'password123',
+      displayName: 'リドゥテスト',
+      role: 'admin',
+    });
+
+    await page.goto('/');
+    await page.waitForLoadState('networkidle');
+  });
+
+  test('Ctrl+Shift+Zでリドゥが実行される', async ({ page }) => {
+    // シフト表が表示されるまで待機
+    const shiftTable = page.locator('table');
+    await expect(shiftTable).toBeVisible({ timeout: 10000 });
+
+    // シフトセルを見つけてフォーカス
+    const shiftCell = page.locator('td[tabindex="0"]').first();
+    await shiftCell.focus();
+
+    // 現在のシフトタイプを取得
+    const initialText = await shiftCell.textContent();
+
+    // Spaceキーを押してシフト変更
+    await page.keyboard.press(' ');
+
+    // シフトが変更されたことを確認
+    await expect(async () => {
+      const changedText = await shiftCell.textContent();
+      expect(changedText).not.toBe(initialText);
+    }).toPass({ timeout: 2000 });
+
+    const changedText = await shiftCell.textContent();
+
+    // フォーカスを外す
+    await page.locator('body').click();
+
+    // Ctrl+Zでアンドゥ
+    await page.keyboard.press('Control+z');
+
+    // 元に戻ったことを確認
+    await expect(async () => {
+      const restoredText = await shiftCell.textContent();
+      expect(restoredText).toBe(initialText);
+    }).toPass({ timeout: 2000 });
+
+    // Ctrl+Shift+Zでリドゥ
+    await page.keyboard.press('Control+Shift+z');
+
+    // リドゥで変更後の状態に戻ったことを確認
+    await expect(async () => {
+      const redoneText = await shiftCell.textContent();
+      expect(redoneText).toBe(changedText);
+    }).toPass({ timeout: 2000 });
+
+    // トースト通知が表示されることを確認
+    const toast = page.locator('[aria-live="polite"]').locator('text=変更をやり直しました');
+    await expect(toast).toBeVisible({ timeout: 5000 });
+  });
+
+  test('アンドゥ→リドゥの往復動作', async ({ page }) => {
+    // シフト表が表示されるまで待機
+    const shiftTable = page.locator('table');
+    await expect(shiftTable).toBeVisible({ timeout: 10000 });
+
+    // シフトセルを見つけてフォーカス
+    const shiftCell = page.locator('td[tabindex="0"]').first();
+    await shiftCell.focus();
+
+    // 初期状態を記録
+    const state0 = await shiftCell.textContent();
+
+    // 1回目の変更
+    await page.keyboard.press(' ');
+    await page.waitForTimeout(500);
+    const state1 = await shiftCell.textContent();
+    expect(state1).not.toBe(state0);
+
+    // フォーカスを外す
+    await page.locator('body').click();
+
+    // アンドゥ（state0に戻る）
+    await page.keyboard.press('Control+z');
+    await expect(async () => {
+      expect(await shiftCell.textContent()).toBe(state0);
+    }).toPass({ timeout: 2000 });
+
+    // リドゥ（state1に戻る）
+    await page.keyboard.press('Control+Shift+z');
+    await expect(async () => {
+      expect(await shiftCell.textContent()).toBe(state1);
+    }).toPass({ timeout: 2000 });
+
+    // 再度アンドゥ（state0に戻る）
+    await page.keyboard.press('Control+z');
+    await expect(async () => {
+      expect(await shiftCell.textContent()).toBe(state0);
+    }).toPass({ timeout: 2000 });
+  });
+
+  test('新しい変更でリドゥスタックがクリアされる', async ({ page }) => {
+    // シフト表が表示されるまで待機
+    const shiftTable = page.locator('table');
+    await expect(shiftTable).toBeVisible({ timeout: 10000 });
+
+    // シフトセルを見つけてフォーカス
+    const shiftCell = page.locator('td[tabindex="0"]').first();
+    await shiftCell.focus();
+
+    // 1回目の変更
+    await page.keyboard.press(' ');
+    await page.waitForTimeout(500);
+    const state1 = await shiftCell.textContent();
+
+    // フォーカスを外す
+    await page.locator('body').click();
+
+    // アンドゥ
+    await page.keyboard.press('Control+z');
+    await page.waitForTimeout(500);
+
+    // 2回目の変更（リドゥスタックがクリアされる）
+    await shiftCell.focus();
+    await page.keyboard.press(' ');
+    await page.waitForTimeout(500);
+    const state2 = await shiftCell.textContent();
+
+    // フォーカスを外す
+    await page.locator('body').click();
+
+    // リドゥを試みても、新しい変更後は効かない（state1には戻らない）
+    await page.keyboard.press('Control+Shift+z');
+    await page.waitForTimeout(500);
+
+    // state2のままであることを確認（リドゥスタックがクリアされているため）
+    const currentText = await shiftCell.textContent();
+    expect(currentText).toBe(state2);
+  });
+});

@@ -98,6 +98,9 @@ const App: React.FC = () => {
   // Phase 31: アンドゥ履歴スタック（最大10件）
   const [undoStack, setUndoStack] = useState<ShiftHistoryEntry[]>([]);
 
+  // Phase 33: リドゥ履歴スタック（最大10件）
+  const [redoStack, setRedoStack] = useState<ShiftHistoryEntry[]>([]);
+
   // ユーザーがアクセスできる施設情報をロード
   useEffect(() => {
     if (!currentUser || !userProfile || !userProfile.facilities) {
@@ -398,11 +401,11 @@ const App: React.FC = () => {
     }
   }, [selectedFacilityId, requirements.targetMonth]);
 
-  // Phase 31: Ctrl+Z / Cmd+Z でアンドゥ
+  // Phase 31/33: Ctrl+Z / Cmd+Z でアンドゥ、Ctrl+Shift+Z / Cmd+Shift+Z でリドゥ
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Ctrl+Z (Windows) または Cmd+Z (Mac)
-      if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
+      // Ctrl+Z または Cmd+Z
+      if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
         // 入力フィールドにフォーカスがある場合は無視
         const activeElement = document.activeElement;
         if (activeElement instanceof HTMLInputElement ||
@@ -412,40 +415,112 @@ const App: React.FC = () => {
         }
 
         e.preventDefault();
-        if (undoStack.length > 0) {
-          const lastEntry = undoStack[undoStack.length - 1];
 
-          // スケジュールを復元
-          setSchedule(prev => {
-            return prev.map(staff => {
-              if (staff.staffId === lastEntry.staffId) {
-                return {
-                  ...staff,
-                  monthlyShifts: staff.monthlyShifts.map(shift => {
-                    if (shift.date === lastEntry.date) {
-                      return {
-                        ...shift,
-                        ...lastEntry.previousValue,
-                      };
+        if (e.shiftKey) {
+          // Phase 33: Ctrl+Shift+Z / Cmd+Shift+Z でリドゥ
+          if (redoStack.length > 0) {
+            const lastEntry = redoStack[redoStack.length - 1];
+
+            // 現在の値をアンドゥスタックに追加
+            setSchedule(prev => {
+              const currentStaff = prev.find(s => s.staffId === lastEntry.staffId);
+              const currentShift = currentStaff?.monthlyShifts.find(s => s.date === lastEntry.date);
+
+              if (currentShift) {
+                const currentValue: Partial<GeneratedShift> = lastEntry.type === 'planned'
+                  ? {
+                      plannedShiftType: currentShift.plannedShiftType || currentShift.shiftType,
+                      shiftType: currentShift.shiftType,
                     }
-                    return shift;
-                  }),
-                };
-              }
-              return staff;
-            });
-          });
+                  : { actualShiftType: currentShift.actualShiftType };
 
-          // 履歴から削除
-          setUndoStack(prev => prev.slice(0, -1));
-          showSuccess('変更を元に戻しました (Ctrl+Z)');
+                setUndoStack(prevUndo => [...prevUndo.slice(-9), {
+                  ...lastEntry,
+                  previousValue: currentValue,
+                  timestamp: Date.now(),
+                }]);
+              }
+
+              // スケジュールを復元
+              return prev.map(staff => {
+                if (staff.staffId === lastEntry.staffId) {
+                  return {
+                    ...staff,
+                    monthlyShifts: staff.monthlyShifts.map(shift => {
+                      if (shift.date === lastEntry.date) {
+                        return {
+                          ...shift,
+                          ...lastEntry.previousValue,
+                        };
+                      }
+                      return shift;
+                    }),
+                  };
+                }
+                return staff;
+              });
+            });
+
+            // リドゥ履歴から削除
+            setRedoStack(prev => prev.slice(0, -1));
+            showSuccess('変更をやり直しました (Ctrl+Shift+Z)');
+          }
+        } else {
+          // Phase 31: Ctrl+Z / Cmd+Z でアンドゥ
+          if (undoStack.length > 0) {
+            const lastEntry = undoStack[undoStack.length - 1];
+
+            // 現在の値をリドゥスタックに追加
+            setSchedule(prev => {
+              const currentStaff = prev.find(s => s.staffId === lastEntry.staffId);
+              const currentShift = currentStaff?.monthlyShifts.find(s => s.date === lastEntry.date);
+
+              if (currentShift) {
+                const currentValue: Partial<GeneratedShift> = lastEntry.type === 'planned'
+                  ? {
+                      plannedShiftType: currentShift.plannedShiftType || currentShift.shiftType,
+                      shiftType: currentShift.shiftType,
+                    }
+                  : { actualShiftType: currentShift.actualShiftType };
+
+                setRedoStack(prevRedo => [...prevRedo.slice(-9), {
+                  ...lastEntry,
+                  previousValue: currentValue,
+                  timestamp: Date.now(),
+                }]);
+              }
+
+              // スケジュールを復元
+              return prev.map(staff => {
+                if (staff.staffId === lastEntry.staffId) {
+                  return {
+                    ...staff,
+                    monthlyShifts: staff.monthlyShifts.map(shift => {
+                      if (shift.date === lastEntry.date) {
+                        return {
+                          ...shift,
+                          ...lastEntry.previousValue,
+                        };
+                      }
+                      return shift;
+                    }),
+                  };
+                }
+                return staff;
+              });
+            });
+
+            // アンドゥ履歴から削除
+            setUndoStack(prev => prev.slice(0, -1));
+            showSuccess('変更を元に戻しました (Ctrl+Z)');
+          }
         }
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [undoStack, showSuccess]);
+  }, [undoStack, redoStack, showSuccess]);
 
   const handleAddNewStaff = useCallback(async () => {
     if (!selectedFacilityId) return;
@@ -669,6 +744,9 @@ const App: React.FC = () => {
 
       // 履歴スタックに追加（最大10件）
       setUndoStack(prev => [...prev.slice(-9), historyEntry]);
+
+      // Phase 33: 新しい変更時はリドゥスタックをクリア
+      setRedoStack([]);
 
       // アンドゥボタン付きトーストを表示
       showWithAction({
