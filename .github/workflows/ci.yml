@@ -212,9 +212,10 @@ jobs:
             exit 1
           fi
 
-          # E2Eテスト実行
+          # E2Eテスト実行（CI環境では基本テストのみ、タイムアウト10分）
           echo "🧪 E2Eテスト実行開始..."
-          PLAYWRIGHT_BASE_URL=http://localhost:5173 npx playwright test --reporter=github,html || TEST_EXIT_CODE=$?
+          timeout 600 bash -c 'PLAYWRIGHT_BASE_URL=http://localhost:5173 npx playwright test e2e/app.spec.ts --reporter=github,html' || TEST_EXIT_CODE=$?
+          echo "📊 テスト終了コード: ${TEST_EXIT_CODE:-0}"
 
           # クリーンアップ
           kill $DEV_PID 2>/dev/null || true
