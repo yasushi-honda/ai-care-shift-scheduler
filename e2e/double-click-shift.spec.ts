@@ -272,3 +272,124 @@ test.describe('キーボードアクセシビリティ', () => {
     expect(ariaLabel).toBeTruthy();
   });
 });
+
+/**
+ * Phase 31: アンドゥ機能テスト
+ */
+test.describe('アンドゥ機能', () => {
+  test.beforeEach(async ({ page }) => {
+    await setupAuthenticatedUser(page, {
+      email: 'undo-test@example.com',
+      password: 'password123',
+      displayName: 'アンドゥテスト',
+      role: 'admin',
+    });
+
+    await page.goto('/');
+    await page.waitForLoadState('networkidle');
+  });
+
+  test('シフト変更後にトースト通知が表示される', async ({ page }) => {
+    // シフト表が表示されるまで待機
+    const shiftTable = page.locator('table');
+    await expect(shiftTable).toBeVisible({ timeout: 10000 });
+
+    // シフトセルを見つけてフォーカス
+    const shiftCell = page.locator('td[tabindex="0"]').first();
+    await shiftCell.focus();
+
+    // Spaceキーを押してシフト変更
+    await page.keyboard.press(' ');
+
+    // トースト通知が表示されることを確認
+    const toast = page.locator('[aria-live="polite"]').locator('text=シフトを変更しました');
+    await expect(toast).toBeVisible({ timeout: 5000 });
+  });
+
+  test('トースト通知に「元に戻す」ボタンが表示される', async ({ page }) => {
+    // シフト表が表示されるまで待機
+    const shiftTable = page.locator('table');
+    await expect(shiftTable).toBeVisible({ timeout: 10000 });
+
+    // シフトセルを見つけてフォーカス
+    const shiftCell = page.locator('td[tabindex="0"]').first();
+    await shiftCell.focus();
+
+    // Spaceキーを押してシフト変更
+    await page.keyboard.press(' ');
+
+    // 「元に戻す」ボタンが表示されることを確認
+    const undoButton = page.locator('[aria-live="polite"]').locator('text=元に戻す');
+    await expect(undoButton).toBeVisible({ timeout: 5000 });
+  });
+
+  test('「元に戻す」ボタンで変更が取り消される', async ({ page }) => {
+    // シフト表が表示されるまで待機
+    const shiftTable = page.locator('table');
+    await expect(shiftTable).toBeVisible({ timeout: 10000 });
+
+    // シフトセルを見つけてフォーカス
+    const shiftCell = page.locator('td[tabindex="0"]').first();
+    await shiftCell.focus();
+
+    // 現在のシフトタイプを取得
+    const initialText = await shiftCell.textContent();
+
+    // Spaceキーを押してシフト変更
+    await page.keyboard.press(' ');
+
+    // シフトが変更されたことを確認
+    await expect(async () => {
+      const changedText = await shiftCell.textContent();
+      expect(changedText).not.toBe(initialText);
+    }).toPass({ timeout: 2000 });
+
+    // 「元に戻す」ボタンをクリック
+    const undoButton = page.locator('[aria-live="polite"]').locator('text=元に戻す');
+    await undoButton.click();
+
+    // 元に戻ったことを確認
+    await expect(async () => {
+      const restoredText = await shiftCell.textContent();
+      expect(restoredText).toBe(initialText);
+    }).toPass({ timeout: 2000 });
+  });
+
+  test('Ctrl+Zでアンドゥが実行される', async ({ page }) => {
+    // シフト表が表示されるまで待機
+    const shiftTable = page.locator('table');
+    await expect(shiftTable).toBeVisible({ timeout: 10000 });
+
+    // シフトセルを見つけてフォーカス
+    const shiftCell = page.locator('td[tabindex="0"]').first();
+    await shiftCell.focus();
+
+    // 現在のシフトタイプを取得
+    const initialText = await shiftCell.textContent();
+
+    // Spaceキーを押してシフト変更
+    await page.keyboard.press(' ');
+
+    // シフトが変更されたことを確認
+    await expect(async () => {
+      const changedText = await shiftCell.textContent();
+      expect(changedText).not.toBe(initialText);
+    }).toPass({ timeout: 2000 });
+
+    // トーストを閉じるのを待つ（フォーカスを戻す）
+    await page.locator('body').click();
+
+    // Ctrl+Zを押す
+    await page.keyboard.press('Control+z');
+
+    // 元に戻ったことを確認
+    await expect(async () => {
+      const restoredText = await shiftCell.textContent();
+      expect(restoredText).toBe(initialText);
+    }).toPass({ timeout: 2000 });
+
+    // トースト通知が表示されることを確認
+    const toast = page.locator('[aria-live="polite"]').locator('text=変更を元に戻しました');
+    await expect(toast).toBeVisible({ timeout: 5000 });
+  });
+});

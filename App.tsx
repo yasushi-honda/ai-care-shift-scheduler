@@ -29,6 +29,17 @@ import { bulkCopyPlannedToActual, type BulkCopyOptions } from './src/utils/bulkC
 type ViewMode = 'shift' | 'leaveRequest';
 
 /**
+ * Phase 31: アンドゥ履歴エントリ
+ */
+interface ShiftHistoryEntry {
+  staffId: string;
+  date: string;
+  type: 'planned' | 'actual';
+  previousValue: Partial<GeneratedShift>;
+  timestamp: number;
+}
+
+/**
  * LeaveRequestDocument配列をLeaveRequest型に変換
  */
 function convertToLeaveRequest(documents: LeaveRequestDocument[]): LeaveRequest {
@@ -46,7 +57,7 @@ function convertToLeaveRequest(documents: LeaveRequestDocument[]): LeaveRequest 
 
 const App: React.FC = () => {
   const { selectedFacilityId, currentUser, isSuperAdmin, userProfile, selectFacility, signOut } = useAuth();
-  const { showSuccess, showError } = useToast();
+  const { showSuccess, showError, showWithAction } = useToast();
   const navigate = useNavigate();
   const [facilities, setFacilities] = useState<Map<string, Facility>>(new Map());
   const [loadingFacilities, setLoadingFacilities] = useState(true);
@@ -83,6 +94,9 @@ const App: React.FC = () => {
   const [versions, setVersions] = useState<ScheduleVersion[]>([]);
   const [versionLoading, setVersionLoading] = useState(false);
   const [bulkCopyModalOpen, setBulkCopyModalOpen] = useState(false);
+
+  // Phase 31: アンドゥ履歴スタック（最大10件）
+  const [undoStack, setUndoStack] = useState<ShiftHistoryEntry[]>([]);
 
   // ユーザーがアクセスできる施設情報をロード
   useEffect(() => {
@@ -384,6 +398,55 @@ const App: React.FC = () => {
     }
   }, [selectedFacilityId, requirements.targetMonth]);
 
+  // Phase 31: Ctrl+Z / Cmd+Z でアンドゥ
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Ctrl+Z (Windows) または Cmd+Z (Mac)
+      if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
+        // 入力フィールドにフォーカスがある場合は無視
+        const activeElement = document.activeElement;
+        if (activeElement instanceof HTMLInputElement ||
+            activeElement instanceof HTMLTextAreaElement ||
+            activeElement instanceof HTMLSelectElement) {
+          return;
+        }
+
+        e.preventDefault();
+        if (undoStack.length > 0) {
+          const lastEntry = undoStack[undoStack.length - 1];
+
+          // スケジュールを復元
+          setSchedule(prev => {
+            return prev.map(staff => {
+              if (staff.staffId === lastEntry.staffId) {
+                return {
+                  ...staff,
+                  monthlyShifts: staff.monthlyShifts.map(shift => {
+                    if (shift.date === lastEntry.date) {
+                      return {
+                        ...shift,
+                        ...lastEntry.previousValue,
+                      };
+                    }
+                    return shift;
+                  }),
+                };
+              }
+              return staff;
+            });
+          });
+
+          // 履歴から削除
+          setUndoStack(prev => prev.slice(0, -1));
+          showSuccess('変更を元に戻しました (Ctrl+Z)');
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [undoStack, showSuccess]);
+
   const handleAddNewStaff = useCallback(async () => {
     if (!selectedFacilityId) return;
 
@@ -540,8 +603,43 @@ const App: React.FC = () => {
   }, []);
 
   /**
+   * Phase 31: アンドゥ実行
+   */
+  const handleUndo = useCallback(() => {
+    if (undoStack.length === 0) return;
+
+    const lastEntry = undoStack[undoStack.length - 1];
+
+    // スケジュールを復元
+    setSchedule(prev => {
+      return prev.map(staff => {
+        if (staff.staffId === lastEntry.staffId) {
+          return {
+            ...staff,
+            monthlyShifts: staff.monthlyShifts.map(shift => {
+              if (shift.date === lastEntry.date) {
+                return {
+                  ...shift,
+                  ...lastEntry.previousValue,
+                };
+              }
+              return shift;
+            }),
+          };
+        }
+        return staff;
+      });
+    });
+
+    // 履歴から削除
+    setUndoStack(prev => prev.slice(0, -1));
+    showSuccess('変更を元に戻しました');
+  }, [undoStack, showSuccess]);
+
+  /**
    * ダブルクリックでシフトタイプを素早く変更するハンドラー
    * Phase 28: ダブルクリック機能追加
+   * Phase 31: アンドゥ履歴追加
    */
   const handleQuickShiftChange = useCallback((
     staffId: string,
@@ -549,6 +647,63 @@ const App: React.FC = () => {
     type: 'planned' | 'actual',
     newShiftType: string
   ) => {
+    // 現在の値を取得して履歴に追加
+    const currentStaff = schedule.find(s => s.staffId === staffId);
+    const currentShift = currentStaff?.monthlyShifts.find(s => s.date === date);
+
+    if (currentShift) {
+      const previousValue: Partial<GeneratedShift> = type === 'planned'
+        ? {
+            plannedShiftType: currentShift.plannedShiftType || currentShift.shiftType,
+            shiftType: currentShift.shiftType,
+          }
+        : { actualShiftType: currentShift.actualShiftType };
+
+      const historyEntry: ShiftHistoryEntry = {
+        staffId,
+        date,
+        type,
+        previousValue,
+        timestamp: Date.now(),
+      };
+
+      // 履歴スタックに追加（最大10件）
+      setUndoStack(prev => [...prev.slice(-9), historyEntry]);
+
+      // アンドゥボタン付きトーストを表示
+      showWithAction({
+        message: 'シフトを変更しました',
+        type: 'success',
+        actionLabel: '元に戻す',
+        onAction: () => {
+          // スケジュールを復元
+          setSchedule(prev => {
+            return prev.map(staff => {
+              if (staff.staffId === staffId) {
+                return {
+                  ...staff,
+                  monthlyShifts: staff.monthlyShifts.map(shift => {
+                    if (shift.date === date) {
+                      return {
+                        ...shift,
+                        ...previousValue,
+                      };
+                    }
+                    return shift;
+                  }),
+                };
+              }
+              return staff;
+            });
+          });
+
+          // 履歴から削除
+          setUndoStack(prev => prev.filter(e => e.timestamp !== historyEntry.timestamp));
+          showSuccess('変更を元に戻しました');
+        },
+      });
+    }
+
     setSchedule(prev => {
       return prev.map(staff => {
         if (staff.staffId === staffId) {
@@ -576,7 +731,7 @@ const App: React.FC = () => {
         return staff;
       });
     });
-  }, []);
+  }, [schedule, showWithAction, showSuccess]);
 
   const handleBulkCopyExecute = useCallback(async (options: BulkCopyOptions) => {
     if (!selectedFacilityId || !currentUser || !currentScheduleId) {

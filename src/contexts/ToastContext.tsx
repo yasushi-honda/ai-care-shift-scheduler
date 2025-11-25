@@ -4,6 +4,7 @@ import { handleError, getErrorMessage } from '../utils/errorHandler';
 /**
  * トーストメッセージの型定義
  * Phase 19.2.4: isExiting状態を追加（退場アニメーション用）
+ * Phase 31: アクションボタン対応追加
  */
 export interface Toast {
   id: string;
@@ -11,6 +12,22 @@ export interface Toast {
   type: 'success' | 'error' | 'info' | 'warning';
   duration?: number; // ミリ秒（デフォルト: 自動計算）
   isExiting?: boolean; // 退場アニメーション中
+  action?: {
+    label: string;
+    onClick: () => void;
+  };
+}
+
+/**
+ * アクション付きトーストのオプション
+ * Phase 31: アンドゥ機能用
+ */
+interface ToastWithActionOptions {
+  message: string;
+  type: Toast['type'];
+  actionLabel: string;
+  onAction: () => void;
+  duration?: number;
 }
 
 /**
@@ -22,6 +39,7 @@ interface ToastContextType {
   showErrorWithHandler: (error: unknown, context?: string, duration?: number) => void;
   showInfo: (message: string, duration?: number) => void;
   showWarning: (message: string, duration?: number) => void;
+  showWithAction: (options: ToastWithActionOptions) => void;
   dismissToast: (id: string) => void;
   toasts: Toast[];
 }
@@ -60,12 +78,14 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   /**
    * トーストを追加
    * Phase 19.2.4: 退場アニメーション対応、最適化された自動消去時間
+   * Phase 31: アクション対応追加
    */
   const addToast = useCallback(
-    (message: string, type: Toast['type'], duration?: number) => {
+    (message: string, type: Toast['type'], duration?: number, action?: Toast['action']) => {
       const id = generateId();
-      const optimalDuration = duration ?? calculateOptimalDuration(message, type);
-      const newToast: Toast = { id, message, type, duration: optimalDuration, isExiting: false };
+      // アクション付きトーストは表示時間を長めに（5秒）
+      const optimalDuration = duration ?? (action ? 5000 : calculateOptimalDuration(message, type));
+      const newToast: Toast = { id, message, type, duration: optimalDuration, isExiting: false, action };
 
       setToasts((prev) => {
         // 最大3件まで表示（古いものから削除）
@@ -88,6 +108,8 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           }, 300);
         }, optimalDuration);
       }
+
+      return id;
     },
     []
   );
@@ -144,6 +166,21 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   );
 
   /**
+   * アクション付きトーストを表示
+   * Phase 31: アンドゥ機能用
+   */
+  const showWithAction = useCallback(
+    (options: ToastWithActionOptions) => {
+      const action = {
+        label: options.actionLabel,
+        onClick: options.onAction,
+      };
+      addToast(options.message, options.type, options.duration, action);
+    },
+    [addToast]
+  );
+
+  /**
    * トーストを非表示
    * Phase 19.2.4: 退場アニメーション対応
    */
@@ -165,6 +202,7 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     showErrorWithHandler,
     showInfo,
     showWarning,
+    showWithAction,
     dismissToast,
     toasts,
   };
@@ -308,7 +346,7 @@ const ToastItem: React.FC<{ toast: Toast; onDismiss: (id: string) => void }> = (
         )}
       </div>
 
-      {/* メッセージ */}
+      {/* メッセージとアクションボタン */}
       <div className="flex-1">
         <p
           className={`text-sm font-medium ${
@@ -323,6 +361,26 @@ const ToastItem: React.FC<{ toast: Toast; onDismiss: (id: string) => void }> = (
         >
           {toast.message}
         </p>
+        {/* Phase 31: アクションボタン */}
+        {toast.action && (
+          <button
+            onClick={() => {
+              toast.action?.onClick();
+              onDismiss(toast.id);
+            }}
+            className={`mt-2 text-sm font-semibold underline hover:no-underline ${
+              toast.type === 'success'
+                ? 'text-green-700 hover:text-green-900'
+                : toast.type === 'error'
+                ? 'text-red-700 hover:text-red-900'
+                : toast.type === 'warning'
+                ? 'text-yellow-700 hover:text-yellow-900'
+                : 'text-blue-700 hover:text-blue-900'
+            }`}
+          >
+            {toast.action.label}
+          </button>
+        )}
       </div>
 
       {/* 閉じるボタン */}
