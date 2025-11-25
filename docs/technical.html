@@ -6,6 +6,13 @@
     <title>技術ドキュメント - 開発者向け</title>
     <meta name="description" content="Phase 25 ユーザビリティ改善の技術詳細とダイアグラム集">
 
+    <!-- モバイル判定リダイレクト -->
+    <script>
+        if (window.innerWidth < 768 && !window.location.pathname.includes('mobile')) {
+            window.location.href = 'technical-mobile.html';
+        }
+    </script>
+
     <!-- Cayman Theme CSS -->
     <link rel="preconnect" href="https://fonts.gstatic.com">
     <link rel="preload" href="https://fonts.googleapis.com/css?family=Open+Sans:400,700&display=swap" as="style" type="text/css" crossorigin>

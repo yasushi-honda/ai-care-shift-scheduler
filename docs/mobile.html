@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5">
+    <title>シフト管理システム - モバイル版</title>
+    <meta name="description" content="実績入力の効率化 - モバイル最適化版">
+
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+            font-size: 16px;
+            line-height: 1.6;
+            color: #333;
+            background: #f6f8fa;
+        }
+        .header {
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 50%, #155799 100%);
+            color: #fff;
+            padding: 1.5rem 1rem;
+            text-align: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .header h1 {
+            font-size: 1.5rem;
+            margin-bottom: 0.25rem;
+        }
+        .header p {
+            font-size: 0.9rem;
+            opacity: 0.9;
+        }
+        .container {
+            padding: 1rem;
+            max-width: 100%;
+        }
+        .card {
+            background: #fff;
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+        }
+        .card h2 {
+            font-size: 1.25rem;
+            color: #155799;
+            margin-bottom: 0.75rem;
+            border-bottom: 2px solid #155799;
+            padding-bottom: 0.5rem;
+        }
+        .card h3 {
+            font-size: 1.1rem;
+            color: #2a5298;
+            margin: 1rem 0 0.5rem 0;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 0.75rem 0;
+        }
+        th, td {
+            padding: 0.75rem 0.5rem;
+            text-align: left;
+            border-bottom: 1px solid #e1e4e8;
+        }
+        th {
+            background: #f6f8fa;
+            font-weight: 600;
+            font-size: 0.9rem;
+            color: #24292e;
+        }
+        td {
+            font-size: 0.95rem;
+        }
+        .status-complete {
+            color: #28a745;
+            font-weight: bold;
+        }
+        .status-pending {
+            color: #ffa500;
+            font-weight: bold;
+        }
+        .metric {
+            background: #e8f5e9;
+            padding: 0.75rem;
+            border-radius: 6px;
+            margin: 0.75rem 0;
+            border-left: 4px solid #28a745;
+        }
+        .metric strong {
+            color: #28a745;
+            font-size: 1.1rem;
+        }
+        .link-button {
+            display: inline-block;
+            background: #155799;
+            color: #fff;
+            padding: 0.75rem 1.5rem;
+            border-radius: 6px;
+            text-decoration: none;
+            margin: 0.5rem 0.5rem 0.5rem 0;
+            font-weight: 600;
+        }
+        .link-button-secondary {
+            background: #6c757d;
+        }
+        .footer {
+            text-align: center;
+            padding: 2rem 1rem;
+            color: #586069;
+            font-size: 0.85rem;
+            border-top: 1px solid #e1e4e8;
+            margin-top: 2rem;
+        }
+        .note {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 0.75rem;
+            margin: 0.75rem 0;
+            font-size: 0.9rem;
+            color: #856404;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>📊 シフト管理システム</h1>
+        <p>実績入力の効率化 - モバイル版</p>
+    </div>
+
+    <div class="container">
+        <div class="card">
+            <h2>🎯 プロジェクト概要</h2>
+            <p>介護施設のシフト管理システムに、実績入力の効率化機能を追加しました。</p>
+
+            <div class="metric">
+                <strong>月間作業時間: 50分 → 7分（86%削減）</strong>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>✅ 実装状況</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>機能</th>
+                        <th style="text-align:center;">状態</th>
+                        <th style="text-align:right;">完了日</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>改善1: 予定と同じボタン</td>
+                        <td style="text-align:center;"><span class="status-complete">✅ 完了</span></td>
+                        <td style="text-align:right;">2025-11-23</td>
+                    </tr>
+                    <tr>
+                        <td>改善2: 一括コピー機能</td>
+                        <td style="text-align:center;"><span class="status-complete">✅ 完了</span></td>
+                        <td style="text-align:right;">2025-11-24</td>
+                    </tr>
+                    <tr>
+                        <td>改善3: ダブルクリック機能</td>
+                        <td style="text-align:center;"><span class="status-pending">⏳ 未実装</span></td>
+                        <td style="text-align:right;">-</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="card">
+            <h2>📈 削減効果の推移</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>段階</th>
+                        <th style="text-align:right;">作業時間</th>
+                        <th style="text-align:right;">削減率</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>従来（手動入力）</td>
+                        <td style="text-align:right;"><strong>50分/月</strong></td>
+                        <td style="text-align:right;">-</td>
+                    </tr>
+                    <tr style="background:#f0f9ff;">
+                        <td>改善1適用後</td>
+                        <td style="text-align:right;"><strong style="color:#0366d6;">25分/月</strong></td>
+                        <td style="text-align:right; color:#0366d6;">▼ 50%削減</td>
+                    </tr>
+                    <tr style="background:#e8f5e9;">
+                        <td>改善2適用後</td>
+                        <td style="text-align:right;"><strong style="color:#28a745;">7分/月</strong></td>
+                        <td style="text-align:right; color:#28a745;">▼ 86%削減</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="card">
+            <h2>🚀 改善機能の詳細</h2>
+
+            <h3>改善1: 「予定と同じ」ボタン</h3>
+            <p>実績入力時に予定通りだった場合、ワンクリックで入力完了。</p>
+            <div class="metric">
+                <strong>効果: 月間作業時間 50分 → 25分（50%削減）</strong>
+            </div>
+
+            <h3>改善2: 一括コピー機能</h3>
+            <p>複数スタッフの実績を一度にまとめて入力。</p>
+            <div class="metric">
+                <strong>効果: 月間作業時間 50分 → 7分（86%削減）</strong>
+            </div>
+
+            <h3>改善3: ダブルクリック機能（未実装）</h3>
+            <p>セルをダブルクリックで即座にコピー（さらなる効率化）。</p>
+            <div class="note">
+                <strong>状態</strong>: 未実装<br>
+                <strong>優先度</strong>: 中<br>
+                <strong>推定工数</strong>: 2-3時間
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>📊 開発規模・投資実績</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>項目</th>
+                        <th style="text-align:right;">実績</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>総開発時間</td>
+                        <td style="text-align:right;"><strong>約120時間</strong></td>
+                    </tr>
+                    <tr>
+                        <td>コード行数</td>
+                        <td style="text-align:right;"><strong>約15,000行</strong></td>
+                    </tr>
+                    <tr>
+                        <td>E2Eテストカバレッジ</td>
+                        <td style="text-align:right;"><strong>主要機能100%</strong></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="card">
+            <h2>🔗 リンク</h2>
+            <a href="https://ai-care-shift-scheduler.web.app" class="link-button">📱 本番環境を開く</a>
+            <a href="technical-mobile.html" class="link-button link-button-secondary">📄 技術ドキュメント</a>
+            <a href="index.html" class="link-button link-button-secondary">💻 デスクトップ版を見る</a>
+        </div>
+
+        <div class="card">
+            <h2>🛠️ 技術スタック</h2>
+            <p><strong>フロントエンド</strong>: React, TypeScript</p>
+            <p><strong>バックエンド</strong>: Firebase (Authentication, Firestore, Cloud Functions)</p>
+            <p><strong>AI</strong>: Gemini API</p>
+            <p><strong>テスト</strong>: Playwright（E2E）</p>
+        </div>
+    </div>
+
+    <div class="footer">
+        <p><strong>最終更新</strong>: 2025年11月24日</p>
+        <p>© 2025 シフト管理システム</p>
+    </div>
+</body>
+</html>
