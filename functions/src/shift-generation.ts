@@ -1,7 +1,8 @@
 import { onRequest } from 'firebase-functions/v2/https';
 import { VertexAI } from '@google-cloud/vertexai';
-import type { Staff, ShiftRequirement, LeaveRequest } from './types';
+import type { Staff, ShiftRequirement, LeaveRequest, StaffSchedule, AIEvaluationResult } from './types';
 import { generateSkeleton, generateDetailedShifts, parseGeminiJsonResponse } from './phased-generation';
+import { EvaluationService, createDefaultEvaluation } from './evaluation/evaluationLogic';
 
 // Firebase Admin初期化は index.ts で実施済み
 
@@ -184,10 +185,32 @@ export const generateShift = onRequest(
       // Firestore保存はフロントエンド側で実施（バージョン履歴管理のため）
       console.log('✅ AI生成完了（Firestore保存はスキップ）');
 
-      // 成功レスポンス（scheduleデータのみ返す）
+      // Phase 40: 評価ロジック実行
+      let evaluation: AIEvaluationResult;
+      try {
+        console.log('📊 評価ロジック実行開始...');
+        const evaluationService = new EvaluationService();
+        evaluation = evaluationService.evaluateSchedule({
+          schedule: scheduleData.schedule as StaffSchedule[],
+          staffList: staffList as Staff[],
+          requirements: requirements as ShiftRequirement,
+          leaveRequests: leaveRequests || {},
+        });
+        console.log('✅ 評価完了:', {
+          overallScore: evaluation.overallScore,
+          fulfillmentRate: evaluation.fulfillmentRate,
+          violationCount: evaluation.constraintViolations.length,
+        });
+      } catch (evalError) {
+        console.error('⚠️ 評価エラー（フォールバック使用）:', evalError);
+        evaluation = createDefaultEvaluation();
+      }
+
+      // 成功レスポンス（scheduleデータ + 評価データ）
       res.status(200).json({
         success: true,
         schedule: scheduleData.schedule,
+        evaluation: evaluation,
         metadata: {
           generatedAt: new Date().toISOString(),
           model: VERTEX_AI_MODEL,

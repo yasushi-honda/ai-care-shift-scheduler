@@ -442,3 +442,98 @@ export type LeaveBalanceError =
   | { code: 'VALIDATION_ERROR'; message: string }
   | { code: 'FIRESTORE_ERROR'; message: string }
   | { code: 'NOT_FOUND'; message: string };
+
+
+// ==================== AI評価・フィードバック（Phase 40）====================
+
+/**
+ * 制約違反タイプ
+ */
+export type ConstraintViolationType =
+  | 'staffShortage'        // 人員不足
+  | 'consecutiveWork'      // 連勤超過
+  | 'nightRestViolation'   // 夜勤後休息不足
+  | 'qualificationMissing' // 資格要件未充足
+  | 'leaveRequestIgnored'; // 休暇希望未反映
+
+/**
+ * 制約違反
+ */
+export interface ConstraintViolation {
+  type: ConstraintViolationType;
+  severity: 'error' | 'warning';
+  description: string;
+  affectedStaff?: string[];   // スタッフID
+  affectedDates?: string[];   // YYYY-MM-DD
+  suggestion?: string;        // 簡易改善提案
+}
+
+/**
+ * 改善提案
+ */
+export interface Recommendation {
+  priority: 'high' | 'medium' | 'low';
+  category: string;           // 'staffing', 'workload', 'fairness'
+  description: string;
+  action: string;             // 具体的なアクション
+}
+
+/**
+ * シミュレーション結果
+ */
+export interface SimulationResult {
+  estimatedOvertimeHours: number;   // 予想残業時間（月間合計）
+  workloadBalance: 'good' | 'fair' | 'poor';  // 負荷バランス
+  paidLeaveUsageRate: number;       // 有給消化率予測 (0-100)
+  risks: string[];                  // リスク要因
+}
+
+/**
+ * AI評価結果
+ */
+export interface AIEvaluationResult {
+  overallScore: number;           // 0-100
+  fulfillmentRate: number;        // 0-100（充足率%）
+  constraintViolations: ConstraintViolation[];
+  recommendations: Recommendation[];
+  simulation: SimulationResult;
+  generatedAt: Timestamp;
+}
+
+/**
+ * AI生成履歴（Firestore保存用）
+ */
+export interface AIGenerationHistory {
+  id: string;
+  targetMonth: string;           // YYYY-MM
+  schedule: StaffSchedule[];     // 生成されたシフト
+  evaluation: AIEvaluationResult; // 評価結果
+  generatedBy: string;           // ユーザーID
+  createdAt: Timestamp;
+}
+
+/**
+ * AI評価サービスエラー型
+ */
+export type AIEvaluationError =
+  | { code: 'PERMISSION_DENIED'; message: string }
+  | { code: 'VALIDATION_ERROR'; message: string }
+  | { code: 'FIRESTORE_ERROR'; message: string }
+  | { code: 'NOT_FOUND'; message: string }
+  | { code: 'EVALUATION_FAILED'; message: string };
+
+/**
+ * generateShift Cloud Functionのレスポンス型
+ */
+export interface GenerateShiftResponse {
+  success: boolean;
+  schedule?: StaffSchedule[];
+  evaluation?: AIEvaluationResult;  // Phase 40で追加（後方互換性のためオプショナル）
+  metadata?: {
+    generatedAt: string;
+    model: string;
+    tokensUsed: number;
+  };
+  error?: string;
+  parseError?: unknown;  // デバッグ用
+}

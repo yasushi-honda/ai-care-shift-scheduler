@@ -1,79 +1,43 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<testsuites name="jest tests" tests="37" failures="0" errors="0" time="20.067">
-  <testsuite name="AI Shift Generation API - Integration Tests" errors="0" failures="0" skipped="0" timestamp="2025-10-22T23:37:20" time="19.916" tests="37">
-    <testcase classname="AI Shift Generation API - Integration Tests › Setup Test" name="should have Cloud Function URL configured" time="0.007">
+<testsuites name="jest tests" tests="19" failures="0" errors="0" time="7.932">
+  <testsuite name="EvaluationService" errors="0" failures="0" skipped="0" timestamp="2025-11-26T07:07:54" time="7.46" tests="19">
+    <testcase classname="EvaluationService › checkStaffShortage" name="人員が充足している場合、違反を検出しない" time="0.009">
     </testcase>
-    <testcase classname="AI Shift Generation API - Integration Tests › Health Check" name="should fail with METHOD_NOT_ALLOWED for GET request" time="0.267">
+    <testcase classname="EvaluationService › checkStaffShortage" name="人員不足を検出する" time="0.001">
     </testcase>
-    <testcase classname="AI Shift Generation API - Integration Tests › Test Fixtures" name="should have 5 standard staff members" time="0">
+    <testcase classname="EvaluationService › checkStaffShortage" name="休日は人員カウントに含めない" time="0">
     </testcase>
-    <testcase classname="AI Shift Generation API - Integration Tests › Test Fixtures" name="should have standard requirements for November 2025" time="0.001">
+    <testcase classname="EvaluationService › checkConsecutiveWorkViolation" name="連勤が上限以内の場合、違反を検出しない" time="0.001">
     </testcase>
-    <testcase classname="AI Shift Generation API - Integration Tests › Test Fixtures" name="should have standard leave requests" time="0">
+    <testcase classname="EvaluationService › checkConsecutiveWorkViolation" name="連勤超過を検出する（境界値テスト）" time="0.002">
     </testcase>
-    <testcase classname="AI Shift Generation API - Integration Tests › Test Fixtures" name="should have 20 staff in large staff list" time="0">
+    <testcase classname="EvaluationService › checkConsecutiveWorkViolation" name="「明け休み」は勤務日としてカウントしない" time="0">
     </testcase>
-    <testcase classname="AI Shift Generation API - Integration Tests › Test Fixtures" name="should have 50 staff in extra large staff list" time="0.001">
+    <testcase classname="EvaluationService › checkNightRestViolation" name="夜勤後に休息がある場合、違反を検出しない" time="0">
     </testcase>
-    <testcase classname="AI Shift Generation API - Integration Tests › Test Fixtures" name="should have mock Vertex AI response" time="0">
+    <testcase classname="EvaluationService › checkNightRestViolation" name="夜勤後に休息がない場合、違反を検出する" time="0.001">
     </testcase>
-    <testcase classname="AI Shift Generation API - Integration Tests › Task 2.1: Basic Shift Generation" name="should return HTTP 200 and success: true for valid request" time="0.424">
+    <testcase classname="EvaluationService › checkNightRestViolation" name="夜勤後に「公休」がある場合、違反を検出しない" time="0">
     </testcase>
-    <testcase classname="AI Shift Generation API - Integration Tests › Task 2.1: Basic Shift Generation" name="should return schedule array in response" time="0.681">
+    <testcase classname="EvaluationService › checkLeaveRequestIgnored" name="休暇希望が反映されている場合、違反を検出しない" time="0.001">
     </testcase>
-    <testcase classname="AI Shift Generation API - Integration Tests › Task 2.1: Basic Shift Generation" name="should generate shifts for all 5 staff members" time="0.421">
+    <testcase classname="EvaluationService › checkLeaveRequestIgnored" name="休暇希望が反映されていない場合、違反を検出する" time="0.001">
     </testcase>
-    <testcase classname="AI Shift Generation API - Integration Tests › Task 2.1: Basic Shift Generation" name="should have staffId, staffName, and monthlyShifts for each staff" time="0.639">
+    <testcase classname="EvaluationService › calculateOverallScore" name="違反がない場合、100点を返す" time="0">
     </testcase>
-    <testcase classname="AI Shift Generation API - Integration Tests › Task 2.1: Basic Shift Generation" name="should have shifts for all days in the target month (30 days in Nov 2025)" time="0.426">
+    <testcase classname="EvaluationService › calculateOverallScore" name="errorは-10点、warningは-5点" time="0">
     </testcase>
-    <testcase classname="AI Shift Generation API - Integration Tests › Task 2.2: Firestore Data Persistence (Indirect Verification)" name="should return scheduleId indicating successful Firestore save" time="0.646">
+    <testcase classname="EvaluationService › calculateOverallScore" name="スコアは0を下回らない" time="0.001">
     </testcase>
-    <testcase classname="AI Shift Generation API - Integration Tests › Task 2.2: Firestore Data Persistence (Indirect Verification)" name="should return metadata with model and tokensUsed" time="0.434">
+    <testcase classname="EvaluationService › calculateFulfillmentRate" name="全て充足している場合、高い充足率を返す" time="0.001">
     </testcase>
-    <testcase classname="AI Shift Generation API - Integration Tests › Task 2.2: Firestore Data Persistence (Indirect Verification)" name="should generate unique scheduleId for each request" time="1.065">
+    <testcase classname="EvaluationService › calculateFulfillmentRate" name="一部不足がある場合、充足率を計算する" time="0.001">
     </testcase>
-    <testcase classname="AI Shift Generation API - Integration Tests › Task 3.1: Input Validation" name="should return error for empty staffList" time="0.239">
+    <testcase classname="EvaluationService › evaluateSchedule" name="正常なスケジュールを評価できる" time="0.001">
     </testcase>
-    <testcase classname="AI Shift Generation API - Integration Tests › Task 3.1: Input Validation" name="should return &quot;staffList is required&quot; for undefined staffList" time="0.245">
+    <testcase classname="EvaluationService › evaluateSchedule" name="複数の違反を含むスケジュールを評価できる" time="0">
     </testcase>
-    <testcase classname="AI Shift Generation API - Integration Tests › Task 3.1: Input Validation" name="should return &quot;requirements with targetMonth is required&quot; for undefined requirements" time="0.239">
-    </testcase>
-    <testcase classname="AI Shift Generation API - Integration Tests › Task 3.1: Input Validation" name="should return error for missing targetMonth" time="0.244">
-    </testcase>
-    <testcase classname="AI Shift Generation API - Integration Tests › Task 3.2: Resource Protection" name="should return error for oversized staffList (201 staff)" time="0.29">
-    </testcase>
-    <testcase classname="AI Shift Generation API - Integration Tests › Task 3.2: Resource Protection" name="should include error message about staff limit" time="0.429">
-    </testcase>
-    <testcase classname="AI Shift Generation API - Integration Tests › Task 3.3: Error Response Format" name="should return success: false for validation errors" time="0.264">
-    </testcase>
-    <testcase classname="AI Shift Generation API - Integration Tests › Task 3.3: Error Response Format" name="should not include stack trace in error response" time="0.243">
-    </testcase>
-    <testcase classname="AI Shift Generation API - Integration Tests › Task 3.3: Error Response Format" name="should return appropriate error message without internal details" time="0.413">
-    </testcase>
-    <testcase classname="AI Shift Generation API - Integration Tests › Task 4.1: Idempotency with Same Input" name="should return cached result for identical second request" time="1.068">
-    </testcase>
-    <testcase classname="AI Shift Generation API - Integration Tests › Task 4.1: Idempotency with Same Input" name="should include metadata.cached: true for cached response" time="1.078">
-    </testcase>
-    <testcase classname="AI Shift Generation API - Integration Tests › Task 4.1: Idempotency with Same Input" name="should return exactly same schedule data for cached request" time="1.084">
-    </testcase>
-    <testcase classname="AI Shift Generation API - Integration Tests › Task 4.2: Cache Invalidation with Different Input" name="should generate new shift for different leaveRequests (cache miss)" time="1.062">
-    </testcase>
-    <testcase classname="AI Shift Generation API - Integration Tests › Task 4.2: Cache Invalidation with Different Input" name="should generate new shift for different requirements (cache miss)" time="1.075">
-    </testcase>
-    <testcase classname="AI Shift Generation API - Integration Tests › Task 4.2: Cache Invalidation with Different Input" name="should invoke Vertex AI on cache miss" time="0.449">
-    </testcase>
-    <testcase classname="AI Shift Generation API - Integration Tests › Task 4.3: Cache Hit Performance" name="should measure cache hit response time and verify it is under 5 seconds" time="1.077">
-    </testcase>
-    <testcase classname="AI Shift Generation API - Integration Tests › Task 4.3: Cache Hit Performance" name="should skip Vertex AI invocation on cache hit" time="1.083">
-    </testcase>
-    <testcase classname="AI Shift Generation API - Integration Tests › Task 4.3: Cache Hit Performance" name="should verify cache hit is significantly faster than first generation" time="1.063">
-    </testcase>
-    <testcase classname="AI Shift Generation API - Integration Tests › Task 6.1: Performance with Different Staff Sizes" name="should generate shift for 5 staff within 15 seconds" time="0.693">
-    </testcase>
-    <testcase classname="AI Shift Generation API - Integration Tests › Task 6.1: Performance with Different Staff Sizes" name="should generate shift for 20 staff within 30 seconds" time="0.487">
-    </testcase>
-    <testcase classname="AI Shift Generation API - Integration Tests › Task 6.1: Performance with Different Staff Sizes" name="should generate shift for 50 staff within 60 seconds" time="0.946">
+    <testcase classname="EvaluationService › DEFAULT_EVALUATION" name="フォールバック用のデフォルト評価が正しい形式" time="0.003">
     </testcase>
   </testsuite>
 </testsuites>
