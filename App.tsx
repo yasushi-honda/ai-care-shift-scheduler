@@ -1350,6 +1350,13 @@ const App: React.FC = () => {
                   <span className="font-medium">{userProfile.name || 'ユーザー'}</span>
                 </div>
               )}
+              <Link
+                to="/reports"
+                className="px-3 py-2 bg-white bg-opacity-20 hover:bg-opacity-30 rounded-lg text-sm font-medium transition-colors flex items-center gap-1"
+                title="月次レポート"
+              >
+                📊 レポート
+              </Link>
               <a
                 href="/manual.html"
                 target="_blank"

@@ -1,0 +1,23 @@
+{
+  "feature_name": "monthly-report-enhancement",
+  "created_at": "2025-11-26T10:00:00Z",
+  "updated_at": "2025-11-27T08:00:00Z",
+  "language": "ja",
+  "phase": "tasks-generated",
+  "description": "Phase 41: レポート機能強化 - 月次レポート生成、シフト集計機能、PDF出力機能",
+  "approvals": {
+    "requirements": {
+      "generated": true,
+      "approved": true
+    },
+    "design": {
+      "generated": true,
+      "approved": true
+    },
+    "tasks": {
+      "generated": true,
+      "approved": true
+    }
+  },
+  "ready_for_implementation": true
+}

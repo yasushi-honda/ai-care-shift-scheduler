@@ -26,6 +26,7 @@ const AuditLogs = lazy(() => import('./src/pages/admin/AuditLogs').then(m => ({ 
 const SecurityAlerts = lazy(() => import('./src/pages/admin/SecurityAlerts').then(m => ({ default: m.SecurityAlerts })));
 const BackupManagement = lazy(() => import('./src/pages/admin/BackupManagement').then(m => ({ default: m.BackupManagement })));
 const UsageReports = lazy(() => import('./src/pages/admin/UsageReports').then(m => ({ default: m.UsageReports })));
+const ReportPage = lazy(() => import('./src/pages/reports/ReportPage').then(m => ({ default: m.ReportPage })));
 
 const rootElement = document.getElementById('root');
 if (!rootElement) {
@@ -49,6 +50,16 @@ root.render(
                     element={
                       <ProtectedRoute>
                         <App />
+                      </ProtectedRoute>
+                    }
+                  />
+
+                  {/* 月次レポートページ */}
+                  <Route
+                    path="/reports"
+                    element={
+                      <ProtectedRoute>
+                        <ReportPage />
                       </ProtectedRoute>
                     }
                   />

@@ -537,3 +537,211 @@ export interface GenerateShiftResponse {
   error?: string;
   parseError?: unknown;  // デバッグ用
 }
+
+
+// ==================== 月次レポート機能（Phase 41）====================
+
+/**
+ * 勤務時間警告タイプ
+ */
+export type WorkTimeWarning = 'overtime' | 'consecutive_work' | 'insufficient_rest';
+
+/**
+ * 日次勤務詳細
+ */
+export interface DailyWorkDetail {
+  date: string;           // YYYY-MM-DD
+  shiftType: string;      // シフト種別名
+  hours: number;          // 勤務時間
+  isNightShift: boolean;  // 夜勤フラグ
+}
+
+/**
+ * 勤務時間集計（スタッフ別）
+ */
+export interface WorkTimeAggregation {
+  staffId: string;
+  staffName: string;
+  totalHours: number;           // 総勤務時間
+  regularHours: number;         // 通常勤務時間（日勤等）
+  nightHours: number;           // 夜勤時間
+  estimatedOvertimeHours: number; // 推定残業時間（160h基準超過分）
+  dailyDetails: DailyWorkDetail[];
+  warningFlags: WorkTimeWarning[];
+}
+
+/**
+ * シフト種別カウント
+ */
+export interface ShiftTypeCount {
+  shiftType: string;
+  count: number;
+  percentage: number;
+  color: string;          // Tailwind CSS class
+}
+
+/**
+ * スタッフ別シフト種別内訳
+ */
+export interface StaffShiftTypeBreakdown {
+  staffId: string;
+  staffName: string;
+  breakdown: ShiftTypeCount[];
+  nightShiftWarning: boolean;  // 夜勤8回以上の警告
+}
+
+/**
+ * シフト種別集計
+ */
+export interface ShiftTypeAggregation {
+  overall: ShiftTypeCount[];          // 全体集計
+  byStaff: StaffShiftTypeBreakdown[]; // スタッフ別内訳
+}
+
+/**
+ * 日別ステータス
+ */
+export interface DayStatus {
+  date: string;           // YYYY-MM-DD
+  status: 'work' | 'rest' | 'paid_leave' | 'public_holiday' | 'absent';
+  shiftType?: string;     // 勤務の場合のシフト種別
+}
+
+/**
+ * スタッフ稼働統計
+ */
+export interface StaffActivityAggregation {
+  staffId: string;
+  staffName: string;
+  workDays: number;                 // 出勤日数
+  restDays: number;                 // 休日数（公休）
+  paidLeaveDays: number;            // 有給休暇日数
+  publicHolidayDays: number;        // 公休日数
+  maxConsecutiveWorkDays: number;   // 連続勤務最大日数
+  averageWeeklyHours: number;       // 平均週間勤務時間
+  monthlyCalendar: DayStatus[];     // 月間カレンダー
+}
+
+/**
+ * レポートサマリー
+ */
+export interface ReportSummary {
+  totalWorkHours: number;           // 総勤務時間（全スタッフ合計）
+  totalStaffCount: number;          // スタッフ数
+  averageWorkHoursPerStaff: number; // スタッフ平均勤務時間
+  fulfillmentRate: number;          // 人員充足率 (0-100)
+  paidLeaveUsageRate: number;       // 有給消化率 (0-100)
+  workDaysCount: number;            // 稼働日数（休日除く）
+}
+
+/**
+ * 月次レポートデータ
+ */
+export interface MonthlyReportData {
+  targetMonth: string;                      // YYYY-MM
+  facilityId: string;
+  summary: ReportSummary;
+  workTimeData: WorkTimeAggregation[];
+  shiftTypeData: ShiftTypeAggregation;
+  staffActivityData: StaffActivityAggregation[];
+  generatedAt: Date;
+}
+
+/**
+ * 時間帯別充足率データ
+ */
+export interface TimeSlotFulfillmentData {
+  timeSlot: string;           // シフト種別名
+  requiredCount: number;      // 必要人数
+  actualCount: number;        // 実際の配置人数
+  fulfillmentRate: number;    // 充足率 (0-100)
+  shortfallDays: number;      // 人員不足日数
+}
+
+/**
+ * 資格別配置状況データ
+ */
+export interface QualificationCoverageData {
+  qualification: string;      // 資格名
+  requiredCount: number;      // 必要人数
+  availableCount: number;     // 配置可能人数
+  coverageRate: number;       // カバー率 (0-100)
+}
+
+/**
+ * コスト推計データ
+ */
+export interface CostEstimateData {
+  regularHoursCost: number;   // 通常勤務コスト
+  overtimeHoursCost: number;  // 残業コスト
+  nightShiftAllowance: number; // 夜勤手当
+  totalEstimate: number;      // 合計推計
+  currency: 'JPY';
+}
+
+/**
+ * 月次比較データ
+ */
+export interface MonthComparisonData {
+  previousMonth: string;       // YYYY-MM
+  workHoursDiff: number;       // 勤務時間差
+  fulfillmentRateDiff: number; // 充足率差
+  costDiff: number;            // コスト差
+}
+
+/**
+ * 経営分析レポートデータ
+ */
+export interface ManagementReportData {
+  summary: ReportSummary;
+  timeSlotFulfillment: TimeSlotFulfillmentData[];
+  qualificationCoverage: QualificationCoverageData[];
+  costEstimate: CostEstimateData;
+  monthComparison: MonthComparisonData | null;
+  recommendations: string[];   // 改善提案
+}
+
+/**
+ * 個人勤務サマリー
+ */
+export interface PersonalWorkSummary {
+  workDays: number;           // 出勤日数
+  totalHours: number;         // 総勤務時間
+  nightShiftCount: number;    // 夜勤回数
+  restDays: number;           // 休日数
+}
+
+/**
+ * 個人休暇残高
+ */
+export interface PersonalLeaveBalance {
+  paidLeaveRemaining: number;     // 有給残日数
+  paidLeaveUsed: number;          // 有給使用日数
+  publicHolidayRemaining: number; // 公休残日数
+  publicHolidayUsed: number;      // 公休使用日数
+}
+
+/**
+ * 個人勤務実績レポートデータ
+ */
+export interface PersonalReportData {
+  staffId: string;
+  staffName: string;
+  targetMonth: string;              // YYYY-MM
+  workSummary: PersonalWorkSummary;
+  shiftBreakdown: ShiftTypeCount[];
+  leaveBalance: PersonalLeaveBalance;
+  calendar: DayStatus[];
+}
+
+/**
+ * レポートサービスエラー型
+ */
+export type ReportError =
+  | { code: 'FACILITY_NOT_FOUND'; message: string; facilityId: string }
+  | { code: 'NO_SCHEDULE_DATA'; message: string; targetMonth: string }
+  | { code: 'AGGREGATION_FAILED'; message: string; reason: string }
+  | { code: 'PDF_GENERATION_FAILED'; message: string; reason: string }
+  | { code: 'PERMISSION_DENIED'; message: string; requiredRole: FacilityRole }
+  | { code: 'NETWORK_ERROR'; message: string; originalError: Error }
+  | { code: 'STAFF_NOT_FOUND'; message: string; staffId: string };

@@ -1,19 +1,19 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<testsuites name="jest tests" tests="19" failures="0" errors="0" time="7.932">
-  <testsuite name="EvaluationService" errors="0" failures="0" skipped="0" timestamp="2025-11-26T07:07:54" time="7.46" tests="19">
-    <testcase classname="EvaluationService › checkStaffShortage" name="人員が充足している場合、違反を検出しない" time="0.009">
+<testsuites name="jest tests" tests="58" failures="29" errors="0" time="14.872">
+  <testsuite name="EvaluationService" errors="0" failures="0" skipped="0" timestamp="2025-11-26T12:18:18" time="10.118" tests="21">
+    <testcase classname="EvaluationService › checkStaffShortage" name="人員が充足している場合、違反を検出しない" time="0.011">
     </testcase>
-    <testcase classname="EvaluationService › checkStaffShortage" name="人員不足を検出する" time="0.001">
+    <testcase classname="EvaluationService › checkStaffShortage" name="人員不足を検出する" time="0.002">
     </testcase>
-    <testcase classname="EvaluationService › checkStaffShortage" name="休日は人員カウントに含めない" time="0">
+    <testcase classname="EvaluationService › checkStaffShortage" name="休日は人員カウントに含めない" time="0.006">
     </testcase>
-    <testcase classname="EvaluationService › checkConsecutiveWorkViolation" name="連勤が上限以内の場合、違反を検出しない" time="0.001">
+    <testcase classname="EvaluationService › checkConsecutiveWorkViolation" name="連勤が上限以内の場合、違反を検出しない" time="0.003">
     </testcase>
-    <testcase classname="EvaluationService › checkConsecutiveWorkViolation" name="連勤超過を検出する（境界値テスト）" time="0.002">
+    <testcase classname="EvaluationService › checkConsecutiveWorkViolation" name="連勤超過を検出する（境界値テスト）" time="0.004">
     </testcase>
-    <testcase classname="EvaluationService › checkConsecutiveWorkViolation" name="「明け休み」は勤務日としてカウントしない" time="0">
+    <testcase classname="EvaluationService › checkConsecutiveWorkViolation" name="「明け休み」は勤務日としてカウントしない" time="0.001">
     </testcase>
-    <testcase classname="EvaluationService › checkNightRestViolation" name="夜勤後に休息がある場合、違反を検出しない" time="0">
+    <testcase classname="EvaluationService › checkNightRestViolation" name="夜勤後に休息がある場合、違反を検出しない" time="0.001">
     </testcase>
     <testcase classname="EvaluationService › checkNightRestViolation" name="夜勤後に休息がない場合、違反を検出する" time="0.001">
     </testcase>
@@ -21,23 +21,275 @@
     </testcase>
     <testcase classname="EvaluationService › checkLeaveRequestIgnored" name="休暇希望が反映されている場合、違反を検出しない" time="0.001">
     </testcase>
-    <testcase classname="EvaluationService › checkLeaveRequestIgnored" name="休暇希望が反映されていない場合、違反を検出する" time="0.001">
+    <testcase classname="EvaluationService › checkLeaveRequestIgnored" name="休暇希望が反映されていない場合、違反を検出する" time="0">
     </testcase>
-    <testcase classname="EvaluationService › calculateOverallScore" name="違反がない場合、100点を返す" time="0">
+    <testcase classname="EvaluationService › calculateOverallScore" name="違反がない場合、100点を返す" time="0.001">
     </testcase>
     <testcase classname="EvaluationService › calculateOverallScore" name="errorは-10点、warningは-5点" time="0">
     </testcase>
-    <testcase classname="EvaluationService › calculateOverallScore" name="スコアは0を下回らない" time="0.001">
+    <testcase classname="EvaluationService › calculateOverallScore" name="スコアは0を下回らない" time="0">
     </testcase>
     <testcase classname="EvaluationService › calculateFulfillmentRate" name="全て充足している場合、高い充足率を返す" time="0.001">
     </testcase>
     <testcase classname="EvaluationService › calculateFulfillmentRate" name="一部不足がある場合、充足率を計算する" time="0.001">
     </testcase>
-    <testcase classname="EvaluationService › evaluateSchedule" name="正常なスケジュールを評価できる" time="0.001">
+    <testcase classname="EvaluationService › evaluateSchedule" name="正常なスケジュールを評価できる" time="0.003">
     </testcase>
-    <testcase classname="EvaluationService › evaluateSchedule" name="複数の違反を含むスケジュールを評価できる" time="0">
+    <testcase classname="EvaluationService › evaluateSchedule" name="複数の違反を含むスケジュールを評価できる" time="0.001">
     </testcase>
-    <testcase classname="EvaluationService › DEFAULT_EVALUATION" name="フォールバック用のデフォルト評価が正しい形式" time="0.003">
+    <testcase classname="EvaluationService › createDefaultEvaluation" name="フォールバック用のデフォルト評価が正しい形式" time="0.002">
+    </testcase>
+    <testcase classname="EvaluationService › createDefaultEvaluation" name="呼び出しごとに新しいTimestampが生成される" time="0.001">
+    </testcase>
+    <testcase classname="EvaluationService › createDefaultEvaluation" name="後方互換性のためDEFAULT_EVALUATIONが利用可能" time="0">
+    </testcase>
+  </testsuite>
+  <testsuite name="AI Shift Generation API - Integration Tests" errors="0" failures="29" skipped="0" timestamp="2025-11-26T12:18:18" time="13.68" tests="37">
+    <testcase classname="AI Shift Generation API - Integration Tests › Setup Test" name="should have Cloud Function URL configured" time="0.021">
+    </testcase>
+    <testcase classname="AI Shift Generation API - Integration Tests › Health Check" name="should fail with METHOD_NOT_ALLOWED for GET request" time="0.177">
+      <failure>Error: expect(received).toBe(expected) // Object.is equality
+
+Expected: 405
+Received: 404
+    at Object.&lt;anonymous&gt; (/Users/yyyhhh/ai-care-shift-scheduler/functions/__tests__/integration/shift-generation.test.ts:36:31)
+    at processTicksAndRejections (node:internal/process/task_queues:105:5)</failure>
+    </testcase>
+    <testcase classname="AI Shift Generation API - Integration Tests › Test Fixtures" name="should have 5 standard staff members" time="0">
+    </testcase>
+    <testcase classname="AI Shift Generation API - Integration Tests › Test Fixtures" name="should have standard requirements for November 2025" time="0.001">
+    </testcase>
+    <testcase classname="AI Shift Generation API - Integration Tests › Test Fixtures" name="should have standard leave requests" time="0">
+    </testcase>
+    <testcase classname="AI Shift Generation API - Integration Tests › Test Fixtures" name="should have 20 staff in large staff list" time="0">
+    </testcase>
+    <testcase classname="AI Shift Generation API - Integration Tests › Test Fixtures" name="should have 50 staff in extra large staff list" time="0">
+    </testcase>
+    <testcase classname="AI Shift Generation API - Integration Tests › Test Fixtures" name="should have mock Vertex AI response" time="0">
+    </testcase>
+    <testcase classname="AI Shift Generation API - Integration Tests › Task 2.1: Basic Shift Generation" name="should return HTTP 200 and success: true for valid request" time="0.096">
+      <failure>Error: expect(received).toBe(expected) // Object.is equality
+
+Expected: 200
+Received: 404
+    at Object.&lt;anonymous&gt; (/Users/yyyhhh/ai-care-shift-scheduler/functions/__tests__/integration/shift-generation.test.ts:87:31)
+    at processTicksAndRejections (node:internal/process/task_queues:105:5)</failure>
+    </testcase>
+    <testcase classname="AI Shift Generation API - Integration Tests › Task 2.1: Basic Shift Generation" name="should return schedule array in response" time="0.118">
+      <failure>Error: expect(received).toHaveProperty(path)
+
+Expected path: &quot;schedule&quot;
+Received path: []
+
+Received value: {}
+    at Object.&lt;anonymous&gt; (/Users/yyyhhh/ai-care-shift-scheduler/functions/__tests__/integration/shift-generation.test.ts:101:29)
+    at processTicksAndRejections (node:internal/process/task_queues:105:5)</failure>
+    </testcase>
+    <testcase classname="AI Shift Generation API - Integration Tests › Task 2.1: Basic Shift Generation" name="should generate shifts for all 5 staff members" time="0.087">
+      <failure>TypeError: expect(received).toHaveLength(expected)
+
+Matcher error: received value must have a length property whose value must be a number
+
+Received has value: undefined
+    at Object.&lt;anonymous&gt; (/Users/yyyhhh/ai-care-shift-scheduler/functions/__tests__/integration/shift-generation.test.ts:115:38)
+    at processTicksAndRejections (node:internal/process/task_queues:105:5)</failure>
+    </testcase>
+    <testcase classname="AI Shift Generation API - Integration Tests › Task 2.1: Basic Shift Generation" name="should have staffId, staffName, and monthlyShifts for each staff" time="0.089">
+      <failure>TypeError: Cannot read properties of undefined (reading &apos;forEach&apos;)
+    at Object.&lt;anonymous&gt; (/Users/yyyhhh/ai-care-shift-scheduler/functions/__tests__/integration/shift-generation.test.ts:128:30)
+    at processTicksAndRejections (node:internal/process/task_queues:105:5)</failure>
+    </testcase>
+    <testcase classname="AI Shift Generation API - Integration Tests › Task 2.1: Basic Shift Generation" name="should have shifts for all days in the target month (30 days in Nov 2025)" time="0.102">
+      <failure>TypeError: Cannot read properties of undefined (reading &apos;forEach&apos;)
+    at Object.&lt;anonymous&gt; (/Users/yyyhhh/ai-care-shift-scheduler/functions/__tests__/integration/shift-generation.test.ts:146:30)
+    at processTicksAndRejections (node:internal/process/task_queues:105:5)</failure>
+    </testcase>
+    <testcase classname="AI Shift Generation API - Integration Tests › Task 2.2: Firestore Data Persistence (Indirect Verification)" name="should return scheduleId indicating successful Firestore save" time="0.086">
+      <failure>Error: expect(received).toBe(expected) // Object.is equality
+
+Expected: 200
+Received: 404
+    at Object.&lt;anonymous&gt; (/Users/yyyhhh/ai-care-shift-scheduler/functions/__tests__/integration/shift-generation.test.ts:173:31)
+    at processTicksAndRejections (node:internal/process/task_queues:105:5)</failure>
+    </testcase>
+    <testcase classname="AI Shift Generation API - Integration Tests › Task 2.2: Firestore Data Persistence (Indirect Verification)" name="should return metadata with model and tokensUsed" time="0.092">
+      <failure>Error: expect(received).toHaveProperty(path)
+
+Expected path: &quot;metadata&quot;
+Received path: []
+
+Received value: {}
+    at Object.&lt;anonymous&gt; (/Users/yyyhhh/ai-care-shift-scheduler/functions/__tests__/integration/shift-generation.test.ts:191:29)
+    at processTicksAndRejections (node:internal/process/task_queues:105:5)</failure>
+    </testcase>
+    <testcase classname="AI Shift Generation API - Integration Tests › Task 2.2: Firestore Data Persistence (Indirect Verification)" name="should generate unique scheduleId for each request" time="0.089">
+      <failure>Error: expect(received).toBe(expected) // Object.is equality
+
+Expected: 200
+Received: 404
+    at Object.&lt;anonymous&gt; (/Users/yyyhhh/ai-care-shift-scheduler/functions/__tests__/integration/shift-generation.test.ts:220:36)
+    at processTicksAndRejections (node:internal/process/task_queues:105:5)</failure>
+    </testcase>
+    <testcase classname="AI Shift Generation API - Integration Tests › Task 3.1: Input Validation" name="should return error for empty staffList" time="0.094">
+      <failure>Error: expect(received).toContain(expected) // indexOf
+
+Expected value: 404
+Received array: [400, 500]
+    at Object.&lt;anonymous&gt; (/Users/yyyhhh/ai-care-shift-scheduler/functions/__tests__/integration/shift-generation.test.ts:262:26)
+    at processTicksAndRejections (node:internal/process/task_queues:105:5)</failure>
+    </testcase>
+    <testcase classname="AI Shift Generation API - Integration Tests › Task 3.1: Input Validation" name="should return &quot;staffList is required&quot; for undefined staffList" time="0.082">
+      <failure>Error: expect(received).toContain(expected) // indexOf
+
+Expected value: 404
+Received array: [400, 500]
+    at Object.&lt;anonymous&gt; (/Users/yyyhhh/ai-care-shift-scheduler/functions/__tests__/integration/shift-generation.test.ts:278:26)
+    at processTicksAndRejections (node:internal/process/task_queues:105:5)</failure>
+    </testcase>
+    <testcase classname="AI Shift Generation API - Integration Tests › Task 3.1: Input Validation" name="should return &quot;requirements with targetMonth is required&quot; for undefined requirements" time="0.148">
+      <failure>Error: expect(received).toContain(expected) // indexOf
+
+Expected value: 404
+Received array: [400, 500]
+    at Object.&lt;anonymous&gt; (/Users/yyyhhh/ai-care-shift-scheduler/functions/__tests__/integration/shift-generation.test.ts:294:26)
+    at processTicksAndRejections (node:internal/process/task_queues:105:5)</failure>
+    </testcase>
+    <testcase classname="AI Shift Generation API - Integration Tests › Task 3.1: Input Validation" name="should return error for missing targetMonth" time="0.085">
+      <failure>Error: expect(received).toContain(expected) // indexOf
+
+Expected value: 404
+Received array: [400, 500]
+    at Object.&lt;anonymous&gt; (/Users/yyyhhh/ai-care-shift-scheduler/functions/__tests__/integration/shift-generation.test.ts:311:26)
+    at processTicksAndRejections (node:internal/process/task_queues:105:5)</failure>
+    </testcase>
+    <testcase classname="AI Shift Generation API - Integration Tests › Task 3.2: Resource Protection" name="should return error for oversized staffList (201 staff)" time="0.103">
+      <failure>Error: expect(received).toBe(expected) // Object.is equality
+
+Expected: 500
+Received: 404
+    at Object.&lt;anonymous&gt; (/Users/yyyhhh/ai-care-shift-scheduler/functions/__tests__/integration/shift-generation.test.ts:334:31)
+    at processTicksAndRejections (node:internal/process/task_queues:105:5)</failure>
+    </testcase>
+    <testcase classname="AI Shift Generation API - Integration Tests › Task 3.2: Resource Protection" name="should include error message about staff limit" time="0.138">
+      <failure>Error: expect(received).toBe(expected) // Object.is equality
+
+Expected: 500
+Received: 404
+    at Object.&lt;anonymous&gt; (/Users/yyyhhh/ai-care-shift-scheduler/functions/__tests__/integration/shift-generation.test.ts:351:31)
+    at processTicksAndRejections (node:internal/process/task_queues:105:5)</failure>
+    </testcase>
+    <testcase classname="AI Shift Generation API - Integration Tests › Task 3.3: Error Response Format" name="should return success: false for validation errors" time="0.093">
+      <failure>Error: expect(received).toHaveProperty(path)
+
+Expected path: &quot;success&quot;
+Received path: []
+
+Received value: {}
+    at Object.&lt;anonymous&gt; (/Users/yyyhhh/ai-care-shift-scheduler/functions/__tests__/integration/shift-generation.test.ts:373:29)
+    at processTicksAndRejections (node:internal/process/task_queues:105:5)</failure>
+    </testcase>
+    <testcase classname="AI Shift Generation API - Integration Tests › Task 3.3: Error Response Format" name="should not include stack trace in error response" time="0.112">
+      <failure>Error: expect(received).toBeDefined()
+
+Received: undefined
+    at Object.&lt;anonymous&gt; (/Users/yyyhhh/ai-care-shift-scheduler/functions/__tests__/integration/shift-generation.test.ts:389:35)
+    at processTicksAndRejections (node:internal/process/task_queues:105:5)</failure>
+    </testcase>
+    <testcase classname="AI Shift Generation API - Integration Tests › Task 3.3: Error Response Format" name="should return appropriate error message without internal details" time="0.114">
+      <failure>Error: expect(received).toBeDefined()
+
+Received: undefined
+    at Object.&lt;anonymous&gt; (/Users/yyyhhh/ai-care-shift-scheduler/functions/__tests__/integration/shift-generation.test.ts:403:35)
+    at processTicksAndRejections (node:internal/process/task_queues:105:5)</failure>
+    </testcase>
+    <testcase classname="AI Shift Generation API - Integration Tests › Task 4.1: Idempotency with Same Input" name="should return cached result for identical second request" time="0.093">
+      <failure>Error: expect(received).toBe(expected) // Object.is equality
+
+Expected: 200
+Received: 404
+    at Object.&lt;anonymous&gt; (/Users/yyyhhh/ai-care-shift-scheduler/functions/__tests__/integration/shift-generation.test.ts:426:36)
+    at processTicksAndRejections (node:internal/process/task_queues:105:5)</failure>
+    </testcase>
+    <testcase classname="AI Shift Generation API - Integration Tests › Task 4.1: Idempotency with Same Input" name="should include metadata.cached: true for cached response" time="0.196">
+      <failure>Error: expect(received).toBeDefined()
+
+Received: undefined
+    at Object.&lt;anonymous&gt; (/Users/yyyhhh/ai-care-shift-scheduler/functions/__tests__/integration/shift-generation.test.ts:468:44)
+    at processTicksAndRejections (node:internal/process/task_queues:105:5)</failure>
+    </testcase>
+    <testcase classname="AI Shift Generation API - Integration Tests › Task 4.1: Idempotency with Same Input" name="should return exactly same schedule data for cached request" time="0.182">
+    </testcase>
+    <testcase classname="AI Shift Generation API - Integration Tests › Task 4.2: Cache Invalidation with Different Input" name="should generate new shift for different leaveRequests (cache miss)" time="0.097">
+      <failure>Error: expect(received).toBe(expected) // Object.is equality
+
+Expected: 200
+Received: 404
+    at Object.&lt;anonymous&gt; (/Users/yyyhhh/ai-care-shift-scheduler/functions/__tests__/integration/shift-generation.test.ts:521:36)
+    at processTicksAndRejections (node:internal/process/task_queues:105:5)</failure>
+    </testcase>
+    <testcase classname="AI Shift Generation API - Integration Tests › Task 4.2: Cache Invalidation with Different Input" name="should generate new shift for different requirements (cache miss)" time="0.1">
+      <failure>Error: expect(received).toBe(expected) // Object.is equality
+
+Expected: 200
+Received: 404
+    at Object.&lt;anonymous&gt; (/Users/yyyhhh/ai-care-shift-scheduler/functions/__tests__/integration/shift-generation.test.ts:569:36)
+    at processTicksAndRejections (node:internal/process/task_queues:105:5)</failure>
+    </testcase>
+    <testcase classname="AI Shift Generation API - Integration Tests › Task 4.2: Cache Invalidation with Different Input" name="should invoke Vertex AI on cache miss" time="0.098">
+      <failure>Error: expect(received).toBe(expected) // Object.is equality
+
+Expected: 200
+Received: 404
+    at Object.&lt;anonymous&gt; (/Users/yyyhhh/ai-care-shift-scheduler/functions/__tests__/integration/shift-generation.test.ts:616:36)
+    at processTicksAndRejections (node:internal/process/task_queues:105:5)</failure>
+    </testcase>
+    <testcase classname="AI Shift Generation API - Integration Tests › Task 4.3: Cache Hit Performance" name="should measure cache hit response time and verify it is under 5 seconds" time="0.109">
+      <failure>Error: expect(received).toBe(expected) // Object.is equality
+
+Expected: 200
+Received: 404
+    at Object.&lt;anonymous&gt; (/Users/yyyhhh/ai-care-shift-scheduler/functions/__tests__/integration/shift-generation.test.ts:642:36)
+    at processTicksAndRejections (node:internal/process/task_queues:105:5)</failure>
+    </testcase>
+    <testcase classname="AI Shift Generation API - Integration Tests › Task 4.3: Cache Hit Performance" name="should skip Vertex AI invocation on cache hit" time="0.088">
+      <failure>Error: expect(received).toBe(expected) // Object.is equality
+
+Expected: 200
+Received: 404
+    at Object.&lt;anonymous&gt; (/Users/yyyhhh/ai-care-shift-scheduler/functions/__tests__/integration/shift-generation.test.ts:686:36)
+    at processTicksAndRejections (node:internal/process/task_queues:105:5)</failure>
+    </testcase>
+    <testcase classname="AI Shift Generation API - Integration Tests › Task 4.3: Cache Hit Performance" name="should verify cache hit is significantly faster than first generation" time="0.087">
+      <failure>Error: expect(received).toBe(expected) // Object.is equality
+
+Expected: 200
+Received: 404
+    at Object.&lt;anonymous&gt; (/Users/yyyhhh/ai-care-shift-scheduler/functions/__tests__/integration/shift-generation.test.ts:729:36)
+    at processTicksAndRejections (node:internal/process/task_queues:105:5)</failure>
+    </testcase>
+    <testcase classname="AI Shift Generation API - Integration Tests › Task 6.1: Performance with Different Staff Sizes" name="should generate shift for 5 staff within 15 seconds" time="0.094">
+      <failure>Error: expect(received).toBe(expected) // Object.is equality
+
+Expected: 200
+Received: 404
+    at Object.&lt;anonymous&gt; (/Users/yyyhhh/ai-care-shift-scheduler/functions/__tests__/integration/shift-generation.test.ts:786:31)
+    at processTicksAndRejections (node:internal/process/task_queues:105:5)</failure>
+    </testcase>
+    <testcase classname="AI Shift Generation API - Integration Tests › Task 6.1: Performance with Different Staff Sizes" name="should generate shift for 20 staff within 30 seconds" time="0.126">
+      <failure>Error: expect(received).toBe(expected) // Object.is equality
+
+Expected: 200
+Received: 404
+    at Object.&lt;anonymous&gt; (/Users/yyyhhh/ai-care-shift-scheduler/functions/__tests__/integration/shift-generation.test.ts:825:31)
+    at processTicksAndRejections (node:internal/process/task_queues:105:5)</failure>
+    </testcase>
+    <testcase classname="AI Shift Generation API - Integration Tests › Task 6.1: Performance with Different Staff Sizes" name="should generate shift for 50 staff within 60 seconds" time="0.094">
+      <failure>Error: expect(received).toBe(expected) // Object.is equality
+
+Expected: 200
+Received: 404
+    at Object.&lt;anonymous&gt; (/Users/yyyhhh/ai-care-shift-scheduler/functions/__tests__/integration/shift-generation.test.ts:864:31)
+    at processTicksAndRejections (node:internal/process/task_queues:105:5)</failure>
     </testcase>
   </testsuite>
 </testsuites>
