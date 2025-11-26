@@ -25,6 +25,7 @@ import VersionHistoryModal from './components/VersionHistoryModal';
 import { Button } from './src/components/Button';
 import { BulkCopyPlannedToActualModal } from './src/components/BulkCopyPlannedToActualModal';
 import { bulkCopyPlannedToActual, type BulkCopyOptions } from './src/utils/bulkCopyPlannedToActual';
+import KeyboardHelpModal from './src/components/KeyboardHelpModal';
 
 type ViewMode = 'shift' | 'leaveRequest';
 
@@ -100,6 +101,9 @@ const App: React.FC = () => {
 
   // Phase 33: リドゥ履歴スタック（最大10件）
   const [redoStack, setRedoStack] = useState<ShiftHistoryEntry[]>([]);
+
+  // Phase 37: キーボードショートカットヘルプモーダル
+  const [showKeyboardHelp, setShowKeyboardHelp] = useState(false);
 
   // ユーザーがアクセスできる施設情報をロード
   useEffect(() => {
@@ -401,9 +405,23 @@ const App: React.FC = () => {
     }
   }, [selectedFacilityId, requirements.targetMonth]);
 
-  // Phase 31/33: Ctrl+Z / Cmd+Z でアンドゥ、Ctrl+Shift+Z / Cmd+Shift+Z でリドゥ
+  // Phase 31/33/37: キーボードショートカット
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      // Phase 37: ?キーでショートカットヘルプ表示
+      if (e.key === '?' || (e.shiftKey && e.key === '/')) {
+        // 入力フィールドにフォーカスがある場合は無視
+        const activeElement = document.activeElement;
+        if (activeElement instanceof HTMLInputElement ||
+            activeElement instanceof HTMLTextAreaElement ||
+            activeElement instanceof HTMLSelectElement) {
+          return;
+        }
+        e.preventDefault();
+        setShowKeyboardHelp(true);
+        return;
+      }
+
       // Ctrl+Z または Cmd+Z
       if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
         // 入力フィールドにフォーカスがある場合は無視
@@ -1493,6 +1511,12 @@ const App: React.FC = () => {
         schedules={schedule}
         targetMonth={requirements.targetMonth}
         onExecute={handleBulkCopyExecute}
+      />
+
+      {/* Phase 37: キーボードショートカットヘルプモーダル */}
+      <KeyboardHelpModal
+        isOpen={showKeyboardHelp}
+        onClose={() => setShowKeyboardHelp(false)}
       />
     </div>
   );

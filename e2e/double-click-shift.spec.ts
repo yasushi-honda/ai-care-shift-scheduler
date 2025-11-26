@@ -955,3 +955,102 @@ test.describe('PageUp/PageDownナビゲーション', () => {
     await expect(afterPageDown).toBeVisible();
   });
 });
+
+/**
+ * Phase 37: キーボードショートカットヘルプテスト
+ */
+test.describe('キーボードショートカットヘルプ', () => {
+  test.beforeEach(async ({ page }) => {
+    await setupAuthenticatedUser(page, {
+      email: 'keyboard-help-test@example.com',
+      password: 'password123',
+      displayName: 'キーボードヘルプテスト',
+      role: 'admin',
+    });
+
+    await page.goto('/');
+    await page.waitForLoadState('networkidle');
+  });
+
+  test('?キーでショートカットヘルプモーダルが表示される', async ({ page }) => {
+    // シフト表が表示されるまで待機
+    const shiftTable = page.locator('table');
+    await expect(shiftTable).toBeVisible({ timeout: 10000 });
+
+    // ?キーを押す（Shift+/）
+    await page.keyboard.press('Shift+/');
+    await page.waitForTimeout(200);
+
+    // モーダルが表示されることを確認
+    const modal = page.locator('[role="dialog"]');
+    await expect(modal).toBeVisible({ timeout: 3000 });
+
+    // タイトルを確認
+    const title = page.locator('#keyboard-help-title');
+    await expect(title).toContainText('キーボードショートカット');
+  });
+
+  test('Escキーでヘルプモーダルが閉じる', async ({ page }) => {
+    // シフト表が表示されるまで待機
+    const shiftTable = page.locator('table');
+    await expect(shiftTable).toBeVisible({ timeout: 10000 });
+
+    // ?キーを押す
+    await page.keyboard.press('Shift+/');
+    await page.waitForTimeout(200);
+
+    // モーダルが表示されることを確認
+    const modal = page.locator('[role="dialog"]');
+    await expect(modal).toBeVisible({ timeout: 3000 });
+
+    // Escキーで閉じる
+    await page.keyboard.press('Escape');
+    await page.waitForTimeout(200);
+
+    // モーダルが閉じることを確認
+    await expect(modal).not.toBeVisible();
+  });
+
+  test('閉じるボタンでヘルプモーダルが閉じる', async ({ page }) => {
+    // シフト表が表示されるまで待機
+    const shiftTable = page.locator('table');
+    await expect(shiftTable).toBeVisible({ timeout: 10000 });
+
+    // ?キーを押す
+    await page.keyboard.press('Shift+/');
+    await page.waitForTimeout(200);
+
+    // モーダルが表示されることを確認
+    const modal = page.locator('[role="dialog"]');
+    await expect(modal).toBeVisible({ timeout: 3000 });
+
+    // 閉じるボタンをクリック
+    const closeButton = modal.locator('button:has-text("閉じる")');
+    await closeButton.click();
+    await page.waitForTimeout(200);
+
+    // モーダルが閉じることを確認
+    await expect(modal).not.toBeVisible();
+  });
+
+  test('ヘルプモーダルにショートカット一覧が表示される', async ({ page }) => {
+    // シフト表が表示されるまで待機
+    const shiftTable = page.locator('table');
+    await expect(shiftTable).toBeVisible({ timeout: 10000 });
+
+    // ?キーを押す
+    await page.keyboard.press('Shift+/');
+    await page.waitForTimeout(200);
+
+    // モーダルが表示されることを確認
+    const modal = page.locator('[role="dialog"]');
+    await expect(modal).toBeVisible({ timeout: 3000 });
+
+    // ショートカット一覧が含まれていることを確認
+    await expect(modal).toContainText('Ctrl+Z');
+    await expect(modal).toContainText('Home');
+    await expect(modal).toContainText('End');
+    await expect(modal).toContainText('PageUp');
+    await expect(modal).toContainText('PageDown');
+  });
+});
