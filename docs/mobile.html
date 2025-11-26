@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>シフト管理システム - モバイル版</title>
-    <meta name="description" content="実績入力の効率化 - モバイル最適化版">
+    <title>AIシフト自動作成システム - モバイル版</title>
+    <meta name="description" content="介護事業所向けAIシフト管理システム - モバイル最適化版">
 
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -33,6 +33,29 @@
         .container {
             padding: 1rem;
             max-width: 100%;
+        }
+        .stats-row {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+            overflow-x: auto;
+        }
+        .stat-box {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 1rem;
+            border-radius: 8px;
+            text-align: center;
+            flex: 1;
+            min-width: 80px;
+        }
+        .stat-box .number {
+            font-size: 1.75rem;
+            font-weight: bold;
+        }
+        .stat-box .label {
+            font-size: 0.75rem;
+            opacity: 0.9;
         }
         .card {
             background: #fff;
@@ -76,10 +99,6 @@
             color: #28a745;
             font-weight: bold;
         }
-        .status-pending {
-            color: #ffa500;
-            font-weight: bold;
-        }
         .metric {
             background: #e8f5e9;
             padding: 0.75rem;
@@ -90,6 +109,17 @@
         .metric strong {
             color: #28a745;
             font-size: 1.1rem;
+        }
+        .feature-list {
+            list-style: none;
+            padding: 0;
+        }
+        .feature-list li {
+            padding: 0.5rem 0;
+            border-bottom: 1px solid #e1e4e8;
+        }
+        .feature-list li:last-child {
+            border-bottom: none;
         }
         .link-button {
             display: inline-block;
@@ -112,161 +142,147 @@
             border-top: 1px solid #e1e4e8;
             margin-top: 2rem;
         }
-        .note {
-            background: #fff3cd;
-            border-left: 4px solid #ffc107;
-            padding: 0.75rem;
-            margin: 0.75rem 0;
-            font-size: 0.9rem;
-            color: #856404;
+        .phase-badge {
+            display: inline-block;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            margin-left: 0.5rem;
+        }
+        .phase-done {
+            background: #28a745;
+            color: white;
         }
     </style>
 </head>
 <body>
     <div class="header">
-        <h1>📊 シフト管理システム</h1>
-        <p>実績入力の効率化 - モバイル版</p>
+        <h1>AIシフト自動作成システム</h1>
+        <p>介護事業所向け シフト管理ソリューション</p>
     </div>
 
     <div class="container">
-        <div class="card">
-            <h2>🎯 プロジェクト概要</h2>
-            <p>介護施設のシフト管理システムに、実績入力の効率化機能を追加しました。</p>
+        <div class="stats-row">
+            <div class="stat-box">
+                <div class="number">39</div>
+                <div class="label">完了Phase</div>
+            </div>
+            <div class="stat-box">
+                <div class="number">86%</div>
+                <div class="label">作業削減</div>
+            </div>
+            <div class="stat-box">
+                <div class="number">2ヶ月</div>
+                <div class="label">開発期間</div>
+            </div>
+        </div>
 
+        <div class="card">
+            <h2>主要機能</h2>
+            <ul class="feature-list">
+                <li><strong>AIシフト自動生成</strong> - Gemini AIによる最適シフト生成</li>
+                <li><strong>認証・権限管理</strong> - マルチテナント設計、RBAC</li>
+                <li><strong>実績入力効率化</strong> - 一括コピー、86%削減</li>
+                <li><strong>キーボード操作</strong> - Tab/矢印キー/アンドゥ対応</li>
+                <li><strong>シフト種別設定</strong> - カスタムシフト、色設定</li>
+                <li><strong>休暇残高管理</strong> - 公休・有給の残高追跡</li>
+            </ul>
+        </div>
+
+        <div class="card">
+            <h2>開発フェーズ</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Phase</th>
+                        <th>内容</th>
+                        <th style="text-align:center;">状態</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>0-12</td>
+                        <td>基盤構築</td>
+                        <td style="text-align:center;"><span class="status-complete">完了</span></td>
+                    </tr>
+                    <tr>
+                        <td>13-17</td>
+                        <td>AI統合</td>
+                        <td style="text-align:center;"><span class="status-complete">完了</span></td>
+                    </tr>
+                    <tr>
+                        <td>18-26</td>
+                        <td>改善・拡張</td>
+                        <td style="text-align:center;"><span class="status-complete">完了</span></td>
+                    </tr>
+                    <tr>
+                        <td>27-37</td>
+                        <td>UX改善</td>
+                        <td style="text-align:center;"><span class="status-complete">完了</span></td>
+                    </tr>
+                    <tr>
+                        <td>38-39</td>
+                        <td>設定管理</td>
+                        <td style="text-align:center;"><span class="status-complete">完了</span></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="card">
+            <h2>効率化の成果</h2>
             <div class="metric">
                 <strong>月間作業時間: 50分 → 7分（86%削減）</strong>
             </div>
-        </div>
-
-        <div class="card">
-            <h2>✅ 実装状況</h2>
             <table>
                 <thead>
                     <tr>
-                        <th>機能</th>
-                        <th style="text-align:center;">状態</th>
-                        <th style="text-align:right;">完了日</th>
+                        <th>改善</th>
+                        <th style="text-align:right;">効果</th>
                     </tr>
                 </thead>
                 <tbody>
                     <tr>
-                        <td>改善1: 予定と同じボタン</td>
-                        <td style="text-align:center;"><span class="status-complete">✅ 完了</span></td>
-                        <td style="text-align:right;">2025-11-23</td>
+                        <td>予定と同じボタン</td>
+                        <td style="text-align:right;color:#0366d6;"><strong>50%削減</strong></td>
                     </tr>
                     <tr>
-                        <td>改善2: 一括コピー機能</td>
-                        <td style="text-align:center;"><span class="status-complete">✅ 完了</span></td>
-                        <td style="text-align:right;">2025-11-24</td>
+                        <td>一括コピー機能</td>
+                        <td style="text-align:right;color:#28a745;"><strong>86%削減</strong></td>
                     </tr>
                     <tr>
-                        <td>改善3: ダブルクリック機能</td>
-                        <td style="text-align:center;"><span class="status-pending">⏳ 未実装</span></td>
-                        <td style="text-align:right;">-</td>
+                        <td>ダブルクリック</td>
+                        <td style="text-align:right;"><strong>高速操作</strong></td>
+                    </tr>
+                    <tr>
+                        <td>キーボード操作</td>
+                        <td style="text-align:right;"><strong>アクセシビリティ</strong></td>
                     </tr>
                 </tbody>
             </table>
         </div>
 
         <div class="card">
-            <h2>📈 削減効果の推移</h2>
-            <table>
-                <thead>
-                    <tr>
-                        <th>段階</th>
-                        <th style="text-align:right;">作業時間</th>
-                        <th style="text-align:right;">削減率</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td>従来（手動入力）</td>
-                        <td style="text-align:right;"><strong>50分/月</strong></td>
-                        <td style="text-align:right;">-</td>
-                    </tr>
-                    <tr style="background:#f0f9ff;">
-                        <td>改善1適用後</td>
-                        <td style="text-align:right;"><strong style="color:#0366d6;">25分/月</strong></td>
-                        <td style="text-align:right; color:#0366d6;">▼ 50%削減</td>
-                    </tr>
-                    <tr style="background:#e8f5e9;">
-                        <td>改善2適用後</td>
-                        <td style="text-align:right;"><strong style="color:#28a745;">7分/月</strong></td>
-                        <td style="text-align:right; color:#28a745;">▼ 86%削減</td>
-                    </tr>
-                </tbody>
-            </table>
+            <h2>技術スタック</h2>
+            <p><strong>フロントエンド</strong>: React 19, TypeScript, Vite</p>
+            <p><strong>バックエンド</strong>: Firebase (Auth, Firestore, Functions)</p>
+            <p><strong>AI</strong>: Google Gemini API</p>
+            <p><strong>テスト</strong>: Playwright (E2E), Vitest</p>
+            <p><strong>CI/CD</strong>: GitHub Actions</p>
         </div>
 
         <div class="card">
-            <h2>🚀 改善機能の詳細</h2>
-
-            <h3>改善1: 「予定と同じ」ボタン</h3>
-            <p>実績入力時に予定通りだった場合、ワンクリックで入力完了。</p>
-            <div class="metric">
-                <strong>効果: 月間作業時間 50分 → 25分（50%削減）</strong>
-            </div>
-
-            <h3>改善2: 一括コピー機能</h3>
-            <p>複数スタッフの実績を一度にまとめて入力。</p>
-            <div class="metric">
-                <strong>効果: 月間作業時間 50分 → 7分（86%削減）</strong>
-            </div>
-
-            <h3>改善3: ダブルクリック機能（未実装）</h3>
-            <p>セルをダブルクリックで即座にコピー（さらなる効率化）。</p>
-            <div class="note">
-                <strong>状態</strong>: 未実装<br>
-                <strong>優先度</strong>: 中<br>
-                <strong>推定工数</strong>: 2-3時間
-            </div>
-        </div>
-
-        <div class="card">
-            <h2>📊 開発規模・投資実績</h2>
-            <table>
-                <thead>
-                    <tr>
-                        <th>項目</th>
-                        <th style="text-align:right;">実績</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td>総開発時間</td>
-                        <td style="text-align:right;"><strong>約120時間</strong></td>
-                    </tr>
-                    <tr>
-                        <td>コード行数</td>
-                        <td style="text-align:right;"><strong>約15,000行</strong></td>
-                    </tr>
-                    <tr>
-                        <td>E2Eテストカバレッジ</td>
-                        <td style="text-align:right;"><strong>主要機能100%</strong></td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
-
-        <div class="card">
-            <h2>🔗 リンク</h2>
-            <a href="https://ai-care-shift-scheduler.web.app" class="link-button">📱 本番環境を開く</a>
-            <a href="technical-mobile.html" class="link-button link-button-secondary">📄 技術ドキュメント</a>
-            <a href="index.html" class="link-button link-button-secondary">💻 デスクトップ版を見る</a>
-        </div>
-
-        <div class="card">
-            <h2>🛠️ 技術スタック</h2>
-            <p><strong>フロントエンド</strong>: React, TypeScript</p>
-            <p><strong>バックエンド</strong>: Firebase (Authentication, Firestore, Cloud Functions)</p>
-            <p><strong>AI</strong>: Gemini API</p>
-            <p><strong>テスト</strong>: Playwright（E2E）</p>
+            <h2>リンク</h2>
+            <a href="https://ai-care-shift-scheduler.web.app" class="link-button">本番環境</a>
+            <a href="technical-mobile.html" class="link-button link-button-secondary">技術詳細</a>
+            <a href="index.html" class="link-button link-button-secondary">PC版</a>
         </div>
     </div>
 
     <div class="footer">
-        <p><strong>最終更新</strong>: 2025年11月24日</p>
-        <p>© 2025 シフト管理システム</p>
+        <p><strong>最終更新</strong>: 2025年11月26日（Phase 39完了）</p>
+        <p>AIシフト自動作成システム</p>
     </div>
 </body>
 </html>

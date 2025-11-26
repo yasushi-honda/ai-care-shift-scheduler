@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>技術ドキュメント - 開発者向け</title>
-    <meta name="description" content="Phase 25 ユーザビリティ改善の技術詳細とダイアグラム集">
+    <title>技術ドキュメント - AIシフト自動作成システム</title>
+    <meta name="description" content="開発者向け技術ドキュメント - WBS、ER図、システム構成図、フロー図">
 
     <!-- モバイル判定リダイレクト -->
     <script>
@@ -56,7 +56,7 @@
             text-shadow: 1px 1px 2px rgba(0,0,0,0.2);
         }
         .main-content {
-            max-width: 64rem;
+            max-width: 72rem;
             padding: 2rem 1rem;
             margin: 0 auto;
             font-size: 1.1rem;
@@ -87,6 +87,24 @@
         strong {
             font-weight: bold;
         }
+        .toc {
+            background: #f6f8fa;
+            border: 1px solid #d1d5da;
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin: 1.5rem 0;
+        }
+        .toc h3 {
+            margin-top: 0;
+            color: #24292e;
+        }
+        .toc ul {
+            list-style: none;
+            padding-left: 0;
+        }
+        .toc li {
+            margin: 0.5rem 0;
+        }
         .mermaid {
             background: #f6f8fa;
             border: 1px solid #d1d5da;
@@ -105,7 +123,6 @@
             max-width: 100%;
             height: auto;
         }
-        /* 大きな図用のスタイル */
         .mermaid-large {
             overflow-x: scroll;
             max-width: 100%;
@@ -113,7 +130,6 @@
         .mermaid-large svg {
             min-width: 1200px;
         }
-        /* モーダル表示用 */
         .mermaid-modal {
             display: none;
             position: fixed;
@@ -203,13 +219,32 @@
             text-align: center;
             font-size: 0.9rem;
         }
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            margin: 1rem 0;
+        }
+        th, td {
+            border: 1px solid #d1d5da;
+            padding: 0.75rem;
+            text-align: left;
+        }
+        th {
+            background: #f6f8fa;
+            font-weight: 600;
+        }
+        code {
+            background: #f6f8fa;
+            padding: 0.2rem 0.4rem;
+            border-radius: 3px;
+            font-family: monospace;
+        }
     </style>
 
     <!-- Mermaid -->
     <script type="module">
       import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
 
-      // Wait for DOM to be fully loaded
       if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', initMermaid);
       } else {
@@ -229,30 +264,12 @@
           },
           gantt: {
             useMaxWidth: false
+          },
+          er: {
+            useMaxWidth: false
           }
         });
         mermaid.run().then(() => {
-          // WBS図を大きく表示
-          const headings = document.querySelectorAll('h2');
-          let wbsDiagram = null;
-          headings.forEach(h => {
-            if (h.textContent.includes('WBS')) {
-              wbsDiagram = h;
-            }
-          });
-
-          if (wbsDiagram) {
-            let nextElement = wbsDiagram.nextElementSibling;
-            while (nextElement) {
-              if (nextElement.classList && nextElement.classList.contains('mermaid')) {
-                nextElement.classList.add('mermaid-large');
-                break;
-              }
-              nextElement = nextElement.nextElementSibling;
-            }
-          }
-
-          // クリックで拡大表示
           setupZoomableImages();
         });
       }
@@ -265,8 +282,8 @@
           <div class="mermaid-modal-content">
             <div class="zoom-controls">
               <button class="zoom-btn zoom-in" title="拡大">+</button>
-              <button class="zoom-btn zoom-out" title="縮小">−</button>
-              <button class="zoom-btn zoom-reset" title="リセット">⟲</button>
+              <button class="zoom-btn zoom-out" title="縮小">-</button>
+              <button class="zoom-btn zoom-reset" title="リセット">&#8635;</button>
               <div class="zoom-level">100%</div>
             </div>
           </div>
@@ -317,17 +334,13 @@
           diagram.addEventListener('click', function() {
             const svg = this.querySelector('svg');
             if (svg) {
-              // コントロール以外をクリア
               const controls = modalContent.querySelector('.zoom-controls');
               modalContent.innerHTML = '';
               modalContent.appendChild(controls);
 
               const clonedSvg = svg.cloneNode(true);
-
-              // ダークモード対応：SVGの背景を白に設定
               clonedSvg.style.backgroundColor = 'white';
 
-              // テキストの色を強制的に黒にする
               const textElements = clonedSvg.querySelectorAll('text, .nodeLabel, .edgeLabel');
               textElements.forEach(el => {
                 el.style.fill = '#000';
@@ -339,7 +352,6 @@
               translateX = 0;
               translateY = 0;
 
-              // ドラッグ機能
               clonedSvg.addEventListener('mousedown', (e) => {
                 if (e.button === 0) {
                   isDragging = true;
@@ -390,311 +402,551 @@
 <body>
     <header class="page-header" role="banner">
         <h1 class="project-name">技術ドキュメント</h1>
-        <h2 class="project-tagline">開発者向け</h2>
+        <h2 class="project-tagline">AIシフト自動作成システム - 開発者向け</h2>
     </header>
 
     <main class="main-content" role="main">
         <h1>技術ドキュメント（開発者向け）</h1>
 
-        <p>Phase 25 ユーザビリティ改善の技術詳細とダイアグラム集です。</p>
+        <p>Phase 39まで完了したAIシフト自動作成システムの技術詳細です。WBS、ER図、システム構成図、フロー図を含みます。</p>
 
-        <hr>
-
-        <h2>WBS（作業分解構造）</h2>
-
-        <div class="mermaid">
-graph TB
-    A[Phase 25.2.5<br/>ユーザビリティ改善]
-
-    A --> B[Task 1<br/>個別「予定と同じ」ボタン]
-    A --> C[Task 2<br/>一括予定→実績コピー]
-    A --> D[Task 3<br/>ダブルクリック即時コピー<br/>未実装]
-
-    B --> B1[設計・仕様確認]
-    B --> B2[copyPlannedToActual実装]
-    B --> B3[CopyPlannedToActualButton実装]
-    B --> B4[ActualShiftInputModal統合]
-    B --> B5[TypeScript型チェック]
-    B --> B6[ユニットテスト]
-    B --> B7[CodeRabbitレビュー]
-    B --> B8[Git管理]
-
-    C --> C1[設計・仕様確認]
-    C --> C2[bulkCopyPlannedToActual実装]
-    C --> C3[BulkCopyPlannedToActualModal実装]
-    C --> C4[App.tsx統合]
-    C --> C5[ShiftTable.tsxボタン追加]
-    C --> C6[TypeScript型チェック]
-    C --> C7[ユニットテスト]
-    C --> C8[CodeRabbitレビュー<br/>4回・9件対応]
-    C --> C9[Git管理・CI/CD]
-
-    D --> D1[UI設計]
-    D --> D2[イベントハンドラ実装]
-    D --> D3[モーダル改修]
-    D --> D4[E2Eテスト]
-
-    style B fill:#90EE90
-    style C fill:#90EE90
-    style D fill:#FFE4B5
+        <div class="toc">
+            <h3>目次</h3>
+            <ul>
+                <li><a href="#wbs">1. WBS（作業分解構造）</a></li>
+                <li><a href="#gantt">2. ガントチャート</a></li>
+                <li><a href="#architecture">3. システムアーキテクチャ</a></li>
+                <li><a href="#er-diagram">4. ER図（データモデル）</a></li>
+                <li><a href="#auth-flow">5. 認証フロー</a></li>
+                <li><a href="#ai-flow">6. AIシフト生成フロー</a></li>
+                <li><a href="#component">7. コンポーネント構成</a></li>
+                <li><a href="#keyboard">8. キーボード操作フロー</a></li>
+            </ul>
         </div>
-        <p class="zoom-hint">💡 図をクリックすると拡大表示されます（横スクロールで全体を確認できます）</p>
 
         <hr>
 
-        <h2>ガントチャート（実装スケジュール）</h2>
+        <h2 id="wbs">1. WBS（作業分解構造）</h2>
+
+        <p>Phase 0-39の全作業を構造化した図です。</p>
+
+        <div class="mermaid mermaid-large">
+graph TB
+    A[AIシフト自動作成システム<br/>Phase 0-39]
+
+    A --> B[Phase 0-12<br/>基盤構築]
+    A --> C[Phase 13-17<br/>AI統合]
+    A --> D[Phase 18-26<br/>改善・拡張]
+    A --> E[Phase 27-37<br/>UX改善]
+    A --> F[Phase 38-39<br/>設定管理]
+
+    B --> B1[認証・権限管理]
+    B --> B2[Firestore設計]
+    B --> B3[UI/UX基盤]
+
+    B1 --> B1a[Firebase Auth]
+    B1 --> B1b[RBAC実装]
+    B1 --> B1c[マルチテナント]
+
+    B2 --> B2a[コレクション設計]
+    B2 --> B2b[セキュリティルール]
+    B2 --> B2c[インデックス設定]
+
+    C --> C1[Gemini API統合]
+    C --> C2[シフト生成AI]
+    C --> C3[制約条件最適化]
+
+    C1 --> C1a[Cloud Functions]
+    C1 --> C1b[APIキー管理]
+
+    C2 --> C2a[プロンプト設計]
+    C2 --> C2b[レスポンス解析]
+
+    D --> D1[実績入力効率化]
+    D --> D2[E2Eテスト]
+    D --> D3[モバイル最適化]
+
+    D1 --> D1a[予定と同じボタン]
+    D1 --> D1b[一括コピー機能]
+
+    E --> E1[ダブルクリック]
+    E --> E2[キーボード操作]
+    E --> E3[アンドゥ/リドゥ]
+    E --> E4[ヘルプモーダル]
+
+    E2 --> E2a[Tab/Enter]
+    E2 --> E2b[矢印キー]
+    E2 --> E2c[PageUp/Down]
+
+    F --> F1[シフト種別設定]
+    F --> F2[休暇残高管理]
+
+    F1 --> F1a[カスタムシフト]
+    F1 --> F1b[色設定]
+
+    F2 --> F2a[公休残高]
+    F2 --> F2b[有給残高]
+    F2 --> F2c[繰越計算]
+
+    style A fill:#E3F2FD
+    style B fill:#BBDEFB
+    style C fill:#FFF3E0
+    style D fill:#E8F5E9
+    style E fill:#F3E5F5
+    style F fill:#FCE4EC
+        </div>
+        <p class="zoom-hint">図をクリックすると拡大表示されます</p>
+
+        <hr>
+
+        <h2 id="gantt">2. ガントチャート</h2>
 
         <div class="mermaid">
 gantt
-    title Phase 25 ユーザビリティ改善 実装スケジュール
+    title AIシフト自動作成システム 開発スケジュール
     dateFormat YYYY-MM-DD
 
-    section 企画・提案
-    ユーザビリティ改善提案作成 : done, proposal, 2025-11-23, 1d
+    section Phase 0-12 基盤構築
+    プロトタイプ: done, p0, 2025-10-23, 7d
+    認証実装: done, p1, 2025-10-30, 3d
+    Firestore設計: done, p2, 2025-11-02, 3d
 
-    section Phase 25.2.5 Task 1
-    設計・仕様確認 : done, task1-design, 2025-11-23, 2h
-    copyPlannedToActual実装 : done, task1-util, after task1-design, 1h
-    CopyPlannedToActualButton実装 : done, task1-comp, after task1-util, 1h
-    ActualShiftInputModal統合 : done, task1-modal, after task1-comp, 1h
-    TypeScript型チェック : done, task1-ts, after task1-modal, 30m
-    ユニットテスト : done, task1-test, after task1-ts, 30m
-    CodeRabbitレビュー : done, task1-review, after task1-test, 30m
-    Git管理・デプロイ : done, task1-deploy, after task1-review, 30m
+    section Phase 13-17 AI統合
+    Gemini API統合: done, p3, 2025-11-06, 5d
+    シフト生成AI: done, p4, 2025-11-11, 4d
 
-    section Phase 25.2.5 Task 2
-    設計・仕様確認 : done, task2-design, 2025-11-24, 1h
-    bulkCopyPlannedToActual実装 : done, task2-util, after task2-design, 1h
-    BulkCopyPlannedToActualModal実装 : done, task2-modal, after task2-util, 2h
-    App.tsx統合 : done, task2-app, after task2-modal, 1h
-    ShiftTable.tsxボタン追加 : done, task2-table, after task2-app, 30m
-    TypeScript型チェック : done, task2-ts, after task2-table, 30m
-    ユニットテスト : done, task2-test, after task2-ts, 30m
-    CodeRabbitレビュー1 : done, task2-review1, after task2-test, 30m
-    修正・レビュー2-4 : done, task2-review2, after task2-review1, 2h
-    Git管理・CI/CD : done, task2-deploy, after task2-review2, 30m
+    section Phase 18-26 改善
+    実績入力効率化: done, p5, 2025-11-16, 5d
+    E2Eテスト: done, p6, 2025-11-21, 2d
+    モバイル最適化: done, p7, 2025-11-23, 2d
+
+    section Phase 27-37 UX
+    ダブルクリック: done, p8, 2025-11-25, 1d
+    キーボード操作: done, p9, 2025-11-25, 1d
+    アンドゥ/リドゥ: done, p10, 2025-11-25, 1d
+
+    section Phase 38-39 設定
+    シフト種別設定: done, p11, 2025-11-26, 1d
+    休暇残高管理: done, p12, 2025-11-26, 1d
         </div>
 
         <hr>
 
-        <h2>システム構成図</h2>
+        <h2 id="architecture">3. システムアーキテクチャ</h2>
 
         <div class="mermaid">
 graph TB
-    subgraph "ユーザー層"
-        U[ユーザー<br/>施設管理者・スタッフ]
+    subgraph "クライアント層"
+        U[ユーザー<br/>ブラウザ]
+        M[モバイル<br/>レスポンシブ]
     end
 
-    subgraph "プレゼンテーション層"
-        ST[ShiftTable<br/>シフト表示]
-        ASIM[ActualShiftInputModal<br/>個別実績入力]
-        BCPAM[BulkCopyPlannedToActualModal<br/>一括コピー]
-        CPTAB[CopyPlannedToActualButton<br/>「予定と同じ」ボタン]
+    subgraph "フロントエンド"
+        R[React 19 + TypeScript]
+        V[Vite Dev Server]
+        T[TailwindCSS]
     end
 
-    subgraph "アプリケーション層"
-        APP[App.tsx<br/>状態管理・ハンドラ]
+    subgraph "Firebase"
+        FA[Firebase Auth]
+        FS[Cloud Firestore]
+        FC[Cloud Functions]
+        FH[Firebase Hosting]
     end
 
-    subgraph "ビジネスロジック層"
-        CPTAUtil[copyPlannedToActual<br/>個別コピーロジック]
-        BCPTAUtil[bulkCopyPlannedToActual<br/>一括コピーロジック]
-        GUACUtil[getUnfilledActualCount<br/>未入力件数計算]
+    subgraph "外部サービス"
+        G[Google Gemini API<br/>us-central1]
     end
 
-    subgraph "データアクセス層"
-        SS[ScheduleService<br/>Firestore操作]
+    subgraph "CI/CD"
+        GH[GitHub Actions]
+        CR[CodeRabbit]
+        GP[GitHub Pages]
     end
 
-    subgraph "データベース層"
-        FS[(Cloud Firestore<br/>スケジュールデータ)]
-    end
+    U --> FH
+    M --> FH
+    FH --> R
+    R --> FA
+    R --> FS
+    R --> FC
+    FC --> G
 
-    U -->|操作| ST
-    U -->|クリック| CPTAB
-    U -->|クリック| BCPAM
-
-    ST -->|モーダル表示| ASIM
-    ST -->|ボタン表示| CPTAB
-    ST -->|モーダル表示| BCPAM
-
-    ASIM -->|コピー実行| APP
-    CPTAB -->|コピー実行| CPTAUtil
-    BCPAM -->|一括コピー実行| APP
-
-    APP -->|個別コピー| CPTAUtil
-    APP -->|一括コピー| BCPTAUtil
-    APP -->|保存| SS
-
-    BCPAM -->|未入力件数取得| GUACUtil
-
-    CPTAUtil -->|シフトデータ変換| APP
-    BCPTAUtil -->|シフトデータ変換| APP
-    GUACUtil -->|件数計算| BCPAM
-
-    SS -->|CRUD操作| FS
+    GH --> FH
+    GH --> GP
+    CR --> GH
 
     style U fill:#E6F3FF
-    style ST fill:#FFE6F0
-    style ASIM fill:#FFE6F0
-    style BCPAM fill:#FFE6F0
-    style CPTAB fill:#FFE6F0
-    style APP fill:#FFF4E6
-    style CPTAUtil fill:#F0FFE6
-    style BCPTAUtil fill:#F0FFE6
-    style GUACUtil fill:#F0FFE6
-    style SS fill:#E6F0FF
-    style FS fill:#F0E6FF
+    style M fill:#E6F3FF
+    style R fill:#61DAFB
+    style FA fill:#FFCA28
+    style FS fill:#FFCA28
+    style FC fill:#FFCA28
+    style FH fill:#FFCA28
+    style G fill:#8E75B2
+    style GH fill:#2088FF
         </div>
 
         <hr>
 
-        <h2>データフロー図</h2>
+        <h2 id="er-diagram">4. ER図（データモデル）</h2>
+
+        <p>Firestoreのコレクション構造を表現したER図です。</p>
+
+        <div class="mermaid">
+erDiagram
+    USERS ||--o{ FACILITIES : "manages"
+    FACILITIES ||--|{ STAFF : "contains"
+    FACILITIES ||--|{ SCHEDULES : "has"
+    FACILITIES ||--o{ LEAVE_REQUESTS : "has"
+    FACILITIES ||--o| SHIFT_SETTINGS : "has"
+    FACILITIES ||--o| LEAVE_SETTINGS : "has"
+    FACILITIES ||--|{ LEAVE_BALANCES : "tracks"
+    STAFF ||--o{ LEAVE_REQUESTS : "submits"
+    STAFF ||--o{ LEAVE_BALANCES : "has"
+
+    USERS {
+        string uid PK
+        string email
+        string displayName
+        string role "admin|manager|staff"
+        array facilities
+        timestamp createdAt
+    }
+
+    FACILITIES {
+        string id PK
+        string name
+        string address
+        object settings
+        timestamp createdAt
+    }
+
+    STAFF {
+        string id PK
+        string name
+        string role "介護福祉士|看護師等"
+        array qualifications
+        object workPreferences
+        boolean isNightShiftOnly
+        boolean isActive
+    }
+
+    SCHEDULES {
+        string id PK
+        string yearMonth "2025-11"
+        array staffSchedules
+        timestamp updatedAt
+        string updatedBy
+    }
+
+    LEAVE_REQUESTS {
+        string id PK
+        string staffId FK
+        string date
+        string leaveType "希望休|有給等"
+        string status "pending|approved"
+    }
+
+    SHIFT_SETTINGS {
+        string id PK "default"
+        array shiftTypes
+        array defaultShiftCycle
+        timestamp updatedAt
+    }
+
+    LEAVE_SETTINGS {
+        string id PK "default"
+        object publicHoliday
+        object paidLeave
+        timestamp updatedAt
+    }
+
+    LEAVE_BALANCES {
+        string id PK "yearMonth_staffId"
+        string staffId FK
+        string yearMonth
+        object publicHolidayBalance
+        object paidLeaveBalance
+    }
+        </div>
+
+        <h3>コレクション構造</h3>
+
+        <table>
+            <tr>
+                <th>パス</th>
+                <th>説明</th>
+            </tr>
+            <tr>
+                <td><code>/users/{uid}</code></td>
+                <td>ユーザー情報、権限、所属事業所</td>
+            </tr>
+            <tr>
+                <td><code>/facilities/{facilityId}</code></td>
+                <td>事業所情報</td>
+            </tr>
+            <tr>
+                <td><code>/facilities/{facilityId}/staff/{staffId}</code></td>
+                <td>スタッフ情報（サブコレクション）</td>
+            </tr>
+            <tr>
+                <td><code>/facilities/{facilityId}/schedules/{yearMonth}</code></td>
+                <td>月間シフト（予定・実績）</td>
+            </tr>
+            <tr>
+                <td><code>/facilities/{facilityId}/leaveRequests/{id}</code></td>
+                <td>休暇申請</td>
+            </tr>
+            <tr>
+                <td><code>/facilities/{facilityId}/shiftSettings/default</code></td>
+                <td>シフト種別設定</td>
+            </tr>
+            <tr>
+                <td><code>/facilities/{facilityId}/leaveSettings/default</code></td>
+                <td>休暇設定</td>
+            </tr>
+            <tr>
+                <td><code>/facilities/{facilityId}/leaveBalances/{yearMonth_staffId}</code></td>
+                <td>休暇残高</td>
+            </tr>
+        </table>
+
+        <hr>
+
+        <h2 id="auth-flow">5. 認証フロー</h2>
 
         <div class="mermaid">
 sequenceDiagram
     actor User as ユーザー
-    participant ST as ShiftTable
-    participant BCPAM as BulkCopyModal
-    participant APP as App.tsx
-    participant Util as bulkCopyUtil
-    participant SS as ScheduleService
+    participant App as React App
+    participant Auth as Firebase Auth
     participant FS as Firestore
+    participant Rules as Security Rules
 
-    User->>ST: 「予定を実績にコピー」クリック
-    ST->>APP: onBulkCopyClick()
-    APP->>BCPAM: モーダル表示
+    User->>App: ログイン画面表示
+    App->>Auth: signInWithEmailAndPassword()
+    Auth-->>App: UserCredential
 
-    BCPAM->>BCPAM: 未入力スタッフ自動選択
-    BCPAM-->>User: モーダル表示
+    App->>FS: getDoc(users/{uid})
+    FS->>Rules: セキュリティルール検証
+    Rules-->>FS: 許可
+    FS-->>App: User Document
 
-    User->>BCPAM: スタッフ選択・実行
-    BCPAM->>APP: onExecute(options)
+    App->>App: ユーザー権限確認
+    alt Admin
+        App->>App: 全事業所アクセス
+    else Manager
+        App->>App: 所属事業所のみ
+    else Staff
+        App->>App: 閲覧のみ
+    end
 
-    APP->>Util: bulkCopyPlannedToActual()
-    Util-->>APP: updatedSchedule
-
-    APP->>APP: setSchedule(楽観的UI更新)
-
-    APP->>SS: updateSchedule()
-    SS->>FS: Firestoreに保存
-    FS-->>SS: 保存成功
-    SS-->>APP: success
-
-    APP->>APP: showSuccess()
-    APP->>APP: モーダル閉じる
-    APP-->>User: 成功メッセージ
-
-    Note over APP,FS: エラー時はrollback
+    App-->>User: ダッシュボード表示
         </div>
 
         <hr>
 
-        <h2>コンポーネント関係図</h2>
+        <h2 id="ai-flow">6. AIシフト生成フロー</h2>
 
         <div class="mermaid">
-graph LR
-    subgraph "App.tsx（状態管理）"
-        APP[App Component<br/>- schedule<br/>- bulkCopyModalOpen<br/>- handleBulkCopyExecute]
+sequenceDiagram
+    actor Manager as 管理者
+    participant App as React App
+    participant CF as Cloud Functions
+    participant Gemini as Gemini API
+    participant FS as Firestore
+
+    Manager->>App: AI生成ボタンクリック
+    App->>App: 制約条件収集
+    Note over App: スタッフ情報、休暇希望、<br/>必要人員体制
+
+    App->>CF: generateShift(options)
+    CF->>CF: プロンプト構築
+
+    CF->>Gemini: generateContent()
+    Note over Gemini: gemini-2.5-flash<br/>us-central1
+
+    Gemini-->>CF: JSON形式シフト
+
+    CF->>CF: レスポンス検証
+    alt 有効なJSON
+        CF->>FS: シフト保存
+        CF-->>App: success + シフトデータ
+        App-->>Manager: シフト表表示
+    else 無効なJSON
+        CF-->>App: error
+        App-->>Manager: エラーメッセージ
     end
-
-    subgraph "ShiftTable.tsx"
-        ST[ShiftTable<br/>- onBulkCopyClick]
-        STButton[一括コピーボタン]
-    end
-
-    subgraph "BulkCopyModal"
-        BCPAM[BulkCopyPlannedToActualModal<br/>- schedules<br/>- targetMonth<br/>- onExecute]
-    end
-
-    subgraph "ActualShiftInputModal"
-        ASIM[ActualShiftInputModal]
-        ASIMButton[CopyPlannedToActualButton]
-    end
-
-    subgraph "Utilities"
-        BCPTAUtil[bulkCopyPlannedToActual]
-        CPTAUtil[copyPlannedToActual]
-        GUACUtil[getUnfilledActualCount]
-    end
-
-    APP -->|props| ST
-    ST -->|render| STButton
-    STButton -->|onClick| APP
-
-    APP -->|props| BCPAM
-    BCPAM -->|onExecute| APP
-
-    APP -->|props| ASIM
-    ASIM -->|render| ASIMButton
-
-    BCPAM -->|import| GUACUtil
-    BCPAM -->|import| BCPTAUtil
-    APP -->|import| BCPTAUtil
-    APP -->|import| CPTAUtil
-
-    style APP fill:#FFF4E6
-    style ST fill:#FFE6F0
-    style BCPAM fill:#FFE6F0
-    style ASIM fill:#FFE6F0
-    style BCPTAUtil fill:#F0FFE6
-    style CPTAUtil fill:#F0FFE6
-    style GUACUtil fill:#F0FFE6
         </div>
 
         <hr>
 
-        <h2>ユーザーインタラクションフロー</h2>
+        <h2 id="component">7. コンポーネント構成</h2>
+
+        <div class="mermaid">
+graph TB
+    subgraph "Pages"
+        App[App.tsx<br/>メインエントリ]
+        Login[Login.tsx]
+        Dashboard[Dashboard]
+    end
+
+    subgraph "シフト関連"
+        ST[ShiftTable.tsx<br/>シフト表]
+        SC[ShiftCell.tsx<br/>セル]
+        SM[ShiftModal.tsx<br/>編集モーダル]
+    end
+
+    subgraph "設定関連"
+        STS[ShiftTypeSettings.tsx<br/>シフト種別設定]
+        LBD[LeaveBalanceDashboard.tsx<br/>休暇残高]
+    end
+
+    subgraph "共通"
+        Modal[Modal.tsx]
+        Button[Button.tsx]
+        Toast[Toast.tsx]
+    end
+
+    subgraph "Services"
+        AuthS[authService.ts]
+        StaffS[staffService.ts]
+        ScheduleS[scheduleService.ts]
+        ShiftTypeS[shiftTypeService.ts]
+        LeaveBalS[leaveBalanceService.ts]
+    end
+
+    subgraph "Hooks"
+        UseAuth[useAuth.ts]
+        UseSchedule[useSchedule.ts]
+        UseUndo[useUndoRedo.ts]
+    end
+
+    App --> Login
+    App --> Dashboard
+    Dashboard --> ST
+    Dashboard --> STS
+    Dashboard --> LBD
+
+    ST --> SC
+    ST --> SM
+    ST --> Modal
+
+    STS --> Modal
+    LBD --> Modal
+
+    ST --> ScheduleS
+    STS --> ShiftTypeS
+    LBD --> LeaveBalS
+
+    App --> UseAuth
+    ST --> UseSchedule
+    ST --> UseUndo
+
+    style App fill:#E3F2FD
+    style ST fill:#E8F5E9
+    style STS fill:#FCE4EC
+    style LBD fill:#FCE4EC
+        </div>
+
+        <hr>
+
+        <h2 id="keyboard">8. キーボード操作フロー</h2>
 
         <div class="mermaid">
 flowchart TD
-    Start([ユーザーがシフト表を表示])
+    Start([シフトセルにフォーカス])
 
-    Start --> ShowButton["「予定を実績にコピー」<br/>ボタン表示"]
-    ShowButton --> ClickButton{ボタンクリック}
-    ClickButton -->|クリック| OpenModal[モーダル表示]
+    Start --> KeyPress{キー入力}
 
-    OpenModal --> AutoSelect[未入力スタッフを<br/>自動選択]
-    AutoSelect --> ShowStaffList[スタッフ選択リスト表示]
+    KeyPress -->|Tab| NextCell[次のセルへ移動]
+    KeyPress -->|Shift+Tab| PrevCell[前のセルへ移動]
+    KeyPress -->|Enter| OpenModal[編集モーダル表示]
+    KeyPress -->|矢印キー| ArrowNav[矢印方向へ移動]
+    KeyPress -->|PageUp| PrevWeek[1週間前へ]
+    KeyPress -->|PageDown| NextWeek[1週間後へ]
+    KeyPress -->|Ctrl+Z| Undo[アンドゥ]
+    KeyPress -->|Ctrl+Shift+Z| Redo[リドゥ]
+    KeyPress -->|?| Help[ヘルプモーダル]
+    KeyPress -->|ダブルクリック| CycleShift[シフトサイクル]
 
-    ShowStaffList --> UserSelect{ユーザーが選択}
-    UserSelect -->|個別選択| UpdateSelection[選択状態更新]
-    UserSelect -->|すべて選択| ToggleAll[全選択/全解除]
-    UpdateSelection --> ShowStaffList
-    ToggleAll --> ShowStaffList
+    NextCell --> End([操作完了])
+    PrevCell --> End
+    ArrowNav --> End
+    PrevWeek --> End
+    NextWeek --> End
 
-    UserSelect -->|実行クリック| ValidateSelection{選択スタッフ<br/>1名以上？}
-    ValidateSelection -->|いいえ| ShowError[エラーメッセージ]
-    ShowError --> ShowStaffList
+    OpenModal --> Edit[シフト編集]
+    Edit --> Save[保存]
+    Save --> End
 
-    ValidateSelection -->|はい| ShowConfirm[確認ダイアログ]
-    ShowConfirm --> UserConfirm{ユーザー確認}
-    UserConfirm -->|キャンセル| ShowStaffList
-    UserConfirm -->|OK| ExecuteCopy[一括コピー実行]
+    Undo --> End
+    Redo --> End
+    Help --> CloseHelp[モーダル閉じる]
+    CloseHelp --> End
 
-    ExecuteCopy --> UpdateUI[UI状態更新]
-    UpdateUI --> SaveFirestore[Firestoreに保存]
-    SaveFirestore --> CheckResult{保存成功？}
-
-    CheckResult -->|はい| ShowSuccess[成功メッセージ]
-    ShowSuccess --> CloseModal[モーダル閉じる]
-    CloseModal --> End([完了])
-
-    CheckResult -->|いいえ| Rollback[状態をロールバック]
-    Rollback --> ShowSaveError[エラーメッセージ]
-    ShowSaveError --> EndError([終了: エラー])
+    CycleShift --> End
 
     style Start fill:#E6F3FF
     style End fill:#90EE90
-    style EndError fill:#FFB6C1
         </div>
+
+        <h3>キーボードショートカット一覧</h3>
+
+        <table>
+            <tr>
+                <th>キー</th>
+                <th>動作</th>
+            </tr>
+            <tr>
+                <td><code>Tab</code></td>
+                <td>次のセルへ移動</td>
+            </tr>
+            <tr>
+                <td><code>Shift + Tab</code></td>
+                <td>前のセルへ移動</td>
+            </tr>
+            <tr>
+                <td><code>Enter</code></td>
+                <td>編集モーダルを開く</td>
+            </tr>
+            <tr>
+                <td><code>矢印キー</code></td>
+                <td>上下左右に移動</td>
+            </tr>
+            <tr>
+                <td><code>PageUp</code></td>
+                <td>1週間前へ移動</td>
+            </tr>
+            <tr>
+                <td><code>PageDown</code></td>
+                <td>1週間後へ移動</td>
+            </tr>
+            <tr>
+                <td><code>Ctrl + Z</code></td>
+                <td>アンドゥ（元に戻す）</td>
+            </tr>
+            <tr>
+                <td><code>Ctrl + Shift + Z</code></td>
+                <td>リドゥ（やり直し）</td>
+            </tr>
+            <tr>
+                <td><code>?</code></td>
+                <td>ヘルプモーダル表示</td>
+            </tr>
+            <tr>
+                <td><code>ダブルクリック</code></td>
+                <td>シフトサイクル（次のシフトへ）</td>
+            </tr>
+        </table>
 
         <hr>
 
         <p><a href="index.html">トップページに戻る</a></p>
 
         <footer class="site-footer">
-            <p><strong>最終更新</strong>: 2025年11月24日</p>
+            <p><strong>最終更新</strong>: 2025年11月26日（Phase 39完了時点）</p>
         </footer>
     </main>
 </body>

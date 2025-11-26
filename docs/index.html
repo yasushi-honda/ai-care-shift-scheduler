@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>シフト管理システム - 改善実績</title>
-    <meta name="description" content="実績入力の効率化">
+    <title>AIシフト自動作成システム - プロジェクト概要</title>
+    <meta name="description" content="介護事業所向けAIシフト自動作成・管理システム">
 
     <!-- モバイル判定リダイレクト -->
     <script>
@@ -87,6 +87,49 @@
         }
         strong {
             font-weight: bold;
+        }
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1.5rem;
+            margin: 1.5rem 0;
+        }
+        .feature-card {
+            background: #f6f8fa;
+            border: 1px solid #d1d5da;
+            border-radius: 8px;
+            padding: 1.5rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+        }
+        .feature-card h3 {
+            margin-top: 0;
+            color: #24292e;
+            font-size: 1.2rem;
+        }
+        .feature-card p {
+            margin: 0.5rem 0 0;
+            color: #586069;
+        }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 1rem;
+            margin: 1.5rem 0;
+        }
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 1.5rem;
+            border-radius: 8px;
+            text-align: center;
+        }
+        .stat-number {
+            font-size: 2.5rem;
+            font-weight: bold;
+        }
+        .stat-label {
+            font-size: 0.9rem;
+            opacity: 0.9;
         }
         .mermaid {
             background: #f6f8fa;
@@ -195,6 +238,22 @@
             text-align: center;
             font-size: 0.9rem;
         }
+        .badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 1rem;
+            font-size: 0.85rem;
+            font-weight: 600;
+            margin-right: 0.5rem;
+        }
+        .badge-done {
+            background: #28a745;
+            color: white;
+        }
+        .badge-planned {
+            background: #6f42c1;
+            color: white;
+        }
     </style>
 
     <!-- Mermaid -->
@@ -234,8 +293,8 @@
           <div class="mermaid-modal-content">
             <div class="zoom-controls">
               <button class="zoom-btn zoom-in" title="拡大">+</button>
-              <button class="zoom-btn zoom-out" title="縮小">−</button>
-              <button class="zoom-btn zoom-reset" title="リセット">⟲</button>
+              <button class="zoom-btn zoom-out" title="縮小">-</button>
+              <button class="zoom-btn zoom-reset" title="リセット">&#8635;</button>
               <div class="zoom-level">100%</div>
             </div>
           </div>
@@ -286,17 +345,13 @@
           diagram.addEventListener('click', function() {
             const svg = this.querySelector('svg');
             if (svg) {
-              // コントロール以外をクリア
               const controls = modalContent.querySelector('.zoom-controls');
               modalContent.innerHTML = '';
               modalContent.appendChild(controls);
 
               const clonedSvg = svg.cloneNode(true);
-
-              // ダークモード対応：SVGの背景を白に設定
               clonedSvg.style.backgroundColor = 'white';
 
-              // テキストの色を強制的に黒にする
               const textElements = clonedSvg.querySelectorAll('text, .nodeLabel, .edgeLabel');
               textElements.forEach(el => {
                 el.style.fill = '#000';
@@ -308,7 +363,6 @@
               translateX = 0;
               translateY = 0;
 
-              // ドラッグ機能
               clonedSvg.addEventListener('mousedown', (e) => {
                 if (e.button === 0) {
                   isDragging = true;
@@ -358,77 +412,133 @@
 </head>
 <body>
     <header class="page-header" role="banner">
-        <h1 class="project-name">シフト管理システム - 改善実績</h1>
-        <h2 class="project-tagline">実績入力の効率化</h2>
+        <h1 class="project-name">AIシフト自動作成システム</h1>
+        <h2 class="project-tagline">介護事業所向け シフト管理・自動生成ソリューション</h2>
     </header>
 
     <main class="main-content" role="main">
-        <h1>シフト管理システム 改善実績</h1>
+        <h1>プロジェクト概要</h1>
 
-        <p>月末のシフト実績入力作業を大幅に効率化しました。</p>
+        <p>介護・福祉事業所向けのAIシフト自動作成・管理システムです。Google Gemini AIを活用し、複雑な制約条件を考慮した最適なシフト表を自動生成します。</p>
 
-        <hr>
-
-        <h2>プロジェクトの歩み</h2>
-
-        <p>2025年10月のプロトタイプ開発から始まり、継続的な改善を重ねてきました。</p>
-
-        <div class="mermaid">
-timeline
-    title シフト管理システム 開発タイムライン
-    section 初期開発（2025年10月）
-        プロトタイプ : 基本機能
-                     : シフト表示・編集
-        認証・データ管理 : マルチテナント設計
-                         : Firebase実装
-    section AI機能（2025年11月）
-        自動シフト生成 : Gemini API統合
-                       : 制約条件対応
-        テスト・検証 : E2Eテスト実装
-                     : 本番デプロイ
-    section ユーザビリティ改善（2025年11月）
-        改善1 予定と同じボタン : 50%効率化
-        改善2 一括コピー機能 : 86%効率化
-        Phase 26.1-26.2 E2Eテスト・モバイル最適化 : 品質保証強化
-        Phase 27-37 UX改善 : ダブルクリック・キーボード操作
-        Phase 38-39 設定管理 : シフト種別・休暇残高
-    section 今後の計画
-        Phase 40+ 機能拡張 : レポート・通知機能
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-number">39</div>
+                <div class="stat-label">完了フェーズ</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">86%</div>
+                <div class="stat-label">作業時間削減</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">2ヶ月</div>
+                <div class="stat-label">開発期間</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">10+</div>
+                <div class="stat-label">主要機能</div>
+            </div>
         </div>
 
         <hr>
 
-        <h2>開発規模・投資実績</h2>
+        <h2>主要機能</h2>
 
-        <p>本プロジェクトは段階的な機能拡充により、確実に価値を積み上げてきました。</p>
+        <div class="feature-grid">
+            <div class="feature-card">
+                <h3>AIシフト自動生成</h3>
+                <p>Gemini AIが制約条件（連勤制限、夜勤後休息、資格要件等）を考慮して最適なシフトを自動生成</p>
+            </div>
+            <div class="feature-card">
+                <h3>認証・権限管理</h3>
+                <p>Firebase Authによるマルチテナント設計。Admin/Manager/Staffの3段階RBAC</p>
+            </div>
+            <div class="feature-card">
+                <h3>実績入力効率化</h3>
+                <p>「予定と同じ」ボタン、一括コピー機能で月間作業時間を86%削減</p>
+            </div>
+            <div class="feature-card">
+                <h3>キーボード操作</h3>
+                <p>Tab/Enter/矢印キー/PageUp/Down対応。アクセシビリティ向上</p>
+            </div>
+            <div class="feature-card">
+                <h3>シフト種別カスタマイズ</h3>
+                <p>事業所ごとにシフト種別（時間、休憩、色）を自由に設定可能</p>
+            </div>
+            <div class="feature-card">
+                <h3>休暇残高管理</h3>
+                <p>公休・有給の残高管理、繰越計算、残高調整機能</p>
+            </div>
+        </div>
+
+        <hr>
+
+        <h2>開発タイムライン</h2>
+
+        <div class="mermaid">
+timeline
+    title AIシフト自動作成システム 開発タイムライン
+    section 基盤構築（10月）
+        Phase 0-6 : プロトタイプ開発
+                  : 認証・マルチテナント設計
+        Phase 7-12 : UI/UX基盤
+                   : Firestore設計
+    section AI統合（11月前半）
+        Phase 13-17 : Gemini API統合
+                    : シフト生成AI
+                    : 制約条件最適化
+    section 改善・拡張（11月中旬）
+        Phase 18-26 : 実績入力効率化
+                    : E2Eテスト
+                    : モバイル最適化
+    section UX強化（11月後半）
+        Phase 27-37 : ダブルクリック機能
+                    : キーボードナビゲーション
+                    : アンドゥ/リドゥ
+        Phase 38-39 : シフト種別設定
+                    : 休暇残高管理
+    section 計画中（12月）
+        Phase 40+ : レポート機能
+                  : 通知機能
+                  : カレンダー連携
+        </div>
+
+        <hr>
+
+        <h2>開発フェーズ詳細</h2>
 
         <div class="mermaid">
 graph LR
-    subgraph "Phase 0-12 基盤構築"
+    subgraph "Phase 0-12<br/>基盤構築"
         A1[認証・権限管理] --> A2[データ設計]
         A2 --> A3[UI/UX基盤]
     end
 
-    subgraph "Phase 13-17 AI統合"
+    subgraph "Phase 13-17<br/>AI統合"
         B1[Gemini API] --> B2[シフト生成AI]
         B2 --> B3[制約条件最適化]
     end
 
-    subgraph "Phase 18-26 改善・拡張"
+    subgraph "Phase 18-26<br/>改善・拡張"
         C1[実績入力効率化] --> C2[一括操作機能]
-        C2 --> C3[E2Eテスト追加]
+        C2 --> C3[E2Eテスト]
         C3 --> C4[モバイル最適化]
     end
 
-    subgraph "Phase 27-39 UX・設定管理"
-        D1[ダブルクリック・キーボード] --> D2[アクセシビリティ]
-        D2 --> D3[シフト種別設定]
-        D3 --> D4[休暇残高管理]
+    subgraph "Phase 27-37<br/>UX改善"
+        D1[ダブルクリック] --> D2[キーボード操作]
+        D2 --> D3[アンドゥ/リドゥ]
+        D3 --> D4[アクセシビリティ]
+    end
+
+    subgraph "Phase 38-39<br/>設定管理"
+        E1[シフト種別設定] --> E2[休暇残高管理]
     end
 
     A3 --> B1
     B3 --> C1
     C4 --> D1
+    D4 --> E1
 
     style A1 fill:#E3F2FD
     style A2 fill:#E3F2FD
@@ -444,18 +554,13 @@ graph LR
     style D2 fill:#F3E5F5
     style D3 fill:#F3E5F5
     style D4 fill:#F3E5F5
+    style E1 fill:#FCE4EC
+    style E2 fill:#FCE4EC
         </div>
-
-        <p><strong>開発フェーズ</strong>: 39マイルストーン完了（Phase 39まで）<br>
-        <strong>総開発期間</strong>: 約2ヶ月（継続中）<br>
-        <strong>主要機能数</strong>: 認証、シフト管理、AI生成、実績入力、権限管理、E2Eテスト、シフト種別設定、休暇残高管理など<br>
-        <strong>技術スタック</strong>: React, TypeScript, Firebase, Gemini AI, Playwright（E2E）</p>
 
         <hr>
 
         <h2>今後のロードマップ</h2>
-
-        <p>ユーザーフィードバックに基づき、継続的な機能拡充を計画しています。</p>
 
         <div class="mermaid">
 gantt
@@ -478,16 +583,16 @@ gantt
 
         <hr>
 
-        <h2>改善の全体像</h2>
+        <h2>効率化の成果</h2>
 
         <div class="mermaid">
 graph TB
     Start[実績入力の課題<br/>月間50分の作業]
 
-    Start --> Phase1[改善1: 予定と同じボタン<br/>完了 2025-11-23]
-    Start --> Phase2[改善2: 一括コピー機能<br/>完了 2025-11-24]
-    Start --> Phase3[改善3: ダブルクリック機能<br/>完了 2025-11-25]
-    Start --> Phase4[改善4: キーボード操作<br/>完了 2025-11-26]
+    Start --> Phase1[改善1: 予定と同じボタン<br/><span class='badge badge-done'>完了</span>]
+    Start --> Phase2[改善2: 一括コピー機能<br/><span class='badge badge-done'>完了</span>]
+    Start --> Phase3[改善3: ダブルクリック機能<br/><span class='badge badge-done'>完了</span>]
+    Start --> Phase4[改善4: キーボード操作<br/><span class='badge badge-done'>完了</span>]
 
     Phase1 --> Result1[効果: 50%削減<br/>25分/月]
     Phase2 --> Result2[効果: 86%削減<br/>7分/月]
@@ -506,107 +611,64 @@ graph TB
 
         <hr>
 
-        <h2>実装状況</h2>
+        <h2>技術スタック</h2>
 
         <div class="mermaid">
-gantt
-    title 改善機能の実装スケジュール
-    dateFormat YYYY-MM-DD
+graph TB
+    subgraph "フロントエンド"
+        FE1[React 19]
+        FE2[TypeScript]
+        FE3[Vite]
+        FE4[TailwindCSS]
+    end
 
-    section 完了
-    改善1 予定と同じボタン: done, impl1, 2025-11-23, 1d
-    改善2 一括コピー機能: done, impl2, 2025-11-24, 1d
+    subgraph "バックエンド"
+        BE1[Firebase Auth]
+        BE2[Cloud Firestore]
+        BE3[Cloud Functions]
+        BE4[Firebase Hosting]
+    end
 
-    section 未実装
-    改善3 ダブルクリック機能: impl3, 2025-11-25, 1d
-        </div>
+    subgraph "AI"
+        AI1[Google Gemini API]
+        AI2[gemini-2.5-flash]
+    end
 
-        <p><strong>完了</strong>: 改善1・改善2(2025年11月24日時点)<br>
-        <strong>未実装</strong>: 改善3</p>
+    subgraph "テスト・CI/CD"
+        T1[Vitest]
+        T2[Playwright E2E]
+        T3[GitHub Actions]
+        T4[CodeRabbit]
+    end
 
-        <hr>
-
-        <h2>改善の詳細</h2>
-
-        <h3>改善1: 「予定と同じ」ボタン</h3>
-
-        <p>実績入力時に予定通りだった場合、ワンクリックで入力完了。</p>
-
-        <div class="mermaid">
-flowchart LR
-    A[実績入力画面] --> B{予定通り？}
-    B -->|はい| C[ボタンクリック<br/>→ 完了]
-    B -->|いいえ| D[手動入力]
-
-    style C fill:#ccffcc
-        </div>
-
-        <p><strong>効果</strong>: 月間作業時間 50分 → 25分（50%削減）</p>
-
-        <hr>
-
-        <h3>改善2: 一括コピー機能</h3>
-
-        <p>複数スタッフの実績を一度にまとめて入力。</p>
-
-        <div class="mermaid">
-flowchart TD
-    A[シフト表] --> B[一括コピーボタン]
-    B --> C[スタッフ選択]
-    C --> D[期間指定]
-    D --> E[実行]
-    E --> F[完了]
-
-    style F fill:#ccffcc
-        </div>
-
-        <p><strong>効果</strong>: 月間作業時間 50分 → 7分（86%削減）</p>
-
-        <hr>
-
-        <h3>改善3: ダブルクリック機能（未実装）</h3>
-
-        <p>セルをダブルクリックで即座にコピー（さらなる効率化）。</p>
-
-        <p><strong>状態</strong>: 未実装<br>
-        <strong>優先度</strong>: 中<br>
-        <strong>推定工数</strong>: 2-3時間</p>
-
-        <hr>
-
-        <h2>削減効果の推移</h2>
-
-        <div class="mermaid">
-gantt
-    title 月間作業時間の推移
-    dateFormat YYYY-MM-DD
-
-    section 従来
-    手動入力 50分: done, old, 2025-11-01, 50m
-
-    section 改善1適用後
-    25分に短縮: done, imp1, 2025-11-23, 25m
-
-    section 改善2適用後
-    7分に短縮: done, imp2, 2025-11-24, 7m
+    style FE1 fill:#61DAFB
+    style FE2 fill:#3178C6
+    style FE3 fill:#646CFF
+    style FE4 fill:#38BDF8
+    style BE1 fill:#FFCA28
+    style BE2 fill:#FFCA28
+    style BE3 fill:#FFCA28
+    style BE4 fill:#FFCA28
+    style AI1 fill:#8E75B2
+    style AI2 fill:#8E75B2
+    style T1 fill:#729B1B
+    style T2 fill:#2EAD33
+    style T3 fill:#2088FF
+    style T4 fill:#FF6B6B
         </div>
 
         <hr>
 
-        <h2>本番環境</h2>
+        <h2>本番環境・ドキュメント</h2>
 
-        <p><a href="https://ai-care-shift-scheduler.web.app">シフト管理システムを開く</a></p>
-
-        <hr>
-
-        <h2>技術詳細（開発者向け）</h2>
-
-        <p>実装の詳細、コンポーネント構成、データフローなどは<a href="technical.html">技術ドキュメント</a>を参照してください。</p>
+        <p><strong>本番アプリ</strong>: <a href="https://ai-care-shift-scheduler.web.app" target="_blank">ai-care-shift-scheduler.web.app</a></p>
+        <p><strong>技術ドキュメント</strong>: <a href="technical.html">開発者向け詳細（WBS・ER図・フロー図）</a></p>
+        <p><strong>GitHub</strong>: <a href="https://github.com/yasushi-honda/ai-care-shift-scheduler" target="_blank">リポジトリ</a></p>
 
         <hr>
 
         <footer class="site-footer">
-            <p><strong>最終更新</strong>: 2025年11月24日</p>
+            <p><strong>最終更新</strong>: 2025年11月26日（Phase 39完了時点）</p>
         </footer>
     </main>
 </body>
