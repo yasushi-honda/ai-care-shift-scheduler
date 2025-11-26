@@ -389,10 +389,11 @@ timeline
     section ユーザビリティ改善（2025年11月）
         改善1 予定と同じボタン : 50%効率化
         改善2 一括コピー機能 : 86%効率化
-        Phase 26.1 E2Eテスト追加 : 品質保証強化
+        Phase 26.1-26.2 E2Eテスト・モバイル最適化 : 品質保証強化
+        Phase 27-37 UX改善 : ダブルクリック・キーボード操作
+        Phase 38-39 設定管理 : シフト種別・休暇残高
     section 今後の計画
-        Phase 26.2 モバイル最適化 : スマホ対応強化
-        改善3 ダブルクリック : さらなる効率化
+        Phase 40+ 機能拡張 : レポート・通知機能
         </div>
 
         <hr>
@@ -416,11 +417,18 @@ graph LR
     subgraph "Phase 18-26 改善・拡張"
         C1[実績入力効率化] --> C2[一括操作機能]
         C2 --> C3[E2Eテスト追加]
-        C3 --> C4[品質保証強化]
+        C3 --> C4[モバイル最適化]
+    end
+
+    subgraph "Phase 27-39 UX・設定管理"
+        D1[ダブルクリック・キーボード] --> D2[アクセシビリティ]
+        D2 --> D3[シフト種別設定]
+        D3 --> D4[休暇残高管理]
     end
 
     A3 --> B1
     B3 --> C1
+    C4 --> D1
 
     style A1 fill:#E3F2FD
     style A2 fill:#E3F2FD
@@ -431,11 +439,16 @@ graph LR
     style C1 fill:#E8F5E9
     style C2 fill:#E8F5E9
     style C3 fill:#E8F5E9
+    style C4 fill:#E8F5E9
+    style D1 fill:#F3E5F5
+    style D2 fill:#F3E5F5
+    style D3 fill:#F3E5F5
+    style D4 fill:#F3E5F5
         </div>
 
-        <p><strong>開発フェーズ</strong>: 26以上のマイルストーン（Phase 26.1完了）<br>
+        <p><strong>開発フェーズ</strong>: 39マイルストーン完了（Phase 39まで）<br>
         <strong>総開発期間</strong>: 約2ヶ月（継続中）<br>
-        <strong>主要機能数</strong>: 認証、シフト管理、AI生成、実績入力、権限管理、E2Eテストなど<br>
+        <strong>主要機能数</strong>: 認証、シフト管理、AI生成、実績入力、権限管理、E2Eテスト、シフト種別設定、休暇残高管理など<br>
         <strong>技術スタック</strong>: React, TypeScript, Firebase, Gemini AI, Playwright（E2E）</p>
 
         <hr>
@@ -453,16 +466,14 @@ gantt
     基盤構築（Phase 0-12）: done, phase1, 2025-10-23, 2025-11-05
     AI統合（Phase 13-17）: done, phase2, 2025-11-06, 2025-11-15
     改善1・2（Phase 18-25）: done, phase3, 2025-11-16, 2025-11-24
-    E2Eテスト追加（Phase 26.1）: done, phase4, 2025-11-24, 4h
-
-    section 進行中
-    Phase 26完了記録・GitHub Pages更新: active, phase5, 2025-11-24, 1h
+    E2E・モバイル（Phase 26）: done, phase4, 2025-11-24, 2d
+    UX改善（Phase 27-37）: done, phase5, 2025-11-25, 2d
+    設定管理（Phase 38-39）: done, phase6, 2025-11-26, 1d
 
     section 計画中（12月）
-    モバイル最適化（Phase 26.2）: phase6, 2025-11-25, 7d
-    改善3 ダブルクリック: phase7, 2025-12-01, 3d
-    レポート機能強化: phase8, 2025-12-08, 7d
-    通知機能追加: phase9, 2025-12-15, 7d
+    レポート機能強化: phase7, 2025-12-01, 7d
+    通知機能追加: phase8, 2025-12-08, 7d
+    カレンダー連携: phase9, 2025-12-15, 7d
         </div>
 
         <hr>
@@ -475,18 +486,22 @@ graph TB
 
     Start --> Phase1[改善1: 予定と同じボタン<br/>完了 2025-11-23]
     Start --> Phase2[改善2: 一括コピー機能<br/>完了 2025-11-24]
-    Start --> Phase3[改善3: ダブルクリック機能<br/>未実装]
+    Start --> Phase3[改善3: ダブルクリック機能<br/>完了 2025-11-25]
+    Start --> Phase4[改善4: キーボード操作<br/>完了 2025-11-26]
 
     Phase1 --> Result1[効果: 50%削減<br/>25分/月]
     Phase2 --> Result2[効果: 86%削減<br/>7分/月]
-    Phase3 --> Result3[効果: さらなる効率化]
+    Phase3 --> Result3[効果: 高速操作]
+    Phase4 --> Result4[効果: アクセシビリティ向上]
 
     style Phase1 fill:#90EE90
     style Phase2 fill:#90EE90
-    style Phase3 fill:#FFE4B5
+    style Phase3 fill:#90EE90
+    style Phase4 fill:#90EE90
     style Result1 fill:#E8F5E9
     style Result2 fill:#E8F5E9
-    style Result3 fill:#FFF8DC
+    style Result3 fill:#E8F5E9
+    style Result4 fill:#E8F5E9
         </div>
 
         <hr>
