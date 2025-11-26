@@ -251,10 +251,14 @@ export function ReportPage(): React.ReactElement {
         </div>
       </header>
 
-      {/* タブナビゲーション */}
+      {/* タブナビゲーション - モバイル対応スクロール */}
       <div className="bg-white border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <nav className="flex space-x-4 overflow-x-auto" aria-label="タブ">
+          <nav
+            className="flex space-x-1 sm:space-x-4 overflow-x-auto scrollbar-hide -mx-4 px-4 sm:mx-0 sm:px-0"
+            aria-label="タブ"
+            style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+          >
             {tabs
               .filter(tab => tab.visible)
               .map(tab => (
@@ -262,7 +266,7 @@ export function ReportPage(): React.ReactElement {
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
                   className={`
-                    py-3 px-4 text-sm font-medium border-b-2 whitespace-nowrap transition-colors
+                    py-3 px-3 sm:px-4 text-xs sm:text-sm font-medium border-b-2 whitespace-nowrap transition-colors flex-shrink-0
                     ${activeTab === tab.id
                       ? 'border-blue-500 text-blue-600'
                       : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
@@ -464,97 +468,162 @@ function WorkTimeContent({ data }: WorkTimeContentProps): React.ReactElement {
 
   return (
     <div className="bg-white rounded-lg shadow overflow-hidden">
-      <table className="min-w-full divide-y divide-gray-200">
-        <thead className="bg-gray-50">
-          <tr>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              スタッフ名
-            </th>
-            <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-              総勤務時間
-            </th>
-            <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-              通常勤務
-            </th>
-            <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-              夜勤時間
-            </th>
-            <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-              推定残業
-            </th>
-            <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-              警告
-            </th>
-          </tr>
-        </thead>
-        <tbody className="bg-white divide-y divide-gray-200">
+      {/* モバイル: カード表示 */}
+      <div className="block md:hidden">
+        <div className="divide-y divide-gray-200">
           {data.workTimeData.map(work => (
-            <React.Fragment key={work.staffId}>
-              <tr
-                onClick={() => setExpandedStaff(expandedStaff === work.staffId ? null : work.staffId)}
-                className="hover:bg-gray-50 cursor-pointer"
-              >
-                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                  {work.staffName}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-900">
-                  {work.totalHours.toFixed(1)}h
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-500">
-                  {work.regularHours.toFixed(1)}h
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-500">
-                  {work.nightHours.toFixed(1)}h
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-500">
-                  {work.estimatedOvertimeHours.toFixed(1)}h
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-center">
-                  {work.warningFlags.length > 0 ? (
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                      ⚠️ {work.warningFlags.length}件
+            <div
+              key={work.staffId}
+              onClick={() => setExpandedStaff(expandedStaff === work.staffId ? null : work.staffId)}
+              className="p-4 cursor-pointer hover:bg-gray-50"
+            >
+              <div className="flex justify-between items-start">
+                <div>
+                  <div className="font-medium text-gray-900">{work.staffName}</div>
+                  <div className="text-sm text-gray-500 mt-1">
+                    総勤務: {work.totalHours.toFixed(1)}h
+                  </div>
+                </div>
+                <div className="text-right">
+                  {work.warningFlags.length > 0 && (
+                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                      ⚠️ {work.warningFlags.length}
                     </span>
-                  ) : (
-                    <span className="text-gray-400">-</span>
                   )}
-                </td>
-              </tr>
+                </div>
+              </div>
+              <div className="grid grid-cols-3 gap-2 mt-3 text-xs text-gray-500">
+                <div>通常: {work.regularHours.toFixed(1)}h</div>
+                <div>夜勤: {work.nightHours.toFixed(1)}h</div>
+                <div>残業: {work.estimatedOvertimeHours.toFixed(1)}h</div>
+              </div>
               {expandedStaff === work.staffId && (
-                <tr>
-                  <td colSpan={6} className="px-6 py-4 bg-gray-50">
-                    <div className="text-sm">
-                      <h4 className="font-medium text-gray-900 mb-2">日別詳細</h4>
-                      <div className="grid grid-cols-7 gap-1 text-xs">
-                        {work.dailyDetails.map(day => (
-                          <div
-                            key={day.date}
-                            className={`p-1 rounded text-center ${
-                              day.hours > 0 ? 'bg-blue-100' : 'bg-gray-100'
-                            }`}
-                          >
-                            <div className="font-medium">{day.date.split('-')[2]}</div>
-                            <div>{day.hours > 0 ? `${day.hours}h` : '-'}</div>
-                          </div>
-                        ))}
+                <div className="mt-4 pt-4 border-t border-gray-200">
+                  <h4 className="font-medium text-gray-900 mb-2 text-sm">日別詳細</h4>
+                  <div className="grid grid-cols-7 gap-1 text-xs">
+                    {work.dailyDetails.map(day => (
+                      <div
+                        key={day.date}
+                        className={`p-1 rounded text-center ${
+                          day.hours > 0 ? 'bg-blue-100' : 'bg-gray-100'
+                        }`}
+                      >
+                        <div className="font-medium">{day.date.split('-')[2]}</div>
+                        <div>{day.hours > 0 ? `${day.hours}h` : '-'}</div>
                       </div>
-                      {work.warningFlags.length > 0 && (
-                        <div className="mt-3">
-                          <h5 className="font-medium text-red-700 mb-1">警告</h5>
-                          <ul className="list-disc list-inside text-red-600">
-                            {work.warningFlags.map((flag, idx) => (
-                              <li key={idx}>{getWarningLabel(flag)}</li>
-                            ))}
-                          </ul>
-                        </div>
-                      )}
+                    ))}
+                  </div>
+                  {work.warningFlags.length > 0 && (
+                    <div className="mt-3">
+                      <h5 className="font-medium text-red-700 mb-1 text-sm">警告</h5>
+                      <ul className="list-disc list-inside text-red-600 text-xs">
+                        {work.warningFlags.map((flag, idx) => (
+                          <li key={idx}>{getWarningLabel(flag)}</li>
+                        ))}
+                      </ul>
                     </div>
+                  )}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* デスクトップ: テーブル表示 */}
+      <div className="hidden md:block overflow-x-auto">
+        <table className="min-w-full divide-y divide-gray-200">
+          <thead className="bg-gray-50">
+            <tr>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                スタッフ名
+              </th>
+              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                総勤務時間
+              </th>
+              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                通常勤務
+              </th>
+              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                夜勤時間
+              </th>
+              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                推定残業
+              </th>
+              <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                警告
+              </th>
+            </tr>
+          </thead>
+          <tbody className="bg-white divide-y divide-gray-200">
+            {data.workTimeData.map(work => (
+              <React.Fragment key={work.staffId}>
+                <tr
+                  onClick={() => setExpandedStaff(expandedStaff === work.staffId ? null : work.staffId)}
+                  className="hover:bg-gray-50 cursor-pointer"
+                >
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                    {work.staffName}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-900">
+                    {work.totalHours.toFixed(1)}h
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-500">
+                    {work.regularHours.toFixed(1)}h
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-500">
+                    {work.nightHours.toFixed(1)}h
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-500">
+                    {work.estimatedOvertimeHours.toFixed(1)}h
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-center">
+                    {work.warningFlags.length > 0 ? (
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                        ⚠️ {work.warningFlags.length}件
+                      </span>
+                    ) : (
+                      <span className="text-gray-400">-</span>
+                    )}
                   </td>
                 </tr>
-              )}
-            </React.Fragment>
-          ))}
-        </tbody>
-      </table>
+                {expandedStaff === work.staffId && (
+                  <tr>
+                    <td colSpan={6} className="px-6 py-4 bg-gray-50">
+                      <div className="text-sm">
+                        <h4 className="font-medium text-gray-900 mb-2">日別詳細</h4>
+                        <div className="grid grid-cols-7 gap-1 text-xs">
+                          {work.dailyDetails.map(day => (
+                            <div
+                              key={day.date}
+                              className={`p-1 rounded text-center ${
+                                day.hours > 0 ? 'bg-blue-100' : 'bg-gray-100'
+                              }`}
+                            >
+                              <div className="font-medium">{day.date.split('-')[2]}</div>
+                              <div>{day.hours > 0 ? `${day.hours}h` : '-'}</div>
+                            </div>
+                          ))}
+                        </div>
+                        {work.warningFlags.length > 0 && (
+                          <div className="mt-3">
+                            <h5 className="font-medium text-red-700 mb-1">警告</h5>
+                            <ul className="list-disc list-inside text-red-600">
+                              {work.warningFlags.map((flag, idx) => (
+                                <li key={idx}>{getWarningLabel(flag)}</li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                )}
+              </React.Fragment>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }
@@ -666,13 +735,30 @@ function StaffActivityContent({ data }: StaffActivityContentProps): React.ReactE
   const selectedActivity = data.staffActivityData.find(s => s.staffId === selectedStaff);
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <div className="space-y-4 lg:space-y-0 lg:grid lg:grid-cols-3 lg:gap-6">
       {/* スタッフ一覧 */}
       <div className="bg-white rounded-lg shadow overflow-hidden">
         <div className="px-4 py-3 border-b border-gray-200">
           <h3 className="text-sm font-semibold text-gray-900">スタッフ一覧</h3>
         </div>
-        <ul className="divide-y divide-gray-200 max-h-96 overflow-y-auto">
+        {/* モバイル: 横スクロールリスト */}
+        <div className="lg:hidden flex overflow-x-auto space-x-2 p-3" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+          {data.staffActivityData.map(staff => (
+            <button
+              key={staff.staffId}
+              onClick={() => setSelectedStaff(staff.staffId)}
+              className={`flex-shrink-0 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                selectedStaff === staff.staffId
+                  ? 'bg-blue-500 text-white'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+            >
+              {staff.staffName}
+            </button>
+          ))}
+        </div>
+        {/* デスクトップ: 縦リスト */}
+        <ul className="hidden lg:block divide-y divide-gray-200 max-h-96 overflow-y-auto">
           {data.staffActivityData.map(staff => (
             <li
               key={staff.staffId}
@@ -697,53 +783,53 @@ function StaffActivityContent({ data }: StaffActivityContentProps): React.ReactE
         {selectedActivity ? (
           <div className="space-y-4">
             {/* 統計カード */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-              <div className="bg-white p-4 rounded-lg shadow">
-                <div className="text-sm text-gray-500">出勤日数</div>
-                <div className="text-2xl font-bold text-gray-900">{selectedActivity.workDays}日</div>
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
+              <div className="bg-white p-3 sm:p-4 rounded-lg shadow">
+                <div className="text-xs sm:text-sm text-gray-500">出勤日数</div>
+                <div className="text-xl sm:text-2xl font-bold text-gray-900">{selectedActivity.workDays}日</div>
               </div>
-              <div className="bg-white p-4 rounded-lg shadow">
-                <div className="text-sm text-gray-500">休日数</div>
-                <div className="text-2xl font-bold text-gray-900">{selectedActivity.restDays}日</div>
+              <div className="bg-white p-3 sm:p-4 rounded-lg shadow">
+                <div className="text-xs sm:text-sm text-gray-500">休日数</div>
+                <div className="text-xl sm:text-2xl font-bold text-gray-900">{selectedActivity.restDays}日</div>
               </div>
-              <div className="bg-white p-4 rounded-lg shadow">
-                <div className="text-sm text-gray-500">連続勤務最大</div>
-                <div className="text-2xl font-bold text-gray-900">{selectedActivity.maxConsecutiveWorkDays}日</div>
+              <div className="bg-white p-3 sm:p-4 rounded-lg shadow">
+                <div className="text-xs sm:text-sm text-gray-500">連続勤務最大</div>
+                <div className="text-xl sm:text-2xl font-bold text-gray-900">{selectedActivity.maxConsecutiveWorkDays}日</div>
               </div>
-              <div className="bg-white p-4 rounded-lg shadow">
-                <div className="text-sm text-gray-500">週平均勤務</div>
-                <div className="text-2xl font-bold text-gray-900">{selectedActivity.averageWeeklyHours.toFixed(1)}h</div>
+              <div className="bg-white p-3 sm:p-4 rounded-lg shadow">
+                <div className="text-xs sm:text-sm text-gray-500">週平均勤務</div>
+                <div className="text-xl sm:text-2xl font-bold text-gray-900">{selectedActivity.averageWeeklyHours.toFixed(1)}h</div>
               </div>
             </div>
 
             {/* 休日内訳 */}
-            <div className="bg-white p-4 rounded-lg shadow">
+            <div className="bg-white p-3 sm:p-4 rounded-lg shadow">
               <h4 className="text-sm font-semibold text-gray-900 mb-3">休日内訳</h4>
-              <div className="flex space-x-4">
+              <div className="flex flex-wrap gap-4">
                 <div>
-                  <span className="text-sm text-gray-500">公休:</span>
+                  <span className="text-xs sm:text-sm text-gray-500">公休:</span>
                   <span className="ml-2 font-medium">{selectedActivity.publicHolidayDays}日</span>
                 </div>
                 <div>
-                  <span className="text-sm text-gray-500">有給:</span>
+                  <span className="text-xs sm:text-sm text-gray-500">有給:</span>
                   <span className="ml-2 font-medium">{selectedActivity.paidLeaveDays}日</span>
                 </div>
               </div>
             </div>
 
             {/* 月間カレンダー */}
-            <div className="bg-white p-4 rounded-lg shadow">
+            <div className="bg-white p-3 sm:p-4 rounded-lg shadow">
               <h4 className="text-sm font-semibold text-gray-900 mb-3">月間カレンダー</h4>
-              <div className="grid grid-cols-7 gap-1 text-center text-xs">
+              <div className="grid grid-cols-7 gap-0.5 sm:gap-1 text-center text-xs">
                 {['日', '月', '火', '水', '木', '金', '土'].map(day => (
                   <div key={day} className="font-medium text-gray-500 py-1">
                     {day}
                   </div>
                 ))}
-                {selectedActivity.monthlyCalendar.map((day, idx) => (
+                {selectedActivity.monthlyCalendar.map((day) => (
                   <div
                     key={day.date}
-                    className={`p-2 rounded ${
+                    className={`p-1 sm:p-2 rounded ${
                       day.status === 'work'
                         ? 'bg-blue-100 text-blue-800'
                         : day.status === 'rest'
@@ -753,16 +839,17 @@ function StaffActivityContent({ data }: StaffActivityContentProps): React.ReactE
                         : 'bg-yellow-100 text-yellow-800'
                     }`}
                   >
-                    <div className="font-medium">{new Date(day.date).getDate()}</div>
-                    <div className="truncate">{day.shiftType || '-'}</div>
+                    <div className="font-medium text-xs sm:text-sm">{new Date(day.date).getDate()}</div>
+                    <div className="truncate text-xs hidden sm:block">{day.shiftType || '-'}</div>
                   </div>
                 ))}
               </div>
             </div>
           </div>
         ) : (
-          <div className="bg-white rounded-lg shadow p-8 text-center text-gray-500">
-            左のリストからスタッフを選択してください
+          <div className="bg-white rounded-lg shadow p-6 sm:p-8 text-center text-gray-500">
+            <p className="hidden lg:block">左のリストからスタッフを選択してください</p>
+            <p className="lg:hidden">上のリストからスタッフを選択してください</p>
           </div>
         )}
       </div>
@@ -781,20 +868,20 @@ interface ManagementContentProps {
 
 function ManagementContent({ data, onDownloadPDF, isPdfGenerating }: ManagementContentProps): React.ReactElement {
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* PDFダウンロードボタン */}
       <div className="flex justify-end">
         <button
           onClick={onDownloadPDF}
           disabled={isPdfGenerating}
-          className="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          className="inline-flex items-center px-3 sm:px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm sm:text-base"
         >
           {isPdfGenerating ? '生成中...' : 'PDFダウンロード'}
         </button>
       </div>
 
       {/* サマリー */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         <SummaryCard title="充足率" value={`${data.summary.fulfillmentRate}%`} icon="📊" color="blue" />
         <SummaryCard title="総勤務時間" value={`${data.summary.totalWorkHours}h`} icon="⏱️" color="green" />
         <SummaryCard title="スタッフ数" value={`${data.summary.totalStaffCount}名`} icon="👥" color="purple" />
@@ -803,80 +890,101 @@ function ManagementContent({ data, onDownloadPDF, isPdfGenerating }: ManagementC
 
       {/* 時間帯別充足率 */}
       <div className="bg-white rounded-lg shadow overflow-hidden">
-        <div className="px-6 py-4 border-b border-gray-200">
-          <h3 className="text-lg font-semibold text-gray-900">時間帯別充足率</h3>
+        <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-200">
+          <h3 className="text-base sm:text-lg font-semibold text-gray-900">時間帯別充足率</h3>
         </div>
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">時間帯</th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">必要人数</th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">実績人数</th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">充足率</th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">不足日数</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-200">
-            {data.timeSlotFulfillment.map(slot => (
-              <tr key={slot.timeSlot} className="hover:bg-gray-50">
-                <td className="px-6 py-4 text-sm font-medium text-gray-900">{slot.timeSlot}</td>
-                <td className="px-6 py-4 text-sm text-right text-gray-500">{slot.requiredCount}</td>
-                <td className="px-6 py-4 text-sm text-right text-gray-500">{slot.actualCount}</td>
-                <td className="px-6 py-4 text-sm text-right">
-                  <span className={`font-medium ${slot.fulfillmentRate >= 80 ? 'text-green-600' : 'text-red-600'}`}>
-                    {slot.fulfillmentRate}%
-                  </span>
-                </td>
-                <td className="px-6 py-4 text-sm text-right text-gray-500">{slot.shortfallDays}日</td>
+        {/* モバイル: カード表示 */}
+        <div className="block sm:hidden divide-y divide-gray-200">
+          {data.timeSlotFulfillment.map(slot => (
+            <div key={slot.timeSlot} className="p-4">
+              <div className="flex justify-between items-start mb-2">
+                <span className="font-medium text-gray-900">{slot.timeSlot}</span>
+                <span className={`font-bold ${slot.fulfillmentRate >= 80 ? 'text-green-600' : 'text-red-600'}`}>
+                  {slot.fulfillmentRate}%
+                </span>
+              </div>
+              <div className="grid grid-cols-3 gap-2 text-xs text-gray-500">
+                <div>必要: {slot.requiredCount}</div>
+                <div>実績: {slot.actualCount}</div>
+                <div>不足: {slot.shortfallDays}日</div>
+              </div>
+            </div>
+          ))}
+        </div>
+        {/* デスクトップ: テーブル表示 */}
+        <div className="hidden sm:block overflow-x-auto">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">時間帯</th>
+                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">必要人数</th>
+                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">実績人数</th>
+                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">充足率</th>
+                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">不足日数</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody className="divide-y divide-gray-200">
+              {data.timeSlotFulfillment.map(slot => (
+                <tr key={slot.timeSlot} className="hover:bg-gray-50">
+                  <td className="px-6 py-4 text-sm font-medium text-gray-900">{slot.timeSlot}</td>
+                  <td className="px-6 py-4 text-sm text-right text-gray-500">{slot.requiredCount}</td>
+                  <td className="px-6 py-4 text-sm text-right text-gray-500">{slot.actualCount}</td>
+                  <td className="px-6 py-4 text-sm text-right">
+                    <span className={`font-medium ${slot.fulfillmentRate >= 80 ? 'text-green-600' : 'text-red-600'}`}>
+                      {slot.fulfillmentRate}%
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 text-sm text-right text-gray-500">{slot.shortfallDays}日</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       {/* コスト推計 */}
-      <div className="bg-white rounded-lg shadow p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">コスト推計</h3>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="bg-white rounded-lg shadow p-4 sm:p-6">
+        <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-3 sm:mb-4">コスト推計</h3>
+        <div className="grid grid-cols-2 gap-3 sm:gap-4">
           <div>
-            <div className="text-sm text-gray-500">通常勤務</div>
-            <div className="text-xl font-bold text-gray-900">¥{data.costEstimate.regularHoursCost.toLocaleString()}</div>
+            <div className="text-xs sm:text-sm text-gray-500">通常勤務</div>
+            <div className="text-lg sm:text-xl font-bold text-gray-900">¥{data.costEstimate.regularHoursCost.toLocaleString()}</div>
           </div>
           <div>
-            <div className="text-sm text-gray-500">残業</div>
-            <div className="text-xl font-bold text-gray-900">¥{data.costEstimate.overtimeHoursCost.toLocaleString()}</div>
+            <div className="text-xs sm:text-sm text-gray-500">残業</div>
+            <div className="text-lg sm:text-xl font-bold text-gray-900">¥{data.costEstimate.overtimeHoursCost.toLocaleString()}</div>
           </div>
           <div>
-            <div className="text-sm text-gray-500">夜勤手当</div>
-            <div className="text-xl font-bold text-gray-900">¥{data.costEstimate.nightShiftAllowance.toLocaleString()}</div>
+            <div className="text-xs sm:text-sm text-gray-500">夜勤手当</div>
+            <div className="text-lg sm:text-xl font-bold text-gray-900">¥{data.costEstimate.nightShiftAllowance.toLocaleString()}</div>
           </div>
           <div>
-            <div className="text-sm text-gray-500">合計</div>
-            <div className="text-xl font-bold text-blue-600">¥{data.costEstimate.totalEstimate.toLocaleString()}</div>
+            <div className="text-xs sm:text-sm text-gray-500">合計</div>
+            <div className="text-lg sm:text-xl font-bold text-blue-600">¥{data.costEstimate.totalEstimate.toLocaleString()}</div>
           </div>
         </div>
       </div>
 
       {/* 前月比較 */}
       {data.monthComparison && (
-        <div className="bg-white rounded-lg shadow p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">前月比較</h3>
-          <div className="grid grid-cols-3 gap-4">
+        <div className="bg-white rounded-lg shadow p-4 sm:p-6">
+          <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-3 sm:mb-4">前月比較</h3>
+          <div className="grid grid-cols-3 gap-2 sm:gap-4">
             <div>
-              <div className="text-sm text-gray-500">勤務時間差</div>
-              <div className={`text-xl font-bold ${data.monthComparison.workHoursDiff >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+              <div className="text-xs sm:text-sm text-gray-500">勤務時間差</div>
+              <div className={`text-base sm:text-xl font-bold ${data.monthComparison.workHoursDiff >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                 {data.monthComparison.workHoursDiff >= 0 ? '+' : ''}{data.monthComparison.workHoursDiff}h
               </div>
             </div>
             <div>
-              <div className="text-sm text-gray-500">充足率差</div>
-              <div className={`text-xl font-bold ${data.monthComparison.fulfillmentRateDiff >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+              <div className="text-xs sm:text-sm text-gray-500">充足率差</div>
+              <div className={`text-base sm:text-xl font-bold ${data.monthComparison.fulfillmentRateDiff >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                 {data.monthComparison.fulfillmentRateDiff >= 0 ? '+' : ''}{data.monthComparison.fulfillmentRateDiff}%
               </div>
             </div>
             <div>
-              <div className="text-sm text-gray-500">コスト差</div>
-              <div className={`text-xl font-bold ${data.monthComparison.costDiff >= 0 ? 'text-red-600' : 'text-green-600'}`}>
+              <div className="text-xs sm:text-sm text-gray-500">コスト差</div>
+              <div className={`text-base sm:text-xl font-bold ${data.monthComparison.costDiff >= 0 ? 'text-red-600' : 'text-green-600'}`}>
                 {data.monthComparison.costDiff >= 0 ? '+' : ''}¥{data.monthComparison.costDiff.toLocaleString()}
               </div>
             </div>
@@ -886,12 +994,12 @@ function ManagementContent({ data, onDownloadPDF, isPdfGenerating }: ManagementC
 
       {/* 改善提案 */}
       {data.recommendations.length > 0 && (
-        <div className="bg-white rounded-lg shadow p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">改善提案</h3>
+        <div className="bg-white rounded-lg shadow p-4 sm:p-6">
+          <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-3 sm:mb-4">改善提案</h3>
           <ul className="space-y-2">
             {data.recommendations.map((rec, idx) => (
-              <li key={idx} className="flex items-start">
-                <span className="mr-2 text-blue-500">💡</span>
+              <li key={idx} className="flex items-start text-sm sm:text-base">
+                <span className="mr-2 text-blue-500 flex-shrink-0">💡</span>
                 <span className="text-gray-700">{rec}</span>
               </li>
             ))}
@@ -913,26 +1021,26 @@ interface PersonalContentProps {
 
 function PersonalContent({ data, onDownloadPDF, isPdfGenerating }: PersonalContentProps): React.ReactElement {
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* PDFダウンロードボタン */}
       <div className="flex justify-end">
         <button
           onClick={onDownloadPDF}
           disabled={isPdfGenerating}
-          className="inline-flex items-center px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          className="inline-flex items-center px-3 sm:px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm sm:text-base"
         >
           {isPdfGenerating ? '生成中...' : 'PDFダウンロード'}
         </button>
       </div>
 
       {/* スタッフ名 */}
-      <div className="bg-white rounded-lg shadow p-6">
-        <h2 className="text-2xl font-bold text-gray-900">{data.staffName}</h2>
-        <p className="text-gray-500">{data.targetMonth} 勤務実績レポート</p>
+      <div className="bg-white rounded-lg shadow p-4 sm:p-6">
+        <h2 className="text-xl sm:text-2xl font-bold text-gray-900">{data.staffName}</h2>
+        <p className="text-sm sm:text-base text-gray-500">{data.targetMonth} 勤務実績レポート</p>
       </div>
 
       {/* 勤務サマリー */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4">
         <SummaryCard title="出勤日数" value={`${data.workSummary.workDays}日`} icon="📅" color="blue" />
         <SummaryCard title="総勤務時間" value={`${data.workSummary.totalHours}h`} icon="⏱️" color="green" />
         <SummaryCard title="夜勤回数" value={`${data.workSummary.nightShiftCount}回`} icon="🌙" color="purple" />
@@ -940,7 +1048,7 @@ function PersonalContent({ data, onDownloadPDF, isPdfGenerating }: PersonalConte
       </div>
 
       {/* シフト種別内訳 */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
         <UsageChart
           type="pie"
           title="シフト種別内訳"
@@ -951,11 +1059,11 @@ function PersonalContent({ data, onDownloadPDF, isPdfGenerating }: PersonalConte
           height={250}
         />
 
-        <div className="bg-white p-6 rounded-lg shadow">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">シフト種別詳細</h3>
+        <div className="bg-white p-4 sm:p-6 rounded-lg shadow">
+          <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-3 sm:mb-4">シフト種別詳細</h3>
           <div className="space-y-2">
             {data.shiftBreakdown.map(shift => (
-              <div key={shift.shiftType} className="flex justify-between items-center">
+              <div key={shift.shiftType} className="flex justify-between items-center text-sm sm:text-base">
                 <span className="text-gray-700">{shift.shiftType}</span>
                 <span className="text-gray-500">{shift.count}回 ({shift.percentage}%)</span>
               </div>
@@ -965,32 +1073,32 @@ function PersonalContent({ data, onDownloadPDF, isPdfGenerating }: PersonalConte
       </div>
 
       {/* 休暇残高 */}
-      <div className="bg-white rounded-lg shadow p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">休暇残高</h3>
-        <div className="grid grid-cols-2 gap-4">
+      <div className="bg-white rounded-lg shadow p-4 sm:p-6">
+        <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-3 sm:mb-4">休暇残高</h3>
+        <div className="grid grid-cols-2 gap-3 sm:gap-4">
           <div>
-            <div className="text-sm text-gray-500">有給休暇</div>
-            <div className="flex items-baseline">
-              <span className="text-2xl font-bold text-gray-900">{data.leaveBalance.paidLeaveRemaining}</span>
-              <span className="text-gray-500 ml-2">/ {data.leaveBalance.paidLeaveUsed + data.leaveBalance.paidLeaveRemaining}日</span>
+            <div className="text-xs sm:text-sm text-gray-500">有給休暇</div>
+            <div className="flex items-baseline flex-wrap">
+              <span className="text-xl sm:text-2xl font-bold text-gray-900">{data.leaveBalance.paidLeaveRemaining}</span>
+              <span className="text-gray-500 ml-1 sm:ml-2 text-xs sm:text-sm">/ {data.leaveBalance.paidLeaveUsed + data.leaveBalance.paidLeaveRemaining}日</span>
             </div>
-            <div className="text-sm text-gray-500">使用済み: {data.leaveBalance.paidLeaveUsed}日</div>
+            <div className="text-xs sm:text-sm text-gray-500">使用済み: {data.leaveBalance.paidLeaveUsed}日</div>
           </div>
           <div>
-            <div className="text-sm text-gray-500">公休</div>
-            <div className="flex items-baseline">
-              <span className="text-2xl font-bold text-gray-900">{data.leaveBalance.publicHolidayRemaining}</span>
-              <span className="text-gray-500 ml-2">/ {data.leaveBalance.publicHolidayUsed + data.leaveBalance.publicHolidayRemaining}日</span>
+            <div className="text-xs sm:text-sm text-gray-500">公休</div>
+            <div className="flex items-baseline flex-wrap">
+              <span className="text-xl sm:text-2xl font-bold text-gray-900">{data.leaveBalance.publicHolidayRemaining}</span>
+              <span className="text-gray-500 ml-1 sm:ml-2 text-xs sm:text-sm">/ {data.leaveBalance.publicHolidayUsed + data.leaveBalance.publicHolidayRemaining}日</span>
             </div>
-            <div className="text-sm text-gray-500">使用済み: {data.leaveBalance.publicHolidayUsed}日</div>
+            <div className="text-xs sm:text-sm text-gray-500">使用済み: {data.leaveBalance.publicHolidayUsed}日</div>
           </div>
         </div>
       </div>
 
       {/* 月間カレンダー */}
-      <div className="bg-white rounded-lg shadow p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">月間カレンダー</h3>
-        <div className="grid grid-cols-7 gap-1 text-center text-xs">
+      <div className="bg-white rounded-lg shadow p-4 sm:p-6">
+        <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-3 sm:mb-4">月間カレンダー</h3>
+        <div className="grid grid-cols-7 gap-0.5 sm:gap-1 text-center text-xs">
           {['日', '月', '火', '水', '木', '金', '土'].map(day => (
             <div key={day} className="font-medium text-gray-500 py-1">
               {day}
@@ -999,7 +1107,7 @@ function PersonalContent({ data, onDownloadPDF, isPdfGenerating }: PersonalConte
           {data.calendar.map((day) => (
             <div
               key={day.date}
-              className={`p-2 rounded ${
+              className={`p-1 sm:p-2 rounded ${
                 day.status === 'work'
                   ? 'bg-blue-100 text-blue-800'
                   : day.status === 'rest'
@@ -1009,8 +1117,8 @@ function PersonalContent({ data, onDownloadPDF, isPdfGenerating }: PersonalConte
                   : 'bg-yellow-100 text-yellow-800'
               }`}
             >
-              <div className="font-medium">{new Date(day.date).getDate()}</div>
-              <div className="truncate">{day.shiftType || '-'}</div>
+              <div className="font-medium text-xs sm:text-sm">{new Date(day.date).getDate()}</div>
+              <div className="truncate text-xs hidden sm:block">{day.shiftType || '-'}</div>
             </div>
           ))}
         </div>
@@ -1038,13 +1146,13 @@ function SummaryCard({ title, value, icon, color }: SummaryCardProps): React.Rea
   };
 
   return (
-    <div className={`p-4 rounded-lg border ${colorClasses[color]}`}>
-      <div className="flex items-center justify-between">
-        <div>
-          <p className="text-sm text-gray-500">{title}</p>
-          <p className="text-2xl font-bold text-gray-900">{value}</p>
+    <div className={`p-3 sm:p-4 rounded-lg border ${colorClasses[color]}`}>
+      <div className="flex items-center justify-between gap-2">
+        <div className="min-w-0 flex-1">
+          <p className="text-xs sm:text-sm text-gray-500 truncate">{title}</p>
+          <p className="text-lg sm:text-2xl font-bold text-gray-900 truncate">{value}</p>
         </div>
-        <span className="text-2xl">{icon}</span>
+        <span className="text-xl sm:text-2xl flex-shrink-0">{icon}</span>
       </div>
     </div>
   );
