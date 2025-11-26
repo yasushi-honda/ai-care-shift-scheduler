@@ -1,4 +1,11 @@
-import type { Staff, ShiftRequirement, StaffSchedule, LeaveRequest } from '../types';
+import type {
+  Staff,
+  ShiftRequirement,
+  StaffSchedule,
+  LeaveRequest,
+  GenerateShiftResponse,
+  AIEvaluationResult,
+} from '../types';
 
 /**
  * Cloud Functions 経由でAIシフトを生成
@@ -28,11 +35,24 @@ const getCloudFunctionUrl = (): string => {
   return url;
 };
 
+/**
+ * シフト生成結果（スケジュール + 評価データ）
+ */
+export interface ShiftGenerationResult {
+  schedule: StaffSchedule[];
+  evaluation: AIEvaluationResult | null;
+  metadata?: {
+    generatedAt: string;
+    model: string;
+    tokensUsed: number;
+  };
+}
+
 export const generateShiftSchedule = async (
   staffList: Staff[],
   requirements: ShiftRequirement,
   leaveRequests: LeaveRequest
-): Promise<StaffSchedule[]> => {
+): Promise<ShiftGenerationResult> => {
   const CLOUD_FUNCTION_URL = getCloudFunctionUrl();
 
   try {
@@ -105,12 +125,27 @@ export const generateShiftSchedule = async (
       throw new Error('Invalid schedule format in response');
     }
 
+    // 評価データのログ出力
+    if (result.evaluation) {
+      console.log('📊 AI評価結果:', {
+        overallScore: result.evaluation.overallScore,
+        fulfillmentRate: result.evaluation.fulfillmentRate,
+        violationCount: result.evaluation.constraintViolations?.length || 0,
+        recommendationCount: result.evaluation.recommendations?.length || 0,
+      });
+    }
+
     console.log('✅ シフト生成成功:', {
       staffCount: result.schedule.length,
       tokensUsed: result.metadata?.tokensUsed || 0,
+      hasEvaluation: !!result.evaluation,
     });
 
-    return result.schedule as StaffSchedule[];
+    return {
+      schedule: result.schedule as StaffSchedule[],
+      evaluation: (result.evaluation as AIEvaluationResult) || null,
+      metadata: result.metadata,
+    };
 
   } catch (error) {
     console.error('❌ generateShiftSchedule エラー:', error);

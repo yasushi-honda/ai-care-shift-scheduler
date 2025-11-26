@@ -1,8 +1,9 @@
 
 import React, { useState, useRef, useCallback, useEffect, useMemo } from 'react';
-import type { StaffSchedule, GeneratedShift, FacilityShiftSettings } from '../types';
+import type { StaffSchedule, GeneratedShift, FacilityShiftSettings, AIEvaluationResult } from '../types';
 import { WEEKDAYS, DEFAULT_SHIFT_TYPES, DEFAULT_SHIFT_CYCLE } from '../constants';
 import { ShiftEditConfirmModal } from '../src/components/ShiftEditConfirmModal';
+import { EvaluationPanel } from '../src/components/EvaluationPanel';
 
 interface ShiftTableProps {
   schedule: StaffSchedule[];
@@ -14,6 +15,8 @@ interface ShiftTableProps {
   onQuickShiftChange?: (staffId: string, date: string, type: 'planned' | 'actual', newShiftType: string) => void;
   /** Phase 38: シフトタイプ設定（オプション - 指定されない場合はデフォルト使用） */
   shiftSettings?: FacilityShiftSettings;
+  /** Phase 40: AI評価結果（オプション） */
+  evaluation?: AIEvaluationResult | null;
 }
 
 const getShiftColor = (shiftType: string) => {
@@ -65,7 +68,7 @@ interface EditModalData {
   currentShift: GeneratedShift | null;
 }
 
-const ShiftTable: React.FC<ShiftTableProps> = ({ schedule, targetMonth, onShiftChange, onShiftUpdate, onBulkCopyClick, onQuickShiftChange, shiftSettings }) => {
+const ShiftTable: React.FC<ShiftTableProps> = ({ schedule, targetMonth, onShiftChange, onShiftUpdate, onBulkCopyClick, onQuickShiftChange, shiftSettings, evaluation }) => {
   const [editingShift, setEditingShift] = useState<{ staffId: string, date: string } | null>(null);
   const [showEditModal, setShowEditModal] = useState(false);
   const [editModalData, setEditModalData] = useState<EditModalData | null>(null);
@@ -386,6 +389,13 @@ const ShiftTable: React.FC<ShiftTableProps> = ({ schedule, targetMonth, onShiftC
 
   return (
     <>
+      {/* Phase 40: AI評価パネル */}
+      {evaluation && (
+        <div className="mb-4">
+          <EvaluationPanel evaluation={evaluation} />
+        </div>
+      )}
+
       {/* 一括コピーボタン */}
       {onBulkCopyClick && (
         <div className="mb-4">

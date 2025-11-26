@@ -4,6 +4,7 @@ import {
   Role, Qualification, TimeSlotPreference, LeaveType,
   type Staff, type ShiftRequirement, type StaffSchedule, type GeneratedShift, type LeaveRequest, type ScheduleVersion, type LeaveRequestDocument, type Facility,
   type FacilityShiftSettings, type FacilityLeaveSettings,
+  type AIEvaluationResult,
   assertResultError, assertResultSuccess
 } from './types';
 import { DEFAULT_TIME_SLOTS, DEFAULT_SHIFT_TYPES, DEFAULT_SHIFT_CYCLE, DEFAULT_LEAVE_SETTINGS } from './constants';
@@ -87,6 +88,7 @@ const App: React.FC = () => {
     }
   });
   const [schedule, setSchedule] = useState<StaffSchedule[]>([]);
+  const [evaluation, setEvaluation] = useState<AIEvaluationResult | null>(null);
   const [currentScheduleId, setCurrentScheduleId] = useState<string | null>(null);
   const [currentScheduleStatus, setCurrentScheduleStatus] = useState<'draft' | 'confirmed' | 'archived'>('draft');
   const [isLoading, setIsLoading] = useState(false);
@@ -295,6 +297,9 @@ const App: React.FC = () => {
             setCurrentScheduleId(null);
             setCurrentScheduleStatus('draft');
           }
+          // Phase 40: 既存スケジュールロード時は評価をクリア
+          // （評価は新規生成時のみ有効なため）
+          setEvaluation(null);
           setLoadingSchedule(false);
           setScheduleError(null);
         }
@@ -983,7 +988,10 @@ const App: React.FC = () => {
 
     try {
       // AI生成
-      const result = await generateShiftSchedule(staffList, requirements, leaveRequests);
+      const generationResult = await generateShiftSchedule(staffList, requirements, leaveRequests);
+
+      // 評価結果をstateに保存（Phase 40: AI評価・フィードバック機能）
+      setEvaluation(generationResult.evaluation);
 
       // 既存のスケジュールがあるかチェック
       if (currentScheduleId) {
@@ -993,7 +1001,7 @@ const App: React.FC = () => {
           currentScheduleId,
           currentUser.uid,
           {
-            staffSchedules: result,
+            staffSchedules: generationResult.schedule,
             status: 'draft', // 下書き状態を維持
           }
         );
@@ -1013,7 +1021,7 @@ const App: React.FC = () => {
           currentUser.uid,
           {
             targetMonth: requirements.targetMonth,
-            staffSchedules: result,
+            staffSchedules: generationResult.schedule,
             version: 1,
             status: 'draft',
           }
@@ -1583,6 +1591,7 @@ const App: React.FC = () => {
                 onBulkCopyClick={() => setBulkCopyModalOpen(true)}
                 onQuickShiftChange={handleQuickShiftChange}
                 shiftSettings={shiftSettings}
+                evaluation={evaluation}
               />
             )
           ) : (

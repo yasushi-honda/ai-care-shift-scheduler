@@ -191,6 +191,14 @@ service cloud.firestore {
         allow write: if isAuthenticated() && hasRole(facilityId, 'editor');
       }
 
+      // aiGenerationHistory subcollection (Phase 40で実装)
+      // AI生成履歴の保存・取得
+      match /aiGenerationHistory/{historyId} {
+        // viewer以上で読み取り、editor以上で書き込み
+        allow read: if isAuthenticated() && hasRole(facilityId, 'viewer');
+        allow write: if isAuthenticated() && hasRole(facilityId, 'editor');
+      }
+
       // invitations subcollection (Phase 2-3で実装予定)
       match /invitations/{invitationId} {
         // super-adminまたはadmin以上で読み取り・作成
