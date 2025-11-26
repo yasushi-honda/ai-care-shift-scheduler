@@ -593,6 +593,263 @@ gantt
 
         <hr>
 
+        <h2>Phase 40: AI評価・フィードバック機能 WBS</h2>
+
+        <p>AI生成シフトの品質評価・改善提案機能の詳細な実装計画です。</p>
+
+        <h3>実装フェーズ概要</h3>
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-number">33</div>
+                <div class="stat-label">タスク数</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">6.5</div>
+                <div class="stat-label">推定日数</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">8</div>
+                <div class="stat-label">サブフェーズ</div>
+            </div>
+            <div class="stat-card" style="background: linear-gradient(135deg, #28a745 0%, #20c997 100%);">
+                <div class="stat-number">設計済</div>
+                <div class="stat-label">ステータス</div>
+            </div>
+        </div>
+
+        <h3>Phase 40 WBS（Work Breakdown Structure）</h3>
+        <div class="mermaid">
+graph TD
+    P40[Phase 40<br/>AI評価・フィードバック]
+
+    P40 --> P401[40.1 型定義<br/>0.5日]
+    P40 --> P402[40.2 評価ロジック<br/>1日]
+    P40 --> P403[40.3 generateShift拡張<br/>1日]
+    P40 --> P404[40.4 FEサービス拡張<br/>0.5日]
+    P40 --> P405[40.5 評価UI<br/>1.5日]
+    P40 --> P406[40.6 シフト表統合<br/>0.5日]
+    P40 --> P407[40.7 履歴機能<br/>0.5日]
+    P40 --> P408[40.8 テスト<br/>1日]
+
+    P401 --> T401a[型定義追加<br/>CF/FE両方]
+    P401 --> T401b[レスポンス型拡張]
+
+    P402 --> T402a[staffShortage検出]
+    P402 --> T402b[consecutiveWork検出]
+    P402 --> T402c[nightRest検出]
+    P402 --> T402d[スコア計算]
+
+    P403 --> T403a[プロンプト拡張]
+    P403 --> T403b[評価統合]
+    P403 --> T403c[フォールバック]
+
+    P404 --> T404a[geminiService拡張]
+
+    P405 --> T405a[サマリー表示]
+    P405 --> T405b[違反リスト]
+    P405 --> T405c[改善提案表示]
+
+    P406 --> T406a[状態管理追加]
+    P406 --> T406b[パネル統合]
+
+    P407 --> T407a[Firestore保存]
+    P407 --> T407b[履歴取得]
+
+    P408 --> T408a[ユニットテスト]
+    P408 --> T408b[統合テスト]
+    P408 --> T408c[E2Eテスト]
+
+    style P40 fill:#1e3c72,color:#fff
+    style P401 fill:#E3F2FD
+    style P402 fill:#FFF3E0
+    style P403 fill:#E8F5E9
+    style P404 fill:#F3E5F5
+    style P405 fill:#FCE4EC
+    style P406 fill:#E0F7FA
+    style P407 fill:#FFF9C4
+    style P408 fill:#FFCCBC
+        </div>
+
+        <h3>Phase 40 ガントチャート（詳細）</h3>
+        <div class="mermaid">
+gantt
+    title Phase 40 AI評価・フィードバック機能 実装スケジュール
+    dateFormat YYYY-MM-DD
+
+    section 40.1 型定義
+    CF型定義追加 :t401a, 2025-12-01, 2h
+    FE型定義追加 :t401b, after t401a, 2h
+    レスポンス型拡張 :t401c, after t401b, 2h
+
+    section 40.2 評価ロジック
+    evaluationLogic作成 :t402a, 2025-12-02, 2h
+    staffShortage実装 :t402b, after t402a, 2h
+    consecutiveWork実装 :t402c, after t402b, 2h
+    nightRest実装 :t402d, after t402c, 2h
+    qualification/leave実装 :t402e, after t402d, 2h
+    スコア計算実装 :t402f, after t402e, 2h
+
+    section 40.3 generateShift拡張
+    プロンプト拡張 :t403a, 2025-12-03, 3h
+    評価統合 :t403b, after t403a, 3h
+    レスポンス拡張 :t403c, after t403b, 2h
+    フォールバック :t403d, after t403c, 2h
+
+    section 40.4 FEサービス
+    geminiService型更新 :t404a, 2025-12-04, 2h
+    generateShift拡張 :t404b, after t404a, 2h
+    エラーハンドリング :t404c, after t404b, 2h
+
+    section 40.5 評価UI
+    EvaluationPanelスケルトン :t405a, 2025-12-04, 3h
+    サマリー表示 :t405b, after t405a, 3h
+    違反リスト表示 :t405c, 2025-12-05, 3h
+    改善提案表示 :t405d, after t405c, 3h
+    レスポンシブ対応 :t405e, after t405d, 3h
+
+    section 40.6 シフト表統合
+    状態管理追加 :t406a, 2025-12-06, 2h
+    パネル統合 :t406b, after t406a, 3h
+    履歴保存ボタン :t406c, after t406b, 2h
+
+    section 40.7 履歴機能
+    historyService作成 :t407a, 2025-12-06, 2h
+    保存機能 :t407b, after t407a, 2h
+    取得機能 :t407c, after t407b, 2h
+    Firestoreルール :t407d, after t407c, 1h
+
+    section 40.8 テスト
+    ユニットテスト :t408a, 2025-12-07, 3h
+    統合テスト :t408b, after t408a, 3h
+    E2Eテスト :t408c, after t408b, 3h
+    型/Lintチェック :t408d, after t408c, 1h
+    CodeRabbitレビュー :t408e, after t408d, 2h
+        </div>
+
+        <h3>Phase 40 システムアーキテクチャ</h3>
+        <div class="mermaid">
+graph TB
+    subgraph "Frontend (React)"
+        UI[ShiftTable.tsx]
+        EvalPanel[EvaluationPanel.tsx<br/>新規追加]
+        GeminiSvc[geminiService.ts]
+        HistorySvc[evaluationHistoryService.ts<br/>新規追加]
+    end
+
+    subgraph "Cloud Functions (asia-northeast1)"
+        GenShift[generateShift<br/>拡張]
+        EvalLogic[evaluationLogic.ts<br/>新規追加]
+    end
+
+    subgraph "Vertex AI (asia-northeast1)"
+        Gemini[Gemini 2.5 Flash]
+    end
+
+    subgraph "Firestore"
+        Schedules[(schedules)]
+        GenHistory[(aiGenerationHistory<br/>新規追加)]
+    end
+
+    UI -->|シフト生成| GeminiSvc
+    GeminiSvc -->|POST| GenShift
+    GenShift -->|プロンプト| Gemini
+    Gemini -->|シフト+評価| GenShift
+    GenShift -->|ルールチェック| EvalLogic
+    GenShift -->|結果| GeminiSvc
+    GeminiSvc --> UI
+    GeminiSvc --> EvalPanel
+    UI -->|保存| Schedules
+    EvalPanel --> HistorySvc
+    HistorySvc -->|履歴保存| GenHistory
+
+    style EvalPanel fill:#90EE90
+    style EvalLogic fill:#90EE90
+    style HistorySvc fill:#90EE90
+    style GenHistory fill:#90EE90
+        </div>
+
+        <h3>Phase 40 評価データモデル</h3>
+        <div class="mermaid">
+erDiagram
+    AIEvaluationResult {
+        number overallScore "0-100"
+        number fulfillmentRate "0-100%"
+        Timestamp generatedAt
+    }
+
+    ConstraintViolation {
+        string type "staffShortage等"
+        string severity "error/warning"
+        string description
+        array affectedStaff
+        array affectedDates
+        string suggestion
+    }
+
+    Recommendation {
+        string priority "high/medium/low"
+        string category "staffing等"
+        string description
+        string action
+    }
+
+    SimulationResult {
+        number estimatedOvertimeHours
+        string workloadBalance "good/fair/poor"
+        number paidLeaveUsageRate
+        array risks
+    }
+
+    AIGenerationHistory {
+        string id
+        string targetMonth
+        string generatedBy
+        Timestamp createdAt
+    }
+
+    AIEvaluationResult ||--o{ ConstraintViolation : contains
+    AIEvaluationResult ||--o{ Recommendation : contains
+    AIEvaluationResult ||--|| SimulationResult : contains
+    AIGenerationHistory ||--|| AIEvaluationResult : includes
+        </div>
+
+        <h3>Phase 40 制約違反検出フロー</h3>
+        <div class="mermaid">
+flowchart TB
+    Start[シフトデータ受信] --> Check1{人員不足?}
+    Check1 -->|違反| Add1[error追加<br/>-10点]
+    Check1 -->|OK| Check2
+
+    Add1 --> Check2{連勤超過?}
+    Check2 -->|違反| Add2[warning追加<br/>-5点]
+    Check2 -->|OK| Check3
+
+    Add2 --> Check3{夜勤後休息不足?}
+    Check3 -->|違反| Add3[warning追加<br/>-5点]
+    Check3 -->|OK| Check4
+
+    Add3 --> Check4{資格要件未充足?}
+    Check4 -->|違反| Add4[error追加<br/>-10点]
+    Check4 -->|OK| Check5
+
+    Add4 --> Check5{休暇希望未反映?}
+    Check5 -->|違反| Add5[warning追加<br/>-5点]
+    Check5 -->|OK| Merge
+
+    Add5 --> Merge[結果統合]
+    Merge --> Score[総合スコア計算<br/>100点 - 減点]
+    Score --> Output[AIEvaluationResult返却]
+
+    style Add1 fill:#FFCDD2
+    style Add2 fill:#FFF9C4
+    style Add3 fill:#FFF9C4
+    style Add4 fill:#FFCDD2
+    style Add5 fill:#FFF9C4
+    style Output fill:#C8E6C9
+        </div>
+
+        <hr>
+
         <h2>効率化の成果</h2>
 
         <div class="mermaid">
@@ -724,7 +981,7 @@ graph TB
         <hr>
 
         <footer class="site-footer">
-            <p><strong>最終更新</strong>: 2025年11月26日（Phase 39完了時点）</p>
+            <p><strong>最終更新</strong>: 2025年11月26日（Phase 40設計完了・タスク生成済み）</p>
         </footer>
     </main>
 </body>

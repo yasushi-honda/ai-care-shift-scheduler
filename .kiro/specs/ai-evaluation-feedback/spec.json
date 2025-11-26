@@ -2,7 +2,7 @@
   "name": "ai-evaluation-feedback",
   "description": "AI評価・フィードバック機能",
   "language": "ja",
-  "phase": "design-generated",
+  "phase": "tasks-generated",
   "approvals": {
     "requirements": {
       "generated": true,
@@ -10,13 +10,18 @@
     },
     "design": {
       "generated": true,
-      "approved": false
+      "approved": true,
+      "approved_at": "2025-11-26T06:30:00Z",
+      "verification_notes": "整合性検証完了: モデル名修正、型定義の差異を文書化"
     },
     "tasks": {
-      "generated": false,
-      "approved": false
+      "generated": true,
+      "generated_at": "2025-11-26T06:45:00Z",
+      "approved": false,
+      "task_count": 33,
+      "estimated_days": 6.5
     }
   },
   "created_at": "2025-11-26T00:00:00Z",
-  "updated_at": "2025-11-26T00:00:00Z"
+  "updated_at": "2025-11-26T06:45:00Z"
 }
