@@ -252,6 +252,15 @@ const ShiftTable: React.FC<ShiftTableProps> = ({ schedule, targetMonth, onShiftC
           // 行の末尾（月末日）に移動
           newDateIndex = totalDates - 1;
           break;
+        // Phase 36: PageUp/PageDownで週単位移動
+        case 'PageUp':
+          // 7日前に移動（最小0）
+          newDateIndex = Math.max(0, dateIndex - 7);
+          break;
+        case 'PageDown':
+          // 7日後に移動（最大月末）
+          newDateIndex = Math.min(totalDates - 1, dateIndex + 7);
+          break;
         default:
           return false;
       }
@@ -290,8 +299,8 @@ const ShiftTable: React.FC<ShiftTableProps> = ({ schedule, targetMonth, onShiftC
       ? (currentShift?.plannedShiftType || currentShift?.shiftType)
       : currentShift?.actualShiftType;
 
-    // 矢印キー＋Home/Endナビゲーション（Phase 32, 34）
-    if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(e.key)) {
+    // 矢印キー＋Home/End＋PageUp/PageDownナビゲーション（Phase 32, 34, 36）
+    if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Home', 'End', 'PageUp', 'PageDown'].includes(e.key)) {
       handleArrowNavigation(e, staffIndex, dateIndex, type, totalStaff, totalDates);
       return;
     }

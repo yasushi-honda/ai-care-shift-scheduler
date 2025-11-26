@@ -876,3 +876,82 @@ test.describe('Ctrl+矢印キーナビゲーション', () => {
     await expect(focusedCell).toBeVisible();
   });
 });
+
+/**
+ * Phase 36: PageUp/PageDownナビゲーションテスト
+ */
+test.describe('PageUp/PageDownナビゲーション', () => {
+  test.beforeEach(async ({ page }) => {
+    await setupAuthenticatedUser(page, {
+      email: 'pageupdown-test@example.com',
+      password: 'password123',
+      displayName: 'PageUpDownテスト',
+      role: 'admin',
+    });
+
+    await page.goto('/');
+    await page.waitForLoadState('networkidle');
+  });
+
+  test('PageUpで7日前に移動する', async ({ page }) => {
+    // シフト表が表示されるまで待機
+    const shiftTable = page.locator('table');
+    await expect(shiftTable).toBeVisible({ timeout: 10000 });
+
+    // 中央付近のセルにフォーカス（7日以上右にある位置）
+    const allCells = page.locator('td[tabindex="0"]');
+    const cellCount = await allCells.count();
+    const middleCell = allCells.nth(Math.floor(cellCount / 2));
+    await middleCell.focus();
+
+    // PageUpを押す
+    await page.keyboard.press('PageUp');
+    await page.waitForTimeout(100);
+
+    // フォーカスが移動したことを確認
+    const focusedCell = page.locator('td[tabindex="0"]:focus');
+    await expect(focusedCell).toBeVisible();
+  });
+
+  test('PageDownで7日後に移動する', async ({ page }) => {
+    // シフト表が表示されるまで待機
+    const shiftTable = page.locator('table');
+    await expect(shiftTable).toBeVisible({ timeout: 10000 });
+
+    // 最初のセルにフォーカス
+    const firstCell = page.locator('td[tabindex="0"]').first();
+    await firstCell.focus();
+
+    // PageDownを押す
+    await page.keyboard.press('PageDown');
+    await page.waitForTimeout(100);
+
+    // フォーカスが移動したことを確認
+    const focusedCell = page.locator('td[tabindex="0"]:focus');
+    await expect(focusedCell).toBeVisible();
+  });
+
+  test('PageUp→PageDownの往復移動', async ({ page }) => {
+    // シフト表が表示されるまで待機
+    const shiftTable = page.locator('table');
+    await expect(shiftTable).toBeVisible({ timeout: 10000 });
+
+    // 中央付近のセルにフォーカス
+    const allCells = page.locator('td[tabindex="0"]');
+    const cellCount = await allCells.count();
+    const middleCell = allCells.nth(Math.floor(cellCount / 2));
+    await middleCell.focus();
+
+    // PageUpで7日前へ
+    await page.keyboard.press('PageUp');
+    await page.waitForTimeout(100);
+    const afterPageUp = page.locator('td[tabindex="0"]:focus');
+    await expect(afterPageUp).toBeVisible();
+
+    // PageDownで7日後へ
+    await page.keyboard.press('PageDown');
+    await page.waitForTimeout(100);
+    const afterPageDown = page.locator('td[tabindex="0"]:focus');
+    await expect(afterPageDown).toBeVisible();
+  });
+});
