@@ -1,7 +1,7 @@
 
-import React, { useState, useRef, useCallback, useEffect } from 'react';
-import type { StaffSchedule, GeneratedShift } from '../types';
-import { WEEKDAYS } from '../constants';
+import React, { useState, useRef, useCallback, useEffect, useMemo } from 'react';
+import type { StaffSchedule, GeneratedShift, FacilityShiftSettings } from '../types';
+import { WEEKDAYS, DEFAULT_SHIFT_TYPES, DEFAULT_SHIFT_CYCLE } from '../constants';
 import { ShiftEditConfirmModal } from '../src/components/ShiftEditConfirmModal';
 
 interface ShiftTableProps {
@@ -12,6 +12,8 @@ interface ShiftTableProps {
   onBulkCopyClick?: () => void;
   /** ダブルクリックでシフトタイプを素早く変更する */
   onQuickShiftChange?: (staffId: string, date: string, type: 'planned' | 'actual', newShiftType: string) => void;
+  /** Phase 38: シフトタイプ設定（オプション - 指定されない場合はデフォルト使用） */
+  shiftSettings?: FacilityShiftSettings;
 }
 
 const getShiftColor = (shiftType: string) => {
@@ -63,10 +65,50 @@ interface EditModalData {
   currentShift: GeneratedShift | null;
 }
 
-const ShiftTable: React.FC<ShiftTableProps> = ({ schedule, targetMonth, onShiftChange, onShiftUpdate, onBulkCopyClick, onQuickShiftChange }) => {
+const ShiftTable: React.FC<ShiftTableProps> = ({ schedule, targetMonth, onShiftChange, onShiftUpdate, onBulkCopyClick, onQuickShiftChange, shiftSettings }) => {
   const [editingShift, setEditingShift] = useState<{ staffId: string, date: string } | null>(null);
   const [showEditModal, setShowEditModal] = useState(false);
   const [editModalData, setEditModalData] = useState<EditModalData | null>(null);
+
+  // Phase 38: 動的シフトサイクルと色取得関数
+  const { shiftCycle, shiftColorMap, availableShiftTypes } = useMemo(() => {
+    const types = shiftSettings?.shiftTypes ?? DEFAULT_SHIFT_TYPES;
+    const cycle = shiftSettings?.defaultShiftCycle ?? DEFAULT_SHIFT_CYCLE;
+
+    // シフトサイクル（IDから名前に変換）
+    const shiftCycleNames = cycle.map(id => {
+      const type = types.find(t => t.id === id);
+      return type?.name ?? '';
+    }).filter(name => name !== '');
+
+    // シフト名から色へのマップ
+    const colorMap = new Map<string, string>();
+    types.forEach(type => {
+      colorMap.set(type.name, `${type.color.background} ${type.color.text}`);
+    });
+
+    // 利用可能なシフトタイプ名
+    const availableTypes = types.filter(t => t.isActive).map(t => t.name);
+
+    return {
+      shiftCycle: shiftCycleNames.length > 0 ? shiftCycleNames : SHIFT_CYCLE,
+      shiftColorMap: colorMap,
+      availableShiftTypes: availableTypes.length > 0 ? availableTypes : AVAILABLE_SHIFT_TYPES,
+    };
+  }, [shiftSettings]);
+
+  // Phase 38: 動的色取得関数
+  const getDynamicShiftColor = useCallback((shiftType: string) => {
+    return shiftColorMap.get(shiftType) || getShiftColor(shiftType);
+  }, [shiftColorMap]);
+
+  // Phase 38: 動的次のシフトタイプ取得関数
+  const getDynamicNextShiftType = useCallback((currentType: string | undefined): string => {
+    if (!currentType) return shiftCycle[0];
+    const index = shiftCycle.indexOf(currentType);
+    if (index === -1) return shiftCycle[0];
+    return shiftCycle[(index + 1) % shiftCycle.length];
+  }, [shiftCycle]);
 
   // シングル/ダブルクリック判定用タイマー
   const clickTimerRef = useRef<Record<string, ReturnType<typeof setTimeout> | null>>({});
@@ -137,9 +179,9 @@ const ShiftTable: React.FC<ShiftTableProps> = ({ schedule, targetMonth, onShiftC
   ) => {
     if (!onQuickShiftChange) return;
 
-    const nextType = getNextShiftType(currentShiftType);
+    const nextType = getDynamicNextShiftType(currentShiftType);
     onQuickShiftChange(staffId, date, type, nextType);
-  }, [onQuickShiftChange]);
+  }, [onQuickShiftChange, getDynamicNextShiftType]);
 
   /**
    * セルクリックハンドラー
@@ -427,7 +469,7 @@ const ShiftTable: React.FC<ShiftTableProps> = ({ schedule, targetMonth, onShiftC
                           onClick={() => handleCellClick(shift.date, staffSchedule.staffId, staffSchedule.staffName, 'planned', shift)}
                           onKeyDown={(e) => handleKeyDown(e, shift.date, staffSchedule.staffId, staffSchedule.staffName, 'planned', shift, staffIndex, dateIndex, totalStaff, totalDates)}
                         >
-                          <span className={`inline-flex px-2 py-0.5 rounded-full ${getShiftColor(plannedShiftType)}`}>
+                          <span className={`inline-flex px-2 py-0.5 rounded-full ${getDynamicShiftColor(plannedShiftType)}`}>
                             {plannedShiftType}
                           </span>
                           {shift.plannedStartTime && shift.plannedEndTime && (
@@ -467,7 +509,7 @@ const ShiftTable: React.FC<ShiftTableProps> = ({ schedule, targetMonth, onShiftC
                             <span className="text-gray-400 text-[10px]">未入力</span>
                           ) : (
                             <>
-                              <span className={`inline-flex px-2 py-0.5 rounded-full ${getShiftColor(actualShiftType)}`}>
+                              <span className={`inline-flex px-2 py-0.5 rounded-full ${getDynamicShiftColor(actualShiftType)}`}>
                                 {actualShiftType}
                               </span>
                               {shift.actualStartTime && shift.actualEndTime && (

@@ -343,3 +343,40 @@ export type SecurityAlertError =
   | { code: 'VALIDATION_ERROR'; message: string }
   | { code: 'FIRESTORE_ERROR'; message: string }
   | { code: 'NOT_FOUND'; message: string };
+
+
+// ==================== シフトタイプ設定（Phase 38）====================
+
+// シフト表示色
+export interface ShiftColor {
+  background: string; // Tailwind CSS color class (e.g., 'bg-sky-100')
+  text: string; // Tailwind CSS color class (e.g., 'text-sky-700')
+}
+
+// シフトタイプ設定
+export interface ShiftTypeConfig {
+  id: string; // UUID (e.g., 'early', 'day', 'late', 'night', 'off', 'postnight')
+  name: string; // 表示名 (e.g., '早番', '日勤')
+  start: string; // 開始時間 HH:mm (e.g., '07:00')
+  end: string; // 終了時間 HH:mm (e.g., '16:00')
+  restHours: number; // 休憩時間（時間単位）
+  color: ShiftColor; // 表示色
+  isActive: boolean; // 有効/無効フラグ
+  sortOrder: number; // 表示順序
+}
+
+// 施設シフト設定（Firestore /facilities/{facilityId}/shiftSettings/default）
+export interface FacilityShiftSettings {
+  facilityId: string;
+  shiftTypes: ShiftTypeConfig[];
+  defaultShiftCycle: string[]; // シフトサイクル順序（シフトタイプIDの配列）
+  updatedAt: Timestamp;
+  updatedBy: string; // 更新者のUID
+}
+
+// シフトタイプ設定サービスエラー型
+export type ShiftTypeSettingsError =
+  | { code: 'PERMISSION_DENIED'; message: string }
+  | { code: 'VALIDATION_ERROR'; message: string }
+  | { code: 'FIRESTORE_ERROR'; message: string }
+  | { code: 'NOT_FOUND'; message: string };

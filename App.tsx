@@ -3,9 +3,10 @@ import { Link, useNavigate } from 'react-router-dom';
 import {
   Role, Qualification, TimeSlotPreference, LeaveType,
   type Staff, type ShiftRequirement, type StaffSchedule, type GeneratedShift, type LeaveRequest, type ScheduleVersion, type LeaveRequestDocument, type Facility,
+  type FacilityShiftSettings,
   assertResultError, assertResultSuccess
 } from './types';
-import { DEFAULT_TIME_SLOTS } from './constants';
+import { DEFAULT_TIME_SLOTS, DEFAULT_SHIFT_TYPES, DEFAULT_SHIFT_CYCLE } from './constants';
 import { generateShiftSchedule } from './services/geminiService';
 import { exportToCSV } from './services/exportService';
 import { StaffService } from './src/services/staffService';
@@ -13,6 +14,7 @@ import { ScheduleService } from './src/services/scheduleService';
 import { LeaveRequestService } from './src/services/leaveRequestService';
 import { RequirementService } from './src/services/requirementService';
 import { getFacilityById } from './src/services/facilityService';
+import { subscribeToShiftSettings, saveShiftSettings } from './src/services/shiftTypeService';
 import { useAuth } from './src/contexts/AuthContext';
 import { useToast } from './src/contexts/ToastContext';
 import ShiftTable from './components/ShiftTable';
@@ -26,6 +28,8 @@ import { Button } from './src/components/Button';
 import { BulkCopyPlannedToActualModal } from './src/components/BulkCopyPlannedToActualModal';
 import { bulkCopyPlannedToActual, type BulkCopyOptions } from './src/utils/bulkCopyPlannedToActual';
 import KeyboardHelpModal from './src/components/KeyboardHelpModal';
+import { ShiftTypeSettings } from './src/components/ShiftTypeSettings';
+import { Timestamp } from 'firebase/firestore';
 
 type ViewMode = 'shift' | 'leaveRequest';
 
@@ -104,6 +108,15 @@ const App: React.FC = () => {
 
   // Phase 37: キーボードショートカットヘルプモーダル
   const [showKeyboardHelp, setShowKeyboardHelp] = useState(false);
+
+  // Phase 38: シフトタイプ設定
+  const [shiftSettings, setShiftSettings] = useState<FacilityShiftSettings>({
+    facilityId: '',
+    shiftTypes: DEFAULT_SHIFT_TYPES,
+    defaultShiftCycle: DEFAULT_SHIFT_CYCLE,
+    updatedAt: Timestamp.now(),
+    updatedBy: 'system',
+  });
 
   // ユーザーがアクセスできる施設情報をロード
   useEffect(() => {
@@ -326,6 +339,42 @@ const App: React.FC = () => {
       setLeaveRequestDocuments([]);
     }
   }, [selectedFacilityId, requirements.targetMonth]);
+
+  // Phase 38: シフト設定の購読
+  useEffect(() => {
+    if (!selectedFacilityId) {
+      return;
+    }
+
+    const unsubscribe = subscribeToShiftSettings(
+      selectedFacilityId,
+      (settings) => {
+        setShiftSettings(settings);
+      },
+      (error) => {
+        console.error('Failed to subscribe to shift settings:', error);
+        showError(`シフト設定の読み込みに失敗しました: ${error.message}`);
+      }
+    );
+
+    return () => unsubscribe();
+  }, [selectedFacilityId]);
+
+  // Phase 38: シフト設定の保存ハンドラ
+  const handleSaveShiftSettings = useCallback(async (
+    settings: Partial<Omit<FacilityShiftSettings, 'facilityId' | 'updatedAt' | 'updatedBy'>>
+  ) => {
+    if (!selectedFacilityId || !currentUser) {
+      return;
+    }
+
+    const result = await saveShiftSettings(selectedFacilityId, settings, currentUser.uid);
+    if (!result.success) {
+      assertResultError(result);
+      throw new Error(result.error.message);
+    }
+    showSuccess('シフト設定を保存しました');
+  }, [selectedFacilityId, currentUser, showSuccess]);
 
   const handleStaffChange = useCallback(async (updatedStaff: Staff) => {
     if (!selectedFacilityId) return;
@@ -1347,6 +1396,13 @@ const App: React.FC = () => {
               />
             )}
           </Accordion>
+          <Accordion title="シフト種別設定" icon={<ShiftTypeIcon/>}>
+            <ShiftTypeSettings
+              settings={shiftSettings}
+              onSave={handleSaveShiftSettings}
+              disabled={!selectedFacilityId}
+            />
+          </Accordion>
           <Accordion title="事業所のシフト要件設定" icon={<ClipboardIcon/>}>
             <div className="space-y-6">
               <div>
@@ -1469,6 +1525,7 @@ const App: React.FC = () => {
                 onShiftUpdate={handleShiftUpdate}
                 onBulkCopyClick={() => setBulkCopyModalOpen(true)}
                 onQuickShiftChange={handleQuickShiftChange}
+                shiftSettings={shiftSettings}
               />
             )
           ) : (
@@ -1534,6 +1591,11 @@ const DownloadIcon = () => (
 const SparklesIcon = () => (
   <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
     <path strokeLinecap="round" strokeLinejoin="round" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.293 2.293a1 1 0 010 1.414L10 16l-4 4-4-4 5.293-5.293a1 1 0 011.414 0L13 13m0 0l2.293 2.293a1 1 0 010 1.414L10 21l-4-4 4-4 3 3z" />
+  </svg>
+);
+const ShiftTypeIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-care-secondary" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+    <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
   </svg>
 );
 
