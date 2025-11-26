@@ -37,7 +37,7 @@ interface RestoreResponse {
  */
 export const restoreFacilityData = onCall<RestoreRequest, Promise<RestoreResponse>>(
   {
-    region: 'us-central1',
+    region: 'asia-northeast1', // 東京リージョン（日本国内データ処理）
     memory: '1GiB', // 大量データ復元に備えて増量
     timeoutSeconds: 540, // 9分（最大値）
     minInstances: 0,

@@ -194,7 +194,7 @@ export const scheduledMonthlyReport = onSchedule(
   {
     schedule: '0 9 1 * *', // 毎月1日午前9時（UTC 0時 = JST 9時）
     timeZone: 'Asia/Tokyo',
-    region: 'us-central1',
+    region: 'asia-northeast1', // 東京リージョン（日本国内データ処理）
     memory: '512MiB',
     timeoutSeconds: 300, // 5分
   },
@@ -246,7 +246,7 @@ export const generateMonthlyReport = onCall<
   }>
 >(
   {
-    region: 'us-central1',
+    region: 'asia-northeast1', // 東京リージョン（日本国内データ処理）
     memory: '512MiB',
     timeoutSeconds: 300,
   },

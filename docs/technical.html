@@ -555,7 +555,7 @@ graph TB
     end
 
     subgraph "外部サービス"
-        G[Google Gemini API<br/>us-central1]
+        G[Vertex AI<br/>Gemini 2.5 Flash<br/>asia-northeast1]
     end
 
     subgraph "CI/CD"
@@ -765,7 +765,7 @@ sequenceDiagram
     CF->>CF: プロンプト構築
 
     CF->>Gemini: generateContent()
-    Note over Gemini: gemini-2.5-flash<br/>us-central1
+    Note over Gemini: gemini-2.5-flash<br/>asia-northeast1（東京）
 
     Gemini-->>CF: JSON形式シフト
 

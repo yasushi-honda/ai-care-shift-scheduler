@@ -13,7 +13,7 @@ import { Storage } from '@google-cloud/storage';
 export const archiveAuditLogs = onRequest(
   {
     timeoutSeconds: 540, // 9分（Cloud Functions gen2の最大値）
-    region: 'us-central1',
+    region: 'asia-northeast1', // 東京リージョン（日本国内データ処理）
     memory: '512MiB',
   },
   async (req, res) => {

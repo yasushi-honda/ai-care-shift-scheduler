@@ -22,7 +22,7 @@ const getCloudFunctionUrl = (): string => {
         'Please check your Firebase configuration in .env.local'
       );
     }
-    return `https://us-central1-${projectId}.cloudfunctions.net/generateShift`;
+    return `https://asia-northeast1-${projectId}.cloudfunctions.net/generateShift`;
   }
 
   return url;

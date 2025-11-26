@@ -621,6 +621,50 @@ graph TB
 
         <hr>
 
+        <h2>セキュリティ・データ保護</h2>
+
+        <div class="feature-grid">
+            <div class="feature-card" style="border-left: 4px solid #28a745;">
+                <h3>🇯🇵 日本国内データ完結</h3>
+                <p>すべてのデータ処理がGCP東京リージョン（asia-northeast1）で完結。個人情報が国外に転送されることはありません。</p>
+            </div>
+            <div class="feature-card" style="border-left: 4px solid #28a745;">
+                <h3>🔒 Vertex AI セキュアAPI</h3>
+                <p>Gemini 2.5 FlashをVertex AI経由で使用。APIキーがクライアントに露出しないサーバーサイド実装。</p>
+            </div>
+            <div class="feature-card" style="border-left: 4px solid #28a745;">
+                <h3>🛡️ Firebase認証・RBAC</h3>
+                <p>Firebase Authenticationによる堅牢な認証。Admin/Manager/Staffの3段階権限管理。</p>
+            </div>
+            <div class="feature-card" style="border-left: 4px solid #28a745;">
+                <h3>📋 監査ログ・コンプライアンス</h3>
+                <p>すべての操作を監査ログに記録。医療介護業界のセキュリティ要件に適合した設計。</p>
+            </div>
+        </div>
+
+        <div class="mermaid">
+graph LR
+    subgraph "日本国内データセンター（東京）"
+        direction TB
+        A[ユーザー<br/>日本国内] -->|HTTPS| B[Firebase Hosting<br/>CDN]
+        B -->|API Call| C[Cloud Functions<br/>asia-northeast1]
+        C -->|AI推論| D[Vertex AI<br/>Gemini 2.5 Flash<br/>asia-northeast1]
+        C -->|データ保存| E[Cloud Firestore<br/>asia-northeast1]
+    end
+
+    style A fill:#E3F2FD
+    style B fill:#FFF3E0
+    style C fill:#E8F5E9
+    style D fill:#F3E5F5
+    style E fill:#E8F5E9
+        </div>
+
+        <p style="text-align: center; margin-top: 1rem; color: #28a745; font-weight: bold;">
+            ✅ GCP東京リージョン（asia-northeast1）ですべてのデータ処理が完結
+        </p>
+
+        <hr>
+
         <h2>技術スタック</h2>
 
         <div class="mermaid">
@@ -640,8 +684,9 @@ graph TB
     end
 
     subgraph "AI"
-        AI1[Google Gemini API]
-        AI2[gemini-2.5-flash]
+        AI1[Vertex AI]
+        AI2[Gemini 2.5 Flash]
+        AI3[asia-northeast1]
     end
 
     subgraph "テスト・CI/CD"

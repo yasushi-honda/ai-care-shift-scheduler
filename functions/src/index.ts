@@ -5,8 +5,9 @@ import * as admin from 'firebase-admin';
 admin.initializeApp();
 
 // グローバル設定（デフォルト値、個別の関数で上書き可能）
+// セキュリティ: 全データ処理を日本国内（東京リージョン）で完結
 setGlobalOptions({
-  region: 'us-central1', // 米国中部リージョン（全関数統一）
+  region: 'asia-northeast1', // 東京リージョン（日本国内データ処理）
   memory: '512MiB',
   timeoutSeconds: 120, // 大規模シフト生成（50名×1ヶ月）に対応
   minInstances: 0,

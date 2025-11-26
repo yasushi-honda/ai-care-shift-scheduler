@@ -46,7 +46,7 @@ googleProvider.setCustomParameters({
 const db = getFirestore(app);
 
 // Cloud Functionsの初期化
-const functions = getFunctions(app, 'us-central1');
+const functions = getFunctions(app, 'asia-northeast1');
 
 // Cloud Storageの初期化
 const storage = getStorage(app);

@@ -22,10 +22,10 @@ Firebase Functions (Gen 2)
 ```
 Google Cloud Platform
 ├── Firebase Hosting (フロントエンド配信)
-├── Cloud Functions (バックエンドAPI)
-├── Firestore (データベース)
+├── Cloud Functions (バックエンドAPI) - asia-northeast1
+├── Firestore (データベース) - asia-northeast1
 ├── Cloud Storage for Firebase (ファイル保存)
-└── Vertex AI (Gemini 2.5 Flash-Lite)
+└── Vertex AI (Gemini 2.5 Flash) - asia-northeast1
 ```
 
 ### 開発・CI/CD
@@ -156,53 +156,58 @@ export default {
 **グローバル設定** (`functions/src/index.ts`):
 ```typescript
 setGlobalOptions({
-  region: 'us-central1',  // 米国中部リージョン（全関数統一、コスト最適化）
+  region: 'asia-northeast1',  // 東京リージョン（日本国内データ処理完結）
   memory: '512MiB',
-  timeoutSeconds: 60,
+  timeoutSeconds: 120,
   minInstances: 0,
   maxInstances: 10,
 });
 ```
 
-**現在実装されているエンドポイント** (us-central1):
-- `generateShift`: AIシフト生成API（Gemini 2.5 Flash-Lite使用）
+**現在実装されているエンドポイント** (asia-northeast1):
+
+- `generateShift`: AIシフト生成API（Vertex AI Gemini 2.5 Flash使用）
 
 **セキュリティ設定**:
+
 - CORS: すべてのオリジンを許可（開発段階）
 - 認証: なし（将来実装予定）
 
-#### Vertex AI - Gemini 2.5 Flash-Lite (GA版)
+#### Vertex AI - Gemini 2.5 Flash (GA版)
+
 **選定理由**:
-- **コスト効率**: 最もコスト効率的なGeminiモデル
-- **高速**: 高スループット対応（出力トークン50%削減）
+
+- **高性能**: Gemini 2.5シリーズの高速モデル
 - **安定版**: GA（Generally Available）で本番環境に適合
 - **文脈理解**: 100万トークンのコンテキストウィンドウ
+- **日本語対応**: 日本語プロンプト・出力に最適化
 
-**モデル情報**（2025年10月時点）:
-- **モデル名**: `gemini-2.5-flash-lite` （自動更新安定版エイリアス）
-- **リリース日**: 2025年7月22日
-- **サポート期限**: 2026年7月22日
+**モデル情報**（2025年11月時点）:
+
+- **モデル名**: `gemini-2.5-flash` （自動更新安定版エイリアス）
 - **バージョン管理**: バージョン番号や日付を省略したモデル名は、Googleの「自動更新安定版エイリアス」として機能し、常に最新の安定版を指します
 
-**利用可能リージョン**（GA版）:
-- **米国**: us-central1, us-east1, us-east4, us-east5, us-south1, us-west1, us-west4
-- **ヨーロッパ**: europe-central2, europe-north1, europe-southwest1, europe-west1, europe-west4, europe-west8, europe-west9
-- **グローバル**: global
-- ⚠️ **重要**: アジアリージョン（asia-northeast1など）では利用不可
+**本プロジェクトでのリージョン構成**:
 
-**本プロジェクトでの使用リージョン**: `us-central1` （米国中部）
+- **Cloud Functions**: `asia-northeast1`（東京）- 日本国内データ処理完結
+- **Vertex AI location**: `asia-northeast1`（東京）- 日本国内データセンターを使用
+- **Firestore**: `asia-northeast1`（東京）- 日本国内データセンター
+
+✅ **セキュリティ**: すべてのデータ処理が日本国内（東京リージョン）で完結します。医療介護業界のデータセキュリティ要件に適合した構成です。
 
 **使用方針**:
-- モデル名: `gemini-2.5-flash-lite` （GA版）
-- リージョン: `us-central1` （Gemini 2.5 Flash-Lite対応リージョン）
+
+- モデル名: `gemini-2.5-flash` （GA版）
+- Vertex AI location: `asia-northeast1` （東京）
 - 本番環境対応: GA版のため、本番環境での使用に適している
 - バージョン管理: バージョン番号や日付を省略したモデル名は、自動的に最新の安定版を使用
 - フォールバック: なし（失敗時はエラーを返す）
 
 **参考ドキュメント**:
-- [Gemini 2.5 Flash-Lite 公式ドキュメント](https://cloud.google.com/vertex-ai/generative-ai/docs/models/gemini/2-5-flash-lite) - 利用可能リージョンの公式情報
+
+- [Gemini 2.5 Flash 公式ドキュメント](https://cloud.google.com/vertex-ai/generative-ai/docs/models/gemini/2-5-flash)
 - [Model versions and lifecycle](https://cloud.google.com/vertex-ai/generative-ai/docs/learn/model-versions)
-- [Gemini 2.5 Updates](https://developers.googleblog.com/en/continuing-to-bring-you-our-latest-models-with-an-improved-gemini-2-5-flash-and-flash-lite-release/)
+- [Vertex AI リージョン](https://cloud.google.com/vertex-ai/docs/general/locations)
 
 **プロンプト設計**:
 ```

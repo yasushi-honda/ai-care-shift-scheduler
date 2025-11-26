@@ -240,7 +240,7 @@ timeline
                 </tr>
                 <tr>
                     <td>AI</td>
-                    <td>Google Gemini API (gemini-2.0-flash-exp)</td>
+                    <td>Vertex AI Gemini 2.5 Flash (asia-northeast1)</td>
                 </tr>
                 <tr>
                     <td>テスト</td>
@@ -252,10 +252,17 @@ timeline
                 </tr>
             </table>
 
-            <div class="danger-box">
-                <strong>重要な注意事項:</strong>
+            <div class="success-box">
+                <strong>セキュリティ・データ保護:</strong>
                 <ul style="margin-bottom: 0;">
-                    <li><strong>Gemini API</strong>: <code>us-central1</code>リージョンのみ使用可能（asia-northeast1は403エラー）</li>
+                    <li><strong>Vertex AI</strong>: <code>asia-northeast1</code>（東京）リージョンでGemini 2.5 Flashを使用</li>
+                    <li><strong>Cloud Functions</strong>: <code>asia-northeast1</code>（東京）で実行 - 日本国内データ処理完結</li>
+                    <li><strong>Firestore</strong>: <code>asia-northeast1</code>（東京）- すべてのデータが日本国内に保存</li>
+                </ul>
+            </div>
+            <div class="highlight-box">
+                <strong>運用上の注意:</strong>
+                <ul style="margin-bottom: 0;">
                     <li><strong>Firebase CLI</strong>: 認証エラー頻発 → GitHub Actions経由でデプロイ推奨</li>
                 </ul>
             </div>

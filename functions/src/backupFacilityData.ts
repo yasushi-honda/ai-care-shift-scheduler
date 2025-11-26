@@ -38,7 +38,7 @@ interface BackupResponse {
  */
 export const backupFacilityData = onCall<BackupRequest, Promise<BackupResponse>>(
   {
-    region: 'us-central1',
+    region: 'asia-northeast1', // 東京リージョン（日本国内データ処理）
     memory: '512MiB',
     timeoutSeconds: 300, // 5分（バックアップ処理に時間がかかる可能性）
     minInstances: 0,

@@ -22,7 +22,7 @@ export const scheduledBackup = onSchedule(
   {
     schedule: '0 17 * * *', // 毎日午前2時（JST）
     timeZone: 'UTC',
-    region: 'us-central1',
+    region: 'asia-northeast1', // 東京リージョン（日本国内データ処理）
     memory: '1GiB',
     timeoutSeconds: 540, // 9分
     // retryConfig は v2 では自動的に設定される

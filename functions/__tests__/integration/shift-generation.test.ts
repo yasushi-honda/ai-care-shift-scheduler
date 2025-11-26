@@ -17,7 +17,7 @@ import {
 describe('AI Shift Generation API - Integration Tests', () => {
   const CLOUD_FUNCTION_URL =
     process.env.CLOUD_FUNCTION_URL ||
-    'https://us-central1-ai-care-shift-scheduler.cloudfunctions.net/generateShift';
+    'https://asia-northeast1-ai-care-shift-scheduler.cloudfunctions.net/generateShift';
 
   describe('Setup Test', () => {
     it('should have Cloud Function URL configured', () => {
