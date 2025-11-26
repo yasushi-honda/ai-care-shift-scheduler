@@ -82,21 +82,23 @@
             margin: 0.75rem 0;
         }
         th, td {
-            padding: 0.75rem 0.5rem;
+            padding: 0.6rem 0.4rem;
             text-align: left;
             border-bottom: 1px solid #e1e4e8;
+            font-size: 0.9rem;
         }
         th {
             background: #f6f8fa;
             font-weight: 600;
-            font-size: 0.9rem;
+            font-size: 0.85rem;
             color: #24292e;
-        }
-        td {
-            font-size: 0.95rem;
         }
         .status-complete {
             color: #28a745;
+            font-weight: bold;
+        }
+        .status-planned {
+            color: #6f42c1;
             font-weight: bold;
         }
         .metric {
@@ -142,17 +144,35 @@
             border-top: 1px solid #e1e4e8;
             margin-top: 2rem;
         }
-        .phase-badge {
-            display: inline-block;
-            padding: 0.25rem 0.5rem;
-            border-radius: 4px;
-            font-size: 0.75rem;
-            font-weight: 600;
+        .timeline-item {
+            padding: 0.75rem 0;
+            border-left: 3px solid #28a745;
+            padding-left: 1rem;
             margin-left: 0.5rem;
+            margin-bottom: 0.5rem;
         }
-        .phase-done {
-            background: #28a745;
-            color: white;
+        .timeline-item.planned {
+            border-left-color: #6f42c1;
+        }
+        .timeline-date {
+            font-size: 0.8rem;
+            color: #586069;
+        }
+        .timeline-title {
+            font-weight: 600;
+            color: #24292e;
+        }
+        .timeline-desc {
+            font-size: 0.9rem;
+            color: #586069;
+        }
+        .section-divider {
+            text-align: center;
+            padding: 0.5rem 0;
+            color: #586069;
+            font-size: 0.85rem;
+            border-top: 1px dashed #d1d5da;
+            margin-top: 1rem;
         }
     </style>
 </head>
@@ -191,7 +211,113 @@
         </div>
 
         <div class="card">
-            <h2>開発フェーズ</h2>
+            <h2>開発スケジュール実績</h2>
+
+            <h3>2025年10月（基盤構築）</h3>
+            <div class="timeline-item">
+                <div class="timeline-date">10/23 - 10/31</div>
+                <div class="timeline-title">Phase 0-6: プロトタイプ開発</div>
+                <div class="timeline-desc">基本UI、シフト表示・編集機能</div>
+            </div>
+            <div class="timeline-item">
+                <div class="timeline-date">10/30 - 11/02</div>
+                <div class="timeline-title">Phase 7-12: 認証・データ設計</div>
+                <div class="timeline-desc">Firebase Auth、Firestore、マルチテナント</div>
+            </div>
+
+            <h3>2025年11月前半（AI統合）</h3>
+            <div class="timeline-item">
+                <div class="timeline-date">11/06 - 11/10</div>
+                <div class="timeline-title">Phase 13-15: Gemini API統合</div>
+                <div class="timeline-desc">Cloud Functions、シフト生成AI</div>
+            </div>
+            <div class="timeline-item">
+                <div class="timeline-date">11/11 - 11/15</div>
+                <div class="timeline-title">Phase 16-17: 制約条件最適化</div>
+                <div class="timeline-desc">連勤制限、夜勤後休息、資格要件</div>
+            </div>
+
+            <h3>2025年11月中旬（改善・拡張）</h3>
+            <div class="timeline-item">
+                <div class="timeline-date">11/16 - 11/20</div>
+                <div class="timeline-title">Phase 18-22: 実績入力効率化</div>
+                <div class="timeline-desc">予定と同じボタン（50%削減）</div>
+            </div>
+            <div class="timeline-item">
+                <div class="timeline-date">11/21 - 11/24</div>
+                <div class="timeline-title">Phase 23-26: 一括コピー・E2E・モバイル</div>
+                <div class="timeline-desc">一括コピー（86%削減）、Playwright</div>
+            </div>
+
+            <h3>2025年11月後半（UX強化）</h3>
+            <div class="timeline-item">
+                <div class="timeline-date">11/25</div>
+                <div class="timeline-title">Phase 27-37: UX改善</div>
+                <div class="timeline-desc">ダブルクリック、キーボード、アンドゥ/リドゥ</div>
+            </div>
+            <div class="timeline-item">
+                <div class="timeline-date">11/26</div>
+                <div class="timeline-title">Phase 38-39: 設定管理</div>
+                <div class="timeline-desc">シフト種別設定、休暇残高管理</div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>今後の対応予定</h2>
+
+            <h3>Phase 40+（2025年12月予定）</h3>
+            <div class="timeline-item planned">
+                <div class="timeline-date">12月上旬</div>
+                <div class="timeline-title">レポート機能強化</div>
+                <div class="timeline-desc">月次レポート、シフト集計、PDF出力</div>
+            </div>
+            <div class="timeline-item planned">
+                <div class="timeline-date">12月中旬</div>
+                <div class="timeline-title">通知機能追加</div>
+                <div class="timeline-desc">シフト変更通知、休暇残高アラート</div>
+            </div>
+            <div class="timeline-item planned">
+                <div class="timeline-date">12月下旬</div>
+                <div class="timeline-title">カレンダー連携</div>
+                <div class="timeline-desc">Google Calendar同期</div>
+            </div>
+
+            <div class="section-divider">将来の機能拡張候補</div>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>機能</th>
+                        <th style="text-align:center;">優先度</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>シフト表印刷最適化</td>
+                        <td style="text-align:center;">中</td>
+                    </tr>
+                    <tr>
+                        <td>シフト承認ワークフロー</td>
+                        <td style="text-align:center;">中</td>
+                    </tr>
+                    <tr>
+                        <td>有給取得率レポート</td>
+                        <td style="text-align:center;">中</td>
+                    </tr>
+                    <tr>
+                        <td>多言語対応（i18n）</td>
+                        <td style="text-align:center;">低</td>
+                    </tr>
+                    <tr>
+                        <td>ダークモード</td>
+                        <td style="text-align:center;">低</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="card">
+            <h2>開発フェーズ一覧</h2>
             <table>
                 <thead>
                     <tr>
@@ -203,28 +329,33 @@
                 <tbody>
                     <tr>
                         <td>0-12</td>
-                        <td>基盤構築</td>
+                        <td>基盤構築・認証・Firestore</td>
                         <td style="text-align:center;"><span class="status-complete">完了</span></td>
                     </tr>
                     <tr>
                         <td>13-17</td>
-                        <td>AI統合</td>
+                        <td>AI統合・シフト生成</td>
                         <td style="text-align:center;"><span class="status-complete">完了</span></td>
                     </tr>
                     <tr>
                         <td>18-26</td>
-                        <td>改善・拡張</td>
+                        <td>実績入力・E2E・モバイル</td>
                         <td style="text-align:center;"><span class="status-complete">完了</span></td>
                     </tr>
                     <tr>
                         <td>27-37</td>
-                        <td>UX改善</td>
+                        <td>UX改善・キーボード操作</td>
                         <td style="text-align:center;"><span class="status-complete">完了</span></td>
                     </tr>
                     <tr>
                         <td>38-39</td>
-                        <td>設定管理</td>
+                        <td>シフト種別・休暇残高</td>
                         <td style="text-align:center;"><span class="status-complete">完了</span></td>
+                    </tr>
+                    <tr>
+                        <td>40+</td>
+                        <td>レポート・通知・連携</td>
+                        <td style="text-align:center;"><span class="status-planned">予定</span></td>
                     </tr>
                 </tbody>
             </table>
