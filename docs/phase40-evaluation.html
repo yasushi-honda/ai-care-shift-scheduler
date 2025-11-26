@@ -1,0 +1,664 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Phase 40: AI評価・フィードバック機能 | AI Care Shift Scheduler</title>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <style>
+    :root {
+      --primary: #3b82f6;
+      --success: #22c55e;
+      --warning: #f59e0b;
+      --error: #ef4444;
+      --bg: #f8fafc;
+      --card-bg: #ffffff;
+      --text: #1e293b;
+      --text-muted: #64748b;
+      --border: #e2e8f0;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+
+    header {
+      background: linear-gradient(135deg, var(--primary), #1d4ed8);
+      color: white;
+      padding: 40px 20px;
+      text-align: center;
+    }
+
+    header h1 {
+      font-size: 2rem;
+      margin-bottom: 10px;
+    }
+
+    header p {
+      opacity: 0.9;
+      font-size: 1.1rem;
+    }
+
+    .nav {
+      background: var(--card-bg);
+      border-bottom: 1px solid var(--border);
+      padding: 10px 20px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .nav a {
+      color: var(--text);
+      text-decoration: none;
+      margin-right: 20px;
+      padding: 8px 12px;
+      border-radius: 6px;
+      transition: background 0.2s;
+    }
+
+    .nav a:hover {
+      background: var(--bg);
+    }
+
+    .card {
+      background: var(--card-bg);
+      border-radius: 12px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      padding: 24px;
+      margin-bottom: 24px;
+    }
+
+    .card h2 {
+      color: var(--primary);
+      margin-bottom: 16px;
+      padding-bottom: 8px;
+      border-bottom: 2px solid var(--border);
+    }
+
+    .card h3 {
+      margin: 20px 0 12px;
+      color: var(--text);
+    }
+
+    .mermaid {
+      background: #fafafa;
+      padding: 20px;
+      border-radius: 8px;
+      overflow-x: auto;
+    }
+
+    .status-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+      margin: 20px 0;
+    }
+
+    .status-item {
+      padding: 16px;
+      border-radius: 8px;
+      text-align: center;
+    }
+
+    .status-item.completed {
+      background: #dcfce7;
+      border: 1px solid #22c55e;
+    }
+
+    .status-item.in-progress {
+      background: #fef3c7;
+      border: 1px solid #f59e0b;
+    }
+
+    .status-item h4 {
+      font-size: 0.9rem;
+      color: var(--text-muted);
+      margin-bottom: 8px;
+    }
+
+    .status-item .value {
+      font-size: 1.5rem;
+      font-weight: bold;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 16px 0;
+    }
+
+    th, td {
+      padding: 12px;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+    }
+
+    th {
+      background: var(--bg);
+      font-weight: 600;
+    }
+
+    code {
+      background: #f1f5f9;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 0.9em;
+    }
+
+    .file-list {
+      list-style: none;
+    }
+
+    .file-list li {
+      padding: 8px 12px;
+      margin: 4px 0;
+      background: var(--bg);
+      border-radius: 6px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .file-list .badge {
+      font-size: 0.75rem;
+      padding: 2px 8px;
+      border-radius: 12px;
+      background: var(--primary);
+      color: white;
+    }
+
+    .file-list .badge.new {
+      background: var(--success);
+    }
+
+    .file-list .badge.modified {
+      background: var(--warning);
+    }
+
+    @media (max-width: 768px) {
+      header h1 {
+        font-size: 1.5rem;
+      }
+
+      .nav {
+        overflow-x: auto;
+        white-space: nowrap;
+      }
+
+      .card {
+        padding: 16px;
+      }
+
+      .mermaid {
+        font-size: 12px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Phase 40: AI評価・フィードバック機能</h1>
+    <p>シフト生成結果の自動評価と改善提案システム</p>
+  </header>
+
+  <nav class="nav">
+    <a href="index.html">Home</a>
+    <a href="technical.html">技術ドキュメント</a>
+    <a href="handoff.html">引き継ぎ</a>
+    <a href="#wbs">WBS</a>
+    <a href="#gantt">ガントチャート</a>
+    <a href="#architecture">アーキテクチャ</a>
+    <a href="#flow">処理フロー</a>
+  </nav>
+
+  <div class="container">
+    <!-- 進捗サマリー -->
+    <div class="card">
+      <h2>進捗サマリー</h2>
+      <div class="status-grid">
+        <div class="status-item completed">
+          <h4>完了タスク</h4>
+          <div class="value">31/33</div>
+        </div>
+        <div class="status-item completed">
+          <h4>バックエンド</h4>
+          <div class="value">100%</div>
+        </div>
+        <div class="status-item completed">
+          <h4>フロントエンド</h4>
+          <div class="value">100%</div>
+        </div>
+        <div class="status-item in-progress">
+          <h4>E2Eテスト</h4>
+          <div class="value">進行中</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- WBS -->
+    <div class="card" id="wbs">
+      <h2>WBS（作業分解構造）</h2>
+      <div class="mermaid">
+graph TD
+    P40[Phase 40: AI評価・フィードバック機能]
+
+    P40 --> W1[Week 1: バックエンド]
+    P40 --> W2[Week 2: フロントエンド]
+    P40 --> W3[Week 3: テスト・検証]
+
+    W1 --> T1[40.1 型定義・スキーマ]
+    W1 --> T2[40.2 評価ロジック]
+    W1 --> T3[40.3 generateShift拡張]
+
+    T1 --> T1_1[40.1.1 Cloud Functions型]
+    T1 --> T1_2[40.1.2 Frontend型]
+    T1 --> T1_3[40.1.3 レスポンス型]
+
+    T2 --> T2_1[40.2.1 evaluationLogic.ts]
+    T2 --> T2_2[40.2.2 人員不足チェック]
+    T2 --> T2_3[40.2.3 連勤チェック]
+    T2 --> T2_4[40.2.4 夜勤休息チェック]
+    T2 --> T2_5[40.2.5 資格チェック]
+    T2 --> T2_6[40.2.6 休暇チェック]
+
+    T3 --> T3_1[40.3.1 プロンプト拡張]
+    T3 --> T3_2[40.3.2 評価統合]
+    T3 --> T3_3[40.3.3 レスポンス拡張]
+    T3 --> T3_4[40.3.4 フォールバック]
+
+    W2 --> T4[40.4 サービス拡張]
+    W2 --> T5[40.5 評価UI]
+    W2 --> T6[40.6 シフト表統合]
+    W2 --> T7[40.7 履歴機能]
+
+    T4 --> T4_1[40.4.1 型定義更新]
+    T4 --> T4_2[40.4.2 関数拡張]
+    T4 --> T4_3[40.4.3 エラー処理]
+
+    T5 --> T5_1[40.5.1 スケルトン]
+    T5 --> T5_2[40.5.2 サマリー表示]
+    T5 --> T5_3[40.5.3 違反リスト]
+    T5 --> T5_4[40.5.4 改善提案]
+    T5 --> T5_5[40.5.5 レスポンシブ]
+
+    T6 --> T6_1[40.6.1 状態管理]
+    T6 --> T6_2[40.6.2 パネル統合]
+    T6 --> T6_3[40.6.3 保存ボタン]
+
+    T7 --> T7_1[40.7.1 サービス作成]
+    T7 --> T7_2[40.7.2 保存機能]
+    T7 --> T7_3[40.7.3 取得機能]
+    T7 --> T7_4[40.7.4 Rulesルール]
+
+    W3 --> T8[40.8 テスト]
+    T8 --> T8_1[40.8.1 ユニットテスト]
+    T8 --> T8_2[40.8.2 統合テスト]
+    T8 --> T8_3[40.8.3 E2Eテスト]
+
+    style P40 fill:#3b82f6,color:#fff
+    style W1 fill:#22c55e,color:#fff
+    style W2 fill:#22c55e,color:#fff
+    style W3 fill:#f59e0b,color:#fff
+      </div>
+    </div>
+
+    <!-- ガントチャート -->
+    <div class="card" id="gantt">
+      <h2>ガントチャート</h2>
+      <div class="mermaid">
+gantt
+    title Phase 40: AI評価・フィードバック機能 実装スケジュール
+    dateFormat YYYY-MM-DD
+
+    section Week 1: バックエンド
+    40.1 型定義・スキーマ拡張     :done, t1, 2025-11-26, 0.5d
+    40.2 評価ロジック実装         :done, t2, after t1, 1d
+    40.3 generateShift拡張        :done, t3, after t2, 1d
+    40.8.1 ユニットテスト         :done, t8_1, after t3, 0.5d
+
+    section Week 2: フロントエンド
+    40.4 サービス拡張             :done, t4, 2025-11-26, 0.5d
+    40.5 評価UI実装               :done, t5, after t4, 1.5d
+    40.6 シフト表統合             :done, t6, after t5, 0.5d
+    40.7 Firestore履歴機能        :done, t7, after t6, 0.5d
+
+    section Week 3: テスト・検証
+    40.8.2 統合テスト             :active, t8_2, after t7, 0.5d
+    40.8.3 E2Eテスト              :t8_3, after t8_2, 0.5d
+    CodeRabbitレビュー            :done, cr, after t7, 0.25d
+    本番デプロイ                  :done, deploy, after cr, 0.25d
+      </div>
+    </div>
+
+    <!-- システムアーキテクチャ -->
+    <div class="card" id="architecture">
+      <h2>システムアーキテクチャ</h2>
+      <div class="mermaid">
+flowchart TB
+    subgraph Client["フロントエンド (React)"]
+        UI[ShiftTable.tsx]
+        EP[EvaluationPanel.tsx]
+        GS[geminiService.ts]
+        EHS[evaluationHistoryService.ts]
+    end
+
+    subgraph CloudFunctions["Cloud Functions (asia-northeast1)"]
+        GF[generateShift]
+        EL[EvaluationService]
+    end
+
+    subgraph VertexAI["Vertex AI"]
+        GM[Gemini 2.5 Flash]
+    end
+
+    subgraph Firestore["Firestore"]
+        SC[schedules]
+        AH[aiGenerationHistory]
+    end
+
+    UI --> EP
+    UI --> GS
+    GS -->|POST /generateShift| GF
+    GF -->|プロンプト| GM
+    GM -->|JSON Response| GF
+    GF --> EL
+    EL -->|評価結果| GF
+    GF -->|schedule + evaluation| GS
+    GS --> UI
+    EP --> EHS
+    EHS --> AH
+    UI --> SC
+
+    style Client fill:#e0f2fe
+    style CloudFunctions fill:#dcfce7
+    style VertexAI fill:#fef3c7
+    style Firestore fill:#fce7f3
+      </div>
+    </div>
+
+    <!-- 処理フロー -->
+    <div class="card" id="flow">
+      <h2>処理フロー</h2>
+      <div class="mermaid">
+sequenceDiagram
+    participant U as ユーザー
+    participant UI as ShiftTable
+    participant GS as geminiService
+    participant CF as Cloud Functions
+    participant GM as Gemini AI
+    participant EV as EvaluationService
+    participant FS as Firestore
+
+    U->>UI: シフト生成ボタンクリック
+    UI->>GS: generateShiftSchedule()
+    GS->>CF: POST /generateShift
+
+    CF->>GM: プロンプト送信
+    GM-->>CF: スケジュールJSON
+
+    CF->>EV: evaluateSchedule()
+    Note over EV: 5つの制約チェック<br/>- 人員不足<br/>- 連続勤務<br/>- 夜勤後休息<br/>- 必要資格<br/>- 休暇申請
+    EV-->>CF: AIEvaluationResult
+
+    CF-->>GS: schedule + evaluation
+    GS-->>UI: ShiftGenerationResult
+
+    UI->>UI: setSchedule()
+    UI->>UI: setEvaluation()
+    UI->>UI: EvaluationPanel表示
+
+    U->>UI: 履歴保存ボタン
+    UI->>FS: saveEvaluationHistory()
+    FS-->>UI: historyId
+      </div>
+    </div>
+
+    <!-- 評価ロジック詳細 -->
+    <div class="card">
+      <h2>評価ロジック詳細</h2>
+
+      <h3>制約違反チェック（5種類）</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>タイプ</th>
+            <th>重要度</th>
+            <th>チェック内容</th>
+            <th>減点</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>staffShortage</code></td>
+            <td>error</td>
+            <td>必要人員数を満たしているか</td>
+            <td>-10点</td>
+          </tr>
+          <tr>
+            <td><code>consecutiveWork</code></td>
+            <td>warning</td>
+            <td>連続勤務日数が上限以内か</td>
+            <td>-5点</td>
+          </tr>
+          <tr>
+            <td><code>nightRestViolation</code></td>
+            <td>warning</td>
+            <td>夜勤後に十分な休息があるか</td>
+            <td>-5点</td>
+          </tr>
+          <tr>
+            <td><code>qualificationMissing</code></td>
+            <td>error</td>
+            <td>必要資格を持つスタッフがいるか</td>
+            <td>-10点</td>
+          </tr>
+          <tr>
+            <td><code>leaveRequestIgnored</code></td>
+            <td>error</td>
+            <td>休暇申請が尊重されているか</td>
+            <td>-10点</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3>スコア計算式</h3>
+      <p><code>overallScore = 100 - (エラー数 × 10) - (警告数 × 5)</code></p>
+      <p>最小値: 0点、最大値: 100点</p>
+    </div>
+
+    <!-- 変更ファイル一覧 -->
+    <div class="card">
+      <h2>変更ファイル一覧</h2>
+
+      <h3>バックエンド</h3>
+      <ul class="file-list">
+        <li>
+          <span>functions/src/types.ts</span>
+          <span class="badge modified">変更</span>
+        </li>
+        <li>
+          <span>functions/src/evaluation/evaluationLogic.ts</span>
+          <span class="badge new">新規</span>
+        </li>
+        <li>
+          <span>functions/src/shift-generation.ts</span>
+          <span class="badge modified">変更</span>
+        </li>
+        <li>
+          <span>functions/__tests__/unit/evaluationLogic.test.ts</span>
+          <span class="badge new">新規</span>
+        </li>
+      </ul>
+
+      <h3>フロントエンド</h3>
+      <ul class="file-list">
+        <li>
+          <span>types.ts</span>
+          <span class="badge modified">変更</span>
+        </li>
+        <li>
+          <span>services/geminiService.ts</span>
+          <span class="badge modified">変更</span>
+        </li>
+        <li>
+          <span>src/components/EvaluationPanel.tsx</span>
+          <span class="badge new">新規</span>
+        </li>
+        <li>
+          <span>components/ShiftTable.tsx</span>
+          <span class="badge modified">変更</span>
+        </li>
+        <li>
+          <span>App.tsx</span>
+          <span class="badge modified">変更</span>
+        </li>
+        <li>
+          <span>src/services/evaluationHistoryService.ts</span>
+          <span class="badge new">新規</span>
+        </li>
+      </ul>
+
+      <h3>インフラ</h3>
+      <ul class="file-list">
+        <li>
+          <span>firestore.rules</span>
+          <span class="badge modified">変更</span>
+        </li>
+        <li>
+          <span>firestore.indexes.json</span>
+          <span class="badge modified">変更</span>
+        </li>
+      </ul>
+    </div>
+
+    <!-- データモデル -->
+    <div class="card">
+      <h2>データモデル</h2>
+      <div class="mermaid">
+erDiagram
+    FACILITIES ||--o{ AI_GENERATION_HISTORY : has
+    FACILITIES ||--o{ SCHEDULES : has
+
+    AI_GENERATION_HISTORY {
+        string id PK
+        string facilityId FK
+        string targetMonth
+        array schedule
+        object evaluation
+        string createdBy
+        timestamp createdAt
+        object metadata
+    }
+
+    EVALUATION_RESULT {
+        number overallScore
+        number fulfillmentRate
+        array constraintViolations
+        array recommendations
+        object simulation
+        timestamp generatedAt
+    }
+
+    CONSTRAINT_VIOLATION {
+        string type
+        string severity
+        string description
+        array affectedStaff
+        array affectedDates
+        string suggestion
+    }
+
+    RECOMMENDATION {
+        string priority
+        string category
+        string description
+        string action
+    }
+
+    SIMULATION_RESULT {
+        number estimatedOvertimeHours
+        string workloadBalance
+        number paidLeaveUsageRate
+        array risks
+    }
+      </div>
+    </div>
+
+    <!-- 次のステップ -->
+    <div class="card">
+      <h2>次のステップ</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>タスク</th>
+            <th>優先度</th>
+            <th>説明</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>E2Eテスト拡張</td>
+            <td>高</td>
+            <td>評価パネル表示の自動テスト追加</td>
+          </tr>
+          <tr>
+            <td>手動検証</td>
+            <td>高</td>
+            <td>本番環境でのシフト生成→評価表示確認</td>
+          </tr>
+          <tr>
+            <td>履歴UI</td>
+            <td>中</td>
+            <td>過去の評価履歴一覧表示機能</td>
+          </tr>
+          <tr>
+            <td>Gemini評価統合</td>
+            <td>低</td>
+            <td>AIによる追加改善提案の統合</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <footer style="text-align: center; padding: 40px 20px; color: var(--text-muted);">
+    <p>AI Care Shift Scheduler - Phase 40 Documentation</p>
+    <p>Generated: 2025-11-26</p>
+  </footer>
+
+  <script>
+    mermaid.initialize({
+      startOnLoad: true,
+      theme: 'default',
+      securityLevel: 'loose',
+      flowchart: {
+        useMaxWidth: true,
+        htmlLabels: true,
+        curve: 'basis'
+      },
+      gantt: {
+        useMaxWidth: true,
+        barHeight: 30,
+        barGap: 6,
+        topPadding: 50
+      }
+    });
+  </script>
+</body>
+</html>
