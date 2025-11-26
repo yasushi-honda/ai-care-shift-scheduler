@@ -198,8 +198,8 @@ describe('AI Shift Generation API - Integration Tests', () => {
         expect(response.body.metadata.generatedAt).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/);
       }
 
-      // モデル名の検証
-      expect(response.body.metadata.model).toBe('gemini-2.5-flash-lite');
+      // モデル名の検証（2025年11月移行: gemini-2.5-flash-lite → gemini-2.5-flash）
+      expect(response.body.metadata.model).toBe('gemini-2.5-flash');
 
       // トークン数が正の整数であることを確認
       expect(typeof response.body.metadata.tokensUsed).toBe('number');

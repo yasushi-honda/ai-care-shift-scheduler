@@ -399,10 +399,20 @@ export const generateShiftSchedule = async (
 
 ## Data Models
 
+### 既存型定義との関係
+
+**注意**: フロントエンド（`types.ts`）とCloud Functions（`functions/src/types.ts`）で`GeneratedShift`型の定義が異なります。
+
+| 型 | フロントエンド | Cloud Functions |
+|----|---------------|-----------------|
+| `GeneratedShift` | 拡張版（予定/実績の分離、備考フィールドあり） | 簡易版（`date`, `shiftType`のみ） |
+
+本機能の実装では、評価ロジックはCloud Functions内で動作するため、Cloud Functions側の簡易型を使用します。
+
 ### AIEvaluationResult
 
 ```typescript
-// types.ts に追加
+// types.ts に追加（フロントエンド/Cloud Functions両方）
 
 /**
  * 制約違反タイプ
