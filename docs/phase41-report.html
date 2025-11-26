@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Phase 41: 月次レポート機能 - AI Care Shift Scheduler</title>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+  <style>
+    :root {
+      --primary: #4F46E5;
+      --success: #10B981;
+      --warning: #F59E0B;
+      --bg: #F9FAFB;
+      --card-bg: #FFFFFF;
+      --text: #1F2937;
+      --text-secondary: #6B7280;
+      --border: #E5E7EB;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+    }
+    .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+    header {
+      background: linear-gradient(135deg, var(--primary), #7C3AED);
+      color: white;
+      padding: 40px 20px;
+      text-align: center;
+    }
+    header h1 { font-size: 2rem; margin-bottom: 10px; }
+    header p { opacity: 0.9; }
+    .badge {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      margin: 10px 5px;
+    }
+    .badge-success { background: var(--success); color: white; }
+    .badge-warning { background: var(--warning); color: white; }
+    nav {
+      background: var(--card-bg);
+      padding: 15px;
+      border-bottom: 1px solid var(--border);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    nav a {
+      color: var(--primary);
+      text-decoration: none;
+      margin-right: 20px;
+      font-weight: 500;
+    }
+    nav a:hover { text-decoration: underline; }
+    .card {
+      background: var(--card-bg);
+      border-radius: 12px;
+      padding: 24px;
+      margin: 20px 0;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    .card h2 {
+      color: var(--primary);
+      margin-bottom: 16px;
+      padding-bottom: 8px;
+      border-bottom: 2px solid var(--border);
+    }
+    .card h3 { color: var(--text); margin: 16px 0 8px; }
+    .mermaid { background: #f8f9fa; padding: 20px; border-radius: 8px; overflow-x: auto; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 16px 0;
+    }
+    th, td {
+      padding: 12px;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+    }
+    th { background: var(--bg); font-weight: 600; }
+    tr:hover { background: var(--bg); }
+    code {
+      background: #E5E7EB;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-family: 'Monaco', 'Consolas', monospace;
+      font-size: 0.9em;
+    }
+    pre {
+      background: #1F2937;
+      color: #E5E7EB;
+      padding: 16px;
+      border-radius: 8px;
+      overflow-x: auto;
+    }
+    pre code { background: none; padding: 0; }
+    .feature-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 16px;
+      margin: 16px 0;
+    }
+    .feature-item {
+      background: var(--bg);
+      padding: 16px;
+      border-radius: 8px;
+      border-left: 4px solid var(--primary);
+    }
+    .feature-item h4 { margin-bottom: 8px; }
+    .status-complete { color: var(--success); }
+    .status-pending { color: var(--warning); }
+    @media (max-width: 768px) {
+      header h1 { font-size: 1.5rem; }
+      nav { overflow-x: auto; white-space: nowrap; }
+      .card { padding: 16px; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Phase 41: 月次レポート機能</h1>
+    <p>AI Care Shift Scheduler - レポート機能強化</p>
+    <div>
+      <span class="badge badge-success">実装完了</span>
+      <span class="badge badge-warning">2025-11-27</span>
+    </div>
+  </header>
+
+  <nav>
+    <div class="container">
+      <a href="index.html">ホーム</a>
+      <a href="technical.html">技術ドキュメント</a>
+      <a href="phase40-evaluation.html">Phase 40</a>
+      <a href="#overview">概要</a>
+      <a href="#architecture">アーキテクチャ</a>
+      <a href="#features">機能</a>
+      <a href="#wbs">WBS</a>
+    </div>
+  </nav>
+
+  <div class="container">
+    <!-- 概要 -->
+    <section id="overview" class="card">
+      <h2>概要</h2>
+      <p>Phase 41では、月次レポート機能の強化を実装しました。管理者向けの経営分析レポートと、スタッフ向けの個人勤務実績レポートを含む包括的なレポート機能を追加しました。</p>
+
+      <h3>主な機能</h3>
+      <div class="feature-grid">
+        <div class="feature-item">
+          <h4>ダッシュボード</h4>
+          <p>月間サマリー、グラフ表示、PDF出力</p>
+        </div>
+        <div class="feature-item">
+          <h4>勤務時間レポート</h4>
+          <p>スタッフ別勤務時間、残業警告、日別詳細</p>
+        </div>
+        <div class="feature-item">
+          <h4>シフト種別レポート</h4>
+          <p>シフト種別分布、スタッフ別内訳</p>
+        </div>
+        <div class="feature-item">
+          <h4>スタッフ稼働レポート</h4>
+          <p>稼働統計、月間カレンダー</p>
+        </div>
+        <div class="feature-item">
+          <h4>経営分析レポート</h4>
+          <p>充足率、コスト推計、改善提案（管理者向け）</p>
+        </div>
+        <div class="feature-item">
+          <h4>個人レポート</h4>
+          <p>勤務実績、休暇残高（スタッフ向け）</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- システムアーキテクチャ -->
+    <section id="architecture" class="card">
+      <h2>システムアーキテクチャ</h2>
+      <div class="mermaid">
+graph TB
+    subgraph "フロントエンド"
+        A[ReportPage.tsx] --> B[DashboardContent]
+        A --> C[WorkTimeContent]
+        A --> D[ShiftTypeContent]
+        A --> E[StaffActivityContent]
+        A --> F[ManagementContent]
+        A --> G[PersonalContent]
+    end
+
+    subgraph "サービス層"
+        H[reportService.ts] --> I[aggregationService.ts]
+        H --> J[pdfService.ts]
+        K[5分キャッシュ] --> H
+    end
+
+    subgraph "データ層"
+        L[(Firestore)] --> H
+        L --> |スケジュール| M[schedules]
+        L --> |スタッフ| N[staff]
+        L --> |休暇残高| O[leaveBalances]
+    end
+
+    A --> H
+    B --> J
+    F --> J
+    G --> J
+      </div>
+    </section>
+
+    <!-- データフロー -->
+    <section class="card">
+      <h2>データフロー</h2>
+      <div class="mermaid">
+sequenceDiagram
+    participant User
+    participant ReportPage
+    participant ReportService
+    participant Cache
+    participant Firestore
+    participant AggregationService
+    participant PDFService
+
+    User->>ReportPage: 月次レポート表示
+    ReportPage->>ReportService: getMonthlyReport(facilityId, month)
+    ReportService->>Cache: キャッシュ確認
+    alt キャッシュあり
+        Cache-->>ReportService: キャッシュデータ
+    else キャッシュなし
+        ReportService->>Firestore: データ取得
+        Firestore-->>ReportService: スケジュール・スタッフデータ
+        ReportService->>AggregationService: データ集計
+        AggregationService-->>ReportService: 集計結果
+        ReportService->>Cache: キャッシュ保存(5分)
+    end
+    ReportService-->>ReportPage: MonthlyReportData
+    ReportPage-->>User: レポート表示
+
+    User->>ReportPage: PDFダウンロード
+    ReportPage->>PDFService: generateDashboardPDF()
+    PDFService-->>ReportPage: PDF Blob
+    ReportPage-->>User: ファイルダウンロード
+      </div>
+    </section>
+
+    <!-- 型定義 -->
+    <section class="card">
+      <h2>型定義（ER図）</h2>
+      <div class="mermaid">
+erDiagram
+    MonthlyReportData ||--|| ReportSummary : contains
+    MonthlyReportData ||--|{ WorkTimeAggregation : contains
+    MonthlyReportData ||--|| ShiftTypeAggregation : contains
+    MonthlyReportData ||--|{ StaffActivityAggregation : contains
+
+    ReportSummary {
+        number totalWorkHours
+        number totalStaffCount
+        number averageWorkHoursPerStaff
+        number fulfillmentRate
+        number paidLeaveUsageRate
+        number workDaysCount
+    }
+
+    WorkTimeAggregation {
+        string staffId
+        string staffName
+        number totalHours
+        number regularHours
+        number nightHours
+        number estimatedOvertimeHours
+        array dailyDetails
+        array warningFlags
+    }
+
+    ShiftTypeAggregation {
+        array overall
+        array byStaff
+    }
+
+    StaffActivityAggregation {
+        string staffId
+        string staffName
+        number workDays
+        number restDays
+        number publicHolidayDays
+        number paidLeaveDays
+        number maxConsecutiveWorkDays
+        number averageWeeklyHours
+        array monthlyCalendar
+    }
+
+    ManagementReportData ||--|| ReportSummary : contains
+    ManagementReportData ||--|{ TimeSlotFulfillment : contains
+    ManagementReportData ||--|| CostEstimate : contains
+    ManagementReportData ||--o| MonthComparison : may_contain
+
+    PersonalReportData ||--|| PersonalWorkSummary : contains
+    PersonalReportData ||--|{ ShiftBreakdown : contains
+    PersonalReportData ||--|| LeaveBalance : contains
+      </div>
+    </section>
+
+    <!-- WBS -->
+    <section id="wbs" class="card">
+      <h2>WBS（作業分解図）</h2>
+      <div class="mermaid">
+graph TD
+    A[Phase 41: 月次レポート機能] --> B[1. 型定義]
+    A --> C[2. 集計サービス]
+    A --> D[3. レポートサービス]
+    A --> E[4. PDF生成]
+    A --> F[5-7. UI実装]
+    A --> G[8. レスポンシブ]
+    A --> H[9. ルーティング]
+    A --> I[10. テスト]
+
+    B --> B1[1.1 レポート型]
+    B --> B2[1.2 経営/個人型]
+    B --> B3[1.3 エラー型]
+
+    C --> C1[2.1 勤務時間集計]
+    C --> C2[2.2 シフト種別集計]
+    C --> C3[2.3 スタッフ稼働統計]
+    C --> C4[2.4 充足率計算]
+    C --> C5[2.5 経営分析集計]
+
+    D --> D1[3.1 月次レポート取得]
+    D --> D2[3.2 キャッシュ機能]
+    D --> D3[3.3 経営分析取得]
+    D --> D4[3.4 個人レポート取得]
+
+    E --> E1[4.1 PDF基盤]
+    E --> E2[4.2 ダッシュボードPDF]
+    E --> E3[4.3 経営分析PDF]
+    E --> E4[4.4 個人レポートPDF]
+
+    F --> F1[5.1 ルートコンポーネント]
+    F --> F2[5.2 ダッシュボード]
+    F --> F3[6.1-6.5 各タブ]
+    F --> F4[7.1-7.2 PDF統合]
+
+    G --> G1[8.1 デスクトップ]
+    G --> G2[8.2 タブレット]
+    G --> G3[8.3 モバイル]
+
+    H --> H1[9.1 ルート設定]
+    H --> H2[9.2 アクセス制御]
+
+    I --> I1[10.1 ユニットテスト]
+    I --> I2[10.2 サービステスト]
+    I --> I3[10.3 E2Eテスト]
+
+    style A fill:#4F46E5,color:#fff
+    style B fill:#10B981,color:#fff
+    style C fill:#10B981,color:#fff
+    style D fill:#10B981,color:#fff
+    style E fill:#10B981,color:#fff
+    style F fill:#10B981,color:#fff
+    style G fill:#10B981,color:#fff
+    style H fill:#10B981,color:#fff
+    style I fill:#F59E0B,color:#fff
+      </div>
+    </section>
+
+    <!-- ガントチャート -->
+    <section class="card">
+      <h2>ガントチャート</h2>
+      <div class="mermaid">
+gantt
+    title Phase 41 実装スケジュール
+    dateFormat YYYY-MM-DD
+    section Week 1
+    型定義作成           :done, t1, 2025-11-27, 1d
+    集計サービス実装     :done, t2, 2025-11-27, 1d
+    レポートサービス実装 :done, t3, 2025-11-27, 1d
+    PDF生成サービス実装  :done, t4, 2025-11-27, 1d
+    UIコンポーネント実装 :done, t5, 2025-11-27, 1d
+    section Week 2
+    レスポンシブ対応     :done, t6, 2025-11-27, 1d
+    E2Eテスト作成        :done, t7, 2025-11-27, 1d
+    ドキュメント更新     :done, t8, 2025-11-27, 1d
+    section 今後
+    ユニットテスト       :active, t9, 2025-11-28, 3d
+      </div>
+    </section>
+
+    <!-- 実装ファイル一覧 -->
+    <section class="card">
+      <h2>実装ファイル一覧</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>ファイル</th>
+            <th>種別</th>
+            <th>説明</th>
+            <th>ステータス</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>types/report.ts</code></td>
+            <td>新規</td>
+            <td>レポート関連の型定義</td>
+            <td class="status-complete">完了</td>
+          </tr>
+          <tr>
+            <td><code>src/services/aggregationService.ts</code></td>
+            <td>新規</td>
+            <td>データ集計ロジック</td>
+            <td class="status-complete">完了</td>
+          </tr>
+          <tr>
+            <td><code>src/services/reportService.ts</code></td>
+            <td>新規</td>
+            <td>レポートデータ取得・キャッシュ</td>
+            <td class="status-complete">完了</td>
+          </tr>
+          <tr>
+            <td><code>src/services/pdfService.ts</code></td>
+            <td>新規</td>
+            <td>PDF生成（jsPDF）</td>
+            <td class="status-complete">完了</td>
+          </tr>
+          <tr>
+            <td><code>src/pages/reports/ReportPage.tsx</code></td>
+            <td>新規</td>
+            <td>レポートページUI（6タブ）</td>
+            <td class="status-complete">完了</td>
+          </tr>
+          <tr>
+            <td><code>e2e/report-page.spec.ts</code></td>
+            <td>新規</td>
+            <td>E2Eテスト</td>
+            <td class="status-complete">完了</td>
+          </tr>
+          <tr>
+            <td><code>index.tsx</code></td>
+            <td>変更</td>
+            <td>ルーティング追加</td>
+            <td class="status-complete">完了</td>
+          </tr>
+          <tr>
+            <td><code>App.tsx</code></td>
+            <td>変更</td>
+            <td>ナビゲーション追加</td>
+            <td class="status-complete">完了</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- コミット履歴 -->
+    <section class="card">
+      <h2>コミット履歴</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>ハッシュ</th>
+            <th>日付</th>
+            <th>内容</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>786e9e8</code></td>
+            <td>2025-11-27</td>
+            <td>feat(phase41): 月次レポート機能実装 - Week 1</td>
+          </tr>
+          <tr>
+            <td><code>f2f88c2</code></td>
+            <td>2025-11-27</td>
+            <td>feat(phase41): レスポンシブ対応強化とE2Eテスト追加 - Week 2</td>
+          </tr>
+          <tr>
+            <td><code>133c52e</code></td>
+            <td>2025-11-27</td>
+            <td>docs(phase41): タスクファイル更新 - 実装完了状態を反映</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- 技術的な特徴 -->
+    <section class="card">
+      <h2>技術的な特徴</h2>
+
+      <h3>Result型パターン</h3>
+      <p>TypeScriptの型narrowingを正しく機能させるため、明示的な比較を使用：</p>
+      <pre><code>if (result.success === true) {
+  // result.data が利用可能
+} else if (result.success === false) {
+  // result.error が利用可能
+}</code></pre>
+
+      <h3>レスポンシブ対応</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>ブレークポイント</th>
+            <th>表示形式</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>モバイル（767px以下）</td>
+            <td>カード形式、横スクロールタブ</td>
+          </tr>
+          <tr>
+            <td>タブレット（768-1023px）</td>
+            <td>2カラムレイアウト</td>
+          </tr>
+          <tr>
+            <td>デスクトップ（1024px以上）</td>
+            <td>フルテーブル表示</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3>アクセス制御</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>ロール</th>
+            <th>アクセス可能なタブ</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>管理者（facility-admin, manager）</td>
+            <td>全タブ + 経営分析</td>
+          </tr>
+          <tr>
+            <td>スタッフ</td>
+            <td>基本タブ + 個人レポート</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- 今後の拡張 -->
+    <section class="card">
+      <h2>今後の拡張予定</h2>
+      <ul>
+        <li>集計サービスのユニットテスト追加</li>
+        <li>レポートサービスのユニットテスト追加</li>
+        <li>日本語フォント対応のPDF改善（Noto Sans JP埋め込み）</li>
+        <li>グラフ画像のPDF埋め込み強化</li>
+        <li>Excel出力機能</li>
+      </ul>
+    </section>
+  </div>
+
+  <script>
+    mermaid.initialize({ startOnLoad: true, theme: 'default' });
+  </script>
+</body>
+</html>
