@@ -196,8 +196,8 @@
             <h2>2. 現在の状態</h2>
 
             <div class="success-box">
-                <strong>Phase 39 完了</strong>（2025-11-26時点）<br>
-                次のPhase: <strong>Phase 40 - AI評価・フィードバック機能</strong>
+                <strong>Phase 40 設計完了・タスク生成済み</strong>（2025-11-26時点）<br>
+                ステータス: <strong>要件承認済み・設計承認済み・33タスク生成済み・実装待ち</strong>
             </div>
 
             <div class="mermaid">
@@ -215,10 +215,10 @@ timeline
                     : キーボード・アンドゥ
         Phase 38-39 : 設定管理
                     : シフト種別・休暇残高
-    section 2025年12月（予定）
+    section 2025年12月
         Phase 40 : AI評価・フィードバック
-        Phase 41 : レポート機能
-        Phase 42 : 通知機能
+                 : 設計完了・タスク33件
+        Phase 41+ : レポート・通知機能
             </div>
         </div>
 
@@ -296,11 +296,14 @@ timeline
         </div>
 
         <div class="card">
-            <h2>5. 次のPhase（Phase 40）</h2>
+            <h2>5. Phase 40: AI評価・フィードバック（設計完了）</h2>
 
-            <h3>AI評価・フィードバック機能</h3>
-            <p>AIシフト生成結果に対する評価・フィードバック機能を追加します。</p>
+            <div class="highlight-box">
+                <strong>現在のステータス:</strong> 設計承認済み・タスク生成済み（33タスク / 6.5日）<br>
+                <strong>次のアクション:</strong> Task 40.1.1から実装開始
+            </div>
 
+            <h3>機能概要</h3>
             <table>
                 <tr>
                     <th>機能</th>
@@ -308,23 +311,45 @@ timeline
                 </tr>
                 <tr>
                     <td>評価サマリー</td>
-                    <td>生成結果のスコア、充足率を表示</td>
+                    <td>生成結果のスコア（0-100）、充足率を表示</td>
                 </tr>
                 <tr>
                     <td>制約違反検出</td>
-                    <td>人員不足、連勤超過などを警告</td>
+                    <td>人員不足、連勤超過、夜勤後休息不足を警告</td>
                 </tr>
                 <tr>
                     <td>改善提案</td>
-                    <td>具体的なネクストアクションを提示</td>
+                    <td>具体的なネクストアクションを優先度付きで提示</td>
                 </tr>
                 <tr>
                     <td>シミュレーション</td>
-                    <td>残業予測、負荷バランスを表示</td>
+                    <td>残業予測、負荷バランス、有給消化率予測</td>
                 </tr>
             </table>
 
-            <p><strong>仕様書</strong>: <code>.kiro/specs/ai-evaluation-feedback/requirements.md</code></p>
+            <h3>実装サブフェーズ</h3>
+            <table>
+                <tr>
+                    <th>サブフェーズ</th>
+                    <th>内容</th>
+                    <th>工数</th>
+                </tr>
+                <tr><td>40.1</td><td>型定義・スキーマ拡張</td><td>0.5日</td></tr>
+                <tr><td>40.2</td><td>評価ロジック実装</td><td>1日</td></tr>
+                <tr><td>40.3</td><td>generateShift拡張</td><td>1日</td></tr>
+                <tr><td>40.4</td><td>フロントエンドサービス拡張</td><td>0.5日</td></tr>
+                <tr><td>40.5</td><td>評価UI（EvaluationPanel）</td><td>1.5日</td></tr>
+                <tr><td>40.6</td><td>シフト表統合</td><td>0.5日</td></tr>
+                <tr><td>40.7</td><td>Firestore履歴機能</td><td>0.5日</td></tr>
+                <tr><td>40.8</td><td>テスト・デバッグ</td><td>1日</td></tr>
+            </table>
+
+            <h3>関連ドキュメント</h3>
+            <ul>
+                <li><code>.kiro/specs/ai-evaluation-feedback/requirements.md</code> - 要件定義</li>
+                <li><code>.kiro/specs/ai-evaluation-feedback/design.md</code> - 技術設計書</li>
+                <li><code>.kiro/specs/ai-evaluation-feedback/tasks.md</code> - タスク一覧（33タスク）</li>
+            </ul>
         </div>
 
         <div class="card">
@@ -359,9 +384,10 @@ npx tsc --noEmit     # 型チェック</code></pre>
 
             <p><span class="step-number">1</span> <strong>このページを読む</strong>（完了）</p>
             <p><span class="step-number">2</span> <strong>CLAUDE.mdを確認</strong>: 開発ルール、ワークフロー</p>
-            <p><span class="step-number">3</span> <strong>Phase 40仕様書を確認</strong>: <code>.kiro/specs/ai-evaluation-feedback/requirements.md</code></p>
-            <p><span class="step-number">4</span> <strong>メモリファイルを確認</strong>: <code>PROJECT_HANDOFF_LATEST</code>（Serena経由）</p>
-            <p><span class="step-number">5</span> <strong>実装開始</strong></p>
+            <p><span class="step-number">3</span> <strong>Phase 40設計書を確認</strong>: <code>.kiro/specs/ai-evaluation-feedback/design.md</code></p>
+            <p><span class="step-number">4</span> <strong>タスク一覧を確認</strong>: <code>.kiro/specs/ai-evaluation-feedback/tasks.md</code>（33タスク）</p>
+            <p><span class="step-number">5</span> <strong>メモリファイルを確認</strong>: <code>PROJECT_HANDOFF_LATEST</code>（Serena経由）</p>
+            <p><span class="step-number">6</span> <strong>Task 40.1.1から実装開始</strong></p>
         </div>
 
         <div class="card">
@@ -375,7 +401,7 @@ npx tsc --noEmit     # 型チェック</code></pre>
     </div>
 
     <div class="footer">
-        <p><strong>最終更新</strong>: 2025年11月26日（Phase 39完了時点）</p>
+        <p><strong>最終更新</strong>: 2025年11月26日（Phase 40設計完了・タスク生成済み）</p>
         <p>AIシフト自動作成システム</p>
     </div>
 </body>
