@@ -380,3 +380,65 @@ export type ShiftTypeSettingsError =
   | { code: 'VALIDATION_ERROR'; message: string }
   | { code: 'FIRESTORE_ERROR'; message: string }
   | { code: 'NOT_FOUND'; message: string };
+
+
+// ==================== 休暇残高管理（Phase 39）====================
+
+// 公休残高
+export interface PublicHolidayBalance {
+  allocated: number;      // 月間付与数
+  used: number;           // 当月使用数
+  carriedOver: number;    // 前月繰越数
+  balance: number;        // 残高 = allocated + carriedOver - used
+}
+
+// 有給残高
+export interface PaidLeaveBalance {
+  annualAllocated: number;  // 年間付与数
+  used: number;             // 使用累計
+  carriedOver: number;      // 前年繰越数
+  balance: number;          // 残高 = annualAllocated + carriedOver - used
+  expiresAt: Timestamp;     // 有効期限
+}
+
+// 残高調整履歴
+export interface LeaveAdjustment {
+  type: 'publicHoliday' | 'paidLeave';
+  amount: number;           // 正=追加、負=減算
+  reason: string;
+  adjustedBy: string;
+  adjustedAt: Timestamp;
+}
+
+// スタッフ休暇残高（Firestore /facilities/{facilityId}/leaveBalances/{yearMonth}_{staffId}）
+export interface StaffLeaveBalance {
+  id: string;                      // {yearMonth}_{staffId}
+  staffId: string;
+  yearMonth: string;               // YYYY-MM形式
+  publicHoliday: PublicHolidayBalance;
+  paidLeave: PaidLeaveBalance;
+  adjustments: LeaveAdjustment[];  // 調整履歴
+  updatedAt: Timestamp;
+  updatedBy: string;
+}
+
+// 施設休暇設定（Firestore /facilities/{facilityId}/leaveSettings/default）
+export interface FacilityLeaveSettings {
+  facilityId: string;
+  publicHoliday: {
+    monthlyAllocation: number;  // 月間付与日数（デフォルト: 9）
+    maxCarryOver: number;       // 繰越上限（-1: 無制限）
+  };
+  paidLeave: {
+    carryOverYears: number;     // 繰越年数（デフォルト: 2）
+  };
+  updatedAt: Timestamp;
+  updatedBy: string;
+}
+
+// 休暇残高サービスエラー型
+export type LeaveBalanceError =
+  | { code: 'PERMISSION_DENIED'; message: string }
+  | { code: 'VALIDATION_ERROR'; message: string }
+  | { code: 'FIRESTORE_ERROR'; message: string }
+  | { code: 'NOT_FOUND'; message: string };

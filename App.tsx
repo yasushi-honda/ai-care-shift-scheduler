@@ -3,10 +3,10 @@ import { Link, useNavigate } from 'react-router-dom';
 import {
   Role, Qualification, TimeSlotPreference, LeaveType,
   type Staff, type ShiftRequirement, type StaffSchedule, type GeneratedShift, type LeaveRequest, type ScheduleVersion, type LeaveRequestDocument, type Facility,
-  type FacilityShiftSettings,
+  type FacilityShiftSettings, type FacilityLeaveSettings,
   assertResultError, assertResultSuccess
 } from './types';
-import { DEFAULT_TIME_SLOTS, DEFAULT_SHIFT_TYPES, DEFAULT_SHIFT_CYCLE } from './constants';
+import { DEFAULT_TIME_SLOTS, DEFAULT_SHIFT_TYPES, DEFAULT_SHIFT_CYCLE, DEFAULT_LEAVE_SETTINGS } from './constants';
 import { generateShiftSchedule } from './services/geminiService';
 import { exportToCSV } from './services/exportService';
 import { StaffService } from './src/services/staffService';
@@ -15,6 +15,7 @@ import { LeaveRequestService } from './src/services/leaveRequestService';
 import { RequirementService } from './src/services/requirementService';
 import { getFacilityById } from './src/services/facilityService';
 import { subscribeToShiftSettings, saveShiftSettings } from './src/services/shiftTypeService';
+import { subscribeToLeaveSettings, saveLeaveSettings } from './src/services/leaveBalanceService';
 import { useAuth } from './src/contexts/AuthContext';
 import { useToast } from './src/contexts/ToastContext';
 import ShiftTable from './components/ShiftTable';
@@ -29,6 +30,7 @@ import { BulkCopyPlannedToActualModal } from './src/components/BulkCopyPlannedTo
 import { bulkCopyPlannedToActual, type BulkCopyOptions } from './src/utils/bulkCopyPlannedToActual';
 import KeyboardHelpModal from './src/components/KeyboardHelpModal';
 import { ShiftTypeSettings } from './src/components/ShiftTypeSettings';
+import { LeaveBalanceDashboard } from './src/components/LeaveBalanceDashboard';
 import { Timestamp } from 'firebase/firestore';
 
 type ViewMode = 'shift' | 'leaveRequest';
@@ -114,6 +116,15 @@ const App: React.FC = () => {
     facilityId: '',
     shiftTypes: DEFAULT_SHIFT_TYPES,
     defaultShiftCycle: DEFAULT_SHIFT_CYCLE,
+    updatedAt: Timestamp.now(),
+    updatedBy: 'system',
+  });
+
+  // Phase 39: 休暇残高設定
+  const [leaveSettings, setLeaveSettings] = useState<FacilityLeaveSettings>({
+    facilityId: '',
+    publicHoliday: DEFAULT_LEAVE_SETTINGS.publicHoliday,
+    paidLeave: DEFAULT_LEAVE_SETTINGS.paidLeave,
     updatedAt: Timestamp.now(),
     updatedBy: 'system',
   });
@@ -360,6 +371,26 @@ const App: React.FC = () => {
     return () => unsubscribe();
   }, [selectedFacilityId]);
 
+  // Phase 39: 休暇設定の購読
+  useEffect(() => {
+    if (!selectedFacilityId) {
+      return;
+    }
+
+    const unsubscribe = subscribeToLeaveSettings(
+      selectedFacilityId,
+      (settings) => {
+        setLeaveSettings(settings);
+      },
+      (error) => {
+        console.error('Failed to subscribe to leave settings:', error);
+        showError(`休暇設定の読み込みに失敗しました: ${error.message}`);
+      }
+    );
+
+    return () => unsubscribe();
+  }, [selectedFacilityId]);
+
   // Phase 38: シフト設定の保存ハンドラ
   const handleSaveShiftSettings = useCallback(async (
     settings: Partial<Omit<FacilityShiftSettings, 'facilityId' | 'updatedAt' | 'updatedBy'>>
@@ -374,6 +405,22 @@ const App: React.FC = () => {
       throw new Error(result.error.message);
     }
     showSuccess('シフト設定を保存しました');
+  }, [selectedFacilityId, currentUser, showSuccess]);
+
+  // Phase 39: 休暇設定の保存ハンドラ
+  const handleSaveLeaveSettings = useCallback(async (
+    settings: Partial<Omit<FacilityLeaveSettings, 'facilityId' | 'updatedAt' | 'updatedBy'>>
+  ) => {
+    if (!selectedFacilityId || !currentUser) {
+      return;
+    }
+
+    const result = await saveLeaveSettings(selectedFacilityId, settings, currentUser.uid);
+    if (!result.success) {
+      assertResultError(result);
+      throw new Error(result.error.message);
+    }
+    showSuccess('休暇設定を保存しました');
   }, [selectedFacilityId, currentUser, showSuccess]);
 
   const handleStaffChange = useCallback(async (updatedStaff: Staff) => {
@@ -1403,6 +1450,16 @@ const App: React.FC = () => {
               disabled={!selectedFacilityId}
             />
           </Accordion>
+          <Accordion title="休暇残高管理" icon={<LeaveBalanceIcon/>}>
+            <LeaveBalanceDashboard
+              facilityId={selectedFacilityId || ''}
+              staffList={staffList}
+              targetMonth={requirements.targetMonth}
+              leaveSettings={leaveSettings}
+              onSaveSettings={handleSaveLeaveSettings}
+              disabled={!selectedFacilityId}
+            />
+          </Accordion>
           <Accordion title="事業所のシフト要件設定" icon={<ClipboardIcon/>}>
             <div className="space-y-6">
               <div>
@@ -1596,6 +1653,11 @@ const SparklesIcon = () => (
 const ShiftTypeIcon = () => (
   <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-care-secondary" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
     <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+  </svg>
+);
+const LeaveBalanceIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-care-secondary" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+    <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
   </svg>
 );
 

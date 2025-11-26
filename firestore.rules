@@ -177,6 +177,20 @@ service cloud.firestore {
         allow write: if isAuthenticated() && hasRole(facilityId, 'editor');
       }
 
+      // leaveSettings subcollection (Phase 39で実装)
+      match /leaveSettings/{settingId} {
+        // viewer以上で読み取り、editor以上で書き込み
+        allow read: if isAuthenticated() && hasRole(facilityId, 'viewer');
+        allow write: if isAuthenticated() && hasRole(facilityId, 'editor');
+      }
+
+      // leaveBalances subcollection (Phase 39で実装)
+      match /leaveBalances/{balanceId} {
+        // viewer以上で読み取り、editor以上で書き込み
+        allow read: if isAuthenticated() && hasRole(facilityId, 'viewer');
+        allow write: if isAuthenticated() && hasRole(facilityId, 'editor');
+      }
+
       // invitations subcollection (Phase 2-3で実装予定)
       match /invitations/{invitationId} {
         // super-adminまたはadmin以上で読み取り・作成

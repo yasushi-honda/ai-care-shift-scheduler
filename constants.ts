@@ -119,3 +119,16 @@ export const DEFAULT_SHIFT_TYPES: ShiftTypeConfig[] = [
 
 // デフォルトシフトサイクル（ダブルクリック時のサイクル順序）
 export const DEFAULT_SHIFT_CYCLE: string[] = ['early', 'day', 'late', 'night', 'off', 'postnight'];
+
+// ==================== 休暇残高管理（Phase 39）====================
+
+// デフォルト休暇設定
+export const DEFAULT_LEAVE_SETTINGS = {
+  publicHoliday: {
+    monthlyAllocation: 9,  // 月9日
+    maxCarryOver: -1,      // 無制限
+  },
+  paidLeave: {
+    carryOverYears: 2,     // 2年繰越
+  },
+};
