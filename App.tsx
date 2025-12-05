@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
   Role, Qualification, TimeSlotPreference, LeaveType,
@@ -93,6 +93,8 @@ const App: React.FC = () => {
   const [currentScheduleStatus, setCurrentScheduleStatus] = useState<'draft' | 'confirmed' | 'archived'>('draft');
   const [isLoading, setIsLoading] = useState(false);
   const [generatingSchedule, setGeneratingSchedule] = useState(false);
+  // AI生成直後のFirestoreリスナー発火時に評価がクリアされるのを防ぐためのRef
+  const justGeneratedRef = useRef(false);
   const [error, setError] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>('shift');
   const [leaveRequests, setLeaveRequests] = useState<LeaveRequest>({});
@@ -299,8 +301,11 @@ const App: React.FC = () => {
           }
           // Phase 40: 既存スケジュールロード時は評価をクリア
           // （評価は新規生成時のみ有効なため）
-          // ただし、AI生成直後のリスナー発火時はクリアしない
-          if (!generatingSchedule) {
+          // ただし、AI生成直後のリスナー発火時はクリアしない（BUG-005修正）
+          if (justGeneratedRef.current) {
+            // 生成直後のリスナー発火時はクリアをスキップし、フラグをリセット
+            justGeneratedRef.current = false;
+          } else {
             setEvaluation(null);
           }
           setLoadingSchedule(false);
@@ -317,7 +322,7 @@ const App: React.FC = () => {
       setLoadingSchedule(false);
       setSchedule([]);
     }
-  }, [selectedFacilityId, requirements.targetMonth, scheduleRetryTrigger, generatingSchedule]);
+  }, [selectedFacilityId, requirements.targetMonth, scheduleRetryTrigger]);
 
   // Firestoreから休暇申請データをリアルタイムで購読
   useEffect(() => {
@@ -995,6 +1000,8 @@ const App: React.FC = () => {
 
       // 評価結果をstateに保存（Phase 40: AI評価・フィードバック機能）
       setEvaluation(generationResult.evaluation);
+      // Firestoreリスナー発火時に評価がクリアされるのを防ぐ（BUG-005修正）
+      justGeneratedRef.current = true;
 
       // 既存のスケジュールがあるかチェック
       if (currentScheduleId) {
