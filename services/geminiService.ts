@@ -62,9 +62,10 @@ export const generateShiftSchedule = async (
       targetMonth: requirements.targetMonth,
     });
 
-    // タイムアウト設定（60秒）
+    // タイムアウト設定（3分 = 180秒）
+    // Gemini 2.5 Flash思考モードにより、10名規模で約2-3分かかる
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 60000);
+    const timeoutId = setTimeout(() => controller.abort(), 180000);
 
     // Cloud Functions に POST リクエスト
     const response = await fetch(CLOUD_FUNCTION_URL, {

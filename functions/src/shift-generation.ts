@@ -47,7 +47,7 @@ export const generateShift = onRequest(
     region: 'asia-northeast1', // 東京リージョン（日本国内データ処理完結）
     cors: true,
     memory: '1GiB', // Vertex AI使用のためメモリ増量
-    timeoutSeconds: 120, // AI生成時間を考慮
+    timeoutSeconds: 300, // Gemini 2.5 Flash思考モード対応（10名規模で約2-3分）
   },
   async (req, res) => {
     // CORS設定
