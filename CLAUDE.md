@@ -431,3 +431,56 @@ CORSエラーが発生した場合、**CORS設定だけでなく「関数が存�
 
 詳細: [BUG-001修正記録](.kiro/bugfix-cors-cloud-functions-2025-12-05.md)
 
+## Gemini 2.5 Flash 設定ルール（重要）
+
+### 必須設定
+
+```typescript
+// Vertex AI初期化
+const vertexAI = new VertexAI({
+  project: projectId,
+  location: 'asia-northeast1',  // ❗ 日本リージョン必須
+});
+
+const model = vertexAI.getGenerativeModel({
+  model: 'gemini-2.5-flash',  // ❗ -latestなし
+});
+
+// 生成設定
+generationConfig: {
+  maxOutputTokens: 65536,  // ❗ 思考モード対応（8192だと不足）
+  // ...
+}
+```
+
+### なぜ65536か（BUG-003教訓）
+
+Gemini 2.5 Flashの「思考モード」は`maxOutputTokens`の予算から思考トークンを消費する。
+
+| カテゴリ | 典型的な消費 |
+|---------|-------------|
+| 思考トークン | 8,000-16,000 |
+| 出力トークン | 4,000-8,000 |
+| **合計** | 12,000-24,000 |
+
+`maxOutputTokens: 8192`では思考だけでトークンを使い切り、出力が空になる。
+
+### propertyOrdering必須（BUG-002教訓）
+
+responseSchemaには必ず`propertyOrdering`を指定：
+
+```typescript
+responseSchema: {
+  type: 'object',
+  properties: { ... },
+  propertyOrdering: ['prop1', 'prop2'],  // ❗ 必須
+  required: ['prop1', 'prop2'],
+}
+```
+
+### 関連ドキュメント
+
+- [BUG-002修正記録](.kiro/bugfix-gemini-empty-response-2025-12-05.md) - propertyOrdering
+- [BUG-003修正記録](.kiro/bugfix-gemini-thinking-tokens-2025-12-05.md) - maxOutputTokens
+- Serenaメモリ: `gemini_region_critical_rule`, `gemini_max_output_tokens_critical_rule`
+

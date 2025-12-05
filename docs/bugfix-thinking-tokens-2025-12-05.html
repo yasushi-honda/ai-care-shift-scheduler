@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BUG-003: Gemini思考トークン修正記録 - AI介護シフトスケジューラー</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+    <style>
+        :root {
+            --primary-color: #2c3e50;
+            --secondary-color: #3498db;
+            --success-color: #27ae60;
+            --danger-color: #e74c3c;
+            --warning-color: #f39c12;
+            --bg-color: #ecf0f1;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.6;
+            color: var(--primary-color);
+            background: var(--bg-color);
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        header {
+            background: linear-gradient(135deg, var(--warning-color), #e67e22);
+            color: white;
+            padding: 30px 20px;
+            text-align: center;
+        }
+        header h1 { font-size: 1.8rem; margin-bottom: 10px; }
+        header p { opacity: 0.9; }
+        .badge {
+            display: inline-block;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: bold;
+            margin: 5px;
+        }
+        .badge-critical { background: #c0392b; color: white; }
+        .badge-fixed { background: var(--success-color); color: white; }
+        .card {
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin: 20px 0;
+            overflow: hidden;
+        }
+        .card-header {
+            background: var(--primary-color);
+            color: white;
+            padding: 15px 20px;
+            font-weight: bold;
+        }
+        .card-body { padding: 20px; }
+        .error-box {
+            background: #fdedec;
+            border-left: 4px solid var(--danger-color);
+            padding: 15px;
+            margin: 15px 0;
+            font-family: monospace;
+            font-size: 0.9rem;
+            overflow-x: auto;
+        }
+        .fix-box {
+            background: #eafaf1;
+            border-left: 4px solid var(--success-color);
+            padding: 15px;
+            margin: 15px 0;
+        }
+        .mermaid {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 15px 0;
+            overflow-x: auto;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: left;
+        }
+        th { background: var(--primary-color); color: white; }
+        tr:nth-child(even) { background: #f9f9f9; }
+        code {
+            background: #f4f4f4;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+        }
+        pre {
+            background: #2c3e50;
+            color: #ecf0f1;
+            padding: 15px;
+            border-radius: 8px;
+            overflow-x: auto;
+            margin: 15px 0;
+        }
+        .nav-links {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin: 20px 0;
+        }
+        .nav-links a {
+            background: var(--secondary-color);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 5px;
+            text-decoration: none;
+        }
+        .nav-links a:hover { background: #2980b9; }
+        .highlight {
+            background: #fff3cd;
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
+        @media (max-width: 768px) {
+            .container { padding: 10px; }
+            header h1 { font-size: 1.4rem; }
+            .card-body { padding: 15px; }
+            pre { font-size: 0.8rem; }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>BUG-003: Gemini 2.5 Flash 思考トークン問題修正</h1>
+        <p>AI介護シフトスケジューラー - バグ修正記録</p>
+        <div>
+            <span class="badge badge-critical">Critical</span>
+            <span class="badge badge-fixed">修正済み</span>
+        </div>
+    </header>
+
+    <div class="container">
+        <div class="nav-links">
+            <a href="index.html">トップページ</a>
+            <a href="bugfix-cors-2025-12-05.html">BUG-001: CORSエラー</a>
+            <a href="bugfix-gemini-2025-12-05.html">BUG-002: 空レスポンス</a>
+            <a href="technical.html">技術ドキュメント</a>
+        </div>
+
+        <div class="card">
+            <div class="card-header">概要</div>
+            <div class="card-body">
+                <table>
+                    <tr><th>発見日</th><td>2025-12-05</td></tr>
+                    <tr><th>修正完了日</th><td>2025-12-05</td></tr>
+                    <tr><th>重要度</th><td><span class="badge badge-critical">Critical</span></td></tr>
+                    <tr><th>影響</th><td>本番環境でAIシフト生成が完全に動作不能</td></tr>
+                    <tr><th>前提バグ</th><td>BUG-002（propertyOrdering追加）修正後に発覚</td></tr>
+                </table>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">エラー内容</div>
+            <div class="card-body">
+                <div class="error-box">
+finishReason: '<span class="highlight">MAX_TOKENS</span>'<br>
+thoughtsTokenCount: <span class="highlight">8191</span><br>
+Response text length: 0<br>
+❌ JSON Parse Error: SyntaxError: Unexpected end of JSON input
+                </div>
+                <p><strong>ポイント</strong>: Gemini 2.5 Flashの「思考モード」が8191トークン消費し、<code>maxOutputTokens: 8192</code>を使い切り、出力用トークンが残らなかった</p>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">問題発生フロー</div>
+            <div class="card-body">
+                <div class="mermaid">
+sequenceDiagram
+    participant User as ユーザー
+    participant CF as Cloud Functions
+    participant Gemini as Gemini 2.5 Flash
+
+    User->>CF: AIシフト生成リクエスト
+    CF->>Gemini: 骨子生成リクエスト<br/>(maxOutputTokens: 8192)
+    Note over Gemini: 思考モード開始<br/>thoughtsTokenCount: 8191
+    Note over Gemini: 出力用トークン残り: 1<br/>→ 出力生成不可
+    Gemini-->>CF: finishReason: MAX_TOKENS<br/>text: ""（空）
+    CF-->>User: HTTP 500 Error
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">根本原因</div>
+            <div class="card-body">
+                <div class="mermaid">
+flowchart TD
+    A[maxOutputTokens: 8192] --> B[Gemini思考モード開始]
+    B --> C[思考に8191トークン消費]
+    C --> D[出力用トークン: 1のみ]
+    D --> E[出力生成を断念]
+    E --> F[finishReason: MAX_TOKENS]
+    F --> G[空のレスポンス]
+
+    style A fill:#f39c12,color:#fff
+    style C fill:#e74c3c,color:#fff
+    style G fill:#e74c3c,color:#fff
+                </div>
+                <p><strong>既知の問題</strong>:</p>
+                <blockquote style="border-left: 4px solid #3498db; padding-left: 15px; margin: 15px 0; color: #666;">
+                    "If MAX_TOKENS finish reason is triggered, the response text is empty, making debugging very difficult."
+                    <br><small>- <a href="https://github.com/googleapis/python-genai/issues/782" target="_blank">googleapis/python-genai Issue #782</a></small>
+                </blockquote>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">修正内容</div>
+            <div class="card-body">
+                <h4>Before（修正前）</h4>
+                <pre>maxOutputTokens: 8192,</pre>
+
+                <h4>After（修正後）</h4>
+                <div class="fix-box">
+                <pre style="background: #2c3e50; margin: 0;">maxOutputTokens: <strong style="color: #27ae60;">65536</strong>,  // Gemini 2.5 Flash thinking mode uses tokens from this budget</pre>
+                </div>
+
+                <h4>トークン予算の比較</h4>
+                <table>
+                    <tr>
+                        <th>カテゴリ</th>
+                        <th>修正前（失敗時）</th>
+                        <th>修正後（予想）</th>
+                    </tr>
+                    <tr>
+                        <td>maxOutputTokens設定</td>
+                        <td>8,192</td>
+                        <td style="color: #27ae60; font-weight: bold;">65,536</td>
+                    </tr>
+                    <tr>
+                        <td>思考トークン消費</td>
+                        <td>8,191</td>
+                        <td>~8,000-16,000</td>
+                    </tr>
+                    <tr>
+                        <td>出力用トークン残り</td>
+                        <td style="color: #e74c3c;">1（不足）</td>
+                        <td style="color: #27ae60;">~49,000-57,000</td>
+                    </tr>
+                    <tr>
+                        <td>結果</td>
+                        <td style="color: #e74c3c;">MAX_TOKENS + 空</td>
+                        <td style="color: #27ae60;">正常完了</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">BUG-001/002/003の関連</div>
+            <div class="card-body">
+                <div class="mermaid">
+flowchart LR
+    BUG1[BUG-001<br/>CORSエラー] -->|修正後| BUG2[BUG-002<br/>propertyOrdering欠如]
+    BUG2 -->|修正後| BUG3[BUG-003<br/>MAX_TOKENS]
+
+    BUG2 -->|デバッグログ追加| LOG[finishReason<br/>usageMetadata]
+    LOG -->|即時発見| BUG3
+
+    style BUG1 fill:#e74c3c,color:#fff
+    style BUG2 fill:#f39c12,color:#fff
+    style BUG3 fill:#27ae60,color:#fff
+    style LOG fill:#3498db,color:#fff
+                </div>
+                <p><strong>教訓</strong>: BUG-002で追加したデバッグログがBUG-003の即時発見に貢献</p>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">学び・教訓</div>
+            <div class="card-body">
+                <ol>
+                    <li><strong>デバッグログの価値</strong> - BUG-002で追加したログがBUG-003の即時発見に貢献</li>
+                    <li><strong>Gemini 2.5の新機能に注意</strong> - 思考モードは強力だが、トークン消費に影響</li>
+                    <li><strong>空レスポンスには複数の原因</strong> - <code>responseLength: 0</code>だけでは原因特定不可、<code>finishReason</code>確認が必須</li>
+                    <li><strong>余裕を持った設定</strong> - トークン制限は余裕を持って設定（8192 → 65536）</li>
+                </ol>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">関連ドキュメント</div>
+            <div class="card-body">
+                <ul>
+                    <li><a href="bugfix-cors-2025-12-05.html">BUG-001: CORSエラー修正記録</a></li>
+                    <li><a href="bugfix-gemini-2025-12-05.html">BUG-002: Gemini空レスポンス修正記録</a></li>
+                    <li><a href="manual-test-checklist.html">手動テストチェックリスト</a></li>
+                    <li><a href="https://github.com/googleapis/python-genai/issues/782" target="_blank">GitHub Issue: Thinking models are unreliable when max_output_tokens set</a></li>
+                </ul>
+            </div>
+        </div>
+
+        <footer style="text-align: center; padding: 30px; color: #666;">
+            <p>最終更新: 2025年12月5日</p>
+            <p><a href="https://github.com/yasushi-honda/ai-care-shift-scheduler" target="_blank">GitHub Repository</a></p>
+        </footer>
+    </div>
+
+    <script>
+        mermaid.initialize({ startOnLoad: true, theme: 'default' });
+    </script>
+</body>
+</html>
