@@ -299,7 +299,10 @@ const App: React.FC = () => {
           }
           // Phase 40: 既存スケジュールロード時は評価をクリア
           // （評価は新規生成時のみ有効なため）
-          setEvaluation(null);
+          // ただし、AI生成直後のリスナー発火時はクリアしない
+          if (!generatingSchedule) {
+            setEvaluation(null);
+          }
           setLoadingSchedule(false);
           setScheduleError(null);
         }
