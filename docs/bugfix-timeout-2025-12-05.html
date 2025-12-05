@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BUG-004: タイムアウト修正記録 - AI介護シフトスケジューラー</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+    <style>
+        :root {
+            --primary-color: #2c3e50;
+            --secondary-color: #3498db;
+            --success-color: #27ae60;
+            --danger-color: #e74c3c;
+            --warning-color: #f39c12;
+            --bg-color: #ecf0f1;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.6;
+            color: var(--primary-color);
+            background: var(--bg-color);
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        header {
+            background: linear-gradient(135deg, var(--secondary-color), #2980b9);
+            color: white;
+            padding: 30px 20px;
+            text-align: center;
+        }
+        header h1 { font-size: 1.8rem; margin-bottom: 10px; }
+        header p { opacity: 0.9; }
+        .badge {
+            display: inline-block;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: bold;
+            margin: 5px;
+        }
+        .badge-high { background: var(--warning-color); color: white; }
+        .badge-fixed { background: var(--success-color); color: white; }
+        .card {
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin: 20px 0;
+            overflow: hidden;
+        }
+        .card-header {
+            background: var(--primary-color);
+            color: white;
+            padding: 15px 20px;
+            font-weight: bold;
+        }
+        .card-body { padding: 20px; }
+        .error-box {
+            background: #fdedec;
+            border-left: 4px solid var(--danger-color);
+            padding: 15px;
+            margin: 15px 0;
+            font-family: monospace;
+            font-size: 0.9rem;
+        }
+        .fix-box {
+            background: #eafaf1;
+            border-left: 4px solid var(--success-color);
+            padding: 15px;
+            margin: 15px 0;
+        }
+        .mermaid {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 15px 0;
+            overflow-x: auto;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: left;
+        }
+        th { background: var(--primary-color); color: white; }
+        tr:nth-child(even) { background: #f9f9f9; }
+        code {
+            background: #f4f4f4;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+        }
+        pre {
+            background: #2c3e50;
+            color: #ecf0f1;
+            padding: 15px;
+            border-radius: 8px;
+            overflow-x: auto;
+            margin: 15px 0;
+        }
+        .nav-links {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin: 20px 0;
+        }
+        .nav-links a {
+            background: var(--secondary-color);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 5px;
+            text-decoration: none;
+        }
+        .nav-links a:hover { background: #2980b9; }
+        @media (max-width: 768px) {
+            .container { padding: 10px; }
+            header h1 { font-size: 1.4rem; }
+            .card-body { padding: 15px; }
+            pre { font-size: 0.8rem; }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>BUG-004: タイムアウト問題修正</h1>
+        <p>AI介護シフトスケジューラー - バグ修正記録</p>
+        <div>
+            <span class="badge badge-high">High</span>
+            <span class="badge badge-fixed">修正済み</span>
+        </div>
+    </header>
+
+    <div class="container">
+        <div class="nav-links">
+            <a href="index.html">トップページ</a>
+            <a href="bugfix-cors-2025-12-05.html">BUG-001: CORSエラー</a>
+            <a href="bugfix-gemini-2025-12-05.html">BUG-002: 空レスポンス</a>
+            <a href="bugfix-thinking-tokens-2025-12-05.html">BUG-003: 思考トークン</a>
+        </div>
+
+        <div class="card">
+            <div class="card-header">概要</div>
+            <div class="card-body">
+                <table>
+                    <tr><th>発見日</th><td>2025-12-05</td></tr>
+                    <tr><th>修正完了日</th><td>2025-12-05</td></tr>
+                    <tr><th>重要度</th><td><span class="badge badge-high">High</span></td></tr>
+                    <tr><th>影響</th><td>AI生成完了前にフロントエンドがタイムアウト</td></tr>
+                    <tr><th>前提バグ</th><td>BUG-003修正後に発覚（思考モード有効化で処理時間増加）</td></tr>
+                </table>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">エラー内容</div>
+            <div class="card-body">
+                <div class="error-box">
+AbortError: signal is aborted without reason<br>
+リクエストがタイムアウトしました。シフト生成に時間がかかっています。
+                </div>
+                <p><strong>ポイント</strong>: サーバー側は正常に動作完了（2分22秒）、クライアント側が60秒でタイムアウト</p>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">問題発生フロー</div>
+            <div class="card-body">
+                <div class="mermaid">
+sequenceDiagram
+    participant User as ユーザー
+    participant FE as フロントエンド
+    participant CF as Cloud Functions
+    participant Gemini as Gemini 2.5 Flash
+
+    User->>FE: シフト生成ボタン押下
+    FE->>CF: POST /generateShift
+    CF->>Gemini: Phase 1: 骨子生成
+    Note over Gemini: 思考モード実行中<br/>~85秒
+
+    Note over FE: 60秒経過<br/>タイムアウト発火
+    FE-->>User: ❌ タイムアウトエラー
+
+    Gemini-->>CF: Phase 1完了
+    CF->>Gemini: Phase 2: 詳細生成
+    Note over Gemini: ~55秒
+    Gemini-->>CF: Phase 2完了
+    CF-->>CF: ✅ 生成成功（受け取り手なし）
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">修正内容</div>
+            <div class="card-body">
+                <h4>フロントエンド（geminiService.ts）</h4>
+                <div class="fix-box">
+                <pre style="background: #2c3e50; margin: 0;">// Before
+setTimeout(() => controller.abort(), 60000);   // 60秒
+
+// After
+setTimeout(() => controller.abort(), <strong style="color: #27ae60;">180000</strong>);  // 3分</pre>
+                </div>
+
+                <h4>Cloud Functions（shift-generation.ts）</h4>
+                <div class="fix-box">
+                <pre style="background: #2c3e50; margin: 0;">// Before
+timeoutSeconds: 120,  // 2分
+
+// After
+timeoutSeconds: <strong style="color: #27ae60;">300</strong>,  // 5分</pre>
+                </div>
+
+                <h4>タイムアウト設定の整合性</h4>
+                <table>
+                    <tr>
+                        <th>層</th>
+                        <th>修正前</th>
+                        <th>修正後</th>
+                    </tr>
+                    <tr>
+                        <td>フロントエンド（fetch）</td>
+                        <td style="color: #e74c3c;">60秒</td>
+                        <td style="color: #27ae60;">180秒（3分）</td>
+                    </tr>
+                    <tr>
+                        <td>Cloud Functions</td>
+                        <td style="color: #e74c3c;">120秒</td>
+                        <td style="color: #27ae60;">300秒（5分）</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">BUG-001→004の連鎖</div>
+            <div class="card-body">
+                <div class="mermaid">
+flowchart LR
+    BUG1[BUG-001<br/>CORSエラー] -->|修正後| BUG2[BUG-002<br/>propertyOrdering欠如]
+    BUG2 -->|修正後| BUG3[BUG-003<br/>MAX_TOKENS]
+    BUG3 -->|修正後<br/>思考モード有効化| BUG4[BUG-004<br/>タイムアウト]
+
+    style BUG1 fill:#e74c3c,color:#fff
+    style BUG2 fill:#f39c12,color:#fff
+    style BUG3 fill:#f39c12,color:#fff
+    style BUG4 fill:#27ae60,color:#fff
+                </div>
+                <p><strong>教訓</strong>: 1つの修正が別の問題を顕在化させることがある。包括的なテストが重要。</p>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">学び・教訓</div>
+            <div class="card-body">
+                <ol>
+                    <li><strong>修正の連鎖効果</strong> - BUG-003修正で思考モードが有効化 → 処理時間増加 → タイムアウト</li>
+                    <li><strong>層間の整合性</strong> - フロントエンド・バックエンドのタイムアウト設定は連動して調整</li>
+                    <li><strong>ログの重要性</strong> - サーバーログで「成功」を確認できたことで、問題がクライアント側と特定</li>
+                    <li><strong>余裕を持った設定</strong> - 処理時間の1.5-2倍のタイムアウトを設定</li>
+                </ol>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">関連ドキュメント</div>
+            <div class="card-body">
+                <ul>
+                    <li><a href="bugfix-cors-2025-12-05.html">BUG-001: CORSエラー修正記録</a></li>
+                    <li><a href="bugfix-gemini-2025-12-05.html">BUG-002: Gemini空レスポンス修正記録</a></li>
+                    <li><a href="bugfix-thinking-tokens-2025-12-05.html">BUG-003: Gemini思考トークン修正記録</a></li>
+                </ul>
+            </div>
+        </div>
+
+        <footer style="text-align: center; padding: 30px; color: #666;">
+            <p>最終更新: 2025年12月5日</p>
+            <p><a href="https://github.com/yasushi-honda/ai-care-shift-scheduler" target="_blank">GitHub Repository</a></p>
+        </footer>
+    </div>
+
+    <script>
+        mermaid.initialize({ startOnLoad: true, theme: 'default' });
+    </script>
+</body>
+</html>
