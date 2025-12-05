@@ -509,6 +509,7 @@ setTimeout(() => controller.abort(), 180000);  // ❗ 3分
 - [BUG-002修正記録](.kiro/bugfix-gemini-empty-response-2025-12-05.md) - propertyOrdering
 - [BUG-003修正記録](.kiro/bugfix-gemini-thinking-tokens-2025-12-05.md) - maxOutputTokens
 - [BUG-004修正記録](.kiro/bugfix-timeout-2025-12-05.md) - タイムアウト
+- [BUG-005修正記録](.kiro/bugfix-evaluation-panel-display-2025-12-06.md) - Firestoreリスナー競合
 - [ポストモーテム](.kiro/postmortem-gemini-bugs-2025-12-05.md) - 全体分析
 - Serenaメモリ: `gemini_region_critical_rule`, `gemini_max_output_tokens_critical_rule`
 

@@ -688,6 +688,7 @@ erDiagram
 
       <h3>原因</h3>
       <p>Firestoreのリアルタイム購読コールバック内で、生成直後でも<code>setEvaluation(null)</code>が実行されていた。</p>
+      <p><strong>重要:</strong> Firestoreリスナーは1回のwrite操作に対して複数回発火する（キャッシュ、サーバー、更新通知）。</p>
 
       <div class="mermaid">
 sequenceDiagram
@@ -700,24 +701,49 @@ sequenceDiagram
     UI->>GS: generateShiftSchedule()
     GS-->>UI: evaluation結果
     UI->>UI: setEvaluation(result) ✅
+    UI->>UI: skipCount = 3 ✅
     UI->>FS: saveSchedule()
-    FS-->>UI: リスナー発火
-    UI->>UI: setEvaluation(null) ❌
-    Note over UI: 評価がクリアされる
+    FS-->>UI: リスナー発火(1回目)
+    UI->>UI: skipCount > 0 → スキップ (3→2)
+    FS-->>UI: リスナー発火(2回目)
+    UI->>UI: skipCount > 0 → スキップ (2→1)
+    Note over UI: 評価が保持される ✅
       </div>
 
-      <h3>修正内容</h3>
-      <p><code>generatingSchedule</code>フラグを使用して、生成中は評価をクリアしないよう修正。</p>
-      <pre style="background: #f8fafc; padding: 16px; border-radius: 8px; overflow-x: auto;"><code>// App.tsx (修正後)
-if (!generatingSchedule) {
+      <h3>修正履歴</h3>
+      <table>
+        <thead>
+          <tr><th>試行</th><th>方式</th><th>結果</th><th>失敗理由</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>1</td><td>generatingSchedule state</td><td>❌ 失敗</td><td>useEffect依存配列問題、タイミング不確定</td></tr>
+          <tr><td>2</td><td>boolean useRef</td><td>❌ 失敗</td><td>リスナー複数回発火に対応できず</td></tr>
+          <tr><td>3</td><td>カウンター useRef</td><td>✅ 成功</td><td>-</td></tr>
+        </tbody>
+      </table>
+
+      <h3>最終修正内容</h3>
+      <p><code>skipEvaluationClearCountRef</code>カウンターを使用して、複数回のリスナー発火に対応。</p>
+      <pre style="background: #f8fafc; padding: 16px; border-radius: 8px; overflow-x: auto;"><code>// App.tsx - カウンター宣言
+const skipEvaluationClearCountRef = useRef(0);
+
+// 生成完了時
+setEvaluation(generationResult.evaluation);
+skipEvaluationClearCountRef.current = 3; // 3回スキップ
+
+// リスナー内
+if (skipEvaluationClearCountRef.current > 0) {
+  skipEvaluationClearCountRef.current -= 1;
+} else {
   setEvaluation(null);
 }</code></pre>
 
       <h3>教訓</h3>
       <ul>
-        <li>Firestoreリアルタイム購読は、自身の書き込みでもコールバックが発火する</li>
-        <li>状態遷移の可視化が重要（特に非同期処理が絡む場合）</li>
-        <li>デバッグログがあることで問題特定が容易になった</li>
+        <li><strong>Firestoreリスナーは複数回発火する</strong>: 単純なbooleanフラグでは対応不可</li>
+        <li><strong>カウンター方式が有効</strong>: 観測した発火回数（2-3回）+ 余裕で対応</li>
+        <li><strong>デバッグログの重要性</strong>: リスナー発火回数の観測で原因特定</li>
+        <li><strong>段階的デバッグ</strong>: 仮説→検証→失敗→観測→新仮説のサイクル</li>
       </ul>
     </div>
 
@@ -739,9 +765,9 @@ if (!generatingSchedule) {
             <td style="color: var(--success);">✅ 完了（2025-12-06）</td>
           </tr>
           <tr>
-            <td>手動検証</td>
-            <td>高</td>
-            <td>本番環境でのシフト生成→評価表示確認</td>
+            <td><s>手動検証</s></td>
+            <td><s>高</s></td>
+            <td style="color: var(--success);">✅ 完了（2025-12-06）- BUG-005修正後に正常動作確認</td>
           </tr>
           <tr>
             <td>履歴UI</td>
