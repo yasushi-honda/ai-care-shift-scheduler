@@ -379,53 +379,55 @@ Managed by `/kiro:steering` command. Updates here reflect command changes.
 - アーキテクチャ: `architecture-diagram-YYYY-MM-DD.md`
 - リリースノート: `release-notes-vX.Y.Z-YYYY-MM-DD.md`
 
-### 具体例（参考）
-
-#### 良い例：Phase 0検証記録（2025年10月31日実施）
-
-**テキストドキュメント**: `.kiro/specs/auth-data-persistence/phase0-verification-2025-10-31.md`
-- 検証目的、検証内容、検証結果の詳細
-- 発見されたバグの説明と修正内容
-- 今後のステップ（Phase 13, 14の推奨）
-- 学び・振り返り
-
-**Mermaid図ドキュメント**: `.kiro/development-status-diagram-2025-10-31.md`
-- Phase実装状況（ガントチャート）
-- システムアーキテクチャ図
-- 認証・アクセス制御フロー（シーケンス図）
-- AIシフト生成フロー（シーケンス図）
-- データモデル（ER図）
-- RBAC権限マトリックス（グラフ）
-- リリース計画タイムライン
-- 開発ワークフロー（フローチャート）
-- Phase 13/14詳細設計
-
-**相互参照**:
-```markdown
-詳細は [development-status-2025-10-31.md](./development-status-2025-10-31.md) を参照
-```
-
-#### 悪い例：不十分な記録
-
-❌ Mermaid図のみで説明がない
-❌ テキストのみで構造が見えない
-❌ 「なぜ」の理由が書かれていない
-❌ 日付や関連ドキュメントへのリンクがない
-
-### AI振り返り時の効果
-
-**この標準に従うことで**:
-
-1. ✅ **即座に全体像把握**: Mermaid図で構造を視覚的に理解
-2. ✅ **詳細コンテキスト理解**: テキストで「なぜ」「どのように」を把握
-3. ✅ **正確な意思決定追跡**: 設計判断の理由が明確に記録
-4. ✅ **効率的な情報検索**: 命名規則により必要な情報に素早くアクセス
-5. ✅ **新規メンバーのオンボーディング**: 過去の経緯を容易に理解
-
 ### 実装時の注意
 
 - **記録は実装の一部**: コードと同様に重要な成果物
 - **リアルタイム記録**: 後回しにせず、完了時に即座に記録
 - **相互参照**: テキスト ↔ 図を相互リンクで結びつける
-- **更新も記録**: 既存ドキュメントを更新する場合、更新日と変更理由を記載
+
+---
+
+## Cloud Functions デプロイ確認ルール（重要）
+
+**背景**: 2025-12-05にCORSエラーが発生。原因はCloud Functionsデプロイが3週間失敗していたが、CI/CDワークフローがエラーをマスクしていたため気づかなかった。
+
+### デプロイ後の必須確認
+
+1. **GitHub Actionsログで関数デプロイ成功を確認**
+
+   ```bash
+   gh run view <run-id> --log | grep -E "functions\[.*\]"
+   # ✔ functions[generateShift(asia-northeast1)] Successful create operation.
+   ```
+
+2. **「Deploy complete!」だけを信じない**
+   - Hosting/Rulesは成功してもFunctionsが失敗している可能性あり
+   - `|| echo` でエラーがマスクされている場合がある
+
+3. **リージョン移行後は必ず実機テスト**
+   - フロントエンドが正しいURLを呼び出しているか確認
+   - 関数が実際にデプロイされているか `gcloud functions list` で確認
+
+### CORSエラー調査手順
+
+CORSエラーが発生した場合、**CORS設定だけでなく「関数が存在するか」も確認**：
+
+1. **Cloud Functions存在確認**
+
+   ```bash
+   gcloud functions list --project=ai-care-shift-scheduler
+   ```
+
+2. **GitHub Actionsデプロイログ確認**
+
+   ```bash
+   gh run view <最新のrun-id> --log | grep -E "(functions|Error|cloudscheduler)"
+   ```
+
+3. **よくある原因**
+   - `cloudscheduler.googleapis.com` API未有効化
+   - リージョン変更後の古い関数が残存
+   - 非インタラクティブモードでの削除失敗
+
+詳細: [BUG-001修正記録](.kiro/bugfix-cors-cloud-functions-2025-12-05.md)
 
