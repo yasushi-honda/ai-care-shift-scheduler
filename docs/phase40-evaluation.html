@@ -600,6 +600,85 @@ erDiagram
       </div>
     </div>
 
+    <!-- Phase 40拡張（2025-12-06） -->
+    <div class="card">
+      <h2>Phase 40拡張: AI評価機能改善（2025-12-06）</h2>
+
+      <h3>追加機能</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>機能</th>
+            <th>説明</th>
+            <th>ステータス</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>警告メッセージ表示</td>
+            <td>スコアに応じた視覚的な警告（critical/severe/warning）</td>
+            <td style="color: var(--success);">✅ 完了</td>
+          </tr>
+          <tr>
+            <td>自動展開機能</td>
+            <td>スコア60未満またはエラー5件以上で自動展開</td>
+            <td style="color: var(--success);">✅ 完了</td>
+          </tr>
+          <tr>
+            <td>AI総合コメント</td>
+            <td>評価結果に基づく自然言語コメント（200文字以内）</td>
+            <td style="color: var(--success);">✅ 完了</td>
+          </tr>
+          <tr>
+            <td>コピー機能</td>
+            <td>AIコメントをクリップボードにコピー</td>
+            <td style="color: var(--success);">✅ 完了</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3>警告レベル</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>レベル</th>
+            <th>スコア範囲</th>
+            <th>表示</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>🚫 Critical</td>
+            <td>0点</td>
+            <td>「この要件では実現不可能です」</td>
+          </tr>
+          <tr>
+            <td>⚠️ Severe</td>
+            <td>1-30点</td>
+            <td>「重大な制約違反があります」</td>
+          </tr>
+          <tr>
+            <td>⚡ Warning</td>
+            <td>31-59点</td>
+            <td>「複数の問題があります」</td>
+          </tr>
+          <tr>
+            <td>-</td>
+            <td>60点以上</td>
+            <td>警告なし（通常表示）</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3>変更ファイル</h3>
+      <ul style="list-style: none; padding: 0;">
+        <li style="padding: 4px 0;">📄 <code>src/components/EvaluationPanel.tsx</code> - UI改善</li>
+        <li style="padding: 4px 0;">📄 <code>functions/src/evaluation/evaluationLogic.ts</code> - AIコメント生成</li>
+        <li style="padding: 4px 0;">📄 <code>types.ts</code> / <code>functions/src/types.ts</code> - aiComment追加</li>
+        <li style="padding: 4px 0;">📄 <code>e2e/ai-evaluation-panel.spec.ts</code> - E2Eテスト追加</li>
+      </ul>
+    </div>
+
     <!-- 次のステップ -->
     <div class="card">
       <h2>次のステップ</h2>
@@ -613,9 +692,9 @@ erDiagram
         </thead>
         <tbody>
           <tr>
-            <td>E2Eテスト拡張</td>
-            <td>高</td>
-            <td>評価パネル表示の自動テスト追加</td>
+            <td><s>E2Eテスト拡張</s></td>
+            <td><s>高</s></td>
+            <td style="color: var(--success);">✅ 完了（2025-12-06）</td>
           </tr>
           <tr>
             <td>手動検証</td>
@@ -628,9 +707,9 @@ erDiagram
             <td>過去の評価履歴一覧表示機能</td>
           </tr>
           <tr>
-            <td>Gemini評価統合</td>
-            <td>低</td>
-            <td>AIによる追加改善提案の統合</td>
+            <td><s>Gemini評価統合</s></td>
+            <td><s>低</s></td>
+            <td style="color: var(--success);">✅ AIコメント機能として実装（2025-12-06）</td>
           </tr>
         </tbody>
       </table>

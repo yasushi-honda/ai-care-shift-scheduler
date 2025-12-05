@@ -1,5 +1,48 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import type { AIEvaluationResult, ConstraintViolation, Recommendation, SimulationResult } from '../../types';
+
+// 自動展開のしきい値定数
+const AUTO_EXPAND_SCORE_THRESHOLD = 60;
+const AUTO_EXPAND_ERROR_THRESHOLD = 5;
+
+// 警告レベル
+type WarningLevel = 'critical' | 'severe' | 'warning' | 'none';
+
+function getWarningLevel(score: number): WarningLevel {
+  if (score === 0) return 'critical';
+  if (score <= 30) return 'severe';
+  if (score < 60) return 'warning';
+  return 'none';
+}
+
+// 警告メッセージ設定
+const WARNING_MESSAGES: Record<WarningLevel, { title: string; message: string; bgColor: string; borderColor: string; textColor: string; icon: string } | null> = {
+  critical: {
+    title: 'この要件では実現不可能です',
+    message: '人員数が不足しているか、制約が厳しすぎるため、すべての条件を満たすシフトを作成できません。スタッフの追加または要件の緩和を検討してください。',
+    bgColor: 'bg-red-50',
+    borderColor: 'border-red-500',
+    textColor: 'text-red-800',
+    icon: '🚫',
+  },
+  severe: {
+    title: '重大な制約違反があります',
+    message: '多数の制約違反が発生しています。このままでは運用に支障をきたす可能性があります。手動での調整が必要です。',
+    bgColor: 'bg-orange-50',
+    borderColor: 'border-orange-500',
+    textColor: 'text-orange-800',
+    icon: '⚠️',
+  },
+  warning: {
+    title: '複数の問題があります',
+    message: 'いくつかの制約違反が検出されました。詳細を確認し、必要に応じて調整してください。',
+    bgColor: 'bg-yellow-50',
+    borderColor: 'border-yellow-500',
+    textColor: 'text-yellow-800',
+    icon: '⚡',
+  },
+  none: null,
+};
 
 interface EvaluationPanelProps {
   evaluation: AIEvaluationResult | null;
@@ -22,9 +65,11 @@ export function EvaluationPanel({
   onToggle,
 }: EvaluationPanelProps) {
   const [internalExpanded, setInternalExpanded] = useState(false);
+  const hasAutoExpandedRef = useRef(false);
 
   // 制御コンポーネントと非制御コンポーネントの両方をサポート
   const isExpanded = controlledExpanded ?? internalExpanded;
+
   const handleToggle = () => {
     if (onToggle) {
       onToggle();
@@ -33,22 +78,63 @@ export function EvaluationPanel({
     }
   };
 
+  // 違反の重要度別カウント（早期計算）
+  const errorCount = evaluation?.constraintViolations?.filter(v => v.severity === 'error').length || 0;
+  const warningCount = evaluation?.constraintViolations?.filter(v => v.severity === 'warning').length || 0;
+
+  // 自動展開の判定（初回のみ）
+  useEffect(() => {
+    if (!evaluation || hasAutoExpandedRef.current || controlledExpanded !== undefined) {
+      return;
+    }
+
+    const shouldAutoExpand =
+      evaluation.overallScore < AUTO_EXPAND_SCORE_THRESHOLD ||
+      errorCount >= AUTO_EXPAND_ERROR_THRESHOLD;
+
+    if (shouldAutoExpand) {
+      setInternalExpanded(true);
+      hasAutoExpandedRef.current = true;
+    }
+  }, [evaluation, errorCount, controlledExpanded]);
+
   if (!evaluation) {
     return null;
   }
 
-  const { overallScore, fulfillmentRate, constraintViolations, recommendations, simulation } = evaluation;
+  const { overallScore, fulfillmentRate, constraintViolations, recommendations, simulation, aiComment } = evaluation;
 
   // スコアが-1の場合は評価失敗
   const isEvaluationFailed = overallScore < 0;
 
-  // 違反の重要度別カウント
-  const errorCount = constraintViolations?.filter(v => v.severity === 'error').length || 0;
-  const warningCount = constraintViolations?.filter(v => v.severity === 'warning').length || 0;
+  // 警告レベルを取得
+  const warningLevel = isEvaluationFailed ? 'none' : getWarningLevel(overallScore);
+  const warningConfig = WARNING_MESSAGES[warningLevel];
 
   return (
-    <div className="bg-white border border-gray-200 rounded-lg shadow-sm">
-      {/* ヘッダー（常に表示） */}
+    <div className="space-y-3">
+      {/* 警告メッセージ（低スコア時に表示） */}
+      {warningConfig && (
+        <div
+          className={`${warningConfig.bgColor} border-l-4 ${warningConfig.borderColor} p-4 rounded-r-lg`}
+          role="alert"
+        >
+          <div className="flex items-start gap-3">
+            <span className="text-2xl flex-shrink-0">{warningConfig.icon}</span>
+            <div>
+              <h3 className={`font-bold ${warningConfig.textColor}`}>
+                {warningConfig.title}
+              </h3>
+              <p className={`mt-1 text-sm ${warningConfig.textColor} opacity-90`}>
+                {warningConfig.message}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className="bg-white border border-gray-200 rounded-lg shadow-sm">
+        {/* ヘッダー（常に表示） */}
       <button
         onClick={handleToggle}
         className="w-full px-4 py-3 flex items-center justify-between hover:bg-gray-50 transition-colors duration-200 rounded-t-lg"
@@ -89,6 +175,11 @@ export function EvaluationPanel({
         </svg>
       </button>
 
+      {/* AIコメント（展開状態に関わらず常に表示） */}
+      {aiComment && !isEvaluationFailed && (
+        <AICommentSection comment={aiComment} />
+      )}
+
       {/* 展開コンテンツ */}
       <div
         id="evaluation-content"
@@ -126,6 +217,7 @@ export function EvaluationPanel({
             </>
           )}
         </div>
+      </div>
       </div>
     </div>
   );
@@ -411,6 +503,67 @@ function SimulationSection({ simulation }: { simulation: SimulationResult }) {
           </ul>
         </div>
       )}
+    </div>
+  );
+}
+
+/**
+ * AIコメントセクション
+ * 展開状態に関わらず常に表示される総合コメント
+ */
+function AICommentSection({ comment }: { comment: string }) {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(comment);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // フォールバック: 古いブラウザ対応
+      const textArea = document.createElement('textarea');
+      textArea.value = comment;
+      document.body.appendChild(textArea);
+      textArea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textArea);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
+
+  return (
+    <div className="px-4 py-3 bg-blue-50 border-t border-blue-100">
+      <div className="flex items-start gap-2">
+        <span className="text-lg flex-shrink-0">💬</span>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center justify-between gap-2 mb-1">
+            <span className="text-xs font-medium text-blue-700">AIコメント</span>
+            <button
+              onClick={handleCopy}
+              className="text-xs text-blue-600 hover:text-blue-800 flex items-center gap-1 transition-colors"
+              title="コメントをコピー"
+            >
+              {copied ? (
+                <>
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                  コピー済み
+                </>
+              ) : (
+                <>
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                  </svg>
+                  コピー
+                </>
+              )}
+            </button>
+          </div>
+          <p className="text-sm text-gray-700 leading-relaxed">{comment}</p>
+        </div>
+      </div>
     </div>
   );
 }

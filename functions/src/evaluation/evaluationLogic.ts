@@ -71,6 +71,14 @@ export class EvaluationService {
     // シミュレーション結果生成
     const simulation = this.generateSimulation(input, violations);
 
+    // AI総合コメント生成
+    const aiComment = this.generateAIComment(
+      overallScore,
+      fulfillmentRate,
+      violations,
+      recommendations
+    );
+
     return {
       overallScore,
       fulfillmentRate,
@@ -78,7 +86,132 @@ export class EvaluationService {
       recommendations,
       simulation,
       generatedAt: Timestamp.now(),
+      aiComment,
     };
+  }
+
+  /**
+   * AI総合コメントを生成
+   *
+   * スコアと違反内容に基づいて、200文字以内の自然言語コメントを生成
+   */
+  private generateAIComment(
+    overallScore: number,
+    fulfillmentRate: number,
+    violations: ConstraintViolation[],
+    recommendations: Recommendation[]
+  ): string {
+    // 違反をタイプ別にカウント
+    const violationCounts: Record<string, number> = {};
+    for (const v of violations) {
+      violationCounts[v.type] = (violationCounts[v.type] || 0) + 1;
+    }
+
+    const errorCount = violations.filter(v => v.severity === 'error').length;
+    const warningCount = violations.filter(v => v.severity === 'warning').length;
+
+    // スコア別のコメント生成
+    if (overallScore === 0) {
+      return this.generateCriticalComment(violationCounts, fulfillmentRate);
+    } else if (overallScore <= 30) {
+      return this.generateSevereComment(violationCounts, errorCount, warningCount);
+    } else if (overallScore < 60) {
+      return this.generateWarningComment(violationCounts, errorCount, warningCount);
+    } else if (overallScore < 80) {
+      return this.generateFairComment(violationCounts, warningCount, fulfillmentRate);
+    } else {
+      return this.generateGoodComment(fulfillmentRate, recommendations);
+    }
+  }
+
+  private generateCriticalComment(
+    violationCounts: Record<string, number>,
+    fulfillmentRate: number
+  ): string {
+    const mainIssues: string[] = [];
+
+    if (violationCounts['staffShortage'] > 10) {
+      mainIssues.push(`${violationCounts['staffShortage']}件の人員不足`);
+    }
+    if (violationCounts['qualificationMissing'] > 5) {
+      mainIssues.push(`資格要件の未充足`);
+    }
+
+    const issueText = mainIssues.length > 0
+      ? `主な問題: ${mainIssues.join('、')}。`
+      : '';
+
+    return `現在の要件ではすべての制約を満たすシフトを作成できません。${issueText}人員充足率${fulfillmentRate}%です。スタッフの追加または要件の緩和を検討してください。`;
+  }
+
+  private generateSevereComment(
+    violationCounts: Record<string, number>,
+    errorCount: number,
+    warningCount: number
+  ): string {
+    const issues: string[] = [];
+
+    if (violationCounts['staffShortage'] > 0) {
+      issues.push(`人員不足が${violationCounts['staffShortage']}件`);
+    }
+    if (violationCounts['consecutiveWork'] > 0) {
+      issues.push(`連勤超過が${violationCounts['consecutiveWork']}件`);
+    }
+    if (violationCounts['nightRestViolation'] > 0) {
+      issues.push(`夜勤後休息不足が${violationCounts['nightRestViolation']}件`);
+    }
+
+    const issueText = issues.slice(0, 2).join('、');
+    const issueClause = issueText ? `${issueText}あります。` : '';
+    return `重大な問題が${errorCount + warningCount}件検出されました。${issueClause}このままでは運用に支障が出る可能性があります。手動での大幅な調整が必要です。`;
+  }
+
+  private generateWarningComment(
+    violationCounts: Record<string, number>,
+    errorCount: number,
+    warningCount: number
+  ): string {
+    const sortedIssues = Object.entries(violationCounts)
+      .sort((a, b) => b[1] - a[1]);
+    const mainIssue = sortedIssues[0];
+
+    if (!mainIssue) {
+      return `いくつかの問題が検出されました（エラー${errorCount}件、警告${warningCount}件）。詳細を確認し、必要に応じて調整してください。`;
+    }
+
+    const issueLabels: Record<string, string> = {
+      staffShortage: '人員不足',
+      consecutiveWork: '連勤',
+      nightRestViolation: '夜勤後休息',
+      qualificationMissing: '資格要件',
+      leaveRequestIgnored: '休暇希望',
+    };
+
+    const mainIssueName = issueLabels[mainIssue[0]] || mainIssue[0];
+
+    return `いくつかの問題が検出されました（エラー${errorCount}件、警告${warningCount}件）。特に${mainIssueName}に関する問題が多く見られます。詳細を確認し、必要に応じて調整してください。`;
+  }
+
+  private generateFairComment(
+    _violationCounts: Record<string, number>,
+    warningCount: number,
+    fulfillmentRate: number
+  ): string {
+    if (warningCount > 0) {
+      return `概ね良好ですが、${warningCount}件の警告があります。人員充足率は${fulfillmentRate}%です。確定前に警告内容を確認することを推奨します。`;
+    }
+    return `シフト配置は概ね適切です。人員充足率${fulfillmentRate}%で、大きな問題はありません。微調整を行えばさらに改善できます。`;
+  }
+
+  private generateGoodComment(
+    fulfillmentRate: number,
+    recommendations: Recommendation[]
+  ): string {
+    const hasLowPriorityRec = recommendations.some(r => r.priority === 'low');
+    if (hasLowPriorityRec && fulfillmentRate >= 95) {
+      return `すべての制約を満たした良好なシフト案です。人員充足率${fulfillmentRate}%で、このまま確定しても問題ありません。`;
+    }
+    return `良好なシフト案が生成されました。人員充足率は${fulfillmentRate}%です。制約違反なく、バランスの取れた配置になっています。`;
   }
 
   /**

@@ -154,6 +154,7 @@ export interface AIEvaluationResult {
   recommendations: Recommendation[];
   simulation: SimulationResult;
   generatedAt: FirebaseFirestore.Timestamp;
+  aiComment?: string;             // AI総合コメント（200文字以内）
 }
 
 /**
