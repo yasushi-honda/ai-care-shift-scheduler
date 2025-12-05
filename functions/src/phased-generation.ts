@@ -119,28 +119,30 @@ function getSkeletonSchema(daysInMonth: number) {
         items: {
           type: 'object',
           properties: {
-            staffId: { type: 'string' },
-            staffName: { type: 'string' },
+            staffId: { type: 'string', description: 'スタッフID' },
+            staffName: { type: 'string', description: 'スタッフ名' },
             restDays: {
               type: 'array',
               description: '休日の日付リスト（1-31の数値配列）',
-              items: { type: 'number', minimum: 1, maximum: daysInMonth },
+              items: { type: 'integer', minimum: 1, maximum: daysInMonth },
             },
             nightShiftDays: {
               type: 'array',
               description: '夜勤の日付リスト（1-31の数値配列）',
-              items: { type: 'number', minimum: 1, maximum: daysInMonth },
+              items: { type: 'integer', minimum: 1, maximum: daysInMonth },
             },
             nightShiftFollowupDays: {
               type: 'array',
               description: '夜勤明け休み・公休の日付リスト（1-31の数値配列）',
-              items: { type: 'number', minimum: 1, maximum: daysInMonth },
+              items: { type: 'integer', minimum: 1, maximum: daysInMonth },
             },
           },
+          propertyOrdering: ['staffId', 'staffName', 'restDays', 'nightShiftDays', 'nightShiftFollowupDays'],
           required: ['staffId', 'staffName', 'restDays', 'nightShiftDays', 'nightShiftFollowupDays'],
         },
       },
     },
+    propertyOrdering: ['staffSchedules'],
     required: ['staffSchedules'],
   };
 }
@@ -181,12 +183,14 @@ ${staffInfo}
 - 休日を公平に分散させる
 
 # 出力形式
-骨子のみをJSONで出力してください。
+各スタッフの骨子をJSONで出力してください。以下の順序で各プロパティを記述してください：
+- staffId: スタッフID（文字列）
+- staffName: スタッフ名（文字列）
 - restDays: 休日の日付リスト（例: [1,5,9,13,17,21,25,29]）
 - nightShiftDays: 夜勤の日付リスト（例: [3,10,17,24]）
 - nightShiftFollowupDays: 夜勤明け休み・公休の日付リスト（例: [4,5,11,12,18,19,25,26]）
 
-重要：全スタッフ分の骨子を出力してください。
+重要：全${staffList.length}名分の骨子を必ず出力してください。
 `;
 }
 
@@ -351,27 +355,32 @@ function getDetailedShiftSchema(daysInMonth: number) {
     properties: {
       schedule: {
         type: 'array',
+        description: 'スタッフごとの月間シフトスケジュール',
         items: {
           type: 'object',
           properties: {
-            staffId: { type: 'string' },
-            staffName: { type: 'string' },
+            staffId: { type: 'string', description: 'スタッフID' },
+            staffName: { type: 'string', description: 'スタッフ名' },
             monthlyShifts: {
               type: 'array',
+              description: '月間シフト配列',
               items: {
                 type: 'object',
                 properties: {
-                  date: { type: 'string' },
-                  shiftType: { type: 'string' },
+                  date: { type: 'string', description: '日付（YYYY-MM-DD形式）' },
+                  shiftType: { type: 'string', description: 'シフト種別（早番/日勤/遅番/夜勤/夜勤明け/公休/休日）' },
                 },
+                propertyOrdering: ['date', 'shiftType'],
                 required: ['date', 'shiftType'],
               },
             },
           },
+          propertyOrdering: ['staffId', 'staffName', 'monthlyShifts'],
           required: ['staffId', 'staffName', 'monthlyShifts'],
         },
       },
     },
+    propertyOrdering: ['schedule'],
     required: ['schedule'],
   };
 }

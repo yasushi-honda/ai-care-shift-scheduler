@@ -407,14 +407,17 @@ function getShiftSchema() {
                     description: "シフト区分 ('早番', '日勤', '遅番', '夜勤', '休', '明け休み')",
                   },
                 },
+                propertyOrdering: ['date', 'shiftType'],
                 required: ['date', 'shiftType'],
               },
             },
           },
+          propertyOrdering: ['staffId', 'staffName', 'monthlyShifts'],
           required: ['staffId', 'staffName', 'monthlyShifts'],
         },
       },
     },
+    propertyOrdering: ['schedule'],
     required: ['schedule'],
   };
 }
