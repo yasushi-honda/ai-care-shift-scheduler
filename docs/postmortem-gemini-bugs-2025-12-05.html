@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ポストモーテム: Geminiバグ連鎖 - AI介護シフトスケジューラー</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+    <style>
+        :root {
+            --primary-color: #2c3e50;
+            --secondary-color: #3498db;
+            --success-color: #27ae60;
+            --danger-color: #e74c3c;
+            --warning-color: #f39c12;
+            --bg-color: #ecf0f1;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.6;
+            color: var(--primary-color);
+            background: var(--bg-color);
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        header {
+            background: linear-gradient(135deg, #8e44ad, #9b59b6);
+            color: white;
+            padding: 30px 20px;
+            text-align: center;
+        }
+        header h1 { font-size: 1.8rem; margin-bottom: 10px; }
+        header p { opacity: 0.9; }
+        .card {
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin: 20px 0;
+            overflow: hidden;
+        }
+        .card-header {
+            background: var(--primary-color);
+            color: white;
+            padding: 15px 20px;
+            font-weight: bold;
+        }
+        .card-body { padding: 20px; }
+        .mermaid {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 15px 0;
+            overflow-x: auto;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: left;
+        }
+        th { background: var(--primary-color); color: white; }
+        tr:nth-child(even) { background: #f9f9f9; }
+        .badge {
+            display: inline-block;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: bold;
+            margin: 5px;
+        }
+        .badge-resolved { background: var(--success-color); color: white; }
+        pre {
+            background: #2c3e50;
+            color: #ecf0f1;
+            padding: 15px;
+            border-radius: 8px;
+            overflow-x: auto;
+            margin: 15px 0;
+        }
+        code {
+            background: #f4f4f4;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+        }
+        .lesson-box {
+            background: #e8f6f3;
+            border-left: 4px solid var(--success-color);
+            padding: 15px;
+            margin: 15px 0;
+        }
+        .warning-box {
+            background: #fef9e7;
+            border-left: 4px solid var(--warning-color);
+            padding: 15px;
+            margin: 15px 0;
+        }
+        .nav-links {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin: 20px 0;
+        }
+        .nav-links a {
+            background: var(--secondary-color);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 5px;
+            text-decoration: none;
+        }
+        .nav-links a:hover { background: #2980b9; }
+        @media (max-width: 768px) {
+            .container { padding: 10px; }
+            header h1 { font-size: 1.4rem; }
+            .card-body { padding: 15px; }
+            pre { font-size: 0.8rem; }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>ポストモーテム: Geminiバグ連鎖（BUG-001〜004）</h1>
+        <p>AI介護シフトスケジューラー - 振り返りと教訓</p>
+        <div>
+            <span class="badge badge-resolved">全4件解決済み</span>
+        </div>
+    </header>
+
+    <div class="container">
+        <div class="nav-links">
+            <a href="index.html">トップページ</a>
+            <a href="bugfix-cors-2025-12-05.html">BUG-001</a>
+            <a href="bugfix-gemini-2025-12-05.html">BUG-002</a>
+            <a href="bugfix-thinking-tokens-2025-12-05.html">BUG-003</a>
+            <a href="bugfix-timeout-2025-12-05.html">BUG-004</a>
+        </div>
+
+        <div class="card">
+            <div class="card-header">概要</div>
+            <div class="card-body">
+                <table>
+                    <tr><th>発生日</th><td>2025-12-05</td></tr>
+                    <tr><th>解決日</th><td>2025-12-05（同日中に全件解決）</td></tr>
+                    <tr><th>影響機能</th><td>AIシフト自動生成（本番環境）</td></tr>
+                    <tr><th>発見契機</th><td>手動テスト MT-001</td></tr>
+                </table>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">バグ連鎖の構造</div>
+            <div class="card-body">
+                <div class="mermaid">
+flowchart LR
+    BUG1[BUG-001<br/>CORSエラー] -->|修正後| BUG2[BUG-002<br/>propertyOrdering欠如]
+    BUG2 -->|修正後<br/>ログ追加| BUG3[BUG-003<br/>MAX_TOKENS]
+    BUG3 -->|修正後| BUG4[BUG-004<br/>タイムアウト]
+    BUG4 -->|修正後| OK[✅ 正常動作]
+
+    style BUG1 fill:#e74c3c,color:#fff
+    style BUG2 fill:#f39c12,color:#fff
+    style BUG3 fill:#f39c12,color:#fff
+    style BUG4 fill:#3498db,color:#fff
+    style OK fill:#27ae60,color:#fff
+                </div>
+                <p><strong>特徴</strong>: 各バグは前のバグを修正することで顕在化した「隠れバグ」</p>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">根本原因分析</div>
+            <div class="card-body">
+                <table>
+                    <tr>
+                        <th>バグ</th>
+                        <th>根本原因</th>
+                        <th>見落とした理由</th>
+                    </tr>
+                    <tr>
+                        <td>BUG-001</td>
+                        <td>CORS設定漏れ</td>
+                        <td>ローカル環境では発生しない</td>
+                    </tr>
+                    <tr>
+                        <td>BUG-002</td>
+                        <td>Gemini 2.5の新仕様</td>
+                        <td>旧バージョンでは不要だった</td>
+                    </tr>
+                    <tr>
+                        <td>BUG-003</td>
+                        <td>思考モードのトークン消費</td>
+                        <td>仕様書に明記されていない</td>
+                    </tr>
+                    <tr>
+                        <td>BUG-004</td>
+                        <td>タイムアウト設定の不整合</td>
+                        <td>単体テストでは短時間で完了</td>
+                    </tr>
+                </table>
+
+                <h4 style="margin-top: 20px;">共通パターン</h4>
+                <div class="mermaid">
+mindmap
+  root((見落とし要因))
+    環境差異
+      ローカル vs 本番
+      開発データ vs 本番データ
+    新機能の副作用
+      Gemini 2.5思考モード
+      仕様変更の把握不足
+    非機能要件の軽視
+      タイムアウト設定
+      CORS設定
+    テスト不足
+      E2Eテストなし
+      本番同等環境なし
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">教訓と再発防止策</div>
+            <div class="card-body">
+                <div class="lesson-box">
+                    <h4>1. デバッグログの価値</h4>
+                    <p>BUG-002修正時に追加したログがBUG-003/004の即時発見に貢献</p>
+                    <pre>console.log('📊 AI Response Details:', {
+  finishReason,        // 'STOP'以外は異常
+  responseLength,      // 0の場合は異常
+  usageMetadata,       // トークン消費量
+});</pre>
+                </div>
+
+                <div class="lesson-box">
+                    <h4>2. タイムアウト設計原則</h4>
+                    <pre>クライアント timeout (180s) < サーバー timeout (300s)
+サーバー timeout (300s) > 想定処理時間 (140s) × 2</pre>
+                </div>
+
+                <div class="lesson-box">
+                    <h4>3. Gemini 2.5 Flash必須設定</h4>
+                    <pre>maxOutputTokens: 65536  // 思考トークン対応
+propertyOrdering: [...]  // 必須
+location: 'asia-northeast1'  // 日本リージョン</pre>
+                </div>
+
+                <div class="warning-box">
+                    <h4>4. finishReason監視</h4>
+                    <table>
+                        <tr><th>finishReason</th><th>意味</th><th>対処</th></tr>
+                        <tr><td><code>STOP</code></td><td>正常完了</td><td>なし</td></tr>
+                        <tr><td><code>MAX_TOKENS</code></td><td>トークン不足</td><td>maxOutputTokens増加</td></tr>
+                        <tr><td><code>SAFETY</code></td><td>安全性フィルタ</td><td>プロンプト見直し</td></tr>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">改善アクション</div>
+            <div class="card-body">
+                <div class="mermaid">
+gantt
+    title 改善アクションタイムライン
+    dateFormat YYYY-MM-DD
+    section 短期（完了）
+    BUG-001〜004修正         :done, bug, 2025-12-05, 1d
+    ドキュメント整備          :done, doc, 2025-12-05, 1d
+    CLAUDE.md更新           :done, claude, 2025-12-05, 1d
+    section 中期（予定）
+    ステージング環境構築       :stage, 2025-12-06, 7d
+    E2Eテスト追加            :e2e, after stage, 7d
+    section 長期（継続）
+    APIリリースノート監視     :milestone, watch, 2025-12-13, 30d
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">まとめ</div>
+            <div class="card-body">
+                <blockquote style="border-left: 4px solid #8e44ad; padding-left: 20px; margin: 20px 0; font-style: italic; color: #666;">
+                    「1つのバグ修正が次のバグを顕在化させる。適切なログを残すことで、連鎖バグの発見と修正が格段に早くなる。」
+                </blockquote>
+                <p><strong>開発プロセスへの反映</strong>: 本番環境でのテストを「最終確認」ではなく「発見の機会」と位置づけ、十分なデバッグログと段階的なテストを心がける。</p>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">関連ドキュメント</div>
+            <div class="card-body">
+                <ul>
+                    <li><a href="bugfix-cors-2025-12-05.html">BUG-001: CORSエラー修正記録</a></li>
+                    <li><a href="bugfix-gemini-2025-12-05.html">BUG-002: propertyOrdering修正記録</a></li>
+                    <li><a href="bugfix-thinking-tokens-2025-12-05.html">BUG-003: MAX_TOKENS修正記録</a></li>
+                    <li><a href="bugfix-timeout-2025-12-05.html">BUG-004: タイムアウト修正記録</a></li>
+                </ul>
+            </div>
+        </div>
+
+        <footer style="text-align: center; padding: 30px; color: #666;">
+            <p>最終更新: 2025年12月5日</p>
+            <p><a href="https://github.com/yasushi-honda/ai-care-shift-scheduler" target="_blank">GitHub Repository</a></p>
+        </footer>
+    </div>
+
+    <script>
+        mermaid.initialize({ startOnLoad: true, theme: 'default' });
+    </script>
+</body>
+</html>

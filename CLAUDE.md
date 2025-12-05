@@ -478,9 +478,69 @@ responseSchema: {
 }
 ```
 
+### タイムアウト設定ルール（BUG-004教訓）
+
+Gemini 2.5 Flash思考モードは処理に時間がかかる（10名規模で約2-3分）。
+
+**必須設定**:
+
+```typescript
+// Cloud Functions (shift-generation.ts)
+export const generateShift = onRequest({
+  timeoutSeconds: 300,  // ❗ 5分（思考モード対応）
+  // ...
+});
+
+// フロントエンド (geminiService.ts)
+const controller = new AbortController();
+setTimeout(() => controller.abort(), 180000);  // ❗ 3分
+```
+
+**設計原則**:
+
+```text
+クライアント timeout (180s) < サーバー timeout (300s)
+サーバー timeout (300s) > 想定処理時間 (140s) × 2
+```
+
 ### 関連ドキュメント
 
+- [BUG-001修正記録](.kiro/bugfix-cors-cloud-functions-2025-12-05.md) - CORS
 - [BUG-002修正記録](.kiro/bugfix-gemini-empty-response-2025-12-05.md) - propertyOrdering
 - [BUG-003修正記録](.kiro/bugfix-gemini-thinking-tokens-2025-12-05.md) - maxOutputTokens
+- [BUG-004修正記録](.kiro/bugfix-timeout-2025-12-05.md) - タイムアウト
+- [ポストモーテム](.kiro/postmortem-gemini-bugs-2025-12-05.md) - 全体分析
 - Serenaメモリ: `gemini_region_critical_rule`, `gemini_max_output_tokens_critical_rule`
+
+---
+
+## AI API統合 デバッグログ必須項目
+
+**背景**: BUG-002で追加したログがBUG-003/004の即時発見に貢献
+
+### 必須ログ出力
+
+```typescript
+// AIレスポンス受信時に必ず出力
+console.log('📊 AI Response Details:', {
+  finishReason,          // ❗ 'STOP'以外は異常
+  responseLength,        // ❗ 0の場合は異常
+  usageMetadata: {
+    promptTokenCount,
+    thoughtsTokenCount,  // ❗ 思考トークン消費量
+    candidatesTokenCount,
+    totalTokenCount,
+  },
+  processingTimeMs,      // 処理時間（タイムアウト調整の参考）
+});
+```
+
+### finishReasonの解釈
+
+| finishReason | 意味 | 対処 |
+|-------------|------|------|
+| `STOP` | 正常完了 | なし |
+| `MAX_TOKENS` | トークン不足 | maxOutputTokens増加 |
+| `SAFETY` | 安全性フィルタ | プロンプト見直し |
+| `OTHER` | その他エラー | ログ詳細確認 |
 
