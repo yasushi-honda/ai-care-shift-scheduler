@@ -225,7 +225,18 @@ export async function generateSkeleton(
     },
   });
 
-  const responseText = result.response.candidates?.[0]?.content?.parts?.[0]?.text || '';
+  // Vertex AI レスポンス詳細ログ（デバッグ用）
+  const response = result.response;
+  const candidate = response.candidates?.[0];
+  console.log('📊 Vertex AI Response Details:', {
+    candidatesCount: response.candidates?.length || 0,
+    finishReason: candidate?.finishReason || 'N/A',
+    safetyRatings: candidate?.safetyRatings || [],
+    blockReason: (response as any).promptFeedback?.blockReason || 'N/A',
+    usageMetadata: response.usageMetadata || {},
+  });
+
+  const responseText = candidate?.content?.parts?.[0]?.text || '';
   const skeleton = parseGeminiJsonResponse(responseText) as ScheduleSkeleton;
   console.log(`✅ Phase 1完了: ${skeleton.staffSchedules.length}名分の骨子生成`);
 
@@ -313,7 +324,16 @@ export async function generateDetailedShifts(
       },
     });
 
-    const batchResponseText = result.response.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    // Vertex AI レスポンス詳細ログ（デバッグ用）
+    const batchResponse = result.response;
+    const batchCandidate = batchResponse.candidates?.[0];
+    console.log(`  📊 Batch ${batchNum} Response:`, {
+      finishReason: batchCandidate?.finishReason || 'N/A',
+      blockReason: (batchResponse as any).promptFeedback?.blockReason || 'N/A',
+      outputTokens: batchResponse.usageMetadata?.candidatesTokenCount || 0,
+    });
+
+    const batchResponseText = batchCandidate?.content?.parts?.[0]?.text || '';
     const batchResult = parseGeminiJsonResponse(batchResponseText);
     allSchedules.push(...batchResult.schedule);
   }
