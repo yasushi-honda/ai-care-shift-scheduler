@@ -94,7 +94,8 @@ const App: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [generatingSchedule, setGeneratingSchedule] = useState(false);
   // AI生成直後のFirestoreリスナー発火時に評価がクリアされるのを防ぐためのRef
-  const justGeneratedRef = useRef(false);
+  // 複数回のリスナー発火に対応するため、カウンターを使用（BUG-005修正）
+  const skipEvaluationClearCountRef = useRef(0);
   const [error, setError] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>('shift');
   const [leaveRequests, setLeaveRequests] = useState<LeaveRequest>({});
@@ -302,14 +303,15 @@ const App: React.FC = () => {
           // Phase 40: 既存スケジュールロード時は評価をクリア
           // （評価は新規生成時のみ有効なため）
           // ただし、AI生成直後のリスナー発火時はクリアしない（BUG-005修正）
+          // 複数回のリスナー発火に対応するため、カウンターを使用
           console.log('🔄 [Firestore Listener] callback fired', {
-            justGeneratedRef: justGeneratedRef.current,
+            skipCount: skipEvaluationClearCountRef.current,
             schedulesCount: schedules.length,
           });
-          if (justGeneratedRef.current) {
-            // 生成直後のリスナー発火時はクリアをスキップし、フラグをリセット
-            console.log('✅ [Firestore Listener] Skipping evaluation clear (just generated)');
-            justGeneratedRef.current = false;
+          if (skipEvaluationClearCountRef.current > 0) {
+            // 生成直後のリスナー発火時はクリアをスキップし、カウンターをデクリメント
+            console.log('✅ [Firestore Listener] Skipping evaluation clear, remaining:', skipEvaluationClearCountRef.current - 1);
+            skipEvaluationClearCountRef.current -= 1;
           } else {
             console.log('🗑️ [Firestore Listener] Clearing evaluation');
             setEvaluation(null);
@@ -1005,10 +1007,11 @@ const App: React.FC = () => {
       const generationResult = await generateShiftSchedule(staffList, requirements, leaveRequests);
 
       // 評価結果をstateに保存（Phase 40: AI評価・フィードバック機能）
-      console.log('📊 [Generation] Setting evaluation and justGeneratedRef=true');
+      console.log('📊 [Generation] Setting evaluation and skipCount=3');
       setEvaluation(generationResult.evaluation);
       // Firestoreリスナー発火時に評価がクリアされるのを防ぐ（BUG-005修正）
-      justGeneratedRef.current = true;
+      // 複数回のリスナー発火（キャッシュ、サーバー、更新通知）に対応するため3回スキップ
+      skipEvaluationClearCountRef.current = 3;
 
       // 既存のスケジュールがあるかチェック
       if (currentScheduleId) {
