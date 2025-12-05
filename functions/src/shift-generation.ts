@@ -148,7 +148,7 @@ export const generateShift = onRequest(
             responseMimeType: 'application/json',
             responseSchema: getShiftSchema() as any,
             temperature: 0.5,
-            maxOutputTokens: 8192,
+            maxOutputTokens: 65536,  // Gemini 2.5 Flash thinking mode uses tokens from this budget
           },
         });
 

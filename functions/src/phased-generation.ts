@@ -225,7 +225,7 @@ export async function generateSkeleton(
       responseMimeType: 'application/json',
       responseSchema: getSkeletonSchema(daysInMonth) as any,
       temperature: 0.3,
-      maxOutputTokens: 8192,
+      maxOutputTokens: 65536,  // Gemini 2.5 Flash thinking mode uses tokens from this budget
     },
   });
 
@@ -324,7 +324,7 @@ export async function generateDetailedShifts(
         responseMimeType: 'application/json',
         responseSchema: getDetailedShiftSchema(daysInMonth) as any,
         temperature: 0.5,
-        maxOutputTokens: 8192,
+        maxOutputTokens: 65536,  // Gemini 2.5 Flash thinking mode uses tokens from this budget
       },
     });
 
