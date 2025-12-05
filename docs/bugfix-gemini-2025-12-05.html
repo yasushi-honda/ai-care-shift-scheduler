@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BUG-002: Gemini空レスポンス修正記録 - AI介護シフトスケジューラー</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+    <style>
+        :root {
+            --primary-color: #2c3e50;
+            --secondary-color: #3498db;
+            --success-color: #27ae60;
+            --danger-color: #e74c3c;
+            --warning-color: #f39c12;
+            --bg-color: #ecf0f1;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.6;
+            color: var(--primary-color);
+            background: var(--bg-color);
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        header {
+            background: linear-gradient(135deg, var(--danger-color), #c0392b);
+            color: white;
+            padding: 30px 20px;
+            text-align: center;
+        }
+        header h1 { font-size: 1.8rem; margin-bottom: 10px; }
+        header p { opacity: 0.9; }
+        .badge {
+            display: inline-block;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: bold;
+            margin: 5px;
+        }
+        .badge-critical { background: #c0392b; color: white; }
+        .badge-fixed { background: var(--success-color); color: white; }
+        .card {
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin: 20px 0;
+            overflow: hidden;
+        }
+        .card-header {
+            background: var(--primary-color);
+            color: white;
+            padding: 15px 20px;
+            font-weight: bold;
+        }
+        .card-body { padding: 20px; }
+        .error-box {
+            background: #fdedec;
+            border-left: 4px solid var(--danger-color);
+            padding: 15px;
+            margin: 15px 0;
+            font-family: monospace;
+            font-size: 0.9rem;
+            overflow-x: auto;
+        }
+        .fix-box {
+            background: #eafaf1;
+            border-left: 4px solid var(--success-color);
+            padding: 15px;
+            margin: 15px 0;
+        }
+        .mermaid {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 15px 0;
+            overflow-x: auto;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: left;
+        }
+        th { background: var(--primary-color); color: white; }
+        tr:nth-child(even) { background: #f9f9f9; }
+        code {
+            background: #f4f4f4;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+        }
+        pre {
+            background: #2c3e50;
+            color: #ecf0f1;
+            padding: 15px;
+            border-radius: 8px;
+            overflow-x: auto;
+            margin: 15px 0;
+        }
+        .nav-links {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin: 20px 0;
+        }
+        .nav-links a {
+            background: var(--secondary-color);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 5px;
+            text-decoration: none;
+        }
+        .nav-links a:hover { background: #2980b9; }
+        @media (max-width: 768px) {
+            .container { padding: 10px; }
+            header h1 { font-size: 1.4rem; }
+            .card-body { padding: 15px; }
+            pre { font-size: 0.8rem; }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>BUG-002: Gemini 2.5 Flash 空レスポンス修正</h1>
+        <p>AI介護シフトスケジューラー - バグ修正記録</p>
+        <div>
+            <span class="badge badge-critical">Critical</span>
+            <span class="badge badge-fixed">修正済み</span>
+        </div>
+    </header>
+
+    <div class="container">
+        <div class="nav-links">
+            <a href="index.html">トップページ</a>
+            <a href="bugfix-cors-2025-12-05.html">BUG-001: CORSエラー</a>
+            <a href="technical.html">技術ドキュメント</a>
+        </div>
+
+        <div class="card">
+            <div class="card-header">概要</div>
+            <div class="card-body">
+                <table>
+                    <tr><th>発見日</th><td>2025-12-05</td></tr>
+                    <tr><th>修正完了日</th><td>2025-12-05</td></tr>
+                    <tr><th>重要度</th><td><span class="badge badge-critical">Critical</span></td></tr>
+                    <tr><th>影響</th><td>本番環境でAIシフト生成が完全に動作不能</td></tr>
+                    <tr><th>前提バグ</th><td>BUG-001（CORSエラー）修正後に発覚</td></tr>
+                </table>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">エラー内容</div>
+            <div class="card-body">
+                <div class="error-box">
+Response text length: 0<br>
+Response text (first 500 chars):<br>
+Response text (last 500 chars):<br>
+❌ JSON Parse Error: SyntaxError: Unexpected end of JSON input
+                </div>
+                <p><strong>ポイント</strong>: <code>responseLength: 0</code> → JSONパースの問題ではなく、<strong>APIからの応答自体が空</strong></p>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">問題発生フロー</div>
+            <div class="card-body">
+                <div class="mermaid">
+sequenceDiagram
+    participant User as ユーザー
+    participant CF as Cloud Functions
+    participant Gemini as Gemini 2.5 Flash
+
+    User->>CF: AIシフト生成リクエスト
+    CF->>Gemini: 骨子生成リクエスト<br/>(responseSchema指定)
+    Note over Gemini: propertyOrderingなし<br/>→ 構造化出力生成失敗
+    Gemini-->>CF: 空レスポンス<br/>(text: "")
+    CF-->>User: HTTP 500 Error
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">根本原因</div>
+            <div class="card-body">
+                <div class="mermaid">
+flowchart TD
+    A[responseSchemaに<br/>propertyOrderingなし] --> B[プロパティ生成順序が不定]
+    B --> C[Schemaとの整合性チェック失敗]
+    C --> D[構造化出力生成を断念]
+    D --> E[空のレスポンスを返却]
+    E --> F[クライアント側で<br/>JSON Parse Error]
+
+    style A fill:#e74c3c,color:#fff
+    style F fill:#e74c3c,color:#fff
+                </div>
+                <p><strong>公式ドキュメントより</strong>:</p>
+                <blockquote style="border-left: 4px solid #3498db; padding-left: 15px; margin: 15px 0; color: #666;">
+                    "If there are any descriptions, schemas, or examples in the prompt, they must present the <strong>same property ordering</strong> as is specified in the responseSchema."
+                </blockquote>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">修正内容</div>
+            <div class="card-body">
+                <h4>Before（修正前）</h4>
+                <pre>{
+  type: 'object',
+  properties: {
+    staffSchedules: { ... }
+  },
+  required: ['staffSchedules'],
+}</pre>
+
+                <h4>After（修正後）</h4>
+                <div class="fix-box">
+                <pre style="background: #2c3e50; margin: 0;">{
+  type: 'object',
+  properties: {
+    staffSchedules: { ... }
+  },
+  <strong style="color: #27ae60;">propertyOrdering: ['staffSchedules'],  // 追加</strong>
+  required: ['staffSchedules'],
+}</pre>
+                </div>
+
+                <h4>修正ファイル</h4>
+                <ul>
+                    <li><code>functions/src/phased-generation.ts</code></li>
+                    <li><code>functions/src/shift-generation.ts</code></li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">調査プロセス（WBS）</div>
+            <div class="card-body">
+                <div class="mermaid">
+graph TD
+    ROOT[BUG-002 調査・修正] --> INVESTIGATE[調査フェーズ]
+    ROOT --> FIX[修正フェーズ]
+    ROOT --> DOC[ドキュメント化]
+
+    INVESTIGATE --> I1[既存ドキュメント確認]
+    INVESTIGATE --> I2[Cloud Functionsログ確認]
+    INVESTIGATE --> I3[Web検索]
+    INVESTIGATE --> I4[公式ドキュメント確認]
+
+    FIX --> F1[Schema修正]
+    FIX --> F2[プロンプト修正]
+    FIX --> F3[デプロイ]
+
+    DOC --> D1[修正記録作成]
+    DOC --> D2[ダイアグラム作成]
+
+    style I4 fill:#27ae60,color:#fff
+    style F1 fill:#27ae60,color:#fff
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">Gemini 2.5 Structured Output ベストプラクティス</div>
+            <div class="card-body">
+                <table>
+                    <tr>
+                        <th>カテゴリ</th>
+                        <th>項目</th>
+                        <th>説明</th>
+                    </tr>
+                    <tr>
+                        <td rowspan="3" style="background: #27ae60; color: white;">必須</td>
+                        <td><code>propertyOrdering</code>指定</td>
+                        <td>全オブジェクトに必須</td>
+                    </tr>
+                    <tr>
+                        <td><code>required</code>指定</td>
+                        <td>必須フィールドを明示</td>
+                    </tr>
+                    <tr>
+                        <td>全ネストレベルで適用</td>
+                        <td>入れ子オブジェクトにも指定</td>
+                    </tr>
+                    <tr>
+                        <td rowspan="2" style="background: #f39c12; color: white;">推奨</td>
+                        <td><code>description</code>追加</td>
+                        <td>各プロパティに説明を追加</td>
+                    </tr>
+                    <tr>
+                        <td>プロンプトと順序一致</td>
+                        <td>説明の順序をSchemaと合わせる</td>
+                    </tr>
+                    <tr>
+                        <td style="background: #e74c3c; color: white;">避ける</td>
+                        <td><code>propertyOrdering</code>省略</td>
+                        <td>空レスポンスの原因になる</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">学び・教訓</div>
+            <div class="card-body">
+                <ol>
+                    <li><strong>公式ドキュメントを先に確認</strong> - Web検索で<code>propertyOrdering</code>の重要性を発見</li>
+                    <li><strong>空レスポンス ≠ パースエラー</strong> - <code>responseLength: 0</code>はAPI側の問題</li>
+                    <li><strong>Gemini 2.5は構造化出力に厳格</strong> - 旧バージョンで動いていたSchemaでも失敗する可能性</li>
+                    <li><strong>デバッグログの重要性</strong> - <code>finishReason</code>等の情報がないと原因特定が困難</li>
+                </ol>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">関連ドキュメント</div>
+            <div class="card-body">
+                <ul>
+                    <li><a href="bugfix-cors-2025-12-05.html">BUG-001: CORSエラー修正記録</a></li>
+                    <li><a href="manual-test-checklist.html">手動テストチェックリスト</a></li>
+                    <li><a href="https://cloud.google.com/vertex-ai/generative-ai/docs/multimodal/control-generated-output" target="_blank">Google公式: Structured output</a></li>
+                </ul>
+            </div>
+        </div>
+
+        <footer style="text-align: center; padding: 30px; color: #666;">
+            <p>最終更新: 2025年12月5日</p>
+            <p><a href="https://github.com/yasushi-honda/ai-care-shift-scheduler" target="_blank">GitHub Repository</a></p>
+        </footer>
+    </div>
+
+    <script>
+        mermaid.initialize({ startOnLoad: true, theme: 'default' });
+    </script>
+</body>
+</html>
