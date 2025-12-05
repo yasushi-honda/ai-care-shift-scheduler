@@ -679,6 +679,48 @@ erDiagram
       </ul>
     </div>
 
+    <!-- BUG-005: 評価パネル非表示バグ修正（2025-12-06） -->
+    <div class="card">
+      <h2>BUG-005: 評価パネル非表示バグ修正（2025-12-06）</h2>
+
+      <h3>症状</h3>
+      <p>AI生成完了後、評価結果は正常に取得されるが、UIに評価パネルが表示されない。</p>
+
+      <h3>原因</h3>
+      <p>Firestoreのリアルタイム購読コールバック内で、生成直後でも<code>setEvaluation(null)</code>が実行されていた。</p>
+
+      <div class="mermaid">
+sequenceDiagram
+    participant U as ユーザー
+    participant UI as App
+    participant GS as geminiService
+    participant FS as Firestore
+
+    U->>UI: シフト生成
+    UI->>GS: generateShiftSchedule()
+    GS-->>UI: evaluation結果
+    UI->>UI: setEvaluation(result) ✅
+    UI->>FS: saveSchedule()
+    FS-->>UI: リスナー発火
+    UI->>UI: setEvaluation(null) ❌
+    Note over UI: 評価がクリアされる
+      </div>
+
+      <h3>修正内容</h3>
+      <p><code>generatingSchedule</code>フラグを使用して、生成中は評価をクリアしないよう修正。</p>
+      <pre style="background: #f8fafc; padding: 16px; border-radius: 8px; overflow-x: auto;"><code>// App.tsx (修正後)
+if (!generatingSchedule) {
+  setEvaluation(null);
+}</code></pre>
+
+      <h3>教訓</h3>
+      <ul>
+        <li>Firestoreリアルタイム購読は、自身の書き込みでもコールバックが発火する</li>
+        <li>状態遷移の可視化が重要（特に非同期処理が絡む場合）</li>
+        <li>デバッグログがあることで問題特定が容易になった</li>
+      </ul>
+    </div>
+
     <!-- 次のステップ -->
     <div class="card">
       <h2>次のステップ</h2>
