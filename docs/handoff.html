@@ -196,8 +196,8 @@
             <h2>2. 現在の状態</h2>
 
             <div class="success-box">
-                <strong>Phase 40 設計完了・タスク生成済み</strong>（2025-11-26時点）<br>
-                ステータス: <strong>要件承認済み・設計承認済み・33タスク生成済み・実装待ち</strong>
+                <strong>Phase 42 UIデザイン改善 完了</strong>（2025-12-06時点）<br>
+                ステータス: <strong>ボタン統一・アイコン改善・ツールチップ追加</strong>
             </div>
 
             <div class="mermaid">
@@ -215,10 +215,12 @@ timeline
                     : キーボード・アンドゥ
         Phase 38-39 : 設定管理
                     : シフト種別・休暇残高
-    section 2025年12月
         Phase 40 : AI評価・フィードバック
-                 : 設計完了・タスク33件
-        Phase 41+ : レポート・通知機能
+    section 2025年12月
+        Phase 41 : 月次レポート・PDF
+        Phase 42 : UIデザイン改善
+                 : ボタン統一・アイコン
+        Phase 43+ : 通知機能
             </div>
         </div>
 
@@ -296,59 +298,80 @@ timeline
         </div>
 
         <div class="card">
-            <h2>5. Phase 40: AI評価・フィードバック（設計完了）</h2>
+            <h2>5. 最新Phase: Phase 42 UIデザイン改善（完了）</h2>
 
-            <div class="highlight-box">
-                <strong>現在のステータス:</strong> 設計承認済み・タスク生成済み（33タスク / 6.5日）<br>
-                <strong>次のアクション:</strong> Task 40.1.1から実装開始
+            <div class="success-box">
+                <strong>ステータス:</strong> 完了（2025-12-06）<br>
+                <strong>目的:</strong> ボタンデザイン統一・アイコン改善・ツールチップ追加
             </div>
 
-            <h3>機能概要</h3>
+            <h3>追加されたコンポーネント</h3>
             <table>
                 <tr>
-                    <th>機能</th>
+                    <th>コンポーネント</th>
                     <th>説明</th>
                 </tr>
                 <tr>
-                    <td>評価サマリー</td>
-                    <td>生成結果のスコア（0-100）、充足率を表示</td>
+                    <td><code>Tooltip.tsx</code></td>
+                    <td>CSS-onlyツールチップ（4方向対応）</td>
                 </tr>
                 <tr>
-                    <td>制約違反検出</td>
-                    <td>人員不足、連勤超過、夜勤後休息不足を警告</td>
+                    <td><code>IconButton.tsx</code></td>
+                    <td>アイコンのみボタン（button/Link/a polymorphism）</td>
                 </tr>
                 <tr>
-                    <td>改善提案</td>
-                    <td>具体的なネクストアクションを優先度付きで提示</td>
+                    <td><code>ButtonGroup.tsx</code></td>
+                    <td>ボタングループ化コンポーネント</td>
                 </tr>
                 <tr>
-                    <td>シミュレーション</td>
-                    <td>残業予測、負荷バランス、有給消化率予測</td>
+                    <td><code>ActionToolbar.tsx</code></td>
+                    <td>アクションボタン統合コンポーネント</td>
                 </tr>
             </table>
 
-            <h3>実装サブフェーズ</h3>
+            <h3>デザイン統一</h3>
             <table>
                 <tr>
-                    <th>サブフェーズ</th>
-                    <th>内容</th>
-                    <th>工数</th>
+                    <th>変更前</th>
+                    <th>変更後</th>
                 </tr>
-                <tr><td>40.1</td><td>型定義・スキーマ拡張</td><td>0.5日</td></tr>
-                <tr><td>40.2</td><td>評価ロジック実装</td><td>1日</td></tr>
-                <tr><td>40.3</td><td>generateShift拡張</td><td>1日</td></tr>
-                <tr><td>40.4</td><td>フロントエンドサービス拡張</td><td>0.5日</td></tr>
-                <tr><td>40.5</td><td>評価UI（EvaluationPanel）</td><td>1.5日</td></tr>
-                <tr><td>40.6</td><td>シフト表統合</td><td>0.5日</td></tr>
-                <tr><td>40.7</td><td>Firestore履歴機能</td><td>0.5日</td></tr>
-                <tr><td>40.8</td><td>テスト・デバッグ</td><td>1日</td></tr>
+                <tr>
+                    <td>5色のボタン（青・緑・紫・グレー・白）</td>
+                    <td>3色に統一（Indigo・Emerald・Gray）</td>
+                </tr>
+                <tr>
+                    <td>絵文字アイコン（📊📖⚙️）</td>
+                    <td>SVG Heroicons（outline style）</td>
+                </tr>
+                <tr>
+                    <td>バラバラなボタンサイズ</td>
+                    <td>sm/md/lgの3サイズに統一</td>
+                </tr>
             </table>
 
             <h3>関連ドキュメント</h3>
             <ul>
-                <li><code>.kiro/specs/ai-evaluation-feedback/requirements.md</code> - 要件定義</li>
-                <li><code>.kiro/specs/ai-evaluation-feedback/design.md</code> - 技術設計書</li>
-                <li><code>.kiro/specs/ai-evaluation-feedback/tasks.md</code> - タスク一覧（33タスク）</li>
+                <li><a href="phase42-ui-design.html">Phase 42詳細ドキュメント</a></li>
+                <li><code>.kiro/specs/ui-design-improvement/</code> - 仕様書</li>
+            </ul>
+        </div>
+
+        <div class="card">
+            <h2>5.1. Phase 40-41（完了済み）</h2>
+
+            <h3>Phase 40: AI評価・フィードバック</h3>
+            <ul>
+                <li>評価サマリー（スコア0-100、充足率）</li>
+                <li>制約違反検出（人員不足、連勤超過など）</li>
+                <li>改善提案（優先度付き）</li>
+                <li>履歴保存（Firestore）</li>
+            </ul>
+
+            <h3>Phase 41: 月次レポート・PDF出力</h3>
+            <ul>
+                <li>勤務時間集計</li>
+                <li>シフト種別集計</li>
+                <li>PDF出力機能</li>
             </ul>
         </div>
 
@@ -383,11 +406,10 @@ npx tsc --noEmit     # 型チェック</code></pre>
             <h2>7. クイックスタート手順</h2>
 
             <p><span class="step-number">1</span> <strong>このページを読む</strong>（完了）</p>
-            <p><span class="step-number">2</span> <strong>CLAUDE.mdを確認</strong>: 開発ルール、ワークフロー</p>
-            <p><span class="step-number">3</span> <strong>Phase 40設計書を確認</strong>: <code>.kiro/specs/ai-evaluation-feedback/design.md</code></p>
-            <p><span class="step-number">4</span> <strong>タスク一覧を確認</strong>: <code>.kiro/specs/ai-evaluation-feedback/tasks.md</code>（33タスク）</p>
-            <p><span class="step-number">5</span> <strong>メモリファイルを確認</strong>: <code>PROJECT_HANDOFF_LATEST</code>（Serena経由）</p>
-            <p><span class="step-number">6</span> <strong>Task 40.1.1から実装開始</strong></p>
+            <p><span class="step-number">2</span> <strong>CLAUDE.mdを確認</strong>: 開発ルール、ワークフロー、重要な注意事項</p>
+            <p><span class="step-number">3</span> <strong>メモリファイルを確認</strong>: <code>PROJECT_HANDOFF_LATEST</code>（Serena経由）</p>
+            <p><span class="step-number">4</span> <strong>GitHub Pagesドキュメントを確認</strong>: <a href="index.html">概要</a>、<a href="technical.html">技術詳細</a></p>
+            <p><span class="step-number">5</span> <strong>Phase 43（通知機能）の設計を開始</strong>、または他のタスクを実施</p>
         </div>
 
         <div class="card">
@@ -395,13 +417,14 @@ npx tsc --noEmit     # 型チェック</code></pre>
 
             <a href="index.html" class="link-button">プロジェクト概要</a>
             <a href="technical.html" class="link-button">技術ドキュメント</a>
+            <a href="phase42-ui-design.html" class="link-button">Phase 42詳細</a>
             <a href="mobile.html" class="link-button link-button-secondary">モバイル版</a>
             <a href="https://github.com/yasushi-honda/ai-care-shift-scheduler" class="link-button link-button-secondary">GitHub</a>
         </div>
     </div>
 
     <div class="footer">
-        <p><strong>最終更新</strong>: 2025年11月26日（Phase 40設計完了・タスク生成済み）</p>
+        <p><strong>最終更新</strong>: 2025年12月6日（Phase 42 UIデザイン改善完了）</p>
         <p>AIシフト自動作成システム</p>
     </div>
 </body>
