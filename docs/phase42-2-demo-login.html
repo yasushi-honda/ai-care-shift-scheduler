@@ -87,11 +87,6 @@
             margin-top: 1rem;
         }
 
-        .badge-pending {
-            background-color: var(--warning-color);
-            color: white;
-        }
-
         .badge-completed {
             background-color: var(--success-color);
             color: white;
@@ -194,6 +189,17 @@
         .feature-box h4 {
             margin: 0 0 0.5rem;
             color: var(--primary-color);
+        }
+
+        .security-box {
+            background: linear-gradient(to bottom right, #ECFDF5, #D1FAE5);
+            border-radius: 0.5rem;
+            padding: 1rem;
+        }
+
+        .security-box h4 {
+            margin: 0 0 0.5rem;
+            color: var(--success-color);
         }
 
         code {
@@ -315,13 +321,21 @@
             color: var(--text-secondary);
             margin-top: 0.25rem;
         }
+
+        .highlight-box {
+            background: #FEF3C7;
+            border-left: 4px solid #F59E0B;
+            padding: 1rem;
+            margin: 1rem 0;
+            border-radius: 0 0.5rem 0.5rem 0;
+        }
     </style>
 </head>
 <body>
     <header>
         <h1>Phase 42.2: デモログイン機能</h1>
-        <p>クライアント向けワンクリックデモアクセス</p>
-        <span class="badge badge-pending">セットアップ待ち</span>
+        <p>Cloud Function認証によるセキュアなワンクリックデモアクセス</p>
+        <span class="badge badge-completed">完了</span>
     </header>
 
     <div class="container">
@@ -338,56 +352,108 @@
                         <li>営業・デモ活動の効率化</li>
                     </ul>
                 </div>
-                <div class="feature-box">
+                <div class="security-box">
                     <h4>セキュリティ</h4>
                     <ul>
+                        <li>認証情報はサーバーサイドでのみ保持</li>
+                        <li>Cloud Functionでカスタムトークン発行</li>
                         <li>viewer権限のみ（データ変更不可）</li>
-                        <li>デモ施設のみアクセス可能</li>
-                        <li>本番データへの影響なし</li>
+                        <li>特定ドメインのみCORS許可</li>
                     </ul>
                 </div>
             </div>
         </div>
 
+        <!-- 使い方 -->
+        <div class="card">
+            <h2>デモログインの使い方</h2>
+            <div class="highlight-box">
+                <strong>ワンクリックでデモ環境にアクセス</strong><br>
+                ログインページの「デモアカウントでログイン」ボタンをクリックするだけ！<br>
+                アカウント作成やパスワード入力は不要です。
+            </div>
+
+            <h3>手順</h3>
+            <ol>
+                <li><a href="https://ai-care-shift-scheduler.web.app" target="_blank">https://ai-care-shift-scheduler.web.app</a> にアクセス</li>
+                <li>ログインページで「デモアカウントでログイン」ボタンをクリック</li>
+                <li>サンプル介護施設のシフト管理画面が表示されます</li>
+            </ol>
+
+            <h3>デモ環境でできること</h3>
+            <table>
+                <tr>
+                    <th>機能</th>
+                    <th>説明</th>
+                </tr>
+                <tr>
+                    <td>シフト表閲覧</td>
+                    <td>サンプルスタッフ10名のシフト表を確認</td>
+                </tr>
+                <tr>
+                    <td>月次レポート閲覧</td>
+                    <td>勤務時間集計、シフト種別統計の確認</td>
+                </tr>
+                <tr>
+                    <td>AIシフト生成体験</td>
+                    <td>Gemini AIによる自動シフト生成を試す</td>
+                </tr>
+                <tr>
+                    <td>評価・フィードバック確認</td>
+                    <td>AI評価スコアと改善提案の確認</td>
+                </tr>
+            </table>
+
+            <div class="highlight-box">
+                <strong>注意:</strong> デモアカウントはviewer（閲覧）権限のため、データの変更・保存はできません。
+            </div>
+        </div>
+
         <!-- UI変更 -->
         <div class="card">
-            <h2>UI変更</h2>
-            <h3>新しいログインページ</h3>
+            <h2>UIデザイン</h2>
+            <h3>ログインページ</h3>
             <div class="ui-preview">
                 <div class="title">シフト作成ツール</div>
                 <div class="subtitle">介護施設向けシフト管理システム</div>
-                <button class="btn btn-google">🔵 Googleでログイン</button>
+                <button class="btn btn-google">G Googleでログイン</button>
                 <div class="divider"><span>または</span></div>
-                <button class="btn btn-demo">👁 デモアカウントでログイン</button>
+                <button class="btn btn-demo">デモアカウントでログイン</button>
                 <div class="demo-note">サンプルデータで機能をお試しいただけます</div>
             </div>
         </div>
 
         <!-- 認証フロー -->
         <div class="card">
-            <h2>認証フロー</h2>
+            <h2>認証フロー（技術詳細）</h2>
             <div class="mermaid">
 sequenceDiagram
     participant U as ユーザー
     participant L as ログインページ
     participant A as AuthContext
-    participant F as Firebase Auth
-    participant D as Firestore
+    participant CF as Cloud Function<br/>(demoSignIn)
+    participant FA as Firebase Auth
+    participant FS as Firestore
 
     U->>L: 「デモアカウントでログイン」クリック
     L->>A: signInWithDemo()
-    A->>F: signInWithEmailAndPassword(demo@example.com, ***)
-    F-->>A: User credential
-    A->>D: createOrUpdateUser()
-    D-->>A: User profile with facilities
+    A->>CF: POST /demoSignIn
+    Note over CF: CORS検証<br/>（許可ドメインのみ）
+    CF->>FA: getUser / createUser
+    CF->>FS: ユーザードキュメント作成/更新
+    CF->>FA: createCustomToken()
+    CF-->>A: { customToken }
+    A->>FA: signInWithCustomToken(customToken)
+    FA-->>A: User credential
     A-->>L: success
     L->>U: シフト管理画面へ遷移
             </div>
+            <p><strong>ポイント:</strong> 認証情報（パスワード等）はCloud Function内でのみ使用され、クライアントには一切送信されません。</p>
         </div>
 
         <!-- 変更ファイル -->
         <div class="card">
-            <h2>変更ファイル一覧</h2>
+            <h2>実装ファイル一覧</h2>
             <table>
                 <thead>
                     <tr>
@@ -398,9 +464,19 @@ sequenceDiagram
                 </thead>
                 <tbody>
                     <tr>
+                        <td><code>functions/src/demoSignIn.ts</code></td>
+                        <td>新規</td>
+                        <td>Cloud Function: カスタムトークン発行</td>
+                    </tr>
+                    <tr>
+                        <td><code>functions/src/index.ts</code></td>
+                        <td>変更</td>
+                        <td>demoSignInエクスポート追加</td>
+                    </tr>
+                    <tr>
                         <td><code>src/contexts/AuthContext.tsx</code></td>
                         <td>変更</td>
-                        <td>signInWithDemo関数追加</td>
+                        <td>signInWithDemo関数追加（Cloud Function呼び出し）</td>
                     </tr>
                     <tr>
                         <td><code>src/components/LoginPage.tsx</code></td>
@@ -412,50 +488,49 @@ sequenceDiagram
                         <td>新規</td>
                         <td>要件定義・セットアップガイド</td>
                     </tr>
-                    <tr>
-                        <td><code>scripts/createDemoUser.ts</code></td>
-                        <td>新規</td>
-                        <td>デモユーザー作成スクリプト</td>
-                    </tr>
                 </tbody>
             </table>
         </div>
 
-        <!-- セットアップ -->
+        <!-- セキュリティ設計 -->
         <div class="card">
-            <h2>セットアップ手順</h2>
-            <p>デモログイン機能を有効にするには、Firebase Consoleで以下の設定が必要です：</p>
+            <h2>セキュリティ設計</h2>
+            <div class="grid">
+                <div class="security-box">
+                    <h4>CORS制限</h4>
+                    <p>以下のドメインのみCloud Function呼び出し可能：</p>
+                    <ul>
+                        <li><code>ai-care-shift-scheduler.web.app</code></li>
+                        <li><code>ai-care-shift-scheduler.firebaseapp.com</code></li>
+                        <li><code>localhost:5173</code>（開発用）</li>
+                        <li><code>localhost:3000</code>（E2Eテスト用）</li>
+                    </ul>
+                </div>
+                <div class="security-box">
+                    <h4>権限制限</h4>
+                    <ul>
+                        <li><strong>viewer権限のみ</strong> - シフトの閲覧は可能、変更は不可</li>
+                        <li><strong>デモ施設のみ</strong> - demo-facility-001へのアクセス限定</li>
+                        <li><strong>本番データ隔離</strong> - 他の施設データへのアクセス不可</li>
+                    </ul>
+                </div>
+            </div>
 
-            <h3>1. Firebase Authenticationでユーザー作成</h3>
-            <ol>
-                <li>Firebase Console → Authentication → Users</li>
-                <li>Add user: <code>demo@example.com</code> / <code>demo-password-2024</code></li>
-                <li>作成されたUIDをコピー</li>
-            </ol>
-
-            <h3>2. Firestoreでユーザードキュメント作成</h3>
-            <pre><code>// /users/{uid}
-{
-  userId: "{uid}",
-  email: "demo@example.com",
-  displayName: "デモユーザー",
-  provider: "password",
-  facilities: [{
-    facilityId: "demo-facility-001",
-    role: "viewer",
-    grantedAt: Timestamp
-  }],
-  createdAt: Timestamp,
-  lastLoginAt: Timestamp
-}</code></pre>
-
-            <h3>3. 施設メンバーに追加</h3>
-            <pre><code>// /facilities/demo-facility-001/members に追加
-{
-  userId: "{uid}",
-  role: "viewer",
-  grantedAt: Timestamp
-}</code></pre>
+            <h3>Cloud Function コード抜粋</h3>
+            <pre><code>export const demoSignIn = onRequest({
+  cors: [
+    'https://ai-care-shift-scheduler.web.app',
+    'https://ai-care-shift-scheduler.firebaseapp.com',
+    'http://localhost:5173',
+    'http://localhost:3000',
+  ],
+  timeoutSeconds: 30,
+  memory: '256MiB',
+}, async (req, res) => {
+  // デモユーザー作成・カスタムトークン発行
+  const customToken = await auth.createCustomToken(DEMO_USER_UID);
+  res.status(200).json({ customToken });
+});</code></pre>
         </div>
 
         <!-- デモアカウント情報 -->
@@ -467,12 +542,12 @@ sequenceDiagram
                     <th>値</th>
                 </tr>
                 <tr>
-                    <td>Email</td>
-                    <td><code>demo@example.com</code></td>
+                    <td>UID</td>
+                    <td><code>demo-user-fixed-uid</code></td>
                 </tr>
                 <tr>
-                    <td>Password</td>
-                    <td><code>demo-password-2024</code></td>
+                    <td>表示名</td>
+                    <td>デモユーザー</td>
                 </tr>
                 <tr>
                     <td>権限</td>
@@ -480,9 +555,10 @@ sequenceDiagram
                 </tr>
                 <tr>
                     <td>アクセス可能施設</td>
-                    <td>demo-facility-001（サンプル介護施設）</td>
+                    <td><code>demo-facility-001</code>（サンプル介護施設）</td>
                 </tr>
             </table>
+            <p><em>※ パスワードはCloud Function内でのみ管理され、クライアントには公開されません</em></p>
         </div>
 
         <!-- ナビゲーション -->
@@ -492,7 +568,6 @@ sequenceDiagram
                 <a href="index.html">概要・WBS</a>
                 <a href="technical.html">技術詳細</a>
                 <a href="phase42-ui-design.html">Phase 42 UIデザイン</a>
-                <a href="phase42-1-navigation.html">Phase 42.1 ナビゲーション</a>
                 <a href="handoff.html">引き継ぎ</a>
             </div>
         </div>
@@ -500,7 +575,7 @@ sequenceDiagram
 
     <footer>
         <p>AIシフト管理システム - Phase 42.2 デモログイン機能</p>
-        <p>更新日: 2025-12-06</p>
+        <p>更新日: 2025-12-07</p>
     </footer>
 
     <script>
