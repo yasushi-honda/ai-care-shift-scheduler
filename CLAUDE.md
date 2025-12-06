@@ -17,7 +17,8 @@ Kiro-style Spec Driven Development implementation using claude code slash comman
 ### Active Specifications
 - **ai-shift-integration-test**: AI自動シフト生成機能の統合テストと検証（TDD） - ✅ 完了
 - **auth-data-persistence**: 認証・データ永続化機能（事業所単位マルチテナント設計） - ✅ Phase 0-12.5完了・検証済み
-- **monthly-report-enhancement**: Phase 41 レポート機能強化（月次レポート・PDF出力） - 🚧 進行中
+- **monthly-report-enhancement**: Phase 41 レポート機能強化（月次レポート・PDF出力） - ✅ 完了
+- **ui-design-improvement**: Phase 42 UIデザイン改善（ボタン統一・アイコン改善） - ✅ 完了
 - Use `/kiro:spec-status [feature-name]` to check progress
 
 ## Development Guidelines

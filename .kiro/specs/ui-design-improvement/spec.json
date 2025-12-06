@@ -1,0 +1,14 @@
+{
+  "name": "ui-design-improvement",
+  "description": "Phase 42: UIデザイン改善 - ヘッダーナビゲーション・アクションボタンエリアの統一",
+  "status": "draft",
+  "createdAt": "2025-12-06",
+  "updatedAt": "2025-12-06",
+  "files": {
+    "requirements": "requirements.md",
+    "design": "design.md",
+    "tasks": "tasks.md"
+  },
+  "dependencies": [],
+  "tags": ["ui", "ux", "design", "accessibility"]
+}

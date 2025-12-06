@@ -33,6 +33,9 @@ import KeyboardHelpModal from './src/components/KeyboardHelpModal';
 import { ShiftTypeSettings } from './src/components/ShiftTypeSettings';
 import { LeaveBalanceDashboard } from './src/components/LeaveBalanceDashboard';
 import { Timestamp } from 'firebase/firestore';
+// Phase 42: UIデザイン改善コンポーネント
+import { IconButton } from './src/components/IconButton';
+import { ActionToolbar } from './src/components/ActionToolbar';
 
 type ViewMode = 'shift' | 'leaveRequest';
 
@@ -1355,47 +1358,47 @@ const App: React.FC = () => {
               <h1 className="text-2xl font-bold">AIシフト自動作成</h1>
               <p className="text-sm text-indigo-200 mt-1">介護・福祉事業所向け</p>
             </div>
-            <div className="flex items-center gap-2">
-              {/* Phase 20: ユーザー名表示 */}
+            {/* Phase 42: 統一されたIconButtonナビゲーション */}
+            <div className="flex items-center gap-1">
+              {/* ユーザー名表示 */}
               {userProfile && (
-                <div className="hidden sm:block text-xs text-indigo-100">
+                <div className="hidden sm:block text-xs text-indigo-100 mr-2">
                   <span className="font-medium">{userProfile.name || 'ユーザー'}</span>
                 </div>
               )}
-              <Link
+              <IconButton
+                as={Link}
                 to="/reports"
-                className="px-3 py-2 bg-white bg-opacity-20 hover:bg-opacity-30 rounded-lg text-sm font-medium transition-colors flex items-center gap-1"
-                title="月次レポート"
-              >
-                📊 レポート
-              </Link>
-              <a
+                icon={<ChartBarIcon />}
+                label="レポート"
+                variant="light"
+              />
+              <IconButton
+                as="a"
                 href="/manual.html"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="px-3 py-2 bg-white bg-opacity-20 hover:bg-opacity-30 rounded-lg text-sm font-medium transition-colors flex items-center gap-1"
-                title="操作マニュアル"
-              >
-                📖 マニュアル
-              </a>
+                icon={<BookOpenIcon />}
+                label="マニュアル"
+                variant="light"
+              />
               {isSuperAdmin() && (
-                <Link
+                <IconButton
+                  as={Link}
                   to="/admin"
-                  className="px-3 py-2 bg-white bg-opacity-20 hover:bg-opacity-30 rounded-lg text-sm font-medium transition-colors flex items-center gap-1"
-                  title="管理画面"
-                >
-                  ⚙️ 管理
-                </Link>
+                  icon={<CogIcon />}
+                  label="管理"
+                  variant="light"
+                />
               )}
-              {/* Phase 20: ログアウトボタン */}
               {currentUser && (
-                <button
+                <IconButton
+                  icon={<LogoutIcon />}
+                  label={isSigningOut ? 'ログアウト中...' : 'ログアウト'}
                   onClick={handleSignOut}
                   disabled={isSigningOut}
-                  className="px-3 py-2 bg-white bg-opacity-20 hover:bg-opacity-30 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {isSigningOut ? 'ログアウト中...' : 'ログアウト'}
-                </button>
+                  variant="light"
+                />
               )}
             </div>
           </div>
@@ -1537,49 +1540,18 @@ const App: React.FC = () => {
             <h2 className="text-3xl font-bold text-slate-900">{requirements.targetMonth.replace('-', '年 ')}月</h2>
             <ViewSwitcher />
           </div>
-          <div className="space-x-2">
-            <button onClick={handleGenerateDemo} className="bg-care-secondary hover:bg-care-dark text-white font-semibold py-2 px-4 rounded-lg shadow-sm text-sm inline-flex items-center transition-colors duration-200">
-              <SparklesIcon/>
-              <span className="ml-2">デモシフト作成</span>
-            </button>
-            <Button
-              onClick={handleSaveDraft}
-              disabled={isLoading || !currentScheduleId || schedule.length === 0 || currentScheduleStatus !== 'draft'}
-              variant="primary"
-              className="font-semibold py-2 px-4 shadow-sm text-sm inline-flex items-center"
-            >
-              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
-              </svg>
-              <span className="ml-2">下書き保存</span>
-            </Button>
-            <Button
-              onClick={handleConfirmSchedule}
-              disabled={isLoading || !currentScheduleId || schedule.length === 0 || currentScheduleStatus !== 'draft'}
-              variant="success"
-              className="font-semibold py-2 px-4 shadow-sm text-sm inline-flex items-center"
-            >
-              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-              </svg>
-              <span className="ml-2">確定</span>
-            </Button>
-            <Button
-              onClick={handleShowVersionHistory}
-              disabled={!currentScheduleId}
-              variant="purple"
-              className="font-semibold py-2 px-4 shadow-sm text-sm inline-flex items-center"
-            >
-              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              <span className="ml-2">バージョン履歴</span>
-            </Button>
-            <button onClick={handleExportCSV} className="bg-white hover:bg-slate-50 text-slate-700 font-semibold py-2 px-4 border border-slate-300 rounded-lg shadow-sm text-sm inline-flex items-center transition-colors duration-200">
-              <DownloadIcon/>
-              <span className="ml-2">CSV形式でダウンロード</span>
-            </button>
-          </div>
+          {/* Phase 42: ActionToolbarで統一されたボタンデザイン */}
+          <ActionToolbar
+            onDemoClick={handleGenerateDemo}
+            onSaveClick={handleSaveDraft}
+            onConfirmClick={handleConfirmSchedule}
+            onHistoryClick={handleShowVersionHistory}
+            onExportClick={handleExportCSV}
+            isLoading={isLoading}
+            canSave={!!currentScheduleId && schedule.length > 0 && currentScheduleStatus === 'draft'}
+            canConfirm={!!currentScheduleId && schedule.length > 0 && currentScheduleStatus === 'draft'}
+            canShowHistory={!!currentScheduleId}
+          />
         </header>
         <div className="flex-1 overflow-auto pt-4 pb-4">
           {viewMode === 'shift' ? (
@@ -1686,6 +1658,29 @@ const ShiftTypeIcon = () => (
 const LeaveBalanceIcon = () => (
   <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-care-secondary" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
     <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+  </svg>
+);
+
+// Phase 42: ヘッダーナビゲーション用アイコン
+const ChartBarIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+    <path strokeLinecap="round" strokeLinejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+  </svg>
+);
+const BookOpenIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+    <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+  </svg>
+);
+const CogIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+    <path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+    <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+  </svg>
+);
+const LogoutIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+    <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
   </svg>
 );
 
