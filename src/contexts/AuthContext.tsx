@@ -344,7 +344,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         throw new Error(errorData.error || 'デモログインに失敗しました');
       }
 
-      const { customToken } = await response.json();
+      const data = await response.json();
+      const { customToken } = data;
+
+      // カスタムトークンのバリデーション
+      if (!customToken || typeof customToken !== 'string') {
+        throw new Error('Invalid response: custom token is missing or invalid');
+      }
 
       // カスタムトークンでサインイン
       await signInWithCustomToken(auth, customToken);
@@ -354,8 +360,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch (error: any) {
       console.error('Demo sign in error:', error);
 
-      // ネットワークエラーの判定
-      if (error.message?.includes('fetch') || error.message?.includes('network')) {
+      // ネットワークエラーの判定（より堅牢なチェック）
+      if (
+        error.name === 'TypeError' ||
+        error.code === 'auth/network-request-failed' ||
+        error.message?.toLowerCase().includes('network') ||
+        error.message?.toLowerCase().includes('fetch')
+      ) {
         return {
           success: false,
           error: { code: 'NETWORK_ERROR', message: 'ネットワークエラーが発生しました' }
