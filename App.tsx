@@ -1319,7 +1319,14 @@ const App: React.FC = () => {
   };
 
   // Phase 20: ログアウトハンドラー
+  // Phase 42.1: 確認ダイアログ追加
   const handleSignOut = async () => {
+    // 確認ダイアログを表示
+    const confirmed = window.confirm('ログアウトしますか？');
+    if (!confirmed) {
+      return; // キャンセル時は何もしない
+    }
+
     setIsSigningOut(true);
     const result = await signOut();
     if (result.success) {
