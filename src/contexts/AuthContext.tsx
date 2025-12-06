@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import { User as FirebaseUser, onAuthStateChanged, signInWithPopup, signOut as firebaseSignOut } from 'firebase/auth';
+import { User as FirebaseUser, onAuthStateChanged, signInWithPopup, signOut as firebaseSignOut, signInWithCustomToken } from 'firebase/auth';
 import { doc, getDoc, Timestamp } from 'firebase/firestore';
 import { auth, googleProvider, db, authReady } from '../../firebase';
 import { User, AuthError, Result, FacilityRole } from '../../types';
@@ -15,6 +15,7 @@ interface AuthContextType {
   selectedFacilityId: string | null;
   loading: boolean;
   signInWithGoogle: () => Promise<Result<void, AuthError>>;
+  signInWithDemo: () => Promise<Result<void, AuthError>>;
   signOut: () => Promise<Result<void, AuthError>>;
   selectFacility: (facilityId: string) => void;
   hasRole: (facilityId: string, role: FacilityRole) => boolean;
@@ -317,6 +318,57 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  // Phase 42.2: デモアカウントでログイン
+  // セキュリティ: 認証情報はサーバーサイド(Cloud Function)でのみ管理
+  // クライアントはカスタムトークンを受け取ってサインイン
+  const signInWithDemo = async (): Promise<Result<void, AuthError>> => {
+    try {
+      console.info('ℹ️ デモアカウントでログインを開始します...');
+
+      // Cloud Functionからカスタムトークンを取得
+      // 本番環境とローカル環境でURLを切り替え
+      const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+      const functionUrl = isLocalhost
+        ? 'http://localhost:5001/ai-care-shift-scheduler/asia-northeast1/demoSignIn'
+        : 'https://asia-northeast1-ai-care-shift-scheduler.cloudfunctions.net/demoSignIn';
+
+      const response = await fetch(functionUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || 'デモログインに失敗しました');
+      }
+
+      const { customToken } = await response.json();
+
+      // カスタムトークンでサインイン
+      await signInWithCustomToken(auth, customToken);
+
+      console.info('✅ デモアカウントでログイン成功');
+      return { success: true, data: undefined };
+    } catch (error: any) {
+      console.error('Demo sign in error:', error);
+
+      // ネットワークエラーの判定
+      if (error.message?.includes('fetch') || error.message?.includes('network')) {
+        return {
+          success: false,
+          error: { code: 'NETWORK_ERROR', message: 'ネットワークエラーが発生しました' }
+        };
+      }
+
+      return {
+        success: false,
+        error: { code: 'AUTH_FAILED', message: 'デモログインに失敗しました。しばらく経ってから再度お試しください。' }
+      };
+    }
+  };
+
   // 施設選択
   const selectFacility = (facilityId: string) => {
     if (!userProfile || !userProfile.facilities) {
@@ -406,6 +458,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     selectedFacilityId,
     loading,
     signInWithGoogle,
+    signInWithDemo,
     signOut,
     selectFacility,
     hasRole,

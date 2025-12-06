@@ -2,9 +2,10 @@ import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 
 export function LoginPage() {
-  const { signInWithGoogle } = useAuth();
+  const { signInWithGoogle, signInWithDemo } = useAuth();
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [demoLoading, setDemoLoading] = useState(false);
 
   const handleGoogleLogin = async () => {
     setError(null);
@@ -24,6 +25,26 @@ export function LoginPage() {
       setError('予期しないエラーが発生しました');
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Phase 42.2: デモアカウントでログイン
+  const handleDemoLogin = async () => {
+    setError(null);
+    setDemoLoading(true);
+
+    try {
+      const result = await signInWithDemo();
+      if (result.success) {
+        // 成功時はAuthContextが自動的に状態を更新し、リダイレクトされる
+        return;
+      }
+      const failureResult = result as { success: false; error: { code: string; message: string } };
+      setError(failureResult.error.message || 'デモログインに失敗しました');
+    } catch (err) {
+      setError('予期しないエラーが発生しました');
+    } finally {
+      setDemoLoading(false);
     }
   };
 
@@ -48,7 +69,7 @@ export function LoginPage() {
 
           <button
             onClick={handleGoogleLogin}
-            disabled={loading}
+            disabled={loading || demoLoading}
             className="w-full flex items-center justify-center gap-3 px-4 py-3 border border-gray-300 rounded-md shadow-sm bg-white text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             <svg className="w-5 h-5" viewBox="0 0 24 24">
@@ -71,6 +92,31 @@ export function LoginPage() {
             </svg>
             {loading ? 'ログイン中...' : 'Googleでログイン'}
           </button>
+
+          {/* Phase 42.2: デモログインセクション */}
+          <div className="relative mt-6">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-gray-300" />
+            </div>
+            <div className="relative flex justify-center text-sm">
+              <span className="px-2 bg-white text-gray-500">または</span>
+            </div>
+          </div>
+
+          <button
+            onClick={handleDemoLogin}
+            disabled={loading || demoLoading}
+            className="mt-4 w-full flex items-center justify-center gap-3 px-4 py-3 border-2 border-indigo-500 rounded-md shadow-sm bg-indigo-50 text-indigo-700 hover:bg-indigo-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          >
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+              <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+            </svg>
+            {demoLoading ? 'ログイン中...' : 'デモアカウントでログイン'}
+          </button>
+          <p className="mt-2 text-center text-xs text-gray-500">
+            サンプルデータで機能をお試しいただけます
+          </p>
 
           <div className="mt-6 text-center">
             <p className="text-sm text-gray-500">

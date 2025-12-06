@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Phase 42.2: デモログイン機能 - AIシフト管理システム</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+    <style>
+        :root {
+            --primary-color: #4F46E5;
+            --success-color: #059669;
+            --warning-color: #F59E0B;
+            --bg-color: #F3F4F6;
+            --card-bg: #FFFFFF;
+            --text-primary: #111827;
+            --text-secondary: #6B7280;
+            --border-color: #E5E7EB;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Hiragino Sans', 'Noto Sans JP', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 1rem;
+        }
+
+        @media (min-width: 768px) {
+            .container {
+                padding: 2rem;
+            }
+        }
+
+        header {
+            background: linear-gradient(135deg, var(--primary-color), #7C3AED);
+            color: white;
+            padding: 2rem 1rem;
+            text-align: center;
+        }
+
+        @media (min-width: 768px) {
+            header {
+                padding: 3rem 2rem;
+            }
+        }
+
+        header h1 {
+            margin: 0 0 0.5rem;
+            font-size: 1.5rem;
+        }
+
+        @media (min-width: 768px) {
+            header h1 {
+                font-size: 2.5rem;
+            }
+        }
+
+        header p {
+            margin: 0;
+            opacity: 0.9;
+            font-size: 0.9rem;
+        }
+
+        @media (min-width: 768px) {
+            header p {
+                font-size: 1.1rem;
+            }
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            margin-top: 1rem;
+        }
+
+        .badge-pending {
+            background-color: var(--warning-color);
+            color: white;
+        }
+
+        .badge-completed {
+            background-color: var(--success-color);
+            color: white;
+        }
+
+        .card {
+            background: var(--card-bg);
+            border-radius: 0.75rem;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            padding: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        @media (min-width: 768px) {
+            .card {
+                padding: 1.5rem;
+            }
+        }
+
+        .card h2 {
+            color: var(--primary-color);
+            margin-top: 0;
+            font-size: 1.25rem;
+            border-bottom: 2px solid var(--primary-color);
+            padding-bottom: 0.5rem;
+        }
+
+        @media (min-width: 768px) {
+            .card h2 {
+                font-size: 1.5rem;
+            }
+        }
+
+        .card h3 {
+            color: var(--text-primary);
+            font-size: 1rem;
+        }
+
+        @media (min-width: 768px) {
+            .card h3 {
+                font-size: 1.25rem;
+            }
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.875rem;
+            overflow-x: auto;
+            display: block;
+        }
+
+        @media (min-width: 768px) {
+            table {
+                display: table;
+            }
+        }
+
+        th, td {
+            padding: 0.5rem;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        @media (min-width: 768px) {
+            th, td {
+                padding: 0.75rem;
+            }
+        }
+
+        th {
+            background-color: var(--bg-color);
+            font-weight: 600;
+        }
+
+        .mermaid {
+            text-align: center;
+            overflow-x: auto;
+        }
+
+        .grid {
+            display: grid;
+            gap: 1rem;
+            grid-template-columns: 1fr;
+        }
+
+        @media (min-width: 768px) {
+            .grid {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 1.5rem;
+            }
+        }
+
+        .feature-box {
+            background: linear-gradient(to bottom right, #EEF2FF, #E0E7FF);
+            border-radius: 0.5rem;
+            padding: 1rem;
+        }
+
+        .feature-box h4 {
+            margin: 0 0 0.5rem;
+            color: var(--primary-color);
+        }
+
+        code {
+            background-color: #F3F4F6;
+            padding: 0.125rem 0.375rem;
+            border-radius: 0.25rem;
+            font-family: 'SF Mono', Monaco, monospace;
+            font-size: 0.875em;
+        }
+
+        pre {
+            background-color: #1F2937;
+            color: #F9FAFB;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            overflow-x: auto;
+            font-size: 0.8rem;
+        }
+
+        @media (min-width: 768px) {
+            pre {
+                font-size: 0.875rem;
+            }
+        }
+
+        .nav-links {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-top: 1rem;
+        }
+
+        .nav-links a {
+            color: var(--primary-color);
+            text-decoration: none;
+            padding: 0.5rem 1rem;
+            background: #EEF2FF;
+            border-radius: 0.375rem;
+            font-size: 0.875rem;
+        }
+
+        .nav-links a:hover {
+            background: #E0E7FF;
+        }
+
+        footer {
+            text-align: center;
+            padding: 2rem;
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+        }
+
+        .ui-preview {
+            border: 2px solid var(--border-color);
+            border-radius: 0.5rem;
+            padding: 1.5rem;
+            background: white;
+            text-align: center;
+        }
+
+        .ui-preview .title {
+            font-size: 1.5rem;
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+        }
+
+        .ui-preview .subtitle {
+            color: var(--text-secondary);
+            margin-bottom: 1.5rem;
+        }
+
+        .ui-preview .btn {
+            display: block;
+            width: 100%;
+            max-width: 300px;
+            margin: 0.5rem auto;
+            padding: 0.75rem 1rem;
+            border-radius: 0.375rem;
+            font-weight: 500;
+            cursor: pointer;
+        }
+
+        .ui-preview .btn-google {
+            background: white;
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+        }
+
+        .ui-preview .btn-demo {
+            background: #EEF2FF;
+            border: 2px solid var(--primary-color);
+            color: var(--primary-color);
+        }
+
+        .ui-preview .divider {
+            display: flex;
+            align-items: center;
+            margin: 1rem 0;
+            max-width: 300px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .ui-preview .divider::before,
+        .ui-preview .divider::after {
+            content: '';
+            flex: 1;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .ui-preview .divider span {
+            padding: 0 0.5rem;
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+        }
+
+        .ui-preview .demo-note {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            margin-top: 0.25rem;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Phase 42.2: デモログイン機能</h1>
+        <p>クライアント向けワンクリックデモアクセス</p>
+        <span class="badge badge-pending">セットアップ待ち</span>
+    </header>
+
+    <div class="container">
+        <!-- 概要 -->
+        <div class="card">
+            <h2>概要</h2>
+            <p>クライアント（見込み顧客）にアプリケーションを簡単に試用してもらうため、ワンクリックでデモ環境にアクセスできる機能を実装しました。</p>
+            <div class="grid">
+                <div class="feature-box">
+                    <h4>目的</h4>
+                    <ul>
+                        <li>クライアントがワンクリックでデモ環境にアクセス</li>
+                        <li>既存のデモデータ（サンプル介護施設）で機能を体験</li>
+                        <li>営業・デモ活動の効率化</li>
+                    </ul>
+                </div>
+                <div class="feature-box">
+                    <h4>セキュリティ</h4>
+                    <ul>
+                        <li>viewer権限のみ（データ変更不可）</li>
+                        <li>デモ施設のみアクセス可能</li>
+                        <li>本番データへの影響なし</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- UI変更 -->
+        <div class="card">
+            <h2>UI変更</h2>
+            <h3>新しいログインページ</h3>
+            <div class="ui-preview">
+                <div class="title">シフト作成ツール</div>
+                <div class="subtitle">介護施設向けシフト管理システム</div>
+                <button class="btn btn-google">🔵 Googleでログイン</button>
+                <div class="divider"><span>または</span></div>
+                <button class="btn btn-demo">👁 デモアカウントでログイン</button>
+                <div class="demo-note">サンプルデータで機能をお試しいただけます</div>
+            </div>
+        </div>
+
+        <!-- 認証フロー -->
+        <div class="card">
+            <h2>認証フロー</h2>
+            <div class="mermaid">
+sequenceDiagram
+    participant U as ユーザー
+    participant L as ログインページ
+    participant A as AuthContext
+    participant F as Firebase Auth
+    participant D as Firestore
+
+    U->>L: 「デモアカウントでログイン」クリック
+    L->>A: signInWithDemo()
+    A->>F: signInWithEmailAndPassword(demo@example.com, ***)
+    F-->>A: User credential
+    A->>D: createOrUpdateUser()
+    D-->>A: User profile with facilities
+    A-->>L: success
+    L->>U: シフト管理画面へ遷移
+            </div>
+        </div>
+
+        <!-- 変更ファイル -->
+        <div class="card">
+            <h2>変更ファイル一覧</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>ファイル</th>
+                        <th>種別</th>
+                        <th>変更内容</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>src/contexts/AuthContext.tsx</code></td>
+                        <td>変更</td>
+                        <td>signInWithDemo関数追加</td>
+                    </tr>
+                    <tr>
+                        <td><code>src/components/LoginPage.tsx</code></td>
+                        <td>変更</td>
+                        <td>デモログインボタン追加</td>
+                    </tr>
+                    <tr>
+                        <td><code>.kiro/specs/demo-login/</code></td>
+                        <td>新規</td>
+                        <td>要件定義・セットアップガイド</td>
+                    </tr>
+                    <tr>
+                        <td><code>scripts/createDemoUser.ts</code></td>
+                        <td>新規</td>
+                        <td>デモユーザー作成スクリプト</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- セットアップ -->
+        <div class="card">
+            <h2>セットアップ手順</h2>
+            <p>デモログイン機能を有効にするには、Firebase Consoleで以下の設定が必要です：</p>
+
+            <h3>1. Firebase Authenticationでユーザー作成</h3>
+            <ol>
+                <li>Firebase Console → Authentication → Users</li>
+                <li>Add user: <code>demo@example.com</code> / <code>demo-password-2024</code></li>
+                <li>作成されたUIDをコピー</li>
+            </ol>
+
+            <h3>2. Firestoreでユーザードキュメント作成</h3>
+            <pre><code>// /users/{uid}
+{
+  userId: "{uid}",
+  email: "demo@example.com",
+  displayName: "デモユーザー",
+  provider: "password",
+  facilities: [{
+    facilityId: "demo-facility-001",
+    role: "viewer",
+    grantedAt: Timestamp
+  }],
+  createdAt: Timestamp,
+  lastLoginAt: Timestamp
+}</code></pre>
+
+            <h3>3. 施設メンバーに追加</h3>
+            <pre><code>// /facilities/demo-facility-001/members に追加
+{
+  userId: "{uid}",
+  role: "viewer",
+  grantedAt: Timestamp
+}</code></pre>
+        </div>
+
+        <!-- デモアカウント情報 -->
+        <div class="card">
+            <h2>デモアカウント情報</h2>
+            <table>
+                <tr>
+                    <th>項目</th>
+                    <th>値</th>
+                </tr>
+                <tr>
+                    <td>Email</td>
+                    <td><code>demo@example.com</code></td>
+                </tr>
+                <tr>
+                    <td>Password</td>
+                    <td><code>demo-password-2024</code></td>
+                </tr>
+                <tr>
+                    <td>権限</td>
+                    <td>viewer（閲覧のみ）</td>
+                </tr>
+                <tr>
+                    <td>アクセス可能施設</td>
+                    <td>demo-facility-001（サンプル介護施設）</td>
+                </tr>
+            </table>
+        </div>
+
+        <!-- ナビゲーション -->
+        <div class="card">
+            <h2>関連ドキュメント</h2>
+            <div class="nav-links">
+                <a href="index.html">概要・WBS</a>
+                <a href="technical.html">技術詳細</a>
+                <a href="phase42-ui-design.html">Phase 42 UIデザイン</a>
+                <a href="phase42-1-navigation.html">Phase 42.1 ナビゲーション</a>
+                <a href="handoff.html">引き継ぎ</a>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        <p>AIシフト管理システム - Phase 42.2 デモログイン機能</p>
+        <p>更新日: 2025-12-06</p>
+    </footer>
+
+    <script>
+        mermaid.initialize({
+            startOnLoad: true,
+            theme: 'default',
+            sequence: {
+                useMaxWidth: true,
+                mirrorActors: false
+            }
+        });
+    </script>
+</body>
+</html>
