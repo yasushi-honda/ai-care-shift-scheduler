@@ -41,15 +41,20 @@ export const demoSignIn = onRequest({
   }
 
   try {
+    console.log('🔄 demoSignIn: Starting...');
     const auth = admin.auth();
     const db = admin.firestore();
+    console.log('🔄 demoSignIn: Firebase services initialized');
 
     // デモユーザーの存在確認・作成
     try {
-      await auth.getUser(DEMO_USER_UID);
+      const existingUser = await auth.getUser(DEMO_USER_UID);
+      console.log('✅ Demo user exists:', existingUser.uid);
     } catch (error: any) {
+      console.log('🔄 demoSignIn: User lookup result -', error.code);
       if (error.code === 'auth/user-not-found') {
         // デモユーザーを作成
+        console.log('🔄 demoSignIn: Creating new demo user...');
         await auth.createUser({
           uid: DEMO_USER_UID,
           email: DEMO_EMAIL,
@@ -58,6 +63,7 @@ export const demoSignIn = onRequest({
         });
         console.log('✅ Demo user created:', DEMO_USER_UID);
       } else {
+        console.error('❌ Auth error:', error.code, error.message);
         throw error;
       }
     }
@@ -67,6 +73,7 @@ export const demoSignIn = onRequest({
     const now = admin.firestore.Timestamp.now();
     const userRef = db.collection('users').doc(DEMO_USER_UID);
 
+    console.log('🔄 demoSignIn: Creating/updating user document...');
     await userRef.set({
       userId: DEMO_USER_UID,
       email: DEMO_EMAIL,
@@ -102,6 +109,7 @@ export const demoSignIn = onRequest({
     }
 
     // カスタムトークンを発行
+    console.log('🔄 demoSignIn: Creating custom token...');
     const customToken = await auth.createCustomToken(DEMO_USER_UID, {
       demoUser: true,
     });
@@ -110,7 +118,11 @@ export const demoSignIn = onRequest({
 
     res.status(200).json({ customToken });
   } catch (error: any) {
-    console.error('❌ Demo sign-in error:', error);
+    console.error('❌ Demo sign-in error:', {
+      message: error.message,
+      code: error.code,
+      stack: error.stack,
+    });
     res.status(500).json({
       error: 'デモログインに失敗しました。しばらく経ってから再度お試しください。',
     });
