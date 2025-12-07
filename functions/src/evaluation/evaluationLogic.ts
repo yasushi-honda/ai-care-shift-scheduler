@@ -215,9 +215,30 @@ export class EvaluationService {
   }
 
   /**
+   * 営業日かどうかを判定
+   *
+   * 夜勤がない施設（デイサービス）の場合、日曜日は営業外として扱う
+   *
+   * @param date 日付文字列 (YYYY-MM-DD)
+   * @param hasNightShift 夜勤シフトがあるかどうか
+   * @returns 営業日の場合true
+   */
+  private isBusinessDay(date: string, hasNightShift: boolean): boolean {
+    if (hasNightShift) {
+      // 24時間営業の施設（老健など）は毎日営業
+      return true;
+    }
+
+    // デイサービス: 日曜日は休業
+    const dayOfWeek = new Date(date).getDay();
+    return dayOfWeek !== 0; // 0 = 日曜日
+  }
+
+  /**
    * 人員不足を検出
    *
    * 各日・各シフトの配置人数が要件を満たしているかをチェック
+   * 注: デイサービス（夜勤なし）の場合、日曜日は営業外としてスキップ
    */
   checkStaffShortage(
     schedule: StaffSchedule[],
@@ -230,9 +251,19 @@ export class EvaluationService {
     const [year, month] = targetMonth.split('-').map(Number);
     const daysInMonth = new Date(year, month, 0).getDate();
 
+    // 夜勤があるかどうかを判定
+    const shiftTypeNames = (requirements.timeSlots || []).map(t => t.name);
+    const hasNightShift = shiftTypeNames.some(name => name.includes('夜'));
+
     // 各日の配置人数をカウント
     for (let day = 1; day <= daysInMonth; day++) {
       const date = `${targetMonth}-${String(day).padStart(2, '0')}`;
+
+      // 営業外の日はスキップ
+      if (!this.isBusinessDay(date, hasNightShift)) {
+        continue;
+      }
+
       const dailyStaffByShift: Record<string, string[]> = {};
 
       // 各スタッフのシフトをカウント
@@ -399,6 +430,7 @@ export class EvaluationService {
 
   /**
    * 資格要件未充足を検出
+   * 注: デイサービス（夜勤なし）の場合、日曜日は営業外としてスキップ
    */
   checkQualificationMissing(
     schedule: StaffSchedule[],
@@ -412,9 +444,18 @@ export class EvaluationService {
     const [year, month] = targetMonth.split('-').map(Number);
     const daysInMonth = new Date(year, month, 0).getDate();
 
+    // 夜勤があるかどうかを判定
+    const shiftTypeNames = (requirements.timeSlots || []).map(t => t.name);
+    const hasNightShift = shiftTypeNames.some(name => name.includes('夜'));
+
     // 各日の資格保有者をカウント
     for (let day = 1; day <= daysInMonth; day++) {
       const date = `${targetMonth}-${String(day).padStart(2, '0')}`;
+
+      // 営業外の日はスキップ
+      if (!this.isBusinessDay(date, hasNightShift)) {
+        continue;
+      }
 
       for (const [shiftName, requirement] of Object.entries(
         requirements.requirements
@@ -520,6 +561,7 @@ export class EvaluationService {
    * 充足率を計算
    *
    * (実際の配置人数 / 必要人数) * 100
+   * 注: デイサービス（夜勤なし）の場合、日曜日は営業外としてスキップ
    */
   calculateFulfillmentRate(
     schedule: StaffSchedule[],
@@ -529,11 +571,20 @@ export class EvaluationService {
     const [year, month] = targetMonth.split('-').map(Number);
     const daysInMonth = new Date(year, month, 0).getDate();
 
+    // 夜勤があるかどうかを判定
+    const shiftTypeNames = (requirements.timeSlots || []).map(t => t.name);
+    const hasNightShift = shiftTypeNames.some(name => name.includes('夜'));
+
     let totalRequired = 0;
     let totalAssigned = 0;
 
     for (let day = 1; day <= daysInMonth; day++) {
       const date = `${targetMonth}-${String(day).padStart(2, '0')}`;
+
+      // 営業外の日はスキップ
+      if (!this.isBusinessDay(date, hasNightShift)) {
+        continue;
+      }
 
       for (const [shiftName, requirement] of Object.entries(
         requirements.requirements
