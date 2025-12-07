@@ -97,6 +97,11 @@ export class EvaluationService {
       ...this.checkLeaveRequestIgnored(input.schedule, input.leaveRequests)
     );
 
+    // Phase 44: timeSlotPreference違反を検出
+    violations.push(
+      ...this.checkTimeSlotPreferenceViolation(input.schedule, input.staffList)
+    );
+
     // Phase 44: スタッフ制約の数学的分析
     const constraintAnalysisResult = this.analyzeStaffConstraints(
       input.staffList,
@@ -776,6 +781,70 @@ export class EvaluationService {
               affectedStaff: [staffId],
               affectedDates: [date],
               suggestion: `${date}を${leaveType}に変更することを検討してください`,
+            });
+          }
+        }
+      }
+    }
+
+    return violations;
+  }
+
+  /**
+   * Phase 44: timeSlotPreference違反を検出
+   *
+   * スタッフのtimeSlotPreferenceに反するシフト配置を検出
+   * - 「日勤のみ」のスタッフが早番・遅番・夜勤に配置されている
+   * - 「夜勤のみ」のスタッフが日勤・早番・遅番に配置されている
+   */
+  checkTimeSlotPreferenceViolation(
+    schedule: StaffSchedule[],
+    staffList: Staff[]
+  ): ConstraintViolation[] {
+    const violations: ConstraintViolation[] = [];
+
+    for (const staffSchedule of schedule) {
+      const staff = staffList.find((s) => s.id === staffSchedule.staffId);
+      if (!staff) continue;
+
+      const preference = staff.timeSlotPreference;
+      const staffName = staff.name;
+
+      // 各日のシフトをチェック
+      for (const shift of staffSchedule.monthlyShifts) {
+        const shiftType = shift.shiftType || '';
+
+        // 休みや明け休みは違反対象外
+        if (shiftType === '休' || shiftType.includes('休') || shiftType === '') {
+          continue;
+        }
+
+        // 日勤のみスタッフが日勤以外に配置されている場合
+        if (preference === TimeSlotPreference.DayOnly) {
+          const isDayShift = shiftType === '日勤' || shiftType.includes('日勤');
+          if (!isDayShift) {
+            violations.push({
+              type: 'leaveRequestIgnored', // 既存タイプを流用（timeSlotPreferenceViolationがないため）
+              severity: 'error',
+              description: `${staffName}さん（日勤のみ希望）が${shift.date}に${shiftType}に配置されています`,
+              affectedStaff: [staffSchedule.staffId],
+              affectedDates: [shift.date],
+              suggestion: `${staffName}さんは日勤のみに配置してください`,
+            });
+          }
+        }
+
+        // 夜勤のみスタッフが夜勤以外に配置されている場合
+        if (preference === TimeSlotPreference.NightOnly) {
+          const isNightShift = shiftType === '夜勤' || shiftType.includes('夜');
+          if (!isNightShift) {
+            violations.push({
+              type: 'leaveRequestIgnored',
+              severity: 'error',
+              description: `${staffName}さん（夜勤のみ希望）が${shift.date}に${shiftType}に配置されています`,
+              affectedStaff: [staffSchedule.staffId],
+              affectedDates: [shift.date],
+              suggestion: `${staffName}さんは夜勤のみに配置してください`,
             });
           }
         }

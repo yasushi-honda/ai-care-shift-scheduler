@@ -6,6 +6,9 @@
  */
 
 import { VertexAI } from '@google-cloud/vertexai';
+import {
+  TimeSlotPreference,
+} from './types';
 import type {
   Staff,
   ShiftRequirement,
@@ -362,6 +365,76 @@ export async function generateSkeleton(
 }
 
 /**
+ * Phase 44: 詳細生成用の動的制約を生成
+ * スタッフのtimeSlotPreferenceに基づいて動的に制約文を生成
+ */
+function buildDetailedDynamicConstraints(
+  staffBatch: Staff[],
+  requirements: ShiftRequirement
+): string {
+  const constraints: string[] = [];
+
+  // 「日勤のみ」スタッフを動的に収集
+  const dayOnlyStaff = staffBatch.filter(
+    s => s.timeSlotPreference === TimeSlotPreference.DayOnly
+  );
+
+  // 「夜勤のみ」スタッフを動的に収集
+  const nightOnlyStaff = staffBatch.filter(
+    s => s.timeSlotPreference === TimeSlotPreference.NightOnly
+  );
+
+  if (dayOnlyStaff.length > 0) {
+    const names = dayOnlyStaff.map(s => s.name).join('、');
+    constraints.push(
+      `## ⚠️ 【時間帯制約】日勤のみスタッフ\n` +
+      `以下のスタッフは**日勤のみ**に配置してください。\n` +
+      `**早番・遅番には絶対に配置しないでください**：\n` +
+      `- ${names}\n` +
+      `\nこれは絶対条件です。違反したシフトは無効になります。`
+    );
+  }
+
+  if (nightOnlyStaff.length > 0) {
+    const names = nightOnlyStaff.map(s => s.name).join('、');
+    constraints.push(
+      `## ⚠️ 【時間帯制約】夜勤のみスタッフ\n` +
+      `以下のスタッフは**夜勤のみ**に配置してください。\n` +
+      `**早番・日勤・遅番には絶対に配置しないでください**：\n` +
+      `- ${names}`
+    );
+  }
+
+  // 看護師配置制約を動的に生成
+  const nurses = staffBatch.filter(staff =>
+    (staff.qualifications || []).some(q =>
+      String(q).includes('看護師') || String(q).includes('看護')
+    )
+  );
+
+  const dayShiftReq = requirements.requirements?.['日勤'];
+  const nurseRequired = dayShiftReq?.requiredQualifications?.some(q =>
+    String(q.qualification).includes('看護')
+  );
+
+  if (nurses.length > 0 && nurseRequired) {
+    const nurseNames = nurses.map(s => s.name).join('、');
+    const requiredCount = dayShiftReq?.requiredQualifications?.find(q =>
+      String(q.qualification).includes('看護')
+    )?.count || 1;
+
+    constraints.push(
+      `## ⚠️ 【看護師配置制約】\n` +
+      `毎日の日勤には、以下の看護師のうち**必ず${requiredCount}名以上**を配置してください：\n` +
+      `- ${nurseNames}\n` +
+      `\n看護師が日勤に入っていない日は資格要件違反です。`
+    );
+  }
+
+  return constraints.length > 0 ? '\n' + constraints.join('\n\n') + '\n' : '';
+}
+
+/**
  * Phase 2: 詳細シフト生成用プロンプト
  */
 function buildDetailedPrompt(
@@ -419,6 +492,9 @@ function buildDetailedPrompt(
   const dayCount = requirements.requirements?.['日勤']?.totalStaff || 2;
   const lateCount = requirements.requirements?.['遅番']?.totalStaff || 1;
 
+  // Phase 44: 動的なtimeSlotPreference制約を生成
+  const dynamicConstraints = buildDetailedDynamicConstraints(staffBatch, requirements);
+
   if (hasNightShift) {
     return `
 以下のスタッフの${requirements.targetMonth}の詳細シフトを生成してください。
@@ -475,7 +551,7 @@ ${requirementsTable}
 
 ❌ 悪い例: 早番1名、日勤4名、遅番0名（日勤に偏りすぎ）
 ✅ 良い例: 早番${earlyCount}名、日勤${dayCount}名、遅番${lateCount}名（バランス良い）
-
+${dynamicConstraints}
 # 制約
 - 骨子で指定された休日は変更しないこと
 - 休日以外の日は、必要人員を満たすようシフトを割り当てる

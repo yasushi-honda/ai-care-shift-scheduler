@@ -1,5 +1,6 @@
 import { onRequest } from 'firebase-functions/v2/https';
 import { VertexAI } from '@google-cloud/vertexai';
+import { TimeSlotPreference } from './types';
 import type { Staff, ShiftRequirement, ShiftTime, LeaveRequest, StaffSchedule, AIEvaluationResult } from './types';
 import { generateSkeleton, generateDetailedShifts, parseGeminiJsonResponse } from './phased-generation';
 import { EvaluationService, createDefaultEvaluation } from './evaluation/evaluationLogic';
@@ -241,6 +242,91 @@ export const generateShift = onRequest(
 );
 
 /**
+ * Phase 44: timeSlotPreferenceに基づいて動的にスタッフ制約を生成
+ *
+ * @returns 動的に生成された絶対条件の追加セクション
+ */
+function buildDynamicTimeSlotConstraints(staffList: Staff[]): string {
+  const constraints: string[] = [];
+
+  // 「日勤のみ」スタッフを動的に収集（TimeSlotPreference enumの値は日本語）
+  const dayOnlyStaff = staffList.filter(
+    s => s.timeSlotPreference === TimeSlotPreference.DayOnly
+  );
+
+  // 「夜勤のみ」スタッフを動的に収集
+  const nightOnlyStaff = staffList.filter(
+    s => s.timeSlotPreference === TimeSlotPreference.NightOnly
+  );
+
+  if (dayOnlyStaff.length > 0) {
+    const names = dayOnlyStaff.map(s => sanitizeForPrompt(s.name)).join('、');
+    constraints.push(
+      `## 【時間帯制約】日勤のみスタッフ（${dayOnlyStaff.length}名）\n` +
+      `以下のスタッフは**日勤のみ**に配置してください。早番・遅番・夜勤には**絶対に配置しないでください**：\n` +
+      `- ${names}\n` +
+      `\n⚠️ この制約に違反したシフトは無効です。`
+    );
+  }
+
+  if (nightOnlyStaff.length > 0) {
+    const names = nightOnlyStaff.map(s => sanitizeForPrompt(s.name)).join('、');
+    constraints.push(
+      `## 【時間帯制約】夜勤のみスタッフ（${nightOnlyStaff.length}名）\n` +
+      `以下のスタッフは**夜勤のみ**に配置してください。早番・日勤・遅番には**絶対に配置しないでください**：\n` +
+      `- ${names}\n` +
+      `\n⚠️ この制約に違反したシフトは無効です。`
+    );
+  }
+
+  return constraints.length > 0 ? '\n' + constraints.join('\n\n') : '';
+}
+
+/**
+ * Phase 44: 看護師配置制約を動的に生成
+ *
+ * @returns 動的に生成された看護師配置セクション
+ */
+function buildDynamicNurseConstraints(
+  staffList: Staff[],
+  requirements: ShiftRequirement
+): string {
+  // 看護師資格を持つスタッフを動的に収集
+  const nurses = staffList.filter(staff =>
+    (staff.qualifications || []).some(q =>
+      String(q).includes('看護師') || String(q).includes('Nurse')
+    )
+  );
+
+  if (nurses.length === 0) {
+    return '';
+  }
+
+  // 日勤に看護師配置が必要かチェック
+  const dayShiftReq = requirements.requirements?.['日勤'];
+  const nurseRequired = dayShiftReq?.requiredQualifications?.some(q =>
+    String(q.qualification).includes('看護')
+  );
+
+  if (!nurseRequired) {
+    return '';
+  }
+
+  const nurseNames = nurses.map(s => sanitizeForPrompt(s.name)).join('、');
+  const requiredCount = dayShiftReq?.requiredQualifications?.find(q =>
+    String(q.qualification).includes('看護')
+  )?.count || 1;
+
+  return `
+## 【看護師配置制約】
+毎日の日勤には、以下の看護師のうち**必ず${requiredCount}名以上**を配置してください：
+- ${nurseNames}
+
+⚠️ 看護師が日勤に入っていない日は**資格要件違反**です。
+`;
+}
+
+/**
  * シフト生成用プロンプトを構築
  */
 function buildShiftPrompt(
@@ -291,6 +377,10 @@ function buildShiftPrompt(
   // 休暇希望のフォーマット
   const leaveRequestsInfo = formatLeaveRequests(leaveRequests, staffList);
 
+  // Phase 44: 動的制約を生成
+  const dynamicTimeSlotConstraints = buildDynamicTimeSlotConstraints(staffList);
+  const dynamicNurseConstraints = buildDynamicNurseConstraints(staffList, requirements);
+
   return `あなたは介護・福祉事業所向けのAIシフト自動作成アシスタントです。
 以下のスタッフ情報、事業所のシフト要件、休暇希望に基づいて、${requirements.targetMonth}の1ヶ月分（${daysInMonth}日間）の最適なシフト表をJSON形式で生成してください。
 
@@ -320,7 +410,7 @@ ${leaveRequestsInfo}
 6. 「夜勤」シフトの翌日は必ず「明け休み」とし、翌々日は必ず「休」（公休）としてください
 7. 1日の勤務が終わってから次の勤務が始まるまで、最低8時間以上の休息時間を確保してください
 8. 週の必須勤務日数（must）は必ず守ってください
-
+${dynamicTimeSlotConstraints}${dynamicNurseConstraints}
 ## 【努力目標】（可能な限り考慮）
 1. スタッフの「希望休」や「研修」の希望日も、可能な限り休日または該当シフトを割り当ててください
 2. スタッフが希望する「週の勤務回数」にできるだけ近づけてください
