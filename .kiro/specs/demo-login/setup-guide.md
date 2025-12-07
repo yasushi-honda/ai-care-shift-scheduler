@@ -1,8 +1,51 @@
 # デモユーザー作成ガイド
 
-## Firebase Consoleでの手動セットアップ
+## 前提条件
 
-デモログイン機能を有効にするには、Firebase Consoleで以下の設定を行ってください。
+デモログイン機能はCloud Functionでカスタムトークンを発行する方式を採用しています。
+この方式を動作させるには、**IAM権限の設定が必須**です。
+
+---
+
+## Step 0: IAM権限の設定（必須）
+
+Cloud Functionsがカスタムトークンを発行するには、サービスアカウントに
+`Service Account Token Creator` ロールが必要です。
+
+### GCP Consoleで設定する場合
+
+1. [GCP Console IAM](https://console.cloud.google.com/iam-admin/iam?project=ai-care-shift-scheduler) にアクセス
+2. サービスアカウント `ai-care-shift-scheduler@appspot.gserviceaccount.com` を探す
+3. 鉛筆アイコン（編集）をクリック
+4. 「別のロールを追加」をクリック
+5. **Service Account Token Creator** (`roles/iam.serviceAccountTokenCreator`) を選択
+6. 「保存」をクリック
+
+### gcloud CLIで設定する場合
+
+```bash
+gcloud projects add-iam-policy-binding ai-care-shift-scheduler \
+  --member="serviceAccount:ai-care-shift-scheduler@appspot.gserviceaccount.com" \
+  --role="roles/iam.serviceAccountTokenCreator"
+```
+
+### 確認方法
+
+```bash
+gcloud projects get-iam-policy ai-care-shift-scheduler \
+  --flatten="bindings[].members" \
+  --filter="bindings.members:ai-care-shift-scheduler@appspot.gserviceaccount.com" \
+  --format="table(bindings.role)"
+```
+
+出力に `roles/iam.serviceAccountTokenCreator` が含まれていればOK。
+
+---
+
+## Step 1以降: Firebase Consoleでの手動セットアップ
+
+**注意**: Cloud Functionがデモユーザーを自動作成するため、以下の手順は
+Cloud Functionが失敗した場合のフォールバック用です。
 
 ### 1. Firebase Authenticationでデモユーザーを作成
 

@@ -531,6 +531,23 @@ sequenceDiagram
   const customToken = await auth.createCustomToken(DEMO_USER_UID);
   res.status(200).json({ customToken });
 });</code></pre>
+
+            <h3>IAM権限要件（必須）</h3>
+            <div class="highlight-box">
+                <strong>重要:</strong> Cloud Functionでカスタムトークンを発行するには、サービスアカウントに
+                <code>Service Account Token Creator</code>ロールが必要です。
+            </div>
+            <table>
+                <tr>
+                    <th>サービスアカウント</th>
+                    <th>必要なロール</th>
+                </tr>
+                <tr>
+                    <td><code>ai-care-shift-scheduler@appspot.gserviceaccount.com</code></td>
+                    <td><code>roles/iam.serviceAccountTokenCreator</code></td>
+                </tr>
+            </table>
+            <p><strong>設定方法:</strong> GCP Console → IAM → サービスアカウントに「Service Account Token Creator」ロールを追加</p>
         </div>
 
         <!-- デモアカウント情報 -->

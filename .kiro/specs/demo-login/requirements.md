@@ -164,10 +164,26 @@
 | デモアカウント悪用 | 中 | viewer権限に制限 |
 | デモデータ改変 | 低 | 権限でブロック |
 | ~~パスワード漏洩~~ | ~~中~~ | ~~Cloud Function方式で解決済み~~ |
+| IAM権限不足 | 高 | setup-guide.mdに設定手順を記載 |
 
 ---
 
-## 7. 関連ドキュメント
+## 7. インフラ要件
+
+### 7.1 IAM権限（必須）
+
+Cloud Functionでカスタムトークンを発行するには、サービスアカウントに以下のロールが必要：
+
+| サービスアカウント | ロール | 目的 |
+|-------------------|--------|------|
+| `PROJECT_ID@appspot.gserviceaccount.com` | `roles/iam.serviceAccountTokenCreator` | カスタムトークン発行 |
+
+**設定方法**: [setup-guide.md](./setup-guide.md) の「Step 0: IAM権限の設定」を参照
+
+---
+
+## 8. 関連ドキュメント
 
 - [Phase 42.1 ナビゲーション改善](.kiro/specs/navigation-improvement/requirements.md)
 - [デモデータテストガイド](../../docs/demo-data-testing-guide.md)
+- [セットアップガイド](./setup-guide.md)
