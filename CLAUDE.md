@@ -635,3 +635,56 @@ gcloud iam service-accounts get-iam-policy \
 
 - [setup-guide.md](.kiro/specs/demo-login/setup-guide.md)
 - Serenaメモリ: `cloud_function_custom_token_iam`
+
+---
+
+## Phase 43 デモ環境設計ルール（重要）
+
+**背景**: 2025-12-07にデモ環境制限が誤って本番ユーザーにも適用された問題を修正。
+
+### 設計原則
+
+**デモ環境制限はデモアカウントでログインした場合のみ適用する**
+
+```typescript
+// ✅ 正しい実装
+const isDemoEnvironment = isDemoUser;  // デモユーザーのみ
+
+// ❌ 間違った実装（以前のバグ）
+const isDemoEnvironment = isDemoUser || isDemoFacility;  // 施設も含めていた
+```
+
+### 理由
+
+| ユースケース | 期待される動作 |
+|-------------|---------------|
+| デモアカウント + サンプル施設 | 制限あり（保存スキップ、バナー表示） |
+| 本番アカウント + サンプル施設 | **制限なし**（フル機能テスト可能） |
+| 本番アカウント + 本番施設 | 制限なし（通常操作） |
+
+### 判定ロジック
+
+```typescript
+// AuthContext.tsx
+const DEMO_USER_UID = 'demo-user-fixed-uid';
+const DEMO_FACILITY_ID = 'demo-facility-001';
+
+const isDemoUser = userProfile?.provider === 'demo'
+  || currentUser?.uid === DEMO_USER_UID;
+
+const isDemoFacility = selectedFacilityId === DEMO_FACILITY_ID;
+
+// デモ環境制限はデモユーザーの場合のみ（施設単体では判定しない）
+const isDemoEnvironment = isDemoUser;
+```
+
+### 注意事項
+
+- `isDemoFacility` は今後の拡張用に保持（UIでのサンプルデータ表示など）
+- デモ環境バナー（🧪）は `isDemoEnvironment` で表示判定
+- 保存スキップも `isDemoEnvironment` で判定
+
+### 参考資料
+
+- [Phase 43ドキュメント](docs/phase43-demo-improvements.html)
+- Serenaメモリ: `phase43_demo_improvements_2025-12-07`

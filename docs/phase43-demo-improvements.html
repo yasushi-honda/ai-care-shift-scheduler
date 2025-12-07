@@ -201,7 +201,13 @@
                 </tr>
             </table>
 
-            <h3 style="font-size: 1rem; margin: 1rem 0 0.5rem;">デモ環境の判定</h3>
+            <h3 style="font-size: 1rem; margin: 1rem 0 0.5rem;">デモ環境の判定（重要な設計判断）</h3>
+            <div style="background: #FEF3C7; border-left: 4px solid #F59E0B; padding: 1rem; border-radius: 0 0.5rem 0.5rem 0; margin-bottom: 1rem;">
+                <p style="font-size: 0.875rem; color: #92400E; margin: 0;">
+                    <strong>設計ポイント:</strong> デモ環境制限は「デモアカウントでログインした場合のみ」適用。
+                    本番アカウントでサンプル介護施設にアクセスした場合は通常通り操作可能。
+                </p>
+            </div>
             <div class="code-block">
 // AuthContextで判定
 const isDemoUser = userProfile?.provider === 'demo'
@@ -209,7 +215,15 @@ const isDemoUser = userProfile?.provider === 'demo'
 
 const isDemoFacility = selectedFacilityId === 'demo-facility-001';
 
-const isDemoEnvironment = isDemoUser || isDemoFacility;</div>
+// ❗ 重要: デモ環境制限はデモユーザーの場合のみ
+// 本番ユーザーがサンプル施設を選択してもテスト可能
+const isDemoEnvironment = isDemoUser;  // NOT: isDemoUser || isDemoFacility</div>
+
+            <h3 style="font-size: 1rem; margin: 1rem 0 0.5rem;">なぜこの設計か</h3>
+            <ul style="font-size: 0.9rem; padding-left: 1.5rem; color: var(--text-secondary);">
+                <li><strong>デモアカウント</strong>: クライアント向け体験用。保存制限あり</li>
+                <li><strong>本番アカウント + サンプル施設</strong>: 開発者テスト用。フル機能利用可能</li>
+            </ul>
         </div>
 
         <div class="card">
