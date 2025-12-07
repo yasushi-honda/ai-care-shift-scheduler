@@ -102,7 +102,7 @@ async function main() {
     facilities: [
       {
         facilityId: DEMO_FACILITY_ID,
-        role: 'viewer', // 閲覧のみ
+        role: 'editor', // Phase 43.2.1: 保存可能にするためeditorに変更
         grantedAt: now,
       },
     ],
@@ -129,7 +129,7 @@ async function main() {
     if (!existingMember) {
       members.push({
         userId: uid,
-        role: 'viewer',
+        role: 'editor', // Phase 43.2.1: 保存可能にするためeditorに変更
         grantedAt: now,
       });
       await facilityRef.update({ members });
@@ -150,7 +150,7 @@ async function main() {
   console.log('📝 デモアカウント情報:');
   console.log(`   Email: ${DEMO_EMAIL}`);
   console.log(`   UID: ${uid}`);
-  console.log(`   権限: ${DEMO_FACILITY_ID} (viewer)`);
+  console.log(`   権限: ${DEMO_FACILITY_ID} (editor)`);
   console.log('');
   console.log('💡 ログインページの「デモアカウントでログイン」ボタンを');
   console.log('   クリックすると、このアカウントでログインできます。');

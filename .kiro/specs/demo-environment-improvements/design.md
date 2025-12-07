@@ -2,7 +2,7 @@
 
 **作成日**: 2025-12-07
 **最終更新**: 2025-12-08
-**ステータス**: Phase 43.2 設計変更中
+**ステータス**: Phase 43.2.1 デモユーザー権限修正中
 
 ---
 
@@ -59,9 +59,55 @@ Phase 43の「デモ環境では保存しない」設計により、以下の問
 
 ---
 
-## 2. Phase 43.2での変更点
+## 2. Phase 43.2.1 デモユーザー権限修正（2025-12-08追加）
 
-### 2.1 App.tsx の変更
+### 問題
+
+Phase 43.2でデモ環境でも保存を許可する設計に変更したが、デモユーザーには`viewer`権限しか付与されておらず、Firestore Security Rulesにより保存が拒否された。
+
+```
+Error: Missing or insufficient permissions.
+```
+
+### 原因
+
+- `scripts/createDemoUser.ts`: デモユーザーに `role: 'viewer'` を付与
+- `firestore.rules`: `schedules`への書き込みには `hasRole(facilityId, 'editor')` が必要
+
+### 解決策
+
+デモユーザーの権限を `viewer` から `editor` に変更する。
+
+1. `scripts/createDemoUser.ts` の権限を `editor` に修正
+2. Firestoreの既存デモユーザードキュメントを更新
+
+### 変更内容
+
+```typescript
+// scripts/createDemoUser.ts
+const userData = {
+  // ...
+  facilities: [
+    {
+      facilityId: DEMO_FACILITY_ID,
+      role: 'editor', // ← viewer から editor に変更
+      grantedAt: now,
+    },
+  ],
+};
+```
+
+### セキュリティ考慮
+
+- デモユーザーは `editor` 権限を持つが、`demo-facility-001` に限定
+- 排他制御（LockService）により、複数デモユーザーの同時編集は防止
+- デモ施設のデータは定期的にリセットされることを前提
+
+---
+
+## 3. Phase 43.2での変更点
+
+### 3.1 App.tsx の変更
 
 #### 削除するコード
 
