@@ -559,6 +559,7 @@ setTimeout(() => controller.abort(), 180000);  // ❗ 3分
 - [BUG-006修正記録](.kiro/specs/demo-login/setup-guide.md) - Cloud Function IAM権限
 - [BUG-007修正記録](.kiro/bugfix-demo-data-sync-2025-12-08.md) - デモデータ同期
 - [BUG-008修正記録](.kiro/bugfix-thinking-budget-2025-12-08.md) - thinkingBudget制限
+- [BUG-009修正記録](.kiro/bugfix-demo-members-2025-12-08.md) - デモユーザー権限消失
 - [ポストモーテム](.kiro/postmortem-gemini-bugs-2025-12-05.md) - 全体分析
 - Serenaメモリ: `gemini_region_critical_rule`, `gemini_max_output_tokens_critical_rule`, `gemini_thinking_budget_critical_rule`, `cloud_function_custom_token_iam`
 

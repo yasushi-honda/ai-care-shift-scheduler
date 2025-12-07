@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BUG-009: デモユーザー権限消失修正記録 - AI介護シフトスケジューラー</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+    <style>
+        :root {
+            --primary-color: #2c3e50;
+            --secondary-color: #3498db;
+            --success-color: #27ae60;
+            --danger-color: #e74c3c;
+            --warning-color: #f39c12;
+            --bg-color: #ecf0f1;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.6;
+            color: var(--primary-color);
+            background: var(--bg-color);
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        header {
+            background: linear-gradient(135deg, var(--warning-color), #e67e22);
+            color: white;
+            padding: 30px 20px;
+            text-align: center;
+        }
+        header h1 { font-size: 1.8rem; margin-bottom: 10px; }
+        header p { opacity: 0.9; }
+        .badge {
+            display: inline-block;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: bold;
+            margin: 5px;
+        }
+        .badge-critical { background: #c0392b; color: white; }
+        .badge-fixed { background: var(--success-color); color: white; }
+        .card {
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin: 20px 0;
+            overflow: hidden;
+        }
+        .card-header {
+            background: var(--primary-color);
+            color: white;
+            padding: 15px 20px;
+            font-weight: bold;
+        }
+        .card-body { padding: 20px; }
+        .error-box {
+            background: #fdedec;
+            border-left: 4px solid var(--danger-color);
+            padding: 15px;
+            margin: 15px 0;
+            font-family: monospace;
+            font-size: 0.9rem;
+            overflow-x: auto;
+        }
+        .fix-box {
+            background: #eafaf1;
+            border-left: 4px solid var(--success-color);
+            padding: 15px;
+            margin: 15px 0;
+        }
+        .warning-box {
+            background: #fef9e7;
+            border-left: 4px solid var(--warning-color);
+            padding: 15px;
+            margin: 15px 0;
+        }
+        .mermaid {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 15px 0;
+            overflow-x: auto;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: left;
+        }
+        th { background: var(--primary-color); color: white; }
+        tr:nth-child(even) { background: #f9f9f9; }
+        code {
+            background: #f4f4f4;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+        }
+        pre {
+            background: #2c3e50;
+            color: #ecf0f1;
+            padding: 15px;
+            border-radius: 8px;
+            overflow-x: auto;
+            margin: 15px 0;
+        }
+        pre code { background: none; color: inherit; }
+        .nav-links {
+            background: var(--primary-color);
+            padding: 10px 20px;
+        }
+        .nav-links a {
+            color: white;
+            text-decoration: none;
+            margin-right: 20px;
+        }
+        .nav-links a:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+    <nav class="nav-links">
+        <a href="index.html">ホーム</a>
+        <a href="technical.html">技術ドキュメント</a>
+        <a href="bugfix-thinking-budget-2025-12-08.html">BUG-008</a>
+        <a href="handoff.html">AI引継ぎ</a>
+    </nav>
+
+    <header>
+        <h1>BUG-009: デモユーザー権限消失修正記録</h1>
+        <p>seedDemoData.ts再投入時にmembersが初期化される問題</p>
+        <div style="margin-top: 15px;">
+            <span class="badge badge-critical">重大度: 高</span>
+            <span class="badge badge-fixed">修正済み</span>
+        </div>
+    </header>
+
+    <div class="container">
+        <!-- 概要 -->
+        <div class="card">
+            <div class="card-header">問題概要</div>
+            <div class="card-body">
+                <h3>症状</h3>
+                <div class="error-box">
+                    <strong>Firestoreエラー:</strong><br>
+                    FirebaseError: Missing or insufficient permissions
+                </div>
+
+                <h3>発生条件</h3>
+                <ul>
+                    <li>デモ環境でシフト生成後、保存を実行</li>
+                    <li>Phase 46でパート職員追加のため<code>seedDemoData.ts</code>を再実行した後</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- 原因分析 -->
+        <div class="card">
+            <div class="card-header">根本原因</div>
+            <div class="card-body">
+                <h3>発生経緯</h3>
+                <div class="mermaid">
+                    sequenceDiagram
+                        participant Dev as 開発者
+                        participant Script as seedDemoData.ts
+                        participant Firestore as Firestore
+
+                        Dev->>Script: パート職員追加を修正
+                        Dev->>Script: npm run seed:demo --reset
+                        Script->>Firestore: facilities.members = [super-admin]
+                        Note over Firestore: デモユーザーが消失！
+
+                        rect rgb(255, 200, 200)
+                        Note over Firestore: デモユーザーは<br/>membersに存在しない
+                        end
+                </div>
+
+                <h3>問題のコード（修正前）</h3>
+                <pre><code>const facilityData: Facility = {
+  facilityId: DEMO_FACILITY_ID,
+  name: DEMO_FACILITY_NAME,
+  members: superAdminId ? [{
+    userId: superAdminId,
+    role: 'super-admin',
+    grantedAt: now,
+  }] : [],  // ← デモユーザーが含まれていない！
+  createdAt: now,
+  updatedAt: now,
+};</code></pre>
+
+                <div class="warning-box">
+                    <strong>セキュリティルールとの関係:</strong><br>
+                    Firestoreルールの<code>isMember()</code>関数は<code>facilities.members</code>配列をチェックする。
+                    デモユーザーがmembersに存在しないため、書き込みが拒否された。
+                </div>
+            </div>
+        </div>
+
+        <!-- 修正内容 -->
+        <div class="card">
+            <div class="card-header">修正内容</div>
+            <div class="card-body">
+                <h3>修正後のロジック</h3>
+                <div class="mermaid">
+                    flowchart TD
+                        A[seedDemoData.ts実行] --> B{施設が存在?}
+                        B -->|Yes| C[既存membersを取得]
+                        B -->|No| D[空配列で初期化]
+                        C --> E[既存membersをコピー]
+                        D --> E
+                        E --> F{super-admin存在?}
+                        F -->|No| G[super-adminを追加]
+                        F -->|Yes| H{デモユーザー存在?}
+                        G --> H
+                        H -->|No| I[デモユーザーをeditorで追加]
+                        H -->|Yes| J[変更なし]
+                        I --> K[施設データを保存]
+                        J --> K
+                </div>
+
+                <div class="fix-box">
+                    <strong>修正コード:</strong>
+                    <pre><code>// 既存のmembersを取得して保持
+const existingFacility = await facilityRef.get();
+let existingMembers: FacilityMember[] = [];
+if (existingFacility.exists) {
+  existingMembers = existingFacility.data()?.members || [];
+}
+
+// super-adminを追加（既存になければ）
+const members: FacilityMember[] = [...existingMembers];
+if (superAdminId && !members.some(m => m.userId === superAdminId)) {
+  members.push({ userId: superAdminId, role: 'super-admin', grantedAt: now });
+}
+
+// デモユーザーを追加（既存になければ）
+const DEMO_USER_UID = 'demo-user-fixed-uid';
+if (!members.some(m => m.userId === DEMO_USER_UID)) {
+  members.push({ userId: DEMO_USER_UID, role: 'editor', grantedAt: now });
+}</code></pre>
+                </div>
+
+                <h3>修正のポイント</h3>
+                <table>
+                    <tr>
+                        <th>項目</th>
+                        <th>修正前</th>
+                        <th>修正後</th>
+                    </tr>
+                    <tr>
+                        <td>既存members</td>
+                        <td>削除される</td>
+                        <td>保持される</td>
+                    </tr>
+                    <tr>
+                        <td>デモユーザー</td>
+                        <td>含まれない</td>
+                        <td>自動追加（editor権限）</td>
+                    </tr>
+                    <tr>
+                        <td>createdAt</td>
+                        <td>常に現在時刻</td>
+                        <td>既存値を保持</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+
+        <!-- 関連BUG -->
+        <div class="card">
+            <div class="card-header">同セッションで発生したBUG</div>
+            <div class="card-body">
+                <table>
+                    <tr>
+                        <th>BUG ID</th>
+                        <th>問題</th>
+                        <th>解決策</th>
+                    </tr>
+                    <tr>
+                        <td><a href="bugfix-thinking-budget-2025-12-08.html">BUG-008</a></td>
+                        <td>thinkingBudget過消費でMAX_TOKENSエラー</td>
+                        <td>thinkingBudget: 16384で制限</td>
+                    </tr>
+                    <tr>
+                        <td><strong>BUG-009</strong></td>
+                        <td>seedDemoData.ts再投入でmembers消失</td>
+                        <td>既存membersを保持、デモユーザー自動追加</td>
+                    </tr>
+                </table>
+
+                <div class="mermaid">
+                    timeline
+                        title 2025-12-08 バグ修正タイムライン
+                        section BUG-008
+                            パート職員追加 : seedDemoData.ts修正
+                            シフト生成失敗 : MAX_TOKENSエラー
+                            thinkingBudget追加 : Cloud Functions更新
+                        section BUG-009
+                            権限エラー発生 : Missing permissions
+                            原因特定 : members消失
+                            seedDemoData.ts修正 : 既存members保持
+                </div>
+            </div>
+        </div>
+
+        <!-- 学び -->
+        <div class="card">
+            <div class="card-header">学びと再発防止</div>
+            <div class="card-body">
+                <h3>重要な学び</h3>
+                <ol>
+                    <li><strong>データ再投入時の副作用に注意</strong>: 既存データを上書きする際、意図しないデータ削除が起こり得る</li>
+                    <li><strong>権限問題はログに現れにくい</strong>: クライアント側の「permission denied」だけでは原因特定が困難</li>
+                    <li><strong>デモユーザーの権限は複数箇所で管理</strong>: users.facilities[].role と facilities.members[].role の両方が必要</li>
+                </ol>
+
+                <h3>再発防止チェックリスト</h3>
+                <ul>
+                    <li>seedDemoData.ts実行後はデモログインで動作確認</li>
+                    <li>既存データを上書きするスクリプトは既存値を保持する設計に</li>
+                    <li>権限エラー時はFirestoreのmembersを確認</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        mermaid.initialize({ startOnLoad: true, theme: 'default' });
+    </script>
+</body>
+</html>
