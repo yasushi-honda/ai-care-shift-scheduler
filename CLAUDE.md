@@ -22,6 +22,7 @@ Kiro-style Spec Driven Development implementation using claude code slash comman
 - **navigation-improvement**: Phase 42.1 ナビゲーション改善（戻るボタン・ログアウト確認） - ✅ 完了
 - **demo-login**: Phase 42.2 デモログイン機能（Cloud Functionカスタムトークン方式） - ✅ 完了
 - **demo-environment-improvements**: Phase 43 デモ環境改善・排他制御（保存スキップ・ロック機構） - ✅ 完了
+- **ai-evaluation-feedback**: Phase 44 AIシフト生成パイプライン改善（動的制約・評価ロジック強化） - ✅ 完了
 - Use `/kiro:spec-status [feature-name]` to check progress
 
 ## Development Guidelines

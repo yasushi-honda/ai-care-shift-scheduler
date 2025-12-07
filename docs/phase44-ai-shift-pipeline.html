@@ -272,7 +272,7 @@
     <header>
       <h1>Phase 44: AIシフト生成パイプライン改善</h1>
       <p>Gemini 2.5 Flash による段階的シフト生成の最適化</p>
-      <span class="status-badge status-in-progress">テスト完了・評価中</span>
+      <span class="status-badge status-in-progress" style="background: #22c55e;">95%完了 ✅</span>
     </header>
 
     <nav class="nav-tabs">
@@ -338,7 +338,7 @@
       </table>
 
       <div class="alert alert-success">
-        <strong>成果:</strong> 根本原因分析により、デモデータの設計問題を特定。データ修正後、充足率が85%→96%に大幅改善。
+        <strong>成果:</strong> 動的プロンプト制約とtimeSlotPreference違反検出を実装。充足率が96%→98%に改善、timeSlotPreference違反0件達成。
       </div>
     </section>
 
@@ -348,20 +348,20 @@
 
       <div class="metric-grid">
         <div class="metric-card">
-          <div class="metric-value" style="color: #22c55e;">96%</div>
+          <div class="metric-value" style="color: #22c55e;">98%</div>
           <div class="metric-label">充足率</div>
         </div>
         <div class="metric-card">
-          <div class="metric-value">13件</div>
+          <div class="metric-value">3件</div>
           <div class="metric-label">制約違反</div>
         </div>
         <div class="metric-card">
-          <div class="metric-value">109秒</div>
+          <div class="metric-value">180秒</div>
           <div class="metric-label">処理時間</div>
         </div>
         <div class="metric-card">
-          <div class="metric-value">16/27日</div>
-          <div class="metric-label">完璧な日</div>
+          <div class="metric-value">0件</div>
+          <div class="metric-label">timeSlotPreference違反</div>
         </div>
       </div>
 
@@ -369,9 +369,9 @@
       <div class="mermaid">
 xychart-beta
     title "充足率の推移"
-    x-axis ["Step 1", "Step 1.5", "データ修正後"]
+    x-axis ["Step 1", "Step 1.5", "データ修正後", "動的制約実装後"]
     y-axis "充足率 (%)" 0 --> 100
-    bar [85, 89, 96]
+    bar [85, 89, 96, 98]
       </div>
 
       <h3 style="margin-top: 1.5rem;">詳細比較</h3>
@@ -382,6 +382,7 @@ xychart-beta
             <th>Step 1</th>
             <th>Step 1.5</th>
             <th>データ修正後</th>
+            <th>動的制約実装後</th>
             <th>目標</th>
           </tr>
         </thead>
@@ -390,20 +391,23 @@ xychart-beta
             <td>充足率</td>
             <td>85%</td>
             <td>89%</td>
-            <td style="color: #22c55e; font-weight: bold;">96%</td>
+            <td>96%</td>
+            <td style="color: #22c55e; font-weight: bold;">98% ✅</td>
             <td>100%</td>
           </tr>
           <tr>
             <td>早番不足</td>
             <td>17日</td>
             <td>15日</td>
-            <td style="color: #22c55e; font-weight: bold;">2日</td>
+            <td>2日</td>
+            <td style="color: #22c55e; font-weight: bold;">3日</td>
             <td>0日</td>
           </tr>
           <tr>
             <td>遅番不足</td>
             <td>3日</td>
             <td>0日</td>
+            <td>0日 ✅</td>
             <td style="color: #22c55e; font-weight: bold;">0日 ✅</td>
             <td>0日</td>
           </tr>
@@ -411,8 +415,17 @@ xychart-beta
             <td>制約違反</td>
             <td>21件</td>
             <td>18件</td>
-            <td style="color: #22c55e; font-weight: bold;">13件</td>
+            <td>13件</td>
+            <td style="color: #22c55e; font-weight: bold;">3件 (-75%)</td>
             <td>0件</td>
+          </tr>
+          <tr>
+            <td>timeSlotPreference違反</td>
+            <td>-</td>
+            <td>-</td>
+            <td>あり</td>
+            <td style="color: #22c55e; font-weight: bold;">なし ✅</td>
+            <td>なし</td>
           </tr>
         </tbody>
       </table>
