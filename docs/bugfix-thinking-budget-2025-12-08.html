@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BUG-008: thinkingBudget制限修正記録 - AI介護シフトスケジューラー</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+    <style>
+        :root {
+            --primary-color: #2c3e50;
+            --secondary-color: #3498db;
+            --success-color: #27ae60;
+            --danger-color: #e74c3c;
+            --warning-color: #f39c12;
+            --bg-color: #ecf0f1;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.6;
+            color: var(--primary-color);
+            background: var(--bg-color);
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        header {
+            background: linear-gradient(135deg, var(--danger-color), #c0392b);
+            color: white;
+            padding: 30px 20px;
+            text-align: center;
+        }
+        header h1 { font-size: 1.8rem; margin-bottom: 10px; }
+        header p { opacity: 0.9; }
+        .badge {
+            display: inline-block;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: bold;
+            margin: 5px;
+        }
+        .badge-critical { background: #c0392b; color: white; }
+        .badge-fixed { background: var(--success-color); color: white; }
+        .card {
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin: 20px 0;
+            overflow: hidden;
+        }
+        .card-header {
+            background: var(--primary-color);
+            color: white;
+            padding: 15px 20px;
+            font-weight: bold;
+        }
+        .card-body { padding: 20px; }
+        .error-box {
+            background: #fdedec;
+            border-left: 4px solid var(--danger-color);
+            padding: 15px;
+            margin: 15px 0;
+            font-family: monospace;
+            font-size: 0.9rem;
+            overflow-x: auto;
+        }
+        .fix-box {
+            background: #eafaf1;
+            border-left: 4px solid var(--success-color);
+            padding: 15px;
+            margin: 15px 0;
+        }
+        .warning-box {
+            background: #fef9e7;
+            border-left: 4px solid var(--warning-color);
+            padding: 15px;
+            margin: 15px 0;
+        }
+        .mermaid {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 15px 0;
+            overflow-x: auto;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: left;
+        }
+        th { background: var(--primary-color); color: white; }
+        tr:nth-child(even) { background: #f9f9f9; }
+        code {
+            background: #f4f4f4;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+        }
+        pre {
+            background: #2c3e50;
+            color: #ecf0f1;
+            padding: 15px;
+            border-radius: 8px;
+            overflow-x: auto;
+            margin: 15px 0;
+        }
+        pre code { background: none; color: inherit; }
+        .nav-links {
+            background: var(--primary-color);
+            padding: 10px 20px;
+        }
+        .nav-links a {
+            color: white;
+            text-decoration: none;
+            margin-right: 20px;
+        }
+        .nav-links a:hover { text-decoration: underline; }
+        .timeline {
+            position: relative;
+            padding-left: 30px;
+        }
+        .timeline::before {
+            content: '';
+            position: absolute;
+            left: 10px;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: var(--secondary-color);
+        }
+        .timeline-item {
+            position: relative;
+            margin-bottom: 20px;
+        }
+        .timeline-item::before {
+            content: '';
+            position: absolute;
+            left: -24px;
+            top: 5px;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: var(--secondary-color);
+        }
+        .highlight { background: #fff3cd; padding: 2px 5px; border-radius: 3px; }
+        .metric-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        .metric-card {
+            background: linear-gradient(135deg, var(--secondary-color), #2980b9);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+        }
+        .metric-card.danger {
+            background: linear-gradient(135deg, var(--danger-color), #c0392b);
+        }
+        .metric-card.success {
+            background: linear-gradient(135deg, var(--success-color), #1e8449);
+        }
+        .metric-value { font-size: 2rem; font-weight: bold; }
+        .metric-label { font-size: 0.9rem; opacity: 0.9; }
+    </style>
+</head>
+<body>
+    <nav class="nav-links">
+        <a href="index.html">ホーム</a>
+        <a href="technical.html">技術ドキュメント</a>
+        <a href="postmortem-gemini-bugs-2025-12-05.html">Geminiバグポストモーテム</a>
+        <a href="handoff.html">AI引継ぎ</a>
+    </nav>
+
+    <header>
+        <h1>BUG-008: thinkingBudget制限修正記録</h1>
+        <p>Gemini 2.5 Flash思考トークン過消費によるMAX_TOKENSエラー</p>
+        <div style="margin-top: 15px;">
+            <span class="badge badge-critical">重大度: 高</span>
+            <span class="badge badge-fixed">修正済み</span>
+        </div>
+    </header>
+
+    <div class="container">
+        <!-- 概要 -->
+        <div class="card">
+            <div class="card-header">問題概要</div>
+            <div class="card-body">
+                <h3>症状</h3>
+                <div class="error-box">
+                    <strong>コンソールエラー:</strong><br>
+                    Failed to parse Gemini JSON response: Unexpected end of JSON input<br><br>
+                    <strong>HTTPレスポンス:</strong><br>
+                    500 Internal Server Error
+                </div>
+
+                <h3>発生条件</h3>
+                <ul>
+                    <li>デモ環境でシフト生成を実行</li>
+                    <li>スタッフ数: 12名（常勤8名 + パート4名）</li>
+                    <li>Phase 46で追加したパート職員4名が原因でトリガー</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- トークン消費状況 -->
+        <div class="card">
+            <div class="card-header">Cloud Functionsログ分析</div>
+            <div class="card-body">
+                <h3>Vertex AI レスポンス詳細</h3>
+                <pre><code>{
+  "finishReason": "MAX_TOKENS",  // 通常は "STOP"
+  "responseLength": 0,           // JSON出力なし！
+  "usageMetadata": {
+    "promptTokenCount": 4523,
+    "thoughtsTokenCount": 65535,  // 全トークンを思考に消費
+    "candidatesTokenCount": 0,    // 出力用トークンなし
+    "totalTokenCount": 70058
+  }
+}</code></pre>
+
+                <div class="metric-grid">
+                    <div class="metric-card danger">
+                        <div class="metric-value">65,535</div>
+                        <div class="metric-label">思考トークン消費</div>
+                    </div>
+                    <div class="metric-card danger">
+                        <div class="metric-value">0</div>
+                        <div class="metric-label">出力トークン</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-value">65,536</div>
+                        <div class="metric-label">maxOutputTokens設定</div>
+                    </div>
+                </div>
+
+                <div class="warning-box">
+                    <strong>根本原因:</strong> Gemini 2.5 Flashの思考モードは <code>maxOutputTokens</code> の予算から思考トークンを消費する。
+                    思考が全予算を使い切ると、出力用トークンが0になりJSONレスポンスが空になる。
+                </div>
+            </div>
+        </div>
+
+        <!-- 問題の図解 -->
+        <div class="card">
+            <div class="card-header">トークン配分の問題</div>
+            <div class="card-body">
+                <div class="mermaid">
+                    pie showData
+                        title "修正前のトークン配分 (BUG状態)"
+                        "思考トークン" : 65535
+                        "出力トークン" : 0
+                        "未使用" : 1
+                </div>
+
+                <div class="mermaid">
+                    pie showData
+                        title "修正後のトークン配分 (正常)"
+                        "思考トークン (制限)" : 16384
+                        "出力トークン" : 20000
+                        "予備" : 29152
+                </div>
+            </div>
+        </div>
+
+        <!-- 修正内容 -->
+        <div class="card">
+            <div class="card-header">修正内容</div>
+            <div class="card-body">
+                <h3>解決策: thinkingBudget制限の追加</h3>
+                <p>Gemini 2.5 Flashには <code>thinkingConfig.thinkingBudget</code> パラメータがあり、思考トークンの上限を設定できる（範囲: 0-24576）。</p>
+
+                <div class="fix-box">
+                    <strong>修正コード (phased-generation.ts):</strong>
+                    <pre><code>generationConfig: {
+  maxOutputTokens: 65536,
+  // 思考トークンを制限（12名スタッフで65535トークン使い切りエラー対策）
+  thinkingConfig: {
+    thinkingBudget: 16384,  // 思考に16K、残りを出力に使用
+  },
+}</code></pre>
+                </div>
+
+                <h3>修正箇所</h3>
+                <table>
+                    <tr>
+                        <th>ファイル</th>
+                        <th>関数</th>
+                        <th>thinkingBudget</th>
+                        <th>理由</th>
+                    </tr>
+                    <tr>
+                        <td>phased-generation.ts</td>
+                        <td>generateSkeleton</td>
+                        <td>16384</td>
+                        <td>全体構造生成、複雑な制約考慮</td>
+                    </tr>
+                    <tr>
+                        <td>phased-generation.ts</td>
+                        <td>generateDetailedShifts</td>
+                        <td>8192</td>
+                        <td>バッチ処理、スケルトン参照で思考量削減</td>
+                    </tr>
+                    <tr>
+                        <td>shift-generation.ts</td>
+                        <td>小規模一括生成</td>
+                        <td>16384</td>
+                        <td>5名以下、一括で全制約を考慮</td>
+                    </tr>
+                </table>
+
+                <h3>依存関係の更新</h3>
+                <pre><code>// functions/package.json
+"@google-cloud/vertexai": "^1.10.0"  // 1.9.0から更新</code></pre>
+            </div>
+        </div>
+
+        <!-- 関連バグ -->
+        <div class="card">
+            <div class="card-header">関連するGeminiバグ履歴</div>
+            <div class="card-body">
+                <div class="mermaid">
+                    timeline
+                        title Gemini思考モード関連バグの系譜
+                        section 2025-12-05
+                            BUG-003 : maxOutputTokens 8192不足
+                                    : 解決策: 65536に増加
+                            BUG-004 : タイムアウト2分
+                                    : 解決策: 5分に延長
+                        section 2025-12-08
+                            BUG-008 : thinkingBudget無制限
+                                    : 解決策: 16384/8192に制限
+                </div>
+
+                <table>
+                    <tr>
+                        <th>BUG ID</th>
+                        <th>問題</th>
+                        <th>解決策</th>
+                        <th>関連性</th>
+                    </tr>
+                    <tr>
+                        <td>BUG-003</td>
+                        <td>maxOutputTokens 8192不足</td>
+                        <td>65536に増加</td>
+                        <td>思考モードトークン問題</td>
+                    </tr>
+                    <tr>
+                        <td>BUG-004</td>
+                        <td>タイムアウト2分</td>
+                        <td>5分に延長</td>
+                        <td>思考モード処理時間</td>
+                    </tr>
+                    <tr>
+                        <td><strong>BUG-008</strong></td>
+                        <td>thinkingBudget無制限</td>
+                        <td>16384/8192に制限</td>
+                        <td>思考トークン過消費</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+
+        <!-- シーケンス図 -->
+        <div class="card">
+            <div class="card-header">修正前後の処理フロー</div>
+            <div class="card-body">
+                <h3>修正前（BUG状態）</h3>
+                <div class="mermaid">
+                    sequenceDiagram
+                        participant UI as フロントエンド
+                        participant CF as Cloud Functions
+                        participant Gemini as Gemini 2.5 Flash
+
+                        UI->>CF: シフト生成リクエスト（12名）
+                        CF->>Gemini: generateContent (maxOutputTokens: 65536)
+                        Note over Gemini: 思考開始...
+                        Note over Gemini: 12名の制約を考慮
+                        Note over Gemini: 思考トークン: 65,535消費
+                        Note over Gemini: 出力トークン: 0残り
+                        Gemini-->>CF: finishReason: MAX_TOKENS, response: ""
+                        CF-->>UI: 500 Error (JSON Parse Error)
+                </div>
+
+                <h3>修正後（正常）</h3>
+                <div class="mermaid">
+                    sequenceDiagram
+                        participant UI as フロントエンド
+                        participant CF as Cloud Functions
+                        participant Gemini as Gemini 2.5 Flash
+
+                        UI->>CF: シフト生成リクエスト（12名）
+                        CF->>Gemini: generateContent (thinkingBudget: 16384)
+                        Note over Gemini: 思考開始...
+                        Note over Gemini: 思考トークン: 16,384で制限
+                        Note over Gemini: 出力トークン: 残り49,152
+                        Gemini-->>CF: finishReason: STOP, response: {valid JSON}
+                        CF-->>UI: 200 OK (シフトデータ)
+                </div>
+            </div>
+        </div>
+
+        <!-- 学び -->
+        <div class="card">
+            <div class="card-header">学びと再発防止</div>
+            <div class="card-body">
+                <h3>重要な学び</h3>
+                <ol>
+                    <li><strong>思考モードはトークン予算を共有する</strong>: <code>maxOutputTokens</code> を増やしても、思考がすべて消費すれば出力は空になる</li>
+                    <li><strong>スケールに注意</strong>: 8名では問題なくても、12名では破綻することがある</li>
+                    <li><strong>明示的な制限が重要</strong>: デフォルト（制限なし）に頼らず、明示的にbudgetを設定する</li>
+                </ol>
+
+                <h3>推奨設定ルール</h3>
+                <div class="fix-box">
+                    <pre><code>// 常にthinkingBudgetを明示的に設定すること
+thinkingConfig: {
+  thinkingBudget: 16384,  // 最大24576、通常16384推奨
+}</code></pre>
+                </div>
+
+                <h3>関連コミット</h3>
+                <p><code>d96aee3</code> - fix: Gemini 2.5 Flash thinkingBudget制限を追加</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        mermaid.initialize({ startOnLoad: true, theme: 'default' });
+    </script>
+</body>
+</html>

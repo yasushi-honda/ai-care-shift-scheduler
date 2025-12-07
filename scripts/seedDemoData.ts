@@ -621,15 +621,38 @@ async function main() {
     superAdminId = usersSnapshot.docs[0].id;
   }
 
-  const facilityData: Facility = {
-    facilityId: DEMO_FACILITY_ID,
-    name: DEMO_FACILITY_NAME,
-    members: superAdminId ? [{
+  // 既存のmembersを取得して保持（デモユーザーを含む）
+  const existingFacility = await facilityRef.get();
+  let existingMembers: FacilityMember[] = [];
+  if (existingFacility.exists) {
+    existingMembers = existingFacility.data()?.members || [];
+  }
+
+  // super-adminを追加（既存になければ）
+  const members: FacilityMember[] = [...existingMembers];
+  if (superAdminId && !members.some(m => m.userId === superAdminId)) {
+    members.push({
       userId: superAdminId,
       role: 'super-admin',
       grantedAt: now,
-    }] : [],
-    createdAt: now,
+    });
+  }
+
+  // デモユーザーを追加（既存になければ）
+  const DEMO_USER_UID = 'demo-user-fixed-uid';
+  if (!members.some(m => m.userId === DEMO_USER_UID)) {
+    members.push({
+      userId: DEMO_USER_UID,
+      role: 'editor',  // Phase 43.2.1: 保存可能にするためeditor
+      grantedAt: now,
+    });
+  }
+
+  const facilityData: Facility = {
+    facilityId: DEMO_FACILITY_ID,
+    name: DEMO_FACILITY_NAME,
+    members,
+    createdAt: existingFacility.exists ? existingFacility.data()?.createdAt : now,
     updatedAt: now,
   };
 

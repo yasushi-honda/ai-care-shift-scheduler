@@ -491,6 +491,26 @@ Gemini 2.5 Flashの「思考モード」は`maxOutputTokens`の予算から思�
 
 `maxOutputTokens: 8192`では思考だけでトークンを使い切り、出力が空になる。
 
+### thinkingBudget制限必須（BUG-008教訓）
+
+スタッフ数が増加すると思考トークン消費が急増し、`maxOutputTokens`を全て消費してしまう場合がある。
+必ず`thinkingConfig.thinkingBudget`で思考トークンを制限すること：
+
+```typescript
+generationConfig: {
+  maxOutputTokens: 65536,
+  thinkingConfig: {
+    thinkingBudget: 16384,  // ❗ 必須（最大24576、通常16384推奨）
+  },
+}
+```
+
+| 処理種別 | thinkingBudget | 理由 |
+|----------|----------------|------|
+| generateSkeleton | 16384 | 全体構造生成、複雑な制約考慮 |
+| generateDetailedShifts | 8192 | バッチ処理、スケルトン参照で思考量削減 |
+| 小規模一括生成 | 16384 | 5名以下、一括で全制約を考慮 |
+
 ### propertyOrdering必須（BUG-002教訓）
 
 responseSchemaには必ず`propertyOrdering`を指定：
@@ -537,8 +557,10 @@ setTimeout(() => controller.abort(), 180000);  // ❗ 3分
 - [BUG-004修正記録](.kiro/bugfix-timeout-2025-12-05.md) - タイムアウト
 - [BUG-005修正記録](.kiro/bugfix-evaluation-panel-display-2025-12-06.md) - Firestoreリスナー競合
 - [BUG-006修正記録](.kiro/specs/demo-login/setup-guide.md) - Cloud Function IAM権限
+- [BUG-007修正記録](.kiro/bugfix-demo-data-sync-2025-12-08.md) - デモデータ同期
+- [BUG-008修正記録](.kiro/bugfix-thinking-budget-2025-12-08.md) - thinkingBudget制限
 - [ポストモーテム](.kiro/postmortem-gemini-bugs-2025-12-05.md) - 全体分析
-- Serenaメモリ: `gemini_region_critical_rule`, `gemini_max_output_tokens_critical_rule`, `cloud_function_custom_token_iam`
+- Serenaメモリ: `gemini_region_critical_rule`, `gemini_max_output_tokens_critical_rule`, `gemini_thinking_budget_critical_rule`, `cloud_function_custom_token_iam`
 
 ---
 
