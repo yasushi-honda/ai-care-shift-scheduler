@@ -472,6 +472,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   // Phase 43: デモ環境判定
+  // デモ環境制限はデモアカウントでログインした場合のみ適用
+  // 本番アカウントでサンプル介護施設にアクセスした場合は通常通り操作可能
   const isDemoUser = useMemo(() => {
     return userProfile?.provider === 'demo' || currentUser?.uid === DEMO_USER_UID;
   }, [userProfile, currentUser]);
@@ -480,9 +482,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return selectedFacilityId === DEMO_FACILITY_ID;
   }, [selectedFacilityId]);
 
+  // デモ環境制限はデモユーザーの場合のみ（施設単体では判定しない）
   const isDemoEnvironment = useMemo(() => {
-    return isDemoUser || isDemoFacility;
-  }, [isDemoUser, isDemoFacility]);
+    return isDemoUser;
+  }, [isDemoUser]);
 
   const value: AuthContextType = {
     currentUser,
