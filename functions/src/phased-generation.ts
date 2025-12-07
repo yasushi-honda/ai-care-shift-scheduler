@@ -109,36 +109,47 @@ export function parseGeminiJsonResponse(responseText: string): any {
 /**
  * Phase 1: 骨子生成用スキーマ
  */
-function getSkeletonSchema(daysInMonth: number) {
+function getSkeletonSchema(daysInMonth: number, hasNightShift: boolean) {
+  // 夜勤がない場合は夜勤関連フィールドを含めない
+  const staffProperties: Record<string, any> = {
+    staffId: { type: 'string', description: 'スタッフID' },
+    staffName: { type: 'string', description: 'スタッフ名' },
+    restDays: {
+      type: 'array',
+      description: '休日の日付リスト（1-31の数値配列）',
+      items: { type: 'integer', minimum: 1, maximum: daysInMonth },
+    },
+  };
+
+  const requiredFields = ['staffId', 'staffName', 'restDays'];
+  const propertyOrder = ['staffId', 'staffName', 'restDays'];
+
+  if (hasNightShift) {
+    staffProperties.nightShiftDays = {
+      type: 'array',
+      description: '夜勤の日付リスト（1-31の数値配列）',
+      items: { type: 'integer', minimum: 1, maximum: daysInMonth },
+    };
+    staffProperties.nightShiftFollowupDays = {
+      type: 'array',
+      description: '夜勤明け休み・公休の日付リスト（1-31の数値配列）',
+      items: { type: 'integer', minimum: 1, maximum: daysInMonth },
+    };
+    requiredFields.push('nightShiftDays', 'nightShiftFollowupDays');
+    propertyOrder.push('nightShiftDays', 'nightShiftFollowupDays');
+  }
+
   return {
     type: 'object',
     properties: {
       staffSchedules: {
         type: 'array',
-        description: '全スタッフの休日・夜勤パターン（骨子）',
+        description: '全スタッフの休日パターン（骨子）',
         items: {
           type: 'object',
-          properties: {
-            staffId: { type: 'string', description: 'スタッフID' },
-            staffName: { type: 'string', description: 'スタッフ名' },
-            restDays: {
-              type: 'array',
-              description: '休日の日付リスト（1-31の数値配列）',
-              items: { type: 'integer', minimum: 1, maximum: daysInMonth },
-            },
-            nightShiftDays: {
-              type: 'array',
-              description: '夜勤の日付リスト（1-31の数値配列）',
-              items: { type: 'integer', minimum: 1, maximum: daysInMonth },
-            },
-            nightShiftFollowupDays: {
-              type: 'array',
-              description: '夜勤明け休み・公休の日付リスト（1-31の数値配列）',
-              items: { type: 'integer', minimum: 1, maximum: daysInMonth },
-            },
-          },
-          propertyOrdering: ['staffId', 'staffName', 'restDays', 'nightShiftDays', 'nightShiftFollowupDays'],
-          required: ['staffId', 'staffName', 'restDays', 'nightShiftDays', 'nightShiftFollowupDays'],
+          properties: staffProperties,
+          propertyOrdering: propertyOrder,
+          required: requiredFields,
         },
       },
     },
@@ -154,16 +165,27 @@ function buildSkeletonPrompt(
   staffList: Staff[],
   requirements: ShiftRequirement,
   leaveRequests: LeaveRequest,
-  daysInMonth: number
+  daysInMonth: number,
+  hasNightShift: boolean
 ): string {
+  // シフト種類名を取得
+  const shiftTypeNames = (requirements.timeSlots || []).map(t => t.name).join('、');
+
   const staffInfo = staffList
-    .map((s) => `- ${s.name}(ID:${s.id}): 週${s.weeklyWorkCount.hope}回希望, 夜勤専従=${s.isNightShiftOnly}`)
+    .map((s) => {
+      const baseInfo = `- ${s.name}(ID:${s.id}): 週${s.weeklyWorkCount.hope}回希望`;
+      return hasNightShift
+        ? `${baseInfo}, 夜勤専従=${s.isNightShiftOnly}`
+        : baseInfo;
+    })
     .join('\n');
 
-  return `
+  // 夜勤がある場合とない場合で異なるプロンプト
+  if (hasNightShift) {
+    return `
 あなたは介護施設のシフト管理AIです。
 まず、全スタッフの「休日」「夜勤日」「夜勤明け休み・公休」のパターン（骨子）だけを決定してください。
-詳細なシフト区分（早番・日勤・遅番など）は後で決めるので、今回は骨子のみです。
+詳細なシフト区分（${shiftTypeNames}など）は後で決めるので、今回は骨子のみです。
 
 # スタッフ情報（全${staffList.length}名）
 ${staffInfo}
@@ -183,7 +205,7 @@ ${staffInfo}
 - 休日を公平に分散させる
 
 # 出力形式
-各スタッフの骨子をJSONで出力してください。以下の順序で各プロパティを記述してください：
+各スタッフの骨子をJSONで出力してください：
 - staffId: スタッフID（文字列）
 - staffName: スタッフ名（文字列）
 - restDays: 休日の日付リスト（例: [1,5,9,13,17,21,25,29]）
@@ -192,6 +214,41 @@ ${staffInfo}
 
 重要：全${staffList.length}名分の骨子を必ず出力してください。
 `;
+  } else {
+    // デイサービスなど夜勤がない施設の場合
+    return `
+あなたはデイサービス（通所介護）のシフト管理AIです。
+まず、全スタッフの「休日」のパターン（骨子）だけを決定してください。
+詳細なシフト区分（${shiftTypeNames}）は後で決めるので、今回は骨子のみです。
+
+**重要**: この施設はデイサービスのため、**夜勤はありません**。日中営業のみです。
+
+# スタッフ情報（全${staffList.length}名）
+${staffInfo}
+
+# 対象期間
+- ${requirements.targetMonth}（全${daysInMonth}日間）
+
+# 制約条件
+## 必須条件
+- 各日、各時間帯で必要な人員体制（${JSON.stringify(requirements.requirements)}）を満たすこと
+- スタッフの休暇希望（${JSON.stringify(leaveRequests)}）を必ず反映すること
+- スタッフの勤務可能曜日を尊重すること
+
+## 努力目標
+- スタッフの希望週勤務回数に近づける
+- 休日を公平に分散させる
+
+# 出力形式
+各スタッフの骨子をJSONで出力してください：
+- staffId: スタッフID（文字列）
+- staffName: スタッフ名（文字列）
+- restDays: 休日の日付リスト（例: [4,5,11,12,18,19,25,26]）
+  - 日曜日（4,11,18,25）は営業日でなければ休日にする
+
+重要：全${staffList.length}名分の骨子を必ず出力してください。
+`;
+  }
 }
 
 /**
@@ -207,6 +264,10 @@ export async function generateSkeleton(
   const actualDaysInMonth = new Date(year, month, 0).getDate();
   const daysInMonth = requirements.daysToGenerate || actualDaysInMonth;
 
+  // 夜勤があるかどうかを判定（シフト名に「夜」が含まれるかどうか）
+  const shiftTypeNames = (requirements.timeSlots || []).map(t => t.name);
+  const hasNightShift = shiftTypeNames.some(name => name.includes('夜'));
+
   const vertexAI = new VertexAI({
     project: projectId,
     location: 'asia-northeast1',
@@ -216,14 +277,15 @@ export async function generateSkeleton(
     model: VERTEX_AI_MODEL,
   });
 
-  const prompt = buildSkeletonPrompt(staffList, requirements, leaveRequests, daysInMonth);
+  const prompt = buildSkeletonPrompt(staffList, requirements, leaveRequests, daysInMonth, hasNightShift);
 
   console.log('🦴 Phase 1: 骨子生成開始...');
+  console.log(`   夜勤シフト: ${hasNightShift ? 'あり' : 'なし（デイサービス）'}`);
   const result = await model.generateContent({
     contents: [{ role: 'user', parts: [{ text: prompt }] }],
     generationConfig: {
       responseMimeType: 'application/json',
-      responseSchema: getSkeletonSchema(daysInMonth) as any,
+      responseSchema: getSkeletonSchema(daysInMonth, hasNightShift) as any,
       temperature: 0.3,
       maxOutputTokens: 65536,  // Gemini 2.5 Flash thinking mode uses tokens from this budget
     },
@@ -254,33 +316,77 @@ function buildDetailedPrompt(
   staffBatch: Staff[],
   skeleton: ScheduleSkeleton,
   requirements: ShiftRequirement,
-  daysInMonth: number
+  daysInMonth: number,
+  hasNightShift: boolean
 ): string {
+  // シフト種類名を取得
+  const shiftTypeNames = (requirements.timeSlots || []).map(t => t.name);
+
   const staffInfo = staffBatch
     .map((s) => {
       const skel = skeleton.staffSchedules.find(sk => sk.staffId === s.id);
-      return `- ${s.name}(ID:${s.id}): 休日=${skel?.restDays.join(',')}, 夜勤=${skel?.nightShiftDays.join(',')}`;
+      if (hasNightShift) {
+        return `- ${s.name}(ID:${s.id}): 休日=${skel?.restDays?.join(',') || 'なし'}, 夜勤=${skel?.nightShiftDays?.join(',') || 'なし'}`;
+      } else {
+        return `- ${s.name}(ID:${s.id}): 休日=${skel?.restDays?.join(',') || 'なし'}`;
+      }
     })
     .join('\n');
 
-  return `
-以下のスタッフの詳細シフトを生成してください。
+  // シフト区分の説明
+  const shiftDescription = requirements.timeSlots.map(t => `- ${t.name}: ${t.start}-${t.end}`).join('\n');
+
+  // 日付の例（正しい年月を使用）
+  const dateExamples = [1, 2, 3].map(d =>
+    `${requirements.targetMonth}-${String(d).padStart(2, '0')}`
+  ).join(', ');
+
+  if (hasNightShift) {
+    return `
+以下のスタッフの${requirements.targetMonth}の詳細シフトを生成してください。
 **骨子（休日・夜勤）は既に決定済み**なので、それに従って詳細シフト区分を割り当ててください。
 
 # 対象スタッフ（${staffBatch.length}名）
 ${staffInfo}
 
 # シフト区分
-${requirements.timeSlots.map(t => `- ${t.name}: ${t.start}-${t.end}`).join('\n')}
+${shiftDescription}
 
 # 制約
 - 骨子で指定された休日・夜勤日は変更しないこと
-- 夜勤以外の日は、早番・日勤・遅番のいずれかを割り当てる
+- 夜勤以外の日は、${shiftTypeNames.filter(n => !n.includes('夜')).join('・')}のいずれかを割り当てる
 - 各日の必要人員を満たすよう調整する
 
 # 出力
-各スタッフの全${daysInMonth}日分の詳細シフトをJSON形式で出力してください。
+各スタッフの${requirements.targetMonth}の全${daysInMonth}日分の詳細シフトをJSON形式で出力してください。
+日付は必ず「${dateExamples}」のように${requirements.targetMonth}の日付を使用してください。
 `;
+  } else {
+    // デイサービスなど夜勤がない施設の場合
+    return `
+以下のスタッフの${requirements.targetMonth}の詳細シフトを生成してください。
+**骨子（休日）は既に決定済み**なので、それに従って詳細シフト区分を割り当ててください。
+
+**重要**: この施設はデイサービスのため、**夜勤はありません**。
+
+# 対象スタッフ（${staffBatch.length}名）
+${staffInfo}
+
+# シフト区分（日中のみ）
+${shiftDescription}
+
+# 制約
+- 骨子で指定された休日は変更しないこと
+- 休日以外の日は、${shiftTypeNames.join('・')}のいずれかを割り当てる
+- 各日の必要人員を満たすよう調整する
+- **夜勤や明け休みは絶対に使用しないこと**
+
+# 出力
+各スタッフの${requirements.targetMonth}の全${daysInMonth}日分の詳細シフトをJSON形式で出力してください。
+日付は必ず「${dateExamples}」のように${requirements.targetMonth}の日付を使用してください。
+shiftTypeは「${shiftTypeNames.join('」「')}」「休」のいずれかを使用してください。
+`;
+  }
 }
 
 /**
@@ -295,6 +401,10 @@ export async function generateDetailedShifts(
   const [year, month] = requirements.targetMonth.split('-').map(Number);
   const actualDaysInMonth = new Date(year, month, 0).getDate();
   const daysInMonth = requirements.daysToGenerate || actualDaysInMonth;
+
+  // 夜勤があるかどうかを判定
+  const shiftTypeNames = (requirements.timeSlots || []).map(t => t.name);
+  const hasNightShift = shiftTypeNames.some(name => name.includes('夜'));
 
   const vertexAI = new VertexAI({
     project: projectId,
@@ -316,13 +426,13 @@ export async function generateDetailedShifts(
 
     console.log(`  バッチ ${batchNum}/${batches}: ${batch.map(s => s.name).join(', ')}`);
 
-    const prompt = buildDetailedPrompt(batch, skeleton, requirements, daysInMonth);
+    const prompt = buildDetailedPrompt(batch, skeleton, requirements, daysInMonth, hasNightShift);
 
     const result = await model.generateContent({
       contents: [{ role: 'user', parts: [{ text: prompt }] }],
       generationConfig: {
         responseMimeType: 'application/json',
-        responseSchema: getDetailedShiftSchema(daysInMonth) as any,
+        responseSchema: getDetailedShiftSchema(requirements.targetMonth, daysInMonth, shiftTypeNames) as any,
         temperature: 0.5,
         maxOutputTokens: 65536,  // Gemini 2.5 Flash thinking mode uses tokens from this budget
       },
@@ -347,9 +457,24 @@ export async function generateDetailedShifts(
 }
 
 /**
- * 詳細シフト用スキーマ（既存のgetShiftSchemaと同じ）
+ * 詳細シフト用スキーマ
+ *
+ * @param targetMonth 対象月 (YYYY-MM)
+ * @param daysInMonth 月の日数
+ * @param shiftTypeNames シフト種類名のリスト（例: ['早番', '日勤', '遅番']）
  */
-function getDetailedShiftSchema(daysInMonth: number) {
+function getDetailedShiftSchema(targetMonth: string, daysInMonth: number, shiftTypeNames: string[]) {
+  // シフト種類に「休」を追加（夜勤がある場合のみ「明け休み」も追加）
+  const hasNightShift = shiftTypeNames.some(name => name.includes('夜'));
+  const allShiftTypes = [...shiftTypeNames, '休'];
+  if (hasNightShift) {
+    allShiftTypes.push('明け休み');
+  }
+  const shiftTypesDescription = allShiftTypes.map(s => `'${s}'`).join(', ');
+
+  // 日付範囲の例
+  const dateExample = `${targetMonth}-01 〜 ${targetMonth}-${String(daysInMonth).padStart(2, '0')}`;
+
   return {
     type: 'object',
     properties: {
@@ -363,12 +488,12 @@ function getDetailedShiftSchema(daysInMonth: number) {
             staffName: { type: 'string', description: 'スタッフ名' },
             monthlyShifts: {
               type: 'array',
-              description: '月間シフト配列',
+              description: `${targetMonth}の月間シフト配列（${daysInMonth}日分）`,
               items: {
                 type: 'object',
                 properties: {
-                  date: { type: 'string', description: '日付（YYYY-MM-DD形式）' },
-                  shiftType: { type: 'string', description: 'シフト種別（早番/日勤/遅番/夜勤/夜勤明け/公休/休日）' },
+                  date: { type: 'string', description: `日付（${dateExample}の形式、必ず${targetMonth}の日付を使用）` },
+                  shiftType: { type: 'string', description: `シフト種別（${shiftTypesDescription}）` },
                 },
                 propertyOrdering: ['date', 'shiftType'],
                 required: ['date', 'shiftType'],

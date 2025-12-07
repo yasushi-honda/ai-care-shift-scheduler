@@ -495,6 +495,44 @@ async function main() {
     process.exit(0);
   }
 
+  // リセットモード: 既存データを削除
+  if (isReset && facilityExists) {
+    console.log('');
+    console.log('🗑️ 既存データを削除中...');
+
+    // スタッフを削除
+    const staffSnapshot = await db.collection(`facilities/${DEMO_FACILITY_ID}/staff`).get();
+    for (const doc of staffSnapshot.docs) {
+      await doc.ref.delete();
+    }
+    console.log(`  ✓ スタッフ: ${staffSnapshot.size}件削除`);
+
+    // シフト要件を削除
+    const reqSnapshot = await db.collection(`facilities/${DEMO_FACILITY_ID}/requirements`).get();
+    for (const doc of reqSnapshot.docs) {
+      await doc.ref.delete();
+    }
+    console.log(`  ✓ シフト要件: ${reqSnapshot.size}件削除`);
+
+    // シフト要件（旧パス shiftRequirements）も削除
+    const oldReqSnapshot = await db.collection(`facilities/${DEMO_FACILITY_ID}/shiftRequirements`).get();
+    for (const doc of oldReqSnapshot.docs) {
+      await doc.ref.delete();
+    }
+    if (oldReqSnapshot.size > 0) {
+      console.log(`  ✓ シフト要件(旧): ${oldReqSnapshot.size}件削除`);
+    }
+
+    // 休暇申請を削除
+    const leaveSnapshot = await db.collection(`facilities/${DEMO_FACILITY_ID}/leaveRequests`).get();
+    for (const doc of leaveSnapshot.docs) {
+      await doc.ref.delete();
+    }
+    console.log(`  ✓ 休暇申請: ${leaveSnapshot.size}件削除`);
+
+    console.log('');
+  }
+
   // バッチ書き込み開始
   console.log('');
   console.log('🔄 デモデータを投入中...');

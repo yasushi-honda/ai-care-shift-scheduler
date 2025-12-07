@@ -1,6 +1,6 @@
 import { onRequest } from 'firebase-functions/v2/https';
 import { VertexAI } from '@google-cloud/vertexai';
-import type { Staff, ShiftRequirement, LeaveRequest, StaffSchedule, AIEvaluationResult } from './types';
+import type { Staff, ShiftRequirement, ShiftTime, LeaveRequest, StaffSchedule, AIEvaluationResult } from './types';
 import { generateSkeleton, generateDetailedShifts, parseGeminiJsonResponse } from './phased-generation';
 import { EvaluationService, createDefaultEvaluation } from './evaluation/evaluationLogic';
 
@@ -141,12 +141,15 @@ export const generateShift = onRequest(
         const prompt = buildShiftPrompt(staffList, requirements, leaveRequests);
         console.log('📝 プロンプト生成完了');
 
+        // シフト種類名をtimeSlotsから抽出
+        const shiftTypeNames = (requirements.timeSlots || []).map((slot: ShiftTime) => slot.name);
+
         console.log('🤖 Vertex AI 呼び出し開始...');
         const result = await model.generateContent({
           contents: [{ role: 'user', parts: [{ text: prompt }] }],
           generationConfig: {
             responseMimeType: 'application/json',
-            responseSchema: getShiftSchema() as any,
+            responseSchema: getShiftSchema(requirements.targetMonth, shiftTypeNames) as any,
             temperature: 0.5,
             maxOutputTokens: 65536,  // Gemini 2.5 Flash thinking mode uses tokens from this budget
           },
@@ -373,8 +376,24 @@ function formatLeaveRequests(leaveRequests: LeaveRequest, staffList: Staff[]): s
 
 /**
  * Vertex AI のJSONスキーマ定義
+ *
+ * @param targetMonth 対象月 (YYYY-MM)
+ * @param shiftTypeNames シフト種類名のリスト（例: ['早番', '日勤', '遅番']）
  */
-function getShiftSchema() {
+function getShiftSchema(targetMonth: string, shiftTypeNames: string[]) {
+  // シフト種類に「休」と「明け休み」を追加（夜勤がある場合のみ明け休み）
+  const hasNightShift = shiftTypeNames.some(name => name.includes('夜'));
+  const allShiftTypes = [...shiftTypeNames, '休'];
+  if (hasNightShift) {
+    allShiftTypes.push('明け休み');
+  }
+  const shiftTypesDescription = allShiftTypes.map(s => `'${s}'`).join(', ');
+
+  // 年月から日付範囲を計算
+  const [year, month] = targetMonth.split('-').map(Number);
+  const daysInMonth = new Date(year, month, 0).getDate();
+  const dateExample = `${targetMonth}-01 〜 ${targetMonth}-${String(daysInMonth).padStart(2, '0')}`;
+
   return {
     type: 'object',
     properties: {
@@ -394,17 +413,17 @@ function getShiftSchema() {
             },
             monthlyShifts: {
               type: 'array',
-              description: 'そのスタッフの1ヶ月分のシフト',
+              description: `そのスタッフの${targetMonth}の1ヶ月分（${daysInMonth}日間）のシフト`,
               items: {
                 type: 'object',
                 properties: {
                   date: {
                     type: 'string',
-                    description: '日付 (YYYY-MM-DD)',
+                    description: `日付 (${dateExample}の形式、必ず${targetMonth}の日付を使用)`,
                   },
                   shiftType: {
                     type: 'string',
-                    description: "シフト区分 ('早番', '日勤', '遅番', '夜勤', '休', '明け休み')",
+                    description: `シフト区分 (${shiftTypesDescription})`,
                   },
                 },
                 propertyOrdering: ['date', 'shiftType'],
