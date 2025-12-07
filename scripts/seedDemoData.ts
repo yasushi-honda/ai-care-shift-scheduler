@@ -299,7 +299,10 @@ const demoStaffs: Omit<Staff, 'createdAt' | 'updatedAt'>[] = [
     weeklyWorkCount: { hope: 5, must: 4 },
     availableWeekdays: [1, 2, 3, 4, 5, 6],  // 月〜土
     unavailableDates: [],
-    timeSlotPreference: '日勤のみ',
+    // Phase 44: 根本原因分析により「いつでも可」に変更
+    // 理由: 日勤のみスタッフが多すぎると早番・遅番に配置できるスタッフが不足する
+    // 詳細: docs/phase44-root-cause-analysis-2025-12-07.md
+    timeSlotPreference: 'いつでも可',
     facilityId: DEMO_FACILITY_ID,
   },
 ];

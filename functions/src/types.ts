@@ -155,6 +155,15 @@ export interface AIEvaluationResult {
   simulation: SimulationResult;
   generatedAt: FirebaseFirestore.Timestamp;
   aiComment?: string;             // AI総合コメント（200文字以内）
+  constraintAnalysis?: {          // Phase 44: スタッフ制約分析結果
+    totalStaff: number;
+    businessDays: number;
+    totalSupplyPersonDays: number;
+    totalRequiredPersonDays: number;
+    isFeasible: boolean;
+    infeasibilityReasons: string[];
+    suggestions: string[];
+  };
 }
 
 /**
