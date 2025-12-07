@@ -1,0 +1,700 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Phase 45: AIシフト生成進行状況表示機能</title>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+  <style>
+    :root {
+      --primary: #2563eb;
+      --secondary: #64748b;
+      --success: #22c55e;
+      --warning: #f59e0b;
+      --danger: #ef4444;
+      --bg: #f8fafc;
+      --card-bg: #ffffff;
+      --text: #1e293b;
+      --border: #e2e8f0;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      padding: 1rem;
+    }
+
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 2rem;
+      padding: 1.5rem;
+      background: linear-gradient(135deg, var(--primary), #1d4ed8);
+      color: white;
+      border-radius: 12px;
+    }
+
+    header h1 {
+      font-size: 1.75rem;
+      margin-bottom: 0.5rem;
+    }
+
+    header p {
+      opacity: 0.9;
+      font-size: 0.95rem;
+    }
+
+    .status-badge {
+      display: inline-block;
+      padding: 0.25rem 0.75rem;
+      border-radius: 9999px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      margin-top: 0.5rem;
+    }
+
+    .status-completed {
+      background: var(--success);
+      color: white;
+    }
+
+    .nav-tabs {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin-bottom: 1.5rem;
+      border-bottom: 2px solid var(--border);
+      padding-bottom: 0.5rem;
+    }
+
+    .nav-tab {
+      padding: 0.5rem 1rem;
+      border: none;
+      background: transparent;
+      cursor: pointer;
+      font-size: 0.9rem;
+      color: var(--secondary);
+      border-radius: 8px 8px 0 0;
+      transition: all 0.2s;
+    }
+
+    .nav-tab:hover {
+      background: var(--border);
+    }
+
+    .nav-tab.active {
+      background: var(--primary);
+      color: white;
+    }
+
+    .tab-content {
+      display: none;
+    }
+
+    .tab-content.active {
+      display: block;
+    }
+
+    .card {
+      background: var(--card-bg);
+      border-radius: 12px;
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      border: 1px solid var(--border);
+    }
+
+    .card h2 {
+      font-size: 1.25rem;
+      margin-bottom: 1rem;
+      color: var(--primary);
+      border-bottom: 2px solid var(--border);
+      padding-bottom: 0.5rem;
+    }
+
+    .card h3 {
+      font-size: 1.1rem;
+      margin: 1rem 0 0.5rem;
+      color: var(--text);
+    }
+
+    .grid {
+      display: grid;
+      gap: 1.5rem;
+    }
+
+    @media (min-width: 768px) {
+      .grid-2 {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.9rem;
+    }
+
+    th, td {
+      padding: 0.75rem;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+    }
+
+    th {
+      background: var(--bg);
+      font-weight: 600;
+    }
+
+    code {
+      background: #f1f5f9;
+      padding: 0.125rem 0.375rem;
+      border-radius: 4px;
+      font-size: 0.85rem;
+    }
+
+    pre {
+      background: #1e293b;
+      color: #e2e8f0;
+      padding: 1rem;
+      border-radius: 8px;
+      overflow-x: auto;
+      font-size: 0.85rem;
+    }
+
+    .mermaid {
+      background: white;
+      padding: 1rem;
+      border-radius: 8px;
+      margin: 1rem 0;
+    }
+
+    ul, ol {
+      padding-left: 1.5rem;
+      margin: 0.5rem 0;
+    }
+
+    li {
+      margin: 0.25rem 0;
+    }
+
+    .back-link {
+      display: inline-block;
+      margin-top: 2rem;
+      padding: 0.75rem 1.5rem;
+      background: var(--primary);
+      color: white;
+      text-decoration: none;
+      border-radius: 8px;
+      transition: background 0.2s;
+    }
+
+    .back-link:hover {
+      background: #1d4ed8;
+    }
+
+    .highlight {
+      background: linear-gradient(120deg, #fef08a 0%, #fde047 100%);
+      padding: 0.125rem 0.25rem;
+      border-radius: 4px;
+    }
+
+    .step-list {
+      list-style: none;
+      padding: 0;
+    }
+
+    .step-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 1rem;
+      padding: 1rem;
+      background: var(--bg);
+      border-radius: 8px;
+      margin-bottom: 0.5rem;
+    }
+
+    .step-number {
+      width: 32px;
+      height: 32px;
+      background: var(--primary);
+      color: white;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 600;
+      flex-shrink: 0;
+    }
+
+    .step-content h4 {
+      font-size: 1rem;
+      margin-bottom: 0.25rem;
+    }
+
+    .step-content p {
+      font-size: 0.9rem;
+      color: var(--secondary);
+    }
+
+    .feature-box {
+      padding: 1rem;
+      border-left: 4px solid var(--primary);
+      background: #eff6ff;
+      border-radius: 0 8px 8px 0;
+      margin: 1rem 0;
+    }
+
+    .time-badge {
+      display: inline-block;
+      padding: 0.125rem 0.5rem;
+      background: var(--secondary);
+      color: white;
+      border-radius: 4px;
+      font-size: 0.75rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>Phase 45: AIシフト生成進行状況表示機能</h1>
+      <p>AI生成中の待ち時間に視覚的なフィードバックを提供</p>
+      <span class="status-badge status-completed">実装完了</span>
+    </header>
+
+    <div class="nav-tabs">
+      <button class="nav-tab active" data-tab="overview">概要</button>
+      <button class="nav-tab" data-tab="architecture">アーキテクチャ</button>
+      <button class="nav-tab" data-tab="components">コンポーネント</button>
+      <button class="nav-tab" data-tab="implementation">実装詳細</button>
+      <button class="nav-tab" data-tab="timeline">タイムライン</button>
+    </div>
+
+    <!-- 概要タブ -->
+    <div id="overview" class="tab-content active">
+      <div class="grid grid-2">
+        <div class="card">
+          <h2>機能概要</h2>
+          <p>AIシフト生成処理は約2〜3分かかるため、ユーザーに処理状況を視覚的に伝える機能を実装しました。</p>
+
+          <h3>主な機能</h3>
+          <ul>
+            <li>5段階のステップ表示（進行状況の可視化）</li>
+            <li>プログレスバー（時間ベースの進捗表示）</li>
+            <li>経過時間・残り時間の表示</li>
+            <li>キャンセル機能（確認ダイアログ付き）</li>
+            <li>完了・エラー・キャンセル時のフィードバック</li>
+          </ul>
+        </div>
+
+        <div class="card">
+          <h2>技術的アプローチ</h2>
+          <div class="feature-box">
+            <strong>クライアントサイド疑似プログレス方式</strong>
+            <p>Cloud Functionの変更を必要とせず、経過時間に基づいて進行状況を推定表示します。</p>
+          </div>
+
+          <h3>メリット</h3>
+          <ul>
+            <li>バックエンド変更不要</li>
+            <li>既存のAPI設計を維持</li>
+            <li>シンプルな実装</li>
+            <li>アクセシビリティ対応</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>5段階の処理ステップ</h2>
+        <ul class="step-list">
+          <li class="step-item">
+            <span class="step-number">1</span>
+            <div class="step-content">
+              <h4>リクエスト送信中 <span class="time-badge">0秒〜</span></h4>
+              <p>サーバーにリクエストを送信しています...</p>
+            </div>
+          </li>
+          <li class="step-item">
+            <span class="step-number">2</span>
+            <div class="step-content">
+              <h4>AIがシフトを分析中 <span class="time-badge">5秒〜</span></h4>
+              <p>スタッフ情報と制約条件を分析しています...</p>
+            </div>
+          </li>
+          <li class="step-item">
+            <span class="step-number">3</span>
+            <div class="step-content">
+              <h4>シフト案を生成中 <span class="time-badge">30秒〜</span></h4>
+              <p>AIがシフト案を生成しています...</p>
+            </div>
+          </li>
+          <li class="step-item">
+            <span class="step-number">4</span>
+            <div class="step-content">
+              <h4>評価・最適化中 <span class="time-badge">90秒〜</span></h4>
+              <p>生成されたシフトを評価・最適化しています...</p>
+            </div>
+          </li>
+          <li class="step-item">
+            <span class="step-number">5</span>
+            <div class="step-content">
+              <h4>結果を保存中 <span class="time-badge">150秒〜</span></h4>
+              <p>シフトデータを保存しています...</p>
+            </div>
+          </li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- アーキテクチャタブ -->
+    <div id="architecture" class="tab-content">
+      <div class="card">
+        <h2>コンポーネント構成図</h2>
+        <div class="mermaid">
+graph TB
+    subgraph "AIGenerationProgress"
+        A[AIGenerationProgress.tsx] --> B[ProgressSteps.tsx]
+        A --> C[ProgressTimer.tsx]
+        A --> D[ProgressBar.tsx]
+        A --> E[CancelConfirmModal]
+    end
+
+    subgraph "State Management"
+        F[useAIGenerationProgress.ts] --> G[GenerationProgressState]
+        G --> H{status}
+        H --> I[idle]
+        H --> J[generating]
+        H --> K[completed]
+        H --> L[error]
+        H --> M[cancelled]
+    end
+
+    A --> F
+    N[App.tsx] --> A
+    N --> F
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>状態遷移図</h2>
+        <div class="mermaid">
+stateDiagram-v2
+    [*] --> idle
+    idle --> generating: startGeneration()
+    generating --> completed: completeGeneration()
+    generating --> error: failGeneration()
+    generating --> cancelled: cancelGeneration()
+    completed --> idle: reset()
+    error --> idle: reset()
+    cancelled --> idle: reset()
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>シーケンス図</h2>
+        <div class="mermaid">
+sequenceDiagram
+    participant User as ユーザー
+    participant App as App.tsx
+    participant Hook as useAIGenerationProgress
+    participant Progress as AIGenerationProgress
+    participant API as Cloud Function
+
+    User->>App: シフト作成実行ボタンクリック
+    App->>Hook: startGeneration()
+    Hook->>Hook: タイマー開始
+    App->>Progress: 表示開始
+    App->>API: generateShiftSchedule()
+
+    loop 1秒ごと
+        Hook->>Hook: elapsedSeconds++
+        Hook->>Hook: calculateCurrentStep()
+        Progress->>Progress: UI更新
+    end
+
+    alt 成功
+        API-->>App: 結果返却
+        App->>Hook: completeGeneration()
+        Progress->>User: 完了メッセージ表示
+    else エラー
+        API-->>App: エラー
+        App->>Hook: failGeneration(message)
+        Progress->>User: エラーメッセージ表示
+    else キャンセル
+        User->>Progress: キャンセルボタン
+        Progress->>App: onCancel()
+        App->>Hook: cancelGeneration()
+        Progress->>User: キャンセルメッセージ表示
+    end
+        </div>
+      </div>
+    </div>
+
+    <!-- コンポーネントタブ -->
+    <div id="components" class="tab-content">
+      <div class="grid grid-2">
+        <div class="card">
+          <h2>AIGenerationProgress.tsx</h2>
+          <p>メインコンポーネント。サブコンポーネントを統合し、状態に応じた表示を行います。</p>
+
+          <h3>Props</h3>
+          <table>
+            <tr>
+              <th>プロパティ</th>
+              <th>型</th>
+              <th>説明</th>
+            </tr>
+            <tr>
+              <td><code>state</code></td>
+              <td>GenerationProgressState</td>
+              <td>進行状況の状態</td>
+            </tr>
+            <tr>
+              <td><code>onCancel</code></td>
+              <td>() => void</td>
+              <td>キャンセル時のコールバック</td>
+            </tr>
+          </table>
+        </div>
+
+        <div class="card">
+          <h2>useAIGenerationProgress.ts</h2>
+          <p>プログレス状態を管理するカスタムフック。</p>
+
+          <h3>返り値</h3>
+          <table>
+            <tr>
+              <th>プロパティ</th>
+              <th>型</th>
+              <th>説明</th>
+            </tr>
+            <tr>
+              <td><code>state</code></td>
+              <td>GenerationProgressState</td>
+              <td>現在の状態</td>
+            </tr>
+            <tr>
+              <td><code>startGeneration</code></td>
+              <td>() => void</td>
+              <td>生成開始</td>
+            </tr>
+            <tr>
+              <td><code>completeGeneration</code></td>
+              <td>() => void</td>
+              <td>生成完了</td>
+            </tr>
+            <tr>
+              <td><code>failGeneration</code></td>
+              <td>(msg) => void</td>
+              <td>エラー終了</td>
+            </tr>
+            <tr>
+              <td><code>cancelGeneration</code></td>
+              <td>() => void</td>
+              <td>キャンセル</td>
+            </tr>
+            <tr>
+              <td><code>reset</code></td>
+              <td>() => void</td>
+              <td>リセット</td>
+            </tr>
+          </table>
+        </div>
+      </div>
+
+      <div class="grid grid-2">
+        <div class="card">
+          <h2>ProgressSteps.tsx</h2>
+          <p>5段階のステップを縦に並べて表示。現在のステップをハイライト、完了済みステップにチェックマークを表示。</p>
+
+          <h3>機能</h3>
+          <ul>
+            <li>現在のステップをパルスアニメーションで強調</li>
+            <li>完了済みステップに緑のチェックマーク</li>
+            <li>ステップ間の接続線表示</li>
+            <li>レスポンシブ対応（モバイルで説明文を非表示）</li>
+          </ul>
+        </div>
+
+        <div class="card">
+          <h2>ProgressTimer.tsx</h2>
+          <p>経過時間と残り時間を表示。</p>
+
+          <h3>表示パターン</h3>
+          <ul>
+            <li><strong>0〜50%</strong>: 「約2〜3分かかります」</li>
+            <li><strong>50〜100%</strong>: 「残り約 X:XX」</li>
+            <li><strong>100%超過</strong>: 「もう少しお待ちください...」</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>ProgressBar.tsx</h2>
+        <p>プログレスバーを表示。経過時間に基づいて進捗率を計算。</p>
+
+        <h3>機能</h3>
+        <ul>
+          <li>アニメーション付きのプログレスバー</li>
+          <li>シマーエフェクト（光沢の流れるアニメーション）</li>
+          <li>進捗率のパーセンテージ表示</li>
+          <li>アクセシビリティ対応（ARIA属性）</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- 実装詳細タブ -->
+    <div id="implementation" class="tab-content">
+      <div class="card">
+        <h2>ファイル構成</h2>
+        <pre>
+src/
+├── components/
+│   └── AIGenerationProgress/
+│       ├── index.ts                    # エクスポート
+│       ├── types.ts                    # 型定義・定数
+│       ├── AIGenerationProgress.tsx    # メインコンポーネント
+│       ├── ProgressSteps.tsx           # ステップ表示
+│       ├── ProgressTimer.tsx           # 時間表示
+│       └── ProgressBar.tsx             # プログレスバー
+├── hooks/
+│   └── useAIGenerationProgress.ts      # カスタムフック
+└── App.tsx                             # 統合
+        </pre>
+      </div>
+
+      <div class="card">
+        <h2>型定義</h2>
+        <pre>
+type GenerationStatus = 'idle' | 'generating' | 'completed' | 'error' | 'cancelled';
+
+interface StepDefinition {
+  id: number;
+  label: string;
+  description: string;
+  startTimeSeconds: number;
+}
+
+interface GenerationProgressState {
+  status: GenerationStatus;
+  currentStep: number;
+  elapsedSeconds: number;
+  estimatedTotalSeconds: number;
+  errorMessage?: string;
+}
+        </pre>
+      </div>
+
+      <div class="card">
+        <h2>使用方法</h2>
+        <pre>
+// App.tsxでの使用例
+import { AIGenerationProgress } from './src/components/AIGenerationProgress';
+import { useAIGenerationProgress } from './src/hooks/useAIGenerationProgress';
+
+const App = () => {
+  const aiProgress = useAIGenerationProgress();
+
+  const handleGenerateClick = async () => {
+    aiProgress.startGeneration();
+    try {
+      await generateShiftSchedule(...);
+      aiProgress.completeGeneration();
+    } catch (error) {
+      aiProgress.failGeneration(error.message);
+    }
+  };
+
+  return (
+    &lt;div&gt;
+      {aiProgress.state.status === 'generating' && (
+        &lt;AIGenerationProgress
+          state={aiProgress.state}
+          onCancel={() => aiProgress.cancelGeneration()}
+        /&gt;
+      )}
+    &lt;/div&gt;
+  );
+};
+        </pre>
+      </div>
+    </div>
+
+    <!-- タイムラインタブ -->
+    <div id="timeline" class="tab-content">
+      <div class="card">
+        <h2>実装タイムライン</h2>
+        <div class="mermaid">
+gantt
+    title Phase 45 実装スケジュール
+    dateFormat  YYYY-MM-DD
+    section 設計
+    要件定義           :done, req, 2025-12-08, 1d
+    技術設計           :done, design, 2025-12-08, 1d
+    section 実装
+    型定義・フック     :done, types, 2025-12-08, 1d
+    コンポーネント実装  :done, comp, 2025-12-08, 1d
+    App.tsx統合        :done, app, 2025-12-08, 1d
+    section ドキュメント
+    GitHub Pages       :done, docs, 2025-12-08, 1d
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>技術スタック</h2>
+        <table>
+          <tr>
+            <th>カテゴリ</th>
+            <th>技術</th>
+          </tr>
+          <tr>
+            <td>フレームワーク</td>
+            <td>React 19 + TypeScript</td>
+          </tr>
+          <tr>
+            <td>スタイリング</td>
+            <td>TailwindCSS</td>
+          </tr>
+          <tr>
+            <td>状態管理</td>
+            <td>React Hooks (useState, useCallback, useRef)</td>
+          </tr>
+          <tr>
+            <td>アニメーション</td>
+            <td>Tailwind CSS Animation + Keyframes</td>
+          </tr>
+        </table>
+      </div>
+    </div>
+
+    <a href="index.html" class="back-link">← ドキュメント一覧に戻る</a>
+  </div>
+
+  <script>
+    mermaid.initialize({ startOnLoad: true, theme: 'default' });
+
+    document.querySelectorAll('.nav-tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+        tab.classList.add('active');
+        document.getElementById(tab.dataset.tab).classList.add('active');
+        mermaid.init(undefined, document.querySelectorAll('.mermaid'));
+      });
+    });
+  </script>
+</body>
+</html>

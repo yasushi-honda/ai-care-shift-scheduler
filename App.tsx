@@ -40,6 +40,9 @@ import { ActionToolbar } from './src/components/ActionToolbar';
 import { DemoBanner } from './src/components/DemoBanner';
 import { LockStatusModal } from './src/components/LockStatusModal';
 import { LockService, LockInfo } from './src/services/lockService';
+// Phase 45: AI生成プログレス表示
+import { AIGenerationProgress } from './src/components/AIGenerationProgress';
+import { useAIGenerationProgress } from './src/hooks/useAIGenerationProgress';
 
 type ViewMode = 'shift' | 'leaveRequest';
 
@@ -116,6 +119,17 @@ const App: React.FC = () => {
   // Phase 43: 排他制御用state
   const [lockModalOpen, setLockModalOpen] = useState(false);
   const [currentLockInfo, setCurrentLockInfo] = useState<LockInfo | null>(null);
+
+  // Phase 45: AI生成プログレス表示
+  const aiProgress = useAIGenerationProgress();
+
+  // Phase 45: AI生成キャンセルハンドラー
+  const handleCancelGeneration = useCallback(() => {
+    aiProgress.cancelGeneration();
+    setIsLoading(false);
+    setGeneratingSchedule(false);
+    showError('AI生成がキャンセルされました');
+  }, [aiProgress, showError]);
 
   // Phase 31: アンドゥ履歴スタック（最大10件）
   const [undoStack, setUndoStack] = useState<ShiftHistoryEntry[]>([]);
@@ -1005,6 +1019,8 @@ const App: React.FC = () => {
     setIsLoading(true);
     setGeneratingSchedule(true);
     setError(null);
+    // Phase 45: プログレス表示開始
+    aiProgress.startGeneration();
 
     try {
       // Phase 43: ロック取得（デモ環境でも競合防止のため取得）
@@ -1019,6 +1035,8 @@ const App: React.FC = () => {
       if (!lockResult.success) {
         setCurrentLockInfo(lockResult.existingLock ?? null);
         setLockModalOpen(true);
+        // Phase 45: プログレスをキャンセル状態に
+        aiProgress.cancelGeneration();
         return;
       }
 
@@ -1077,6 +1095,8 @@ const App: React.FC = () => {
         }
 
         setViewMode('shift');
+        // Phase 45: プログレス完了
+        aiProgress.completeGeneration();
       } finally {
         // Phase 43: ロック解放
         await LockService.releaseLock(
@@ -1089,11 +1109,13 @@ const App: React.FC = () => {
       const errorMessage = err instanceof Error ? err.message : '不明なエラーが発生しました。';
       setError(errorMessage);
       showError(errorMessage);
+      // Phase 45: プログレスエラー
+      aiProgress.failGeneration(errorMessage);
     } finally {
       setIsLoading(false);
       setGeneratingSchedule(false);
     }
-  }, [staffList, requirements, leaveRequests, selectedFacilityId, currentUser, currentScheduleId, showSuccess, showError, isDemoEnvironment]);
+  }, [staffList, requirements, leaveRequests, selectedFacilityId, currentUser, currentScheduleId, showSuccess, showError, isDemoEnvironment, aiProgress]);
 
   const handleExportCSV = () => {
     if (schedule.length > 0) {
@@ -1528,7 +1550,17 @@ const App: React.FC = () => {
         </footer>
       </aside>
 
-      <main className="flex-1 p-6 flex flex-col overflow-hidden">
+      <main className="flex-1 p-6 flex flex-col overflow-hidden relative">
+        {/* Phase 45: AI生成プログレスオーバーレイ */}
+        {aiProgress.state.status === 'generating' && (
+          <div className="absolute inset-0 bg-slate-100/80 backdrop-blur-sm z-40 flex items-center justify-center">
+            <AIGenerationProgress
+              state={aiProgress.state}
+              onCancel={handleCancelGeneration}
+            />
+          </div>
+        )}
+
         <header className="flex justify-between items-center mb-1">
           <div>
             <h2 className="text-3xl font-bold text-slate-900">{requirements.targetMonth.replace('-', '年 ')}月</h2>

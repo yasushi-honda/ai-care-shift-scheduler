@@ -23,6 +23,7 @@ Kiro-style Spec Driven Development implementation using claude code slash comman
 - **demo-login**: Phase 42.2 デモログイン機能（Cloud Functionカスタムトークン方式） - ✅ 完了
 - **demo-environment-improvements**: Phase 43 デモ環境改善・排他制御（排他ロック・月次レポート連動） - ✅ 完了（Phase 43.2.1で権限修正済み）
 - **ai-evaluation-feedback**: Phase 44 AIシフト生成パイプライン改善（動的制約・評価ロジック強化） - ✅ 完了
+- **ai-generation-progress**: Phase 45 AIシフト生成進行状況表示機能（プログレス表示・UX改善） - 🚧 作業中
 - Use `/kiro:spec-status [feature-name]` to check progress
 
 ## Development Guidelines
