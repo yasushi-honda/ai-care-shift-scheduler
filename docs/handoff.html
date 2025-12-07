@@ -419,7 +419,7 @@ timeline
                 </tr>
                 <tr>
                     <td>権限</td>
-                    <td>viewer（閲覧のみ）</td>
+                    <td>editor（Phase 43.2.1で変更: 保存・AI生成可能）</td>
                 </tr>
                 <tr>
                     <td>Cloud Function</td>
@@ -431,7 +431,8 @@ timeline
             <ul>
                 <li>認証情報はサーバーサイドでのみ保持</li>
                 <li>特定ドメインのみCORS許可</li>
-                <li>viewer権限でデータ変更不可</li>
+                <li>editor権限だが<code>demo-facility-001</code>に限定</li>
+                <li>排他制御（LockService）により複数ユーザー同時編集を防止</li>
             </ul>
 
             <h3>関連ドキュメント</h3>

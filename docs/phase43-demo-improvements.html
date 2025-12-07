@@ -179,6 +179,17 @@
             </table>
         </div>
 
+        <div class="card" style="border-left: 4px solid #F59E0B;">
+            <h2>Phase 43.2.1 バグ修正（2025-12-08）</h2>
+            <p><strong>問題:</strong> Phase 43.2実装後、デモユーザーでシフト保存時に「権限がありません」エラーが発生</p>
+            <p style="margin-top: 0.5rem;"><strong>原因:</strong></p>
+            <ul style="padding-left: 1.5rem; margin: 0.5rem 0;">
+                <li><code>scripts/createDemoUser.ts</code>: デモユーザーに <code>role: 'viewer'</code> を付与</li>
+                <li><code>firestore.rules</code>: <code>schedules</code>への書き込みには <code>editor</code> 権限が必要</li>
+            </ul>
+            <p style="margin-top: 0.5rem;"><strong>修正:</strong> デモユーザーの権限を <code>viewer</code> から <code>editor</code> に変更</p>
+        </div>
+
         <div class="card">
             <h2>Phase 43.1: デモデータ改善</h2>
             <p>デモデータをデイサービス（通所介護）の実態に即した設計に全面修正しました。</p>
@@ -303,7 +314,7 @@ const isDemoEnvironment = isDemoUser;  // NOT: isDemoUser || isDemoFacility</div
 
             <h3 style="font-size: 1rem; margin: 1rem 0 0.5rem;">なぜこの設計か</h3>
             <ul style="font-size: 0.9rem; padding-left: 1.5rem; color: var(--text-secondary);">
-                <li><strong>デモアカウント</strong>: クライアント向け体験用。保存制限あり</li>
+                <li><strong>デモアカウント</strong>: クライアント向け体験用。editor権限でフル機能利用可能（Phase 43.2.1で変更）</li>
                 <li><strong>本番アカウント + サンプル施設</strong>: 開発者テスト用。フル機能利用可能</li>
             </ul>
         </div>

@@ -21,7 +21,7 @@ Kiro-style Spec Driven Development implementation using claude code slash comman
 - **ui-design-improvement**: Phase 42 UIデザイン改善（ボタン統一・アイコン改善） - ✅ 完了
 - **navigation-improvement**: Phase 42.1 ナビゲーション改善（戻るボタン・ログアウト確認） - ✅ 完了
 - **demo-login**: Phase 42.2 デモログイン機能（Cloud Functionカスタムトークン方式） - ✅ 完了
-- **demo-environment-improvements**: Phase 43 デモ環境改善・排他制御（排他ロック・月次レポート連動） - ✅ 完了（Phase 43.2で保存許可に変更）
+- **demo-environment-improvements**: Phase 43 デモ環境改善・排他制御（排他ロック・月次レポート連動） - ✅ 完了（Phase 43.2.1で権限修正済み）
 - **ai-evaluation-feedback**: Phase 44 AIシフト生成パイプライン改善（動的制約・評価ロジック強化） - ✅ 完了
 - Use `/kiro:spec-status [feature-name]` to check progress
 
@@ -641,7 +641,7 @@ gcloud iam service-accounts get-iam-policy \
 
 ## Phase 43 デモ環境設計ルール（重要）
 
-**背景**: 2025-12-07にPhase 43を実装。2025-12-08にPhase 43.2でデモ体験の一貫性を改善。
+**背景**: 2025-12-07にPhase 43を実装。2025-12-08にPhase 43.2でデモ体験の一貫性を改善。Phase 43.2.1で権限エラーを修正。
 
 ### 設計原則（Phase 43.2で更新）
 
@@ -674,6 +674,16 @@ const isDemoEnvironment = isDemoUser;
 | 確定 | ✅ 実行可能・**確定される** |
 | 月次レポート | ✅ 保存したシフトが**集計表示** |
 | 排他制御 | ✅ 複数ユーザー同時アクセス時にロック |
+
+### Phase 43.2.1 権限修正（2025-12-08）
+
+**問題**: Phase 43.2実装後、デモユーザーでシフト保存時に「権限がありません」エラーが発生
+
+**原因**:
+- `scripts/createDemoUser.ts`: デモユーザーに `role: 'viewer'` を付与
+- `firestore.rules`: `schedules`への書き込みには `editor` 権限が必要
+
+**修正**: デモユーザーの権限を `viewer` → `editor` に変更
 
 ### 判定ロジック
 
