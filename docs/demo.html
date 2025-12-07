@@ -10,6 +10,7 @@
             --primary: #4F46E5;
             --primary-dark: #4338CA;
             --success: #10B981;
+            --warning: #F59E0B;
             --bg: #F9FAFB;
             --card: #FFFFFF;
             --text: #111827;
@@ -66,7 +67,7 @@
         }
 
         .container {
-            max-width: 600px;
+            max-width: 700px;
             margin: 0 auto;
             padding: 2rem 1.5rem;
             flex: 1;
@@ -110,6 +111,44 @@
             margin-top: 1rem;
             font-size: 0.875rem;
             color: var(--text-secondary);
+        }
+
+        .facility-info {
+            background: #EEF2FF;
+            border-radius: 0.75rem;
+            padding: 1.25rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .facility-info h3 {
+            font-size: 1rem;
+            color: var(--primary);
+            margin-bottom: 0.75rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .facility-info-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 0.75rem;
+            font-size: 0.875rem;
+        }
+
+        .facility-info-item {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .facility-info-label {
+            color: var(--text-secondary);
+            font-size: 0.75rem;
+        }
+
+        .facility-info-value {
+            font-weight: 600;
+            color: var(--text);
         }
 
         .features {
@@ -180,6 +219,7 @@
             background: var(--card);
             border-radius: 1rem;
             padding: 1.5rem;
+            margin-bottom: 1.5rem;
         }
 
         .steps h3 {
@@ -213,8 +253,80 @@
             flex-shrink: 0;
         }
 
-        .step-text {
-            padding-top: 0.25rem;
+        .step-content {
+            flex: 1;
+        }
+
+        .step-title {
+            font-weight: 600;
+            color: var(--text);
+            margin-bottom: 0.25rem;
+        }
+
+        .step-description {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+        }
+
+        .try-section {
+            background: var(--card);
+            border-radius: 1rem;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .try-section h3 {
+            font-size: 1rem;
+            margin-bottom: 1rem;
+            color: var(--text);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .try-list {
+            list-style: none;
+        }
+
+        .try-list li {
+            padding: 0.75rem 0;
+            border-bottom: 1px solid var(--border);
+            font-size: 0.9rem;
+        }
+
+        .try-list li:last-child {
+            border-bottom: none;
+        }
+
+        .try-list strong {
+            color: var(--primary);
+        }
+
+        .try-list .hint {
+            display: block;
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            margin-top: 0.25rem;
+        }
+
+        .badge {
+            display: inline-block;
+            font-size: 0.7rem;
+            padding: 0.15rem 0.4rem;
+            border-radius: 0.25rem;
+            font-weight: 600;
+            vertical-align: middle;
+            margin-left: 0.5rem;
+        }
+
+        .badge-ai {
+            background: #DBEAFE;
+            color: #1E40AF;
+        }
+
+        .badge-new {
+            background: #D1FAE5;
+            color: #065F46;
         }
 
         footer {
@@ -233,12 +345,19 @@
         footer a:hover {
             text-decoration: underline;
         }
+
+        .footer-links {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
     </style>
 </head>
 <body>
     <div class="hero">
         <h1>AIシフト自動作成システム</h1>
-        <p>介護施設のシフト作成を、AIが自動で最適化します</p>
+        <p>デイサービス（通所介護）のシフト作成を、AIが自動で最適化します</p>
     </div>
 
     <div class="container">
@@ -247,7 +366,34 @@
             <a href="https://ai-care-shift-scheduler.web.app" class="demo-button" target="_blank" rel="noopener">
                 デモを開始する
             </a>
-            <p class="demo-note">ログイン画面で「デモアカウントでログイン」をクリックしてください</p>
+            <p class="demo-note">ログイン画面で「デモアカウントでログイン」ボタンをクリックしてください</p>
+        </div>
+
+        <div class="facility-info">
+            <h3>
+                <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
+                </svg>
+                サンプル施設の設定
+            </h3>
+            <div class="facility-info-grid">
+                <div class="facility-info-item">
+                    <span class="facility-info-label">施設種別</span>
+                    <span class="facility-info-value">デイサービス（定員20名）</span>
+                </div>
+                <div class="facility-info-item">
+                    <span class="facility-info-label">スタッフ数</span>
+                    <span class="facility-info-value">8名</span>
+                </div>
+                <div class="facility-info-item">
+                    <span class="facility-info-label">営業日</span>
+                    <span class="facility-info-value">月〜土（日曜休み）</span>
+                </div>
+                <div class="facility-info-item">
+                    <span class="facility-info-label">シフト種類</span>
+                    <span class="facility-info-value">早番・日勤・遅番</span>
+                </div>
+            </div>
         </div>
 
         <div class="features">
@@ -258,8 +404,8 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
                     </svg>
                     <div class="feature-text">
-                        <strong>AIシフト自動生成</strong>
-                        <span>スタッフの条件を考慮した最適シフトを自動作成</span>
+                        <strong>AIシフト自動生成 <span class="badge badge-ai">AI</span></strong>
+                        <span>Gemini AIがスタッフの条件・資格・休暇希望を考慮して最適なシフトを自動作成</span>
                     </div>
                 </li>
                 <li>
@@ -267,8 +413,17 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
                     </svg>
                     <div class="feature-text">
-                        <strong>シフト表の閲覧</strong>
-                        <span>10名のサンプルスタッフのシフト表を確認</span>
+                        <strong>AI評価・改善提案 <span class="badge badge-new">NEW</span></strong>
+                        <span>生成されたシフトの品質スコア（公平性・効率性など）と改善ポイントを表示</span>
+                    </div>
+                </li>
+                <li>
+                    <svg class="feature-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                    </svg>
+                    <div class="feature-text">
+                        <strong>シフト表の操作</strong>
+                        <span>キーボード操作（Tab/矢印キー）、クリックでシフト変更、Ctrl+Zで元に戻す</span>
                     </div>
                 </li>
                 <li>
@@ -277,7 +432,7 @@
                     </svg>
                     <div class="feature-text">
                         <strong>月次レポート</strong>
-                        <span>勤務時間集計・シフト種別統計を確認</span>
+                        <span>勤務時間集計・シフト種別統計・スタッフ別稼働状況を確認</span>
                     </div>
                 </li>
                 <li>
@@ -285,37 +440,81 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
                     </svg>
                     <div class="feature-text">
-                        <strong>AI評価・改善提案</strong>
-                        <span>シフトの品質スコアと改善ポイントを表示</span>
+                        <strong>スタッフ・設定管理</strong>
+                        <span>スタッフ情報、シフト種別設定、休暇残高の確認</span>
                     </div>
                 </li>
             </ul>
         </div>
 
         <div class="info-box">
-            <p><strong>ご注意:</strong> デモ環境では操作を体験できますが、変更は保存されません。実際のデータへの影響はありません。</p>
+            <p><strong>ご注意:</strong> デモ環境では操作を体験できますが、変更は保存されません。画面上部に「🧪 デモ環境」バナーが表示されます。</p>
         </div>
 
         <div class="steps">
-            <h3>デモの使い方</h3>
+            <h3>デモの始め方</h3>
             <div class="step">
                 <span class="step-number">1</span>
-                <span class="step-text">「デモを開始する」ボタンをクリック</span>
+                <div class="step-content">
+                    <div class="step-title">「デモを開始する」をクリック</div>
+                    <div class="step-description">新しいタブでアプリが開きます</div>
+                </div>
             </div>
             <div class="step">
                 <span class="step-number">2</span>
-                <span class="step-text">ログイン画面で「デモアカウントでログイン」をクリック</span>
+                <div class="step-content">
+                    <div class="step-title">「デモアカウントでログイン」をクリック</div>
+                    <div class="step-description">メールアドレス入力は不要です</div>
+                </div>
             </div>
             <div class="step">
                 <span class="step-number">3</span>
-                <span class="step-text">サンプル介護施設のシフト管理画面が表示されます</span>
+                <div class="step-content">
+                    <div class="step-title">シフト表が表示されます</div>
+                    <div class="step-description">サンプル介護施設のシフト管理画面が開きます</div>
+                </div>
             </div>
+        </div>
+
+        <div class="try-section">
+            <h3>
+                <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path>
+                </svg>
+                ぜひ試してほしい操作
+            </h3>
+            <ul class="try-list">
+                <li>
+                    <strong>AIシフト生成:</strong> 画面上部の「AIシフト生成」ボタンをクリック
+                    <span class="hint">→ 2〜3分でシフトが自動生成されます。生成中は進捗が表示されます。</span>
+                </li>
+                <li>
+                    <strong>評価パネルを確認:</strong> 生成完了後、画面右側に表示されるスコアをチェック
+                    <span class="hint">→ 公平性・効率性・制約充足率などの評価と改善提案が表示されます。</span>
+                </li>
+                <li>
+                    <strong>シフトの手動変更:</strong> セルをクリック → シフトボタンを選択
+                    <span class="hint">→ 変更はCtrl+Z（Mac: ⌘+Z）で元に戻せます。</span>
+                </li>
+                <li>
+                    <strong>月の切り替え:</strong> 画面上部の「◀」「▶」で前月・翌月を表示
+                    <span class="hint">→ 異なる月のシフトを確認できます。</span>
+                </li>
+                <li>
+                    <strong>レポート確認:</strong> ナビゲーションから「レポート」を選択
+                    <span class="hint">→ 月次の勤務集計・統計情報を確認できます。</span>
+                </li>
+            </ul>
         </div>
     </div>
 
     <footer>
         <p>AIシフト自動作成システム</p>
-        <p><a href="index.html">プロジェクト詳細</a></p>
+        <div class="footer-links">
+            <a href="index.html">プロジェクト概要</a>
+            <a href="technical.html">技術詳細</a>
+            <a href="handoff.html">開発ドキュメント</a>
+        </div>
     </footer>
 </body>
 </html>
