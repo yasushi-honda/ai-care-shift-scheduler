@@ -229,10 +229,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
 
         // Phase 21: デバッグログ - loading状態変更
+        // BUG-009対策: 権限情報を明示的にログ出力
+        const facilityRoles = userProfile?.facilities?.map((f: { facilityId: string; role: string }) => ({
+          facilityId: f.facilityId,
+          role: f.role,
+        })) || [];
         console.log('[Phase 21 Debug] AuthContext: setLoading(false) - Authentication state loaded', {
           currentUser: user?.uid || null,
           userProfileExists: !!userProfile,
           selectedFacilityId,
+          facilityRoles, // 権限情報を追加
         });
         setLoading(false);
       });
