@@ -49,7 +49,8 @@ test.describe('データCRUD操作 - シフト生成UI', () => {
     await expect(generateButton).toBeVisible({ timeout: 10000 });
   });
 
-  test('「デモシフト生成」ボタンが表示される', async ({ page }) => {
+  // Phase 43でデモシフト生成機能が削除されたため、このテストはスキップ
+  test.skip('「デモシフト生成」ボタンが表示される（機能削除済み）', async ({ page }) => {
     await page.goto('/');
 
     // 「デモシフト生成」ボタンが表示されることを確認

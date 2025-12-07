@@ -264,45 +264,25 @@ export function StaffCard({ staff, onUpdate, onDelete }: StaffCardProps) {
 4. **型安全**: 引数・戻り値に型を付ける
 
 #### `geminiService.ts`
-**役割**: AI API呼び出し（現在無効化）
+**役割**: Cloud Functions経由でAI API呼び出し（Gemini 2.5 Flash）
 
 ```typescript
+// 現在の実装（2025-12-07更新）
 export const generateShiftSchedule = async (
   staffList: Staff[],
   requirements: ShiftRequirement,
   leaveRequests: LeaveRequest
-): Promise<StaffSchedule[]> => {
-  // 現在は無効化
-  throw new Error(
-    "AIシフト生成機能は現在実装中です。\n\n" +
-    "【理由】\n" +
-    "- セキュリティのため、Gemini API は Cloud Functions 経由で呼び出す必要があります\n" +
-    "- ブラウザから直接 API を呼び出すと、APIキーが露出してしまいます\n\n" +
-    "【代替手段】\n" +
-    "画面下部の「デモシフト作成」ボタンをご利用ください。"
-  );
-};
-```
+): Promise<ShiftGenerationResult> => {
+  const CLOUD_FUNCTION_URL = getCloudFunctionUrl();
 
-**将来実装**:
-```typescript
-export const generateShiftSchedule = async (
-  staffList: Staff[],
-  requirements: ShiftRequirement,
-  leaveRequests: LeaveRequest
-): Promise<StaffSchedule[]> => {
-  const response = await fetch('/api/generateShift', {
+  const response = await fetch(CLOUD_FUNCTION_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ staffList, requirements, leaveRequests }),
   });
 
-  if (!response.ok) {
-    throw new Error('シフト生成に失敗しました');
-  }
-
-  const data = await response.json();
-  return data.schedule;
+  // ...エラーハンドリング、レスポンス検証
+  return { schedule, evaluation, metadata };
 };
 ```
 

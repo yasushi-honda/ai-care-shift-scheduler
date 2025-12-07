@@ -377,7 +377,7 @@ const ShiftTable: React.FC<ShiftTableProps> = ({ schedule, targetMonth, onShiftC
             <path vectorEffect="non-scaling-stroke" strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 13h6m-3-3v6m-9 1V7a2 2 0 012-2h14a2 2 0 012 2v10a2 2 0 01-2 2H4a2 2 0 01-2-2z" />
           </svg>
           <h3 className="mt-4 text-lg font-medium text-slate-800">シフトが作成されていません</h3>
-          <p className="mt-2 text-sm text-slate-500">左のパネルで条件を設定し、「シフト作成実行」または「デモシフト作成」ボタンを押してください。</p>
+          <p className="mt-2 text-sm text-slate-500">左のパネルで条件を設定し、「シフト作成実行」ボタンを押してください。</p>
         </div>
       </div>
     );

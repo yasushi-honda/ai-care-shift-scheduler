@@ -366,9 +366,10 @@ jobs:
 - Cloud Functions経由でVertex AI APIを呼び出す設計に変更
 - ブラウザには分かりやすいエラーメッセージを表示
 
-**代替手段**:
-- 「デモシフト作成」ボタンでランダムシフトを生成
-- Cloud Functions実装までの暫定対応
+**現在の状態** (2025-12-07更新):
+
+- Cloud Functions経由でVertex AI Gemini 2.5 Flashを使用したAIシフト生成が稼働中
+- Phase 43でデモシフト生成機能は削除済み
 
 ---
 

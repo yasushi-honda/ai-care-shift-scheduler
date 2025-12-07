@@ -96,7 +96,7 @@ test.describe('休暇希望入力機能', () => {
     await page.getByRole('button', { name: 'シフト表' }).click();
     await page.waitForTimeout(500);
 
-    // デモシフト作成ボタンが表示されることを確認
-    await expect(page.getByRole('button', { name: 'デモシフト作成' })).toBeVisible();
+    // シフト作成実行ボタンが表示されることを確認
+    await expect(page.getByRole('button', { name: 'シフト作成実行' })).toBeVisible();
   });
 });
