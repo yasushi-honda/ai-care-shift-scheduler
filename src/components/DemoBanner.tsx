@@ -28,7 +28,7 @@ export function DemoBanner({ className = '' }: DemoBannerProps) {
       role="banner"
       aria-label="デモ環境通知"
     >
-      <span className="font-medium" aria-hidden="true">🎭 デモ環境</span>
+      <span className="font-medium" aria-hidden="true">🧪 デモ環境</span>
       <span className="ml-2 text-sm">
         操作を体験できますが、変更は保存されません
       </span>
