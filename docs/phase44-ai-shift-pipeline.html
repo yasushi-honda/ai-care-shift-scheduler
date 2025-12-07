@@ -1,0 +1,919 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Phase 44: AIシフト生成パイプライン改善</title>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+  <style>
+    :root {
+      --primary: #2563eb;
+      --secondary: #64748b;
+      --success: #22c55e;
+      --warning: #f59e0b;
+      --danger: #ef4444;
+      --bg: #f8fafc;
+      --card-bg: #ffffff;
+      --text: #1e293b;
+      --border: #e2e8f0;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      padding: 1rem;
+    }
+
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 2rem;
+      padding: 1.5rem;
+      background: linear-gradient(135deg, var(--primary), #1d4ed8);
+      color: white;
+      border-radius: 12px;
+    }
+
+    header h1 {
+      font-size: 1.75rem;
+      margin-bottom: 0.5rem;
+    }
+
+    header p {
+      opacity: 0.9;
+      font-size: 0.95rem;
+    }
+
+    .status-badge {
+      display: inline-block;
+      padding: 0.25rem 0.75rem;
+      border-radius: 9999px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      margin-top: 0.5rem;
+    }
+
+    .status-in-progress {
+      background: var(--warning);
+      color: white;
+    }
+
+    .nav-tabs {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin-bottom: 1.5rem;
+      border-bottom: 2px solid var(--border);
+      padding-bottom: 0.5rem;
+    }
+
+    .nav-tab {
+      padding: 0.5rem 1rem;
+      border: none;
+      background: transparent;
+      cursor: pointer;
+      font-size: 0.9rem;
+      color: var(--secondary);
+      border-radius: 8px 8px 0 0;
+      transition: all 0.2s;
+    }
+
+    .nav-tab:hover {
+      background: var(--border);
+    }
+
+    .nav-tab.active {
+      background: var(--primary);
+      color: white;
+    }
+
+    .section {
+      display: none;
+      background: var(--card-bg);
+      border-radius: 12px;
+      padding: 1.5rem;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      margin-bottom: 1.5rem;
+    }
+
+    .section.active {
+      display: block;
+    }
+
+    .section h2 {
+      font-size: 1.25rem;
+      margin-bottom: 1rem;
+      color: var(--primary);
+      border-bottom: 2px solid var(--border);
+      padding-bottom: 0.5rem;
+    }
+
+    .mermaid {
+      background: white;
+      padding: 1rem;
+      border-radius: 8px;
+      overflow-x: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 1rem 0;
+      font-size: 0.9rem;
+    }
+
+    th, td {
+      padding: 0.75rem;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+    }
+
+    th {
+      background: var(--bg);
+      font-weight: 600;
+    }
+
+    tr:hover {
+      background: var(--bg);
+    }
+
+    .metric-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1rem;
+      margin: 1rem 0;
+    }
+
+    .metric-card {
+      background: var(--bg);
+      padding: 1rem;
+      border-radius: 8px;
+      text-align: center;
+    }
+
+    .metric-value {
+      font-size: 2rem;
+      font-weight: 700;
+      color: var(--primary);
+    }
+
+    .metric-label {
+      font-size: 0.85rem;
+      color: var(--secondary);
+    }
+
+    .code-block {
+      background: #1e293b;
+      color: #e2e8f0;
+      padding: 1rem;
+      border-radius: 8px;
+      overflow-x: auto;
+      font-family: 'Monaco', 'Menlo', monospace;
+      font-size: 0.85rem;
+      margin: 1rem 0;
+    }
+
+    .timeline-item {
+      display: flex;
+      gap: 1rem;
+      padding: 1rem 0;
+      border-left: 3px solid var(--primary);
+      padding-left: 1.5rem;
+      margin-left: 0.5rem;
+    }
+
+    .timeline-item.completed {
+      border-left-color: var(--success);
+    }
+
+    .timeline-item.in-progress {
+      border-left-color: var(--warning);
+    }
+
+    .timeline-date {
+      font-weight: 600;
+      min-width: 80px;
+    }
+
+    .alert {
+      padding: 1rem;
+      border-radius: 8px;
+      margin: 1rem 0;
+    }
+
+    .alert-info {
+      background: #dbeafe;
+      color: #1e40af;
+    }
+
+    .alert-warning {
+      background: #fef3c7;
+      color: #92400e;
+    }
+
+    .alert-success {
+      background: #dcfce7;
+      color: #166534;
+    }
+
+    /* Mobile responsive */
+    @media (max-width: 768px) {
+      header h1 {
+        font-size: 1.25rem;
+      }
+
+      .nav-tabs {
+        flex-direction: column;
+      }
+
+      .nav-tab {
+        width: 100%;
+        text-align: center;
+      }
+
+      .metric-grid {
+        grid-template-columns: 1fr 1fr;
+      }
+
+      table {
+        font-size: 0.8rem;
+      }
+
+      th, td {
+        padding: 0.5rem;
+      }
+
+      .mermaid {
+        font-size: 0.8rem;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .metric-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>Phase 44: AIシフト生成パイプライン改善</h1>
+      <p>Gemini 2.5 Flash による段階的シフト生成の最適化</p>
+      <span class="status-badge status-in-progress">実装中</span>
+    </header>
+
+    <nav class="nav-tabs">
+      <button class="nav-tab active" onclick="showSection('overview')">概要</button>
+      <button class="nav-tab" onclick="showSection('wbs')">WBS</button>
+      <button class="nav-tab" onclick="showSection('gantt')">ガントチャート</button>
+      <button class="nav-tab" onclick="showSection('architecture')">システム構成</button>
+      <button class="nav-tab" onclick="showSection('flow')">処理フロー</button>
+      <button class="nav-tab" onclick="showSection('data')">データ設計</button>
+      <button class="nav-tab" onclick="showSection('implementation')">実装状況</button>
+    </nav>
+
+    <!-- Overview Section -->
+    <section id="overview" class="section active">
+      <h2>プロジェクト概要</h2>
+
+      <div class="metric-grid">
+        <div class="metric-card">
+          <div class="metric-value">5</div>
+          <div class="metric-label">段階パイプライン</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-value">100%</div>
+          <div class="metric-label">目標充足率</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-value">Flash</div>
+          <div class="metric-label">使用モデル</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-value">8名</div>
+          <div class="metric-label">デモスタッフ</div>
+        </div>
+      </div>
+
+      <h3 style="margin-top: 1.5rem;">問題と解決策</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>問題</th>
+            <th>原因</th>
+            <th>解決策</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>シフト配分が不均等</td>
+            <td>プロンプトに具体的人員数がない</td>
+            <td>必要人員テーブルを明示的に記載</td>
+          </tr>
+          <tr>
+            <td>日単位の最適化不可</td>
+            <td>スタッフ軸バッチ処理</td>
+            <td>週単位（日付軸）処理に変更</td>
+          </tr>
+          <tr>
+            <td>全体最適化が困難</td>
+            <td>バッチ間の情報分断</td>
+            <td>5段階パイプラインで段階的最適化</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="alert alert-info">
+        <strong>アプローチ:</strong> 人間のエンジニアチームが大規模問題を解決するように、要件分析→骨子設計→詳細配置→検証→調整の段階的プロセスを実装
+      </div>
+    </section>
+
+    <!-- WBS Section -->
+    <section id="wbs" class="section">
+      <h2>WBS（作業分解図）</h2>
+
+      <div class="mermaid">
+graph TD
+    A[Phase 44: AIシフト生成パイプライン改善] --> B[Step 1: クイックウィン]
+    A --> C[Step 2: 週単位処理]
+    A --> D[Step 3: 5段階パイプライン]
+
+    B --> B1[プロンプト改善]
+    B --> B2[テスト・検証]
+    B --> B3[Gitコミット]
+
+    B1 --> B1a[必要人員テーブル追加]
+    B1 --> B1b[資格要件フォーマット]
+    B1 --> B1c[チェックリスト追加]
+
+    C --> C1[phase3-weekly.ts作成]
+    C --> C2[週分割ロジック]
+    C --> C3[統合テスト]
+    C --> C4[Gitコミット]
+
+    D --> D1[Phase 1: 要件分析]
+    D --> D2[Phase 2: 骨子設計]
+    D --> D3[Phase 3: 週別配置]
+    D --> D4[Phase 4: 整合性検証]
+    D --> D5[Phase 4.1: 調整]
+    D --> D6[Phase 5: 最終出力]
+
+    style A fill:#2563eb,color:#fff
+    style B fill:#22c55e,color:#fff
+    style C fill:#f59e0b,color:#fff
+    style D fill:#64748b,color:#fff
+      </div>
+
+      <h3 style="margin-top: 1.5rem;">タスク詳細</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>タスク</th>
+            <th>優先度</th>
+            <th>見積もり</th>
+            <th>ステータス</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>1.1</td>
+            <td>プロンプトに必要人員テーブル追加</td>
+            <td>最高</td>
+            <td>30分</td>
+            <td>🔄 実装中</td>
+          </tr>
+          <tr>
+            <td>1.2</td>
+            <td>資格要件フォーマット関数追加</td>
+            <td>高</td>
+            <td>15分</td>
+            <td>⏳ 待機</td>
+          </tr>
+          <tr>
+            <td>1.3</td>
+            <td>テスト実行・検証</td>
+            <td>高</td>
+            <td>30分</td>
+            <td>⏳ 待機</td>
+          </tr>
+          <tr>
+            <td>2.1</td>
+            <td>週単位処理ロジック実装</td>
+            <td>高</td>
+            <td>2時間</td>
+            <td>⏳ 待機</td>
+          </tr>
+          <tr>
+            <td>2.2</td>
+            <td>統合テスト</td>
+            <td>高</td>
+            <td>1時間</td>
+            <td>⏳ 待機</td>
+          </tr>
+          <tr>
+            <td>3.1</td>
+            <td>5段階パイプライン実装</td>
+            <td>中</td>
+            <td>4時間</td>
+            <td>⏳ 待機</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- Gantt Section -->
+    <section id="gantt" class="section">
+      <h2>ガントチャート（スケジュール）</h2>
+
+      <div class="mermaid">
+gantt
+    title Phase 44 実装スケジュール
+    dateFormat  YYYY-MM-DD
+
+    section Step 1: クイックウィン
+    ドキュメント作成           :done,    doc1, 2025-12-07, 1d
+    プロンプト改善             :active,  s1a, 2025-12-07, 1d
+    テスト・検証               :         s1b, after s1a, 1d
+
+    section Step 2: 週単位処理
+    週単位処理ロジック         :         s2a, 2025-12-08, 1d
+    統合テスト                 :         s2b, after s2a, 1d
+
+    section Step 3: パイプライン
+    Phase 1-2 実装             :         s3a, 2025-12-09, 1d
+    Phase 3-5 実装             :         s3b, after s3a, 1d
+    最終検証・デプロイ         :         s3c, after s3b, 1d
+      </div>
+
+      <h3 style="margin-top: 1.5rem;">マイルストーン</h3>
+      <div class="timeline-item completed">
+        <span class="timeline-date">12/7 AM</span>
+        <div>
+          <strong>プロジェクト会議・ドキュメント作成</strong>
+          <p>議事録、技術仕様書、実装計画書を作成完了</p>
+        </div>
+      </div>
+      <div class="timeline-item in-progress">
+        <span class="timeline-date">12/7 PM</span>
+        <div>
+          <strong>Step 1: クイックウィン実装</strong>
+          <p>プロンプト改善による即効性のある改善</p>
+        </div>
+      </div>
+      <div class="timeline-item">
+        <span class="timeline-date">12/8</span>
+        <div>
+          <strong>Step 2: 週単位処理</strong>
+          <p>日付軸バッチ処理への移行</p>
+        </div>
+      </div>
+      <div class="timeline-item">
+        <span class="timeline-date">12/9</span>
+        <div>
+          <strong>Step 3: 5段階パイプライン完成</strong>
+          <p>堅牢なアーキテクチャの完成・本番デプロイ</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Architecture Section -->
+    <section id="architecture" class="section">
+      <h2>システム構成図</h2>
+
+      <div class="mermaid">
+graph TB
+    subgraph "クライアント層"
+        A[React SPA<br/>ShiftGenerationPage]
+    end
+
+    subgraph "API層"
+        B[Cloud Functions<br/>generateShift]
+    end
+
+    subgraph "AI Pipeline"
+        C[Phase 1<br/>要件分析]
+        D[Phase 2<br/>骨子設計]
+        E[Phase 3<br/>週別配置]
+        F[Phase 4<br/>整合性検証]
+        G[Phase 4.1<br/>調整]
+        H[Phase 5<br/>最終出力]
+    end
+
+    subgraph "外部サービス"
+        I[Vertex AI<br/>Gemini 2.5 Flash]
+    end
+
+    subgraph "データ層"
+        J[(Firestore<br/>staff, requirements)]
+        K[(Firestore<br/>schedules)]
+    end
+
+    A -->|POST /generateShift| B
+    B --> C
+    C -->|ConstraintMatrix| D
+    D -->|SkeletonSchedule| E
+    E -->|WeeklyShifts| F
+    F -->|ValidationResult| G
+    G -->|AdjustedShifts| F
+    F -->|Valid| H
+    H -->|FinalSchedule| B
+
+    D -->|AI Call| I
+    E -->|AI Call x 週数| I
+    G -->|AI Call 条件付き| I
+
+    B -->|Read| J
+    B -->|Write| K
+
+    style C fill:#dbeafe
+    style D fill:#fef3c7
+    style E fill:#fef3c7
+    style F fill:#dbeafe
+    style G fill:#fef3c7
+    style H fill:#dbeafe
+      </div>
+
+      <div class="alert alert-info">
+        <strong>凡例:</strong>
+        青 = ローカル処理（高速・無料）、
+        黄 = AI処理（Gemini API呼び出し）
+      </div>
+
+      <h3 style="margin-top: 1.5rem;">コンポーネント一覧</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>コンポーネント</th>
+            <th>役割</th>
+            <th>技術</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>React SPA</td>
+            <td>ユーザーインターフェース</td>
+            <td>React 18, TypeScript, Vite</td>
+          </tr>
+          <tr>
+            <td>Cloud Functions</td>
+            <td>APIエンドポイント</td>
+            <td>Node.js 18, Firebase Functions</td>
+          </tr>
+          <tr>
+            <td>Vertex AI</td>
+            <td>AIシフト生成</td>
+            <td>Gemini 2.5 Flash</td>
+          </tr>
+          <tr>
+            <td>Firestore</td>
+            <td>データ永続化</td>
+            <td>NoSQL Document DB</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- Flow Section -->
+    <section id="flow" class="section">
+      <h2>処理フロー図</h2>
+
+      <div class="mermaid">
+sequenceDiagram
+    participant U as ユーザー
+    participant FE as React SPA
+    participant CF as Cloud Functions
+    participant P1 as Phase 1: 分析
+    participant P2 as Phase 2: 骨子
+    participant P3 as Phase 3: 週別
+    participant P4 as Phase 4: 検証
+    participant AI as Gemini 2.5 Flash
+    participant FS as Firestore
+
+    U->>FE: シフト生成ボタン押下
+    FE->>CF: POST /generateShift
+
+    Note over CF,P1: Phase 1: 要件分析（ローカル）
+    CF->>P1: staffList, requirements
+    P1->>P1: 営業日抽出、制約構築
+    P1-->>CF: ConstraintMatrix
+
+    alt 実現不可能
+        CF-->>FE: error: 人員不足
+        FE-->>U: エラー表示
+    end
+
+    Note over CF,AI: Phase 2: 骨子設計（AI）
+    CF->>P2: ConstraintMatrix
+    P2->>AI: 骨子生成プロンプト
+    AI-->>P2: SkeletonSchedule
+    P2-->>CF: 休日パターン
+
+    Note over CF,AI: Phase 3: 週別配置（AI × 週数）
+    loop 各週（4-5週）
+        CF->>P3: week, skeleton
+        P3->>AI: 週別配置プロンプト
+        AI-->>P3: WeeklyShifts
+        P3-->>CF: 週のシフト
+    end
+
+    Note over CF,P4: Phase 4: 整合性検証（ローカル）
+    CF->>P4: allWeeklyShifts
+    P4->>P4: 人員充足、資格、連勤チェック
+    P4-->>CF: ValidationResult
+
+    alt 違反あり
+        loop 最大3回
+            CF->>AI: 調整プロンプト
+            AI-->>CF: AdjustedShifts
+            CF->>P4: 再検証
+        end
+    end
+
+    Note over CF,FS: Phase 5: 最終出力
+    CF->>FS: schedule保存
+    CF-->>FE: success: schedule, evaluation
+    FE-->>U: シフト表表示
+      </div>
+
+      <h3 style="margin-top: 1.5rem;">Phase別処理時間（見積もり）</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Phase</th>
+            <th>処理</th>
+            <th>所要時間</th>
+            <th>API呼び出し</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Phase 1</td>
+            <td>要件分析</td>
+            <td>~100ms</td>
+            <td>なし</td>
+          </tr>
+          <tr>
+            <td>Phase 2</td>
+            <td>骨子設計</td>
+            <td>~30秒</td>
+            <td>1回</td>
+          </tr>
+          <tr>
+            <td>Phase 3</td>
+            <td>週別配置</td>
+            <td>~2分</td>
+            <td>4-5回</td>
+          </tr>
+          <tr>
+            <td>Phase 4</td>
+            <td>整合性検証</td>
+            <td>~100ms</td>
+            <td>なし</td>
+          </tr>
+          <tr>
+            <td>Phase 4.1</td>
+            <td>調整（条件付き）</td>
+            <td>~30秒/回</td>
+            <td>0-3回</td>
+          </tr>
+          <tr>
+            <td>Phase 5</td>
+            <td>最終出力</td>
+            <td>~100ms</td>
+            <td>なし</td>
+          </tr>
+          <tr style="font-weight: bold;">
+            <td colspan="2">合計</td>
+            <td>~3分</td>
+            <td>5-9回</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- Data Section -->
+    <section id="data" class="section">
+      <h2>データ設計（ER図）</h2>
+
+      <div class="mermaid">
+erDiagram
+    STAFF {
+        string staffId PK
+        string name
+        string position
+        array certifications
+        object weeklyWorkCount
+        array availableWeekdays
+        array unavailableDates
+        string timeSlotPreference
+        boolean nightShiftOnly
+        int maxConsecutiveDays
+    }
+
+    REQUIREMENT {
+        string targetMonth
+        array timeSlots
+        object requirements
+        timestamp updatedAt
+    }
+
+    LEAVE_REQUEST {
+        string requestId PK
+        string staffId FK
+        string date
+        string leaveType
+    }
+
+    CONSTRAINT_MATRIX {
+        array businessDays
+        object dailyRequirements
+        object staffConstraints
+        object feasibility
+    }
+
+    SKELETON_SCHEDULE {
+        array staffSchedules
+    }
+
+    WEEKLY_SHIFTS {
+        int weekNumber
+        string startDate
+        string endDate
+        array dailyAssignments
+    }
+
+    FINAL_SCHEDULE {
+        array schedule
+        object evaluation
+        object metadata
+    }
+
+    STAFF ||--o{ LEAVE_REQUEST : "has"
+    STAFF }|--|| CONSTRAINT_MATRIX : "analyzed into"
+    REQUIREMENT }|--|| CONSTRAINT_MATRIX : "analyzed into"
+    CONSTRAINT_MATRIX ||--|| SKELETON_SCHEDULE : "generates"
+    SKELETON_SCHEDULE ||--o{ WEEKLY_SHIFTS : "generates"
+    WEEKLY_SHIFTS }|--|| FINAL_SCHEDULE : "combines into"
+      </div>
+
+      <h3 style="margin-top: 1.5rem;">主要データ構造</h3>
+
+      <div class="code-block">
+<pre>
+// Phase間のデータ受け渡し
+
+interface ConstraintMatrix {
+  businessDays: string[];           // ['2026-01-05', ...]
+  dailyRequirements: {
+    [shiftType: string]: {
+      totalStaff: number;
+      qualifications: QualReq[];
+    };
+  };
+  staffConstraints: {
+    [staffId: string]: {
+      availableDays: string[];
+      preferredShifts: string[];
+      qualifications: string[];
+    };
+  };
+  feasibility: {
+    isPossible: boolean;
+    marginRate: number;
+  };
+}
+
+interface WeeklyShifts {
+  weekNumber: number;
+  dailyAssignments: {
+    date: string;
+    早番: string[];
+    日勤: string[];
+    遅番: string[];
+    休: string[];
+  }[];
+}
+</pre>
+      </div>
+    </section>
+
+    <!-- Implementation Section -->
+    <section id="implementation" class="section">
+      <h2>実装状況</h2>
+
+      <div class="alert alert-warning">
+        <strong>現在のステータス:</strong> Step 1 (クイックウィン) 実装中
+      </div>
+
+      <h3>変更対象ファイル</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>ファイル</th>
+            <th>変更内容</th>
+            <th>ステータス</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>functions/src/phased-generation.ts</code></td>
+            <td>buildDetailedPrompt改善</td>
+            <td>🔄 実装中</td>
+          </tr>
+          <tr>
+            <td><code>functions/src/pipeline/phase3-weekly.ts</code></td>
+            <td>週単位処理ロジック（新規）</td>
+            <td>⏳ Step 2</td>
+          </tr>
+          <tr>
+            <td><code>functions/src/pipeline/phase1-analyze.ts</code></td>
+            <td>要件分析ロジック（新規）</td>
+            <td>⏳ Step 3</td>
+          </tr>
+          <tr>
+            <td><code>functions/src/pipeline/phase4-validate.ts</code></td>
+            <td>整合性検証ロジック（新規）</td>
+            <td>⏳ Step 3</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3 style="margin-top: 1.5rem;">Step 1: プロンプト改善（実装内容）</h3>
+      <div class="code-block">
+<pre>
+// buildDetailedPrompt の改善点
+
+// 1. 必要人員テーブルを追加
+# 【絶対条件】各日の必要人員
+| シフト | 必要人数 | 資格要件 |
+|--------|----------|----------|
+| 早番   | 2名      | なし     |
+| 日勤   | 2名      | 看護師1名以上 |
+| 遅番   | 1名      | なし     |
+
+// 2. 資格要件を明示
+- 日勤には看護師を**必ず1名以上**配置すること
+
+// 3. チェックリストを追加
+# 出力前チェックリスト
+□ 各日の早番が2名いるか
+□ 各日の日勤が2名いるか（看護師1名含む）
+□ 各日の遅番が1名いるか
+</pre>
+      </div>
+
+      <h3 style="margin-top: 1.5rem;">成功基準</h3>
+      <div class="metric-grid">
+        <div class="metric-card">
+          <div class="metric-value">100%</div>
+          <div class="metric-label">人員充足率</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-value">0件</div>
+          <div class="metric-label">制約違反</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-value">5分</div>
+          <div class="metric-label">処理時間上限</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-value">150%</div>
+          <div class="metric-label">コスト上限（対現行比）</div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    mermaid.initialize({
+      startOnLoad: true,
+      theme: 'default',
+      securityLevel: 'loose'
+    });
+
+    function showSection(sectionId) {
+      // Hide all sections
+      document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+      document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+
+      // Show selected section
+      document.getElementById(sectionId).classList.add('active');
+      event.target.classList.add('active');
+    }
+  </script>
+</body>
+</html>

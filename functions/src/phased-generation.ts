@@ -171,14 +171,41 @@ function buildSkeletonPrompt(
   // シフト種類名を取得
   const shiftTypeNames = (requirements.timeSlots || []).map(t => t.name).join('、');
 
+  // 必要人員テーブルを作成
+  const requirementsTable = Object.entries(requirements.requirements || {})
+    .map(([shiftName, req]) => {
+      const quals = (req.requiredQualifications || [])
+        .map(q => `${q.qualification}${q.count}名`)
+        .join('、') || 'なし';
+      return `| ${shiftName} | ${req.totalStaff}名 | ${quals} |`;
+    })
+    .join('\n');
+
+  // 1日の合計必要人員
+  const totalStaffPerDay = Object.values(requirements.requirements || {})
+    .reduce((sum, req) => sum + req.totalStaff, 0);
+
   const staffInfo = staffList
     .map((s) => {
-      const baseInfo = `- ${s.name}(ID:${s.id}): 週${s.weeklyWorkCount.hope}回希望`;
+      const baseInfo = `- ${s.name}(ID:${s.id}): 週${s.weeklyWorkCount.hope}回希望（必須${s.weeklyWorkCount.must}回）`;
       return hasNightShift
         ? `${baseInfo}, 夜勤専従=${s.isNightShiftOnly}`
         : baseInfo;
     })
     .join('\n');
+
+  // 日曜日のリストを計算（デイサービス用）
+  const [year, month] = requirements.targetMonth.split('-').map(Number);
+  const sundays: number[] = [];
+  for (let day = 1; day <= daysInMonth; day++) {
+    const date = new Date(year, month - 1, day);
+    if (date.getDay() === 0) {
+      sundays.push(day);
+    }
+  }
+
+  // 営業日数（日曜除く）
+  const businessDayCount = daysInMonth - sundays.length;
 
   // 夜勤がある場合とない場合で異なるプロンプト
   if (hasNightShift) {
@@ -193,9 +220,14 @@ ${staffInfo}
 # 対象期間
 - ${requirements.targetMonth}（全${daysInMonth}日間）
 
+# 各日の必要人員
+| シフト | 必要人数 | 資格要件 |
+|--------|----------|----------|
+${requirementsTable}
+
 # 制約条件
 ## 必須条件
-- 各日、各時間帯で必要な人員体制（${JSON.stringify(requirements.requirements)}）を満たすこと
+- 各日、合計${totalStaffPerDay}名の勤務者を確保すること
 - 夜勤の翌日は「夜勤明け休み」、翌々日は「公休」を割り当てること（連続2日休み）
 - スタッフの休暇希望（${JSON.stringify(leaveRequests)}）を必ず反映すること
 - 夜勤専従スタッフ（isNightShiftOnly=true）は夜勤と休日のみ
@@ -228,23 +260,43 @@ ${staffInfo}
 
 # 対象期間
 - ${requirements.targetMonth}（全${daysInMonth}日間）
+- 営業日: ${businessDayCount}日（日曜休み）
+- 日曜日: ${sundays.join(', ')}日 ← **全員休日**
+
+# 各日の必要人員（営業日のみ）
+| シフト | 必要人数 | 資格要件 |
+|--------|----------|----------|
+${requirementsTable}
+| **合計** | **${totalStaffPerDay}名/日** | - |
 
 # 制約条件
-## 必須条件
-- 各日、各時間帯で必要な人員体制（${JSON.stringify(requirements.requirements)}）を満たすこと
-- スタッフの休暇希望（${JSON.stringify(leaveRequests)}）を必ず反映すること
-- スタッフの勤務可能曜日を尊重すること
+## 必須条件（厳守）
+1. **日曜日（${sundays.join(', ')}日）は全員「休」とすること**
+2. 営業日（月〜土）は毎日${totalStaffPerDay}名の勤務者を確保すること
+3. スタッフの休暇希望（${JSON.stringify(leaveRequests)}）を必ず反映すること
+4. 連続勤務は最大5日まで
 
 ## 努力目標
 - スタッフの希望週勤務回数に近づける
-- 休日を公平に分散させる
+- 休日を公平に分散させる（週1〜2日の休み）
+
+# 数学的検証
+- 必要人日数: ${businessDayCount}営業日 × ${totalStaffPerDay}名 = ${businessDayCount * totalStaffPerDay}人日
+- 可能人日数: ${staffList.length}名 × 週${Math.round(staffList.reduce((s, st) => s + st.weeklyWorkCount.hope, 0) / staffList.length)}回 × 4週 ≒ ${Math.round(staffList.reduce((s, st) => s + st.weeklyWorkCount.hope, 0) * 4)}人日
+- 余裕あり: 実現可能です
 
 # 出力形式
 各スタッフの骨子をJSONで出力してください：
 - staffId: スタッフID（文字列）
 - staffName: スタッフ名（文字列）
-- restDays: 休日の日付リスト（例: [4,5,11,12,18,19,25,26]）
-  - 日曜日（4,11,18,25）は営業日でなければ休日にする
+- restDays: 休日の日付リスト
+  - **日曜日（${sundays.join(', ')}）は必ず含めること**
+  - 例: [${sundays[0]},${sundays[0] + 1},${sundays[1]},${sundays[1] + 2},...]
+
+# 出力前チェック
+□ 全${staffList.length}名分の骨子があるか
+□ 日曜日（${sundays.join(', ')}日）が全員のrestDaysに含まれているか
+□ 各営業日に${totalStaffPerDay}名以上が勤務可能か
 
 重要：全${staffList.length}名分の骨子を必ず出力してください。
 `;
@@ -325,10 +377,11 @@ function buildDetailedPrompt(
   const staffInfo = staffBatch
     .map((s) => {
       const skel = skeleton.staffSchedules.find(sk => sk.staffId === s.id);
+      const qualifications = (s.qualifications || []).join('、') || 'なし';
       if (hasNightShift) {
-        return `- ${s.name}(ID:${s.id}): 休日=${skel?.restDays?.join(',') || 'なし'}, 夜勤=${skel?.nightShiftDays?.join(',') || 'なし'}`;
+        return `- ${s.name}(ID:${s.id}): 資格=${qualifications}, 休日=${skel?.restDays?.join(',') || 'なし'}, 夜勤=${skel?.nightShiftDays?.join(',') || 'なし'}`;
       } else {
-        return `- ${s.name}(ID:${s.id}): 休日=${skel?.restDays?.join(',') || 'なし'}`;
+        return `- ${s.name}(ID:${s.id}): 資格=${qualifications}, 休日=${skel?.restDays?.join(',') || 'なし'}`;
       }
     })
     .join('\n');
@@ -341,6 +394,26 @@ function buildDetailedPrompt(
     `${requirements.targetMonth}-${String(d).padStart(2, '0')}`
   ).join(', ');
 
+  // 必要人員テーブルを作成
+  const requirementsTable = Object.entries(requirements.requirements || {})
+    .map(([shiftName, req]) => {
+      const quals = (req.requiredQualifications || [])
+        .map(q => `${q.qualification}${q.count}名以上`)
+        .join('、') || 'なし';
+      return `| ${shiftName} | ${req.totalStaff}名 | ${quals} |`;
+    })
+    .join('\n');
+
+  // 1日の合計必要人員
+  const totalStaffPerDay = Object.values(requirements.requirements || {})
+    .reduce((sum, req) => sum + req.totalStaff, 0);
+
+  // 看護師名のリスト（資格要件がある場合）
+  const nurses = staffBatch.filter(s =>
+    (s.qualifications || []).some(q => q.includes('看護'))
+  ).map(s => s.name);
+  const nurseInfo = nurses.length > 0 ? `（${nurses.join('、')}）` : '';
+
   if (hasNightShift) {
     return `
 以下のスタッフの${requirements.targetMonth}の詳細シフトを生成してください。
@@ -352,10 +425,18 @@ ${staffInfo}
 # シフト区分
 ${shiftDescription}
 
+# 【絶対条件】各日の必要人員
+| シフト | 必要人数 | 資格要件 |
+|--------|----------|----------|
+${requirementsTable}
+
+**重要**: 各営業日、上記の人員配置を**必ず**満たしてください。
+1日の合計勤務者数: ${totalStaffPerDay}名
+
 # 制約
 - 骨子で指定された休日・夜勤日は変更しないこと
 - 夜勤以外の日は、${shiftTypeNames.filter(n => !n.includes('夜')).join('・')}のいずれかを割り当てる
-- 各日の必要人員を満たすよう調整する
+- 各シフトの必要人数を**必ず**満たすこと
 
 # 出力
 各スタッフの${requirements.targetMonth}の全${daysInMonth}日分の詳細シフトをJSON形式で出力してください。
@@ -375,11 +456,27 @@ ${staffInfo}
 # シフト区分（日中のみ）
 ${shiftDescription}
 
+# 【絶対条件】各日の必要人員
+| シフト | 必要人数 | 資格要件 |
+|--------|----------|----------|
+${requirementsTable}
+
+**最重要**: 各営業日（日曜日を除く）、上記の人員配置を**必ず**満たしてください。
+- 1日の合計勤務者数: ${totalStaffPerDay}名
+- 日勤には看護師${nurseInfo}を**必ず1名以上**配置すること
+
 # 制約
 - 骨子で指定された休日は変更しないこと
-- 休日以外の日は、${shiftTypeNames.join('・')}のいずれかを割り当てる
-- 各日の必要人員を満たすよう調整する
+- 休日以外の日は、必要人員を満たすようシフトを割り当てる
+- 日曜日は全員「休」とすること
 - **夜勤や明け休みは絶対に使用しないこと**
+
+# 出力前チェックリスト
+□ 各営業日の早番が${requirements.requirements?.['早番']?.totalStaff || 2}名いるか
+□ 各営業日の日勤が${requirements.requirements?.['日勤']?.totalStaff || 2}名いるか（看護師1名含む）
+□ 各営業日の遅番が${requirements.requirements?.['遅番']?.totalStaff || 1}名いるか
+□ 日曜日は全員「休」になっているか
+□ 休日のスタッフは「休」になっているか
 
 # 出力
 各スタッフの${requirements.targetMonth}の全${daysInMonth}日分の詳細シフトをJSON形式で出力してください。
