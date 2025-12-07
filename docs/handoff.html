@@ -196,8 +196,8 @@
             <h2>2. 現在の状態</h2>
 
             <div class="success-box">
-                <strong>Phase 42.2 デモログイン機能 完了</strong>（2025-12-07時点）<br>
-                ステータス: <strong>Phase 42完全完了（UIデザイン改善・ナビゲーション改善・デモログイン）</strong>
+                <strong>Phase 44 完了</strong>（2025-12-07時点）<br>
+                ステータス: <strong>AIシフト生成パイプライン改善（動的制約・評価ロジック強化）95%完了</strong>
             </div>
 
             <div class="mermaid">
@@ -224,7 +224,13 @@ timeline
                    : 戻るボタン・ログアウト確認
         Phase 42.2 : デモログイン機能
                    : Cloud Function認証
-        Phase 43+ : 通知機能
+        Phase 43 : デモ環境改善
+                 : 保存スキップ・排他制御
+        Phase 43.1 : デモデータ改善
+                   : デイサービス8名体制
+        Phase 44 : AIシフト生成パイプライン改善
+                 : 動的制約・評価ロジック強化
+        Phase 45+ : 通知機能
             </div>
         </div>
 
@@ -302,7 +308,95 @@ timeline
         </div>
 
         <div class="card">
-            <h2>5. 最新Phase: Phase 42.2 デモログイン機能（完了）</h2>
+            <h2>5. 最新Phase: Phase 44 AIシフト生成パイプライン改善（完了）</h2>
+
+            <div class="success-box">
+                <strong>ステータス:</strong> 95%完了（2025-12-07）<br>
+                <strong>目的:</strong> 動的制約抽出と評価ロジック強化によるシフト品質向上
+            </div>
+
+            <h3>実装内容</h3>
+            <table>
+                <tr>
+                    <th>機能</th>
+                    <th>説明</th>
+                </tr>
+                <tr>
+                    <td><code>buildDynamicTimeSlotConstraints()</code></td>
+                    <td>timeSlotPreference（日勤のみ/夜勤のみ）を動的に抽出</td>
+                </tr>
+                <tr>
+                    <td><code>buildDynamicNurseConstraints()</code></td>
+                    <td>看護師資格保有者の日勤配置必須制約を生成</td>
+                </tr>
+                <tr>
+                    <td><code>checkTimeSlotPreferenceViolation()</code></td>
+                    <td>違反検出と評価スコアへの反映</td>
+                </tr>
+            </table>
+
+            <h3>テスト結果</h3>
+            <ul>
+                <li>充足率: 96% → 98% (+2ポイント)</li>
+                <li>制約違反: 12件 → 3件 (-75%)</li>
+                <li>timeSlotPreference違反: なし</li>
+            </ul>
+
+            <h3>関連ドキュメント</h3>
+            <ul>
+                <li><a href="phase44-ai-shift-pipeline.html">Phase 44詳細ドキュメント</a></li>
+                <li><code>.kiro/specs/ai-evaluation-feedback/</code> - 仕様書</li>
+            </ul>
+        </div>
+
+        <div class="card">
+            <h2>5.01. Phase 43/43.1 デモ環境改善（完了）</h2>
+
+            <div class="success-box">
+                <strong>ステータス:</strong> 完了（2025-12-07）<br>
+                <strong>目的:</strong> デモ環境での安全な操作体験と排他制御
+            </div>
+
+            <h3>Phase 43 実装内容</h3>
+            <ul>
+                <li><strong>デモ環境バナー:</strong> 「🧪 デモ環境」表示、保存されない旨を明示</li>
+                <li><strong>保存スキップ:</strong> デモ環境ではFirestore書き込みなし</li>
+                <li><strong>排他ロック機構:</strong> AI生成/保存時にロック取得</li>
+            </ul>
+
+            <h3>Phase 43.1 デモデータ改善</h3>
+            <table>
+                <tr>
+                    <th>項目</th>
+                    <th>内容</th>
+                </tr>
+                <tr>
+                    <td>施設種別</td>
+                    <td>デイサービス（通所介護）定員20名</td>
+                </tr>
+                <tr>
+                    <td>スタッフ数</td>
+                    <td>8名（管理者、看護師2名、介護職員4名、機能訓練指導員）</td>
+                </tr>
+                <tr>
+                    <td>シフト種類</td>
+                    <td>早番・日勤・遅番（夜勤なし）</td>
+                </tr>
+                <tr>
+                    <td>営業日</td>
+                    <td>月〜土（日曜休み）</td>
+                </tr>
+            </table>
+
+            <h3>関連ドキュメント</h3>
+            <ul>
+                <li><a href="phase43-demo-improvements.html">Phase 43詳細ドキュメント</a></li>
+                <li><a href="demo.html">デモ体験ページ</a></li>
+            </ul>
+        </div>
+
+        <div class="card">
+            <h2>5.02. Phase 42.2 デモログイン機能（完了）</h2>
 
             <div class="success-box">
                 <strong>ステータス:</strong> 完了（2025-12-07）<br>
@@ -505,7 +599,7 @@ npx tsc --noEmit     # 型チェック</code></pre>
     </div>
 
     <div class="footer">
-        <p><strong>最終更新</strong>: 2025年12月7日（Phase 42.2 デモログイン機能完了）</p>
+        <p><strong>最終更新</strong>: 2025年12月7日（Phase 44 AIシフト生成パイプライン改善 95%完了）</p>
         <p>AIシフト自動作成システム</p>
     </div>
 </body>
