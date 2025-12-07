@@ -414,6 +414,11 @@ function buildDetailedPrompt(
   ).map(s => s.name);
   const nurseInfo = nurses.length > 0 ? `（${nurses.join('、')}）` : '';
 
+  // 各シフトの必要人数を取得
+  const earlyCount = requirements.requirements?.['早番']?.totalStaff || 2;
+  const dayCount = requirements.requirements?.['日勤']?.totalStaff || 2;
+  const lateCount = requirements.requirements?.['遅番']?.totalStaff || 1;
+
   if (hasNightShift) {
     return `
 以下のスタッフの${requirements.targetMonth}の詳細シフトを生成してください。
@@ -461,20 +466,28 @@ ${shiftDescription}
 |--------|----------|----------|
 ${requirementsTable}
 
-**最重要**: 各営業日（日曜日を除く）、上記の人員配置を**必ず**満たしてください。
-- 1日の合計勤務者数: ${totalStaffPerDay}名
-- 日勤には看護師${nurseInfo}を**必ず1名以上**配置すること
+# ⚠️ シフト配分の優先ルール（必ず守ること）
+**日勤に偏った配置をしないでください。以下の順序でシフトを配分してください：**
+
+1. **まず早番${earlyCount}名を確保** ← 最優先！
+2. **次に遅番${lateCount}名を確保**
+3. **残りのスタッフを日勤${dayCount}名に配置**（看護師${nurseInfo}を必ず1名含む）
+
+❌ 悪い例: 早番1名、日勤4名、遅番0名（日勤に偏りすぎ）
+✅ 良い例: 早番${earlyCount}名、日勤${dayCount}名、遅番${lateCount}名（バランス良い）
 
 # 制約
 - 骨子で指定された休日は変更しないこと
 - 休日以外の日は、必要人員を満たすようシフトを割り当てる
 - 日曜日は全員「休」とすること
 - **夜勤や明け休みは絶対に使用しないこと**
+- **日勤に${dayCount + 1}名以上配置しないこと**（他のシフトが不足する原因になる）
 
 # 出力前チェックリスト
-□ 各営業日の早番が${requirements.requirements?.['早番']?.totalStaff || 2}名いるか
-□ 各営業日の日勤が${requirements.requirements?.['日勤']?.totalStaff || 2}名いるか（看護師1名含む）
-□ 各営業日の遅番が${requirements.requirements?.['遅番']?.totalStaff || 1}名いるか
+□ 各営業日の早番が${earlyCount}名いるか ← 最重要！
+□ 各営業日の遅番が${lateCount}名いるか
+□ 各営業日の日勤が${dayCount}名いるか（看護師1名含む）
+□ 日勤が${dayCount + 1}名以上の日がないか
 □ 日曜日は全員「休」になっているか
 □ 休日のスタッフは「休」になっているか
 
