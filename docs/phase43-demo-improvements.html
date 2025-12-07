@@ -134,11 +134,49 @@
             <h2>概要</h2>
             <p>Phase 43では、デモ環境での安全な操作体験と、本番環境における排他制御（同時編集防止）機能を実装しました。</p>
             <ul style="margin-top: 1rem; padding-left: 1.5rem;">
-                <li>デモ環境ではAI生成や手動編集を体験可能（保存はスキップ）</li>
+                <li>デモ環境でもAI生成・保存・確定を完全に体験可能（Phase 43.2で変更）</li>
                 <li>デモ環境であることを視覚的に明示するバナー表示</li>
-                <li>本番・デモ両環境で排他ロック機構を実装</li>
+                <li>本番・デモ両環境で排他ロック機構を実装（複数ユーザー対応）</li>
                 <li>不要な開発用機能（ランダムシフト生成ボタン）を削除</li>
+                <li>AI生成したシフトが月次レポートに反映（Phase 43.2で追加）</li>
             </ul>
+        </div>
+
+        <div class="card" style="border-left: 4px solid #10B981;">
+            <h2>Phase 43.2 設計変更（2025-12-08）</h2>
+            <p><strong>背景:</strong> Phase 43実装後、以下の問題が発覚</p>
+            <ul style="padding-left: 1.5rem; margin: 0.5rem 0;">
+                <li>AI生成したシフトが月次レポートに反映されない</li>
+                <li>デモ体験の一貫性が損なわれる</li>
+            </ul>
+            <p style="margin-top: 1rem;"><strong>方針変更:</strong> デモ環境でも本番環境と同様にFirestoreへ保存を許可する</p>
+            <table style="width: 100%; border-collapse: collapse; font-size: 0.9rem; margin-top: 1rem;">
+                <tr style="background: var(--bg);">
+                    <th style="padding: 0.5rem; text-align: left; border-bottom: 1px solid var(--border);">機能</th>
+                    <th style="padding: 0.5rem; text-align: left; border-bottom: 1px solid var(--border);">Phase 43</th>
+                    <th style="padding: 0.5rem; text-align: left; border-bottom: 1px solid var(--border);">Phase 43.2</th>
+                </tr>
+                <tr>
+                    <td style="padding: 0.5rem; border-bottom: 1px solid var(--border);">AI生成</td>
+                    <td style="padding: 0.5rem; border-bottom: 1px solid var(--border);">画面表示のみ</td>
+                    <td style="padding: 0.5rem; border-bottom: 1px solid var(--border);"><strong>保存される</strong></td>
+                </tr>
+                <tr>
+                    <td style="padding: 0.5rem; border-bottom: 1px solid var(--border);">手動編集・保存</td>
+                    <td style="padding: 0.5rem; border-bottom: 1px solid var(--border);">スキップ</td>
+                    <td style="padding: 0.5rem; border-bottom: 1px solid var(--border);"><strong>保存される</strong></td>
+                </tr>
+                <tr>
+                    <td style="padding: 0.5rem; border-bottom: 1px solid var(--border);">確定</td>
+                    <td style="padding: 0.5rem; border-bottom: 1px solid var(--border);">スキップ</td>
+                    <td style="padding: 0.5rem; border-bottom: 1px solid var(--border);"><strong>確定される</strong></td>
+                </tr>
+                <tr>
+                    <td style="padding: 0.5rem;">月次レポート</td>
+                    <td style="padding: 0.5rem;">サンプルデータ表示</td>
+                    <td style="padding: 0.5rem;"><strong>AI生成シフト集計</strong></td>
+                </tr>
+            </table>
         </div>
 
         <div class="card">
@@ -194,7 +232,7 @@
                     </svg>
                     <div class="feature-text">
                         <strong>デモ環境バナー</strong>
-                        <span>画面上部に「🧪 デモ環境」バナーを表示。保存されないことを明示</span>
+                        <span>画面上部に「🧪 デモ環境」バナーを表示。サンプル施設で体験中であることを明示</span>
                     </div>
                 </div>
                 <div class="feature-item">
@@ -202,8 +240,8 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
                     </svg>
                     <div class="feature-text">
-                        <strong>保存スキップ</strong>
-                        <span>デモ環境ではAI生成結果を画面表示のみ。Firestoreへの書き込みなし</span>
+                        <strong>完全な保存機能（Phase 43.2）</strong>
+                        <span>デモ環境でもAI生成結果をFirestoreに保存。月次レポートに反映</span>
                     </div>
                 </div>
                 <div class="feature-item">
@@ -305,7 +343,7 @@ facilities/{facilityId}/locks/{yearMonth}
     </div>
 
     <footer>
-        <p>Phase 43: デモ環境改善・排他制御 | 2025-12-07</p>
+        <p>Phase 43: デモ環境改善・排他制御 | 2025-12-07（Phase 43.2: 2025-12-08）</p>
         <p><a href="index.html">プロジェクト概要</a></p>
     </footer>
 </body>

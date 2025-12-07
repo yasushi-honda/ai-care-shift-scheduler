@@ -1,11 +1,29 @@
 # Phase 43: デモ環境改善・排他制御 - 技術設計
 
 **作成日**: 2025-12-07
-**ステータス**: 設計中
+**最終更新**: 2025-12-08
+**ステータス**: Phase 43.2 設計変更中
 
 ---
 
-## 1. アーキテクチャ概要
+## Phase 43.2 変更概要
+
+### 変更理由
+
+Phase 43の「デモ環境では保存しない」設計により、以下の問題が発生：
+
+- AI生成したシフトが月次レポートに反映されない
+- デモ体験の一貫性が損なわれる（プロの仕事ではない）
+
+### 変更方針
+
+**デモ環境でも本番環境と同様にFirestoreへ保存を許可する**
+
+既に実装済みの排他制御（LockService）により、複数デモユーザーの同時アクセスは適切に処理される。
+
+---
+
+## 1. アーキテクチャ概要（Phase 43.2更新）
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
@@ -14,15 +32,16 @@
 │                                                                     │
 │  ┌─────────────────┐    ┌─────────────────┐    ┌────────────────┐  │
 │  │  AuthContext    │    │  LockService    │    │  DemoBanner    │  │
-│  │  + isDemoUser   │    │  + acquireLock  │    │  (新規)        │  │
+│  │  + isDemoUser   │    │  + acquireLock  │    │  (表示のみ)    │  │
 │  │  + isDemoFacility│   │  + releaseLock  │    └────────────────┘  │
 │  └────────┬────────┘    │  + checkLock    │                        │
 │           │             └────────┬────────┘                        │
 │           ▼                      │                                 │
 │  ┌─────────────────────────────────────────────────────────────┐   │
 │  │                         App.tsx                              │   │
-│  │  - AI生成時: ロック取得 → 生成 → デモなら保存スキップ           │   │
-│  │  - 保存時: デモなら警告表示、本番ならロック取得→保存           │   │
+│  │  Phase 43.2: デモ環境でも本番同様に保存                        │   │
+│  │  - AI生成時: ロック取得 → 生成 → 保存（デモ/本番共通）          │   │
+│  │  - 保存時: ロック取得 → 保存（デモ/本番共通）                   │   │
 │  └─────────────────────────────────────────────────────────────┘   │
 │                                                                     │
 └─────────────────────────────────────────────────────────────────────┘
@@ -32,457 +51,50 @@
 │                           Firestore                                  │
 ├─────────────────────────────────────────────────────────────────────┤
 │                                                                     │
-│  /facilities/{facilityId}/locks/{yearMonth}                         │
-│  {                                                                  │
-│    lockedBy: "user-id",                                             │
-│    lockedAt: Timestamp,                                             │
-│    operation: "ai-generation" | "saving",                           │
-│    expiresAt: Timestamp                                             │
-│  }                                                                  │
+│  /facilities/demo-facility-001/schedules/{yearMonth}  ← 保存される  │
+│  /facilities/demo-facility-001/locks/{yearMonth}      ← 排他制御    │
 │                                                                     │
 └─────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## 2. コンポーネント設計
+## 2. Phase 43.2での変更点
 
-### 2.1 AuthContext 拡張
+### 2.1 App.tsx の変更
 
-```typescript
-// src/contexts/AuthContext.tsx
-
-interface AuthContextType {
-  // 既存
-  currentUser: User | null;
-  userProfile: UserProfile | null;
-  // ...
-
-  // 新規追加
-  isDemoUser: boolean;      // デモユーザーかどうか
-  isDemoFacility: boolean;  // デモ施設を選択中かどうか
-}
-
-// 判定ロジック
-const isDemoUser = useMemo(() => {
-  return userProfile?.provider === 'demo' ||
-         currentUser?.uid === 'demo-user-fixed-uid';
-}, [userProfile, currentUser]);
-
-const isDemoFacility = useMemo(() => {
-  return selectedFacilityId === 'demo-facility-001';
-}, [selectedFacilityId]);
-```
-
-### 2.2 LockService（新規）
+#### 削除するコード
 
 ```typescript
-// src/services/lockService.ts
-
-import {
-  doc, getDoc, setDoc, deleteDoc,
-  Timestamp, runTransaction
-} from 'firebase/firestore';
-import { db } from '../firebase';
-
-export type LockOperation = 'ai-generation' | 'saving';
-
-export interface LockInfo {
-  lockedBy: string;
-  lockedAt: Timestamp;
-  operation: LockOperation;
-  expiresAt: Timestamp;
+// 削除: デモ環境での保存スキップ
+if (isDemoEnvironment) {
+  showSuccess('シフトを生成しました（デモ環境のため保存されません）');
+  return;
 }
 
-export interface LockResult {
-  success: boolean;
-  error?: string;
-  existingLock?: LockInfo;
+// 削除: 保存時のデモ環境チェック
+if (isDemoEnvironment) {
+  showInfo('デモ環境では保存されません。本番環境でお試しください。');
+  return;
 }
 
-const LOCK_TIMEOUTS: Record<LockOperation, number> = {
-  'ai-generation': 5 * 60 * 1000,  // 5分
-  'saving': 30 * 1000,              // 30秒
-};
-
-export class LockService {
-  /**
-   * ロックを取得する
-   */
-  static async acquireLock(
-    facilityId: string,
-    yearMonth: string,
-    userId: string,
-    operation: LockOperation
-  ): Promise<LockResult> {
-    const lockRef = doc(db, 'facilities', facilityId, 'locks', yearMonth);
-
-    try {
-      return await runTransaction(db, async (transaction) => {
-        const lockDoc = await transaction.get(lockRef);
-        const now = Timestamp.now();
-
-        if (lockDoc.exists()) {
-          const existingLock = lockDoc.data() as LockInfo;
-
-          // 自分のロックなら更新
-          if (existingLock.lockedBy === userId) {
-            const newLock: LockInfo = {
-              lockedBy: userId,
-              lockedAt: now,
-              operation,
-              expiresAt: Timestamp.fromMillis(
-                now.toMillis() + LOCK_TIMEOUTS[operation]
-              ),
-            };
-            transaction.set(lockRef, newLock);
-            return { success: true };
-          }
-
-          // 期限切れなら上書き
-          if (existingLock.expiresAt.toMillis() < now.toMillis()) {
-            const newLock: LockInfo = {
-              lockedBy: userId,
-              lockedAt: now,
-              operation,
-              expiresAt: Timestamp.fromMillis(
-                now.toMillis() + LOCK_TIMEOUTS[operation]
-              ),
-            };
-            transaction.set(lockRef, newLock);
-            return { success: true };
-          }
-
-          // 他のユーザーがロック中
-          return {
-            success: false,
-            error: '他のユーザーが操作中です',
-            existingLock,
-          };
-        }
-
-        // ロックなし → 新規取得
-        const newLock: LockInfo = {
-          lockedBy: userId,
-          lockedAt: now,
-          operation,
-          expiresAt: Timestamp.fromMillis(
-            now.toMillis() + LOCK_TIMEOUTS[operation]
-          ),
-        };
-        transaction.set(lockRef, newLock);
-        return { success: true };
-      });
-    } catch (error) {
-      console.error('Lock acquisition failed:', error);
-      return {
-        success: false,
-        error: 'ロック取得に失敗しました',
-      };
-    }
-  }
-
-  /**
-   * ロックを解放する
-   */
-  static async releaseLock(
-    facilityId: string,
-    yearMonth: string,
-    userId: string
-  ): Promise<boolean> {
-    const lockRef = doc(db, 'facilities', facilityId, 'locks', yearMonth);
-
-    try {
-      const lockDoc = await getDoc(lockRef);
-      if (!lockDoc.exists()) return true;
-
-      const lock = lockDoc.data() as LockInfo;
-      if (lock.lockedBy !== userId) {
-        console.warn('Cannot release lock owned by another user');
-        return false;
-      }
-
-      await deleteDoc(lockRef);
-      return true;
-    } catch (error) {
-      console.error('Lock release failed:', error);
-      return false;
-    }
-  }
-
-  /**
-   * ロック状態を確認する
-   */
-  static async checkLock(
-    facilityId: string,
-    yearMonth: string
-  ): Promise<LockInfo | null> {
-    const lockRef = doc(db, 'facilities', facilityId, 'locks', yearMonth);
-
-    try {
-      const lockDoc = await getDoc(lockRef);
-      if (!lockDoc.exists()) return null;
-
-      const lock = lockDoc.data() as LockInfo;
-      const now = Timestamp.now();
-
-      // 期限切れなら無効
-      if (lock.expiresAt.toMillis() < now.toMillis()) {
-        return null;
-      }
-
-      return lock;
-    } catch (error) {
-      console.error('Lock check failed:', error);
-      return null;
-    }
-  }
+// 削除: 確定時のデモ環境チェック
+if (isDemoEnvironment) {
+  showInfo('デモ環境では確定できません。本番環境でお試しください。');
+  return;
 }
 ```
 
-### 2.3 DemoBanner（新規）
+#### 変更後のAI生成フロー
 
 ```typescript
-// src/components/DemoBanner.tsx
-
-import React from 'react';
-
-interface DemoBannerProps {
-  className?: string;
-}
-
-export function DemoBanner({ className = '' }: DemoBannerProps) {
-  return (
-    <div
-      className={`
-        bg-amber-100 border-b border-amber-300
-        px-4 py-2 text-center text-amber-800
-        ${className}
-      `}
-    >
-      <span className="font-medium">🎭 デモ環境</span>
-      <span className="ml-2 text-sm">
-        操作を体験できますが、変更は保存されません
-      </span>
-    </div>
-  );
-}
-```
-
-### 2.4 LockStatusModal（新規）
-
-```typescript
-// src/components/LockStatusModal.tsx
-
-import React from 'react';
-import { LockInfo } from '../services/lockService';
-
-interface LockStatusModalProps {
-  isOpen: boolean;
-  lockInfo: LockInfo | null;
-  onClose: () => void;
-  onWait?: () => void;
-}
-
-export function LockStatusModal({
-  isOpen,
-  lockInfo,
-  onClose,
-  onWait
-}: LockStatusModalProps) {
-  if (!isOpen || !lockInfo) return null;
-
-  const remainingSeconds = Math.max(
-    0,
-    Math.ceil((lockInfo.expiresAt.toMillis() - Date.now()) / 1000)
-  );
-
-  const remainingMinutes = Math.ceil(remainingSeconds / 60);
-
-  const operationLabel =
-    lockInfo.operation === 'ai-generation'
-      ? 'AI生成'
-      : '保存処理';
-
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
-        <h3 className="text-lg font-bold text-slate-900 mb-4">
-          🔒 他のユーザーが操作中です
-        </h3>
-        <p className="text-slate-600 mb-4">
-          現在、別のユーザーが{operationLabel}を実行中です。
-          <br />
-          約{remainingMinutes}分後に操作可能になります。
-        </p>
-        <div className="flex gap-3 justify-end">
-          <button
-            onClick={onClose}
-            className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded"
-          >
-            キャンセル
-          </button>
-          {onWait && (
-            <button
-              onClick={onWait}
-              className="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700"
-            >
-              待機する
-            </button>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
-```
-
-### 2.5 ActionToolbar 変更
-
-```typescript
-// src/components/ActionToolbar.tsx
-
-// 変更前
-interface ActionToolbarProps {
-  onDemoClick: () => void;  // 削除
-  onSaveClick: () => void;
-  // ...
-}
-
-// 変更後
-interface ActionToolbarProps {
-  // onDemoClick 削除
-  onSaveClick: () => void;
-  onConfirmClick: () => void;
-  onHistoryClick: () => void;
-  onExportClick: () => void;
-  isLoading: boolean;
-  canSave: boolean;
-  canConfirm: boolean;
-  canShowHistory: boolean;
-  className?: string;
-}
-
-export function ActionToolbar({
-  onSaveClick,
-  onConfirmClick,
-  onHistoryClick,
-  onExportClick,
-  isLoading,
-  canSave,
-  canConfirm,
-  canShowHistory,
-  className = '',
-}: ActionToolbarProps) {
-  return (
-    <div className={`flex items-center gap-4 ${className}`}>
-      {/* 編集グループ - デモボタン削除 */}
-      <ButtonGroup>
-        <Button
-          variant="secondary"
-          size="md"
-          icon={<SaveIcon />}
-          onClick={onSaveClick}
-          disabled={isLoading || !canSave}
-          data-testid="save-draft-button"
-        >
-          保存
-        </Button>
-        <Button
-          variant="success"
-          size="md"
-          icon={<CheckIcon />}
-          onClick={onConfirmClick}
-          disabled={isLoading || !canConfirm}
-          data-testid="confirm-button"
-        >
-          確定
-        </Button>
-      </ButtonGroup>
-
-      {/* ユーティリティグループ */}
-      <ButtonGroup separated>
-        <Button
-          variant="ghost"
-          size="md"
-          icon={<ClockIcon />}
-          onClick={onHistoryClick}
-          disabled={!canShowHistory}
-          data-testid="version-history-button"
-        >
-          履歴
-        </Button>
-        <Button
-          variant="outline"
-          size="md"
-          icon={<DownloadIcon />}
-          onClick={onExportClick}
-          data-testid="csv-export-button"
-        >
-          CSV
-        </Button>
-      </ButtonGroup>
-    </div>
-  );
-}
-```
-
----
-
-## 3. App.tsx 変更
-
-### 3.1 デモ環境判定とUI
-
-```typescript
-// App.tsx
-
-import { DemoBanner } from './src/components/DemoBanner';
-import { LockStatusModal } from './src/components/LockStatusModal';
-import { LockService, LockInfo } from './src/services/lockService';
-
-function App() {
-  const { isDemoUser, isDemoFacility } = useAuth();
-
-  // デモ環境かどうか
-  const isDemoEnvironment = isDemoUser || isDemoFacility;
-
-  // ロック状態
-  const [lockModalOpen, setLockModalOpen] = useState(false);
-  const [currentLockInfo, setCurrentLockInfo] = useState<LockInfo | null>(null);
-
-  // ...
-
-  return (
-    <div className="min-h-screen">
-      {/* デモ環境バナー */}
-      {isDemoEnvironment && <DemoBanner />}
-
-      {/* ロック状態モーダル */}
-      <LockStatusModal
-        isOpen={lockModalOpen}
-        lockInfo={currentLockInfo}
-        onClose={() => setLockModalOpen(false)}
-      />
-
-      {/* 既存のUI */}
-      {/* ... */}
-    </div>
-  );
-}
-```
-
-### 3.2 AI生成フローの変更
-
-```typescript
-// App.tsx - AI生成ハンドラー（既存のhandleGenerateClick相当）
-
 const handleGenerateShift = async () => {
   if (!selectedFacilityId || !currentUser) {
     showError('施設またはユーザー情報が取得できません');
     return;
   }
 
-  // 1. ロック取得（デモ環境でも取得 - 他のデモユーザーとの競合防止）
+  // 1. ロック取得（デモ/本番共通）
   const lockResult = await LockService.acquireLock(
     selectedFacilityId,
     requirements.targetMonth,
@@ -510,41 +122,18 @@ const handleGenerateShift = async () => {
     setSchedule(generationResult.schedule);
     setEvaluation(generationResult.evaluation);
 
-    // 4. デモ環境では保存スキップ
-    if (isDemoEnvironment) {
-      showSuccess('シフトを生成しました（デモ環境のため保存されません）');
-      return;
-    }
-
-    // 5. 本番環境では保存
+    // 4. Firestoreに保存（デモ/本番共通）
     if (currentScheduleId) {
-      await ScheduleService.updateSchedule(
-        selectedFacilityId,
-        currentScheduleId,
-        currentUser.uid,
-        {
-          staffSchedules: generationResult.schedule,
-          status: 'draft',
-        }
-      );
+      await ScheduleService.updateSchedule(/* ... */);
     } else {
-      await ScheduleService.saveSchedule(
-        selectedFacilityId,
-        currentUser.uid,
-        {
-          targetMonth: requirements.targetMonth,
-          staffSchedules: generationResult.schedule,
-          version: 1,
-          status: 'draft',
-        }
-      );
+      await ScheduleService.saveSchedule(/* ... */);
     }
 
-    showSuccess('シフトを生成し、保存しました');
+    showSuccess('シフトを生成しました');
   } catch (error) {
     showError('シフト生成に失敗しました');
   } finally {
-    // 6. ロック解放
+    // 5. ロック解放
     await LockService.releaseLock(
       selectedFacilityId,
       requirements.targetMonth,
@@ -555,154 +144,108 @@ const handleGenerateShift = async () => {
 };
 ```
 
-### 3.3 保存フローの変更
+### 2.2 DemoBanner.tsx の変更
+
+#### 変更前
 
 ```typescript
-// App.tsx - 保存ハンドラー
-
-const handleSaveDraft = async () => {
-  // デモ環境では保存しない
-  if (isDemoEnvironment) {
-    showInfo('デモ環境では保存されません。本番環境でお試しください。');
-    return;
-  }
-
-  // 以下、既存の保存ロジック（ロック取得を追加）
-  const lockResult = await LockService.acquireLock(
-    selectedFacilityId,
-    requirements.targetMonth,
-    currentUser.uid,
-    'saving'
+export function DemoBanner({ className = '' }: DemoBannerProps) {
+  return (
+    <div className={`...`}>
+      <span className="font-medium">🧪 デモ環境</span>
+      <span className="ml-2 text-sm">
+        操作を体験できますが、変更は保存されません
+      </span>
+    </div>
   );
-
-  if (!lockResult.success) {
-    setCurrentLockInfo(lockResult.existingLock ?? null);
-    setLockModalOpen(true);
-    return;
-  }
-
-  try {
-    // 保存処理
-    await ScheduleService.updateSchedule(/* ... */);
-    showSuccess('下書きを保存しました');
-  } finally {
-    await LockService.releaseLock(/* ... */);
-  }
-};
-
-const handleConfirmSchedule = async () => {
-  // デモ環境では確定しない
-  if (isDemoEnvironment) {
-    showInfo('デモ環境では確定できません。本番環境でお試しください。');
-    return;
-  }
-
-  // 以下、既存の確定ロジック
-  // ...
-};
-```
-
----
-
-## 4. Firestore Rules 変更
-
-```javascript
-// firestore.rules
-
-// locks subcollection
-match /facilities/{facilityId}/locks/{lockId} {
-  // 認証済みユーザーが読み取り可能
-  allow read: if isAuthenticated();
-
-  // 認証済みユーザーが作成・更新可能（自分のロックのみ）
-  allow create: if isAuthenticated()
-    && request.resource.data.lockedBy == request.auth.uid;
-
-  allow update: if isAuthenticated()
-    && (
-      // 自分のロックを更新
-      resource.data.lockedBy == request.auth.uid
-      // または期限切れのロックを上書き
-      || resource.data.expiresAt < request.time
-    )
-    && request.resource.data.lockedBy == request.auth.uid;
-
-  // 自分のロックのみ削除可能
-  allow delete: if isAuthenticated()
-    && resource.data.lockedBy == request.auth.uid;
 }
 ```
 
+#### 変更後
+
+```typescript
+export function DemoBanner({ className = '' }: DemoBannerProps) {
+  return (
+    <div className={`...`}>
+      <span className="font-medium">🧪 デモ環境</span>
+      <span className="ml-2 text-sm">
+        サンプル施設でシステムを体験中です
+      </span>
+    </div>
+  );
+}
+```
+
+### 2.3 AuthContext.tsx の確認（変更不要）
+
+`isDemoEnvironment`フラグは引き続きバナー表示に使用するため、削除しない。
+
+```typescript
+// 変更なし: デモ環境判定は維持
+const isDemoEnvironment = isDemoUser;
+
+// コンテキストで公開
+value={{
+  isDemoUser,
+  isDemoFacility,
+  isDemoEnvironment, // バナー表示用に維持
+}}
+```
+
 ---
 
-## 5. 削除対象
+## 3. 既存実装（変更なし）
 
-### 5.1 削除するコード
+以下のコンポーネントは既に実装済みで、変更不要：
 
-| ファイル | 削除対象 |
-|----------|----------|
-| `App.tsx` | `handleGenerateDemo`関数（約80行） |
-| `src/components/ActionToolbar.tsx` | `onDemoClick` prop、デモボタン |
+### 3.1 LockService
 
-### 5.2 削除するテスト
+排他制御は既に実装済み。デモ環境でも本番環境と同様に機能する。
 
-| ファイル | 削除対象 |
-|----------|----------|
-| `e2e/tests/*.spec.ts` | `demo-shift-button`関連のテスト |
+### 3.2 LockStatusModal
+
+ロック競合時のモーダル表示は既に実装済み。
+
+### 3.3 Firestore Rules
+
+デモユーザーによるデモ施設への書き込みは既に許可されている。
 
 ---
 
-## 6. 実装順序
+## 4. 実装順序（Phase 43.2）
 
 ```mermaid
 graph TD
-    A[1. LockService作成] --> B[2. Firestore Rules更新]
-    B --> C[3. AuthContext拡張]
-    C --> D[4. DemoBanner作成]
-    D --> E[5. LockStatusModal作成]
-    E --> F[6. ActionToolbar変更]
+    A[1. 要件定義書更新] --> B[2. 技術設計書更新]
+    B --> C[3. CLAUDE.md更新]
+    C --> D[4. Serenaメモリ更新]
+    D --> E[5. docs/demo.html更新]
+    E --> F[6. docs/phase43-demo-improvements.html更新]
     F --> G[7. App.tsx変更]
-    G --> H[8. handleGenerateDemo削除]
-    H --> I[9. テスト更新]
-    I --> J[10. デプロイ・検証]
+    G --> H[8. DemoBanner.tsx変更]
+    H --> I[9. テスト・検証]
+    I --> J[10. コミット・デプロイ]
 ```
 
 ---
 
-## 7. テスト計画
+## 5. テスト計画（Phase 43.2）
 
-### 7.1 ユニットテスト
+### 5.1 手動テスト
 
-```typescript
-// src/services/lockService.test.ts
+| # | テスト項目 | 期待結果 |
+|---|-----------|----------|
+| 1 | デモログイン → AI生成 | シフトが生成・保存される |
+| 2 | デモログイン → 保存ボタン | シフトが保存される |
+| 3 | デモログイン → 確定ボタン | シフトが確定される |
+| 4 | デモログイン → レポート | 保存したシフトが集計表示される |
+| 5 | 複数タブで同時AI生成 | 排他制御モーダル表示 |
 
-describe('LockService', () => {
-  describe('acquireLock', () => {
-    it('should acquire lock when no lock exists', async () => {});
-    it('should fail when another user holds the lock', async () => {});
-    it('should succeed when lock is expired', async () => {});
-    it('should update lock when same user re-acquires', async () => {});
-  });
+### 5.2 E2Eテスト更新
 
-  describe('releaseLock', () => {
-    it('should release own lock', async () => {});
-    it('should fail to release another user lock', async () => {});
-  });
-});
-```
-
-### 7.2 E2Eテスト
-
-```typescript
-// e2e/tests/demo-environment.spec.ts
-
-describe('Demo Environment', () => {
-  it('should show demo banner when logged in as demo user', async () => {});
-  it('should allow AI generation in demo environment', async () => {});
-  it('should show message when trying to save in demo', async () => {});
-  it('should not persist changes to Firestore', async () => {});
-});
-```
+既存のデモ環境テストを更新：
+- 「保存されません」メッセージのアサーションを削除
+- 実際に保存されることを確認するアサーションに変更
 
 ---
 
@@ -711,3 +254,4 @@ describe('Demo Environment', () => {
 | 日付 | 変更者 | 内容 |
 |------|--------|------|
 | 2025-12-07 | Claude | 初版作成 |
+| 2025-12-08 | Claude | Phase 43.2: デモ環境での保存許可に方針変更 |

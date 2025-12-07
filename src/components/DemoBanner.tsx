@@ -2,8 +2,9 @@
  * DemoBanner - デモ環境表示バナー
  *
  * Phase 43: デモ環境改善
+ * Phase 43.2: メッセージ変更（保存許可に変更）
  * - デモ環境であることを明示的に表示
- * - 保存されないことをユーザーに通知
+ * - サンプル施設で体験中であることを通知
  */
 
 import React from 'react';
@@ -30,7 +31,7 @@ export function DemoBanner({ className = '' }: DemoBannerProps) {
     >
       <span className="font-medium" aria-hidden="true">🧪 デモ環境</span>
       <span className="ml-2 text-sm">
-        操作を体験できますが、変更は保存されません
+        サンプル施設でシステムを体験中です
       </span>
     </div>
   );

@@ -1032,15 +1032,6 @@ const App: React.FC = () => {
         // 複数回のリスナー発火（キャッシュ、サーバー、更新通知）に対応するため3回スキップ
         skipEvaluationClearCountRef.current = 3;
 
-        // Phase 43: デモ環境では保存しない（画面表示のみ）
-        if (isDemoEnvironment) {
-          // 画面に表示するためにstateを更新
-          setSchedule(generationResult.schedule);
-          showSuccess('シフトを生成しました（デモ環境のため保存されません）');
-          setViewMode('shift');
-          return;
-        }
-
         // 既存のスケジュールがあるかチェック
         if (currentScheduleId) {
           // 既存スケジュールを更新（バージョン履歴を保持）
@@ -1113,18 +1104,6 @@ const App: React.FC = () => {
   };
 
   const handleSaveDraft = useCallback(async () => {
-    // Phase 43: デモ環境では保存しない
-    if (isDemoEnvironment) {
-      showWithAction({
-        message: 'デモ環境では保存されません。本番環境でお試しください。',
-        type: 'info',
-        actionLabel: '閉じる',
-        onAction: () => {},
-        duration: 5000,
-      });
-      return;
-    }
-
     if (!selectedFacilityId || !currentUser || !currentScheduleId) {
       showError('保存に必要な情報が不足しています');
       return;
@@ -1188,21 +1167,9 @@ const App: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [selectedFacilityId, currentUser, currentScheduleId, schedule, requirements.targetMonth, showSuccess, showError, showWithAction, isDemoEnvironment]);
+  }, [selectedFacilityId, currentUser, currentScheduleId, schedule, requirements.targetMonth, showSuccess, showError]);
 
   const handleConfirmSchedule = useCallback(async () => {
-    // Phase 43: デモ環境では確定しない
-    if (isDemoEnvironment) {
-      showWithAction({
-        message: 'デモ環境では確定できません。本番環境でお試しください。',
-        type: 'info',
-        actionLabel: '閉じる',
-        onAction: () => {},
-        duration: 5000,
-      });
-      return;
-    }
-
     if (!selectedFacilityId || !currentUser || !currentScheduleId) {
       showError('確定に必要な情報が不足しています');
       return;
@@ -1244,7 +1211,7 @@ const App: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [selectedFacilityId, currentUser, currentScheduleId, schedule, currentScheduleStatus, requirements.targetMonth, showSuccess, showError, showWithAction, isDemoEnvironment]);
+  }, [selectedFacilityId, currentUser, currentScheduleId, schedule, currentScheduleStatus, requirements.targetMonth, showSuccess, showError]);
 
   const handleShowVersionHistory = useCallback(async () => {
     if (!selectedFacilityId || !currentScheduleId) {

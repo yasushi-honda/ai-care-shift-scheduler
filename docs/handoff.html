@@ -225,7 +225,7 @@ timeline
         Phase 42.2 : デモログイン機能
                    : Cloud Function認証
         Phase 43 : デモ環境改善
-                 : 保存スキップ・排他制御
+                 : 排他制御・月次レポート連動
         Phase 43.1 : デモデータ改善
                    : デイサービス8名体制
         Phase 44 : AIシフト生成パイプライン改善
@@ -357,11 +357,11 @@ timeline
                 <strong>目的:</strong> デモ環境での安全な操作体験と排他制御
             </div>
 
-            <h3>Phase 43 実装内容</h3>
+            <h3>Phase 43 実装内容（Phase 43.2で更新）</h3>
             <ul>
-                <li><strong>デモ環境バナー:</strong> 「🧪 デモ環境」表示、保存されない旨を明示</li>
-                <li><strong>保存スキップ:</strong> デモ環境ではFirestore書き込みなし</li>
-                <li><strong>排他ロック機構:</strong> AI生成/保存時にロック取得</li>
+                <li><strong>デモ環境バナー:</strong> 「🧪 デモ環境」表示、サンプル施設で体験中であることを明示</li>
+                <li><strong>完全な保存機能:</strong> デモ環境でもFirestoreに保存・月次レポートに反映</li>
+                <li><strong>排他ロック機構:</strong> AI生成/保存時にロック取得（複数ユーザー対応）</li>
             </ul>
 
             <h3>Phase 43.1 デモデータ改善</h3>

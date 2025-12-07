@@ -21,7 +21,7 @@ Kiro-style Spec Driven Development implementation using claude code slash comman
 - **ui-design-improvement**: Phase 42 UIデザイン改善（ボタン統一・アイコン改善） - ✅ 完了
 - **navigation-improvement**: Phase 42.1 ナビゲーション改善（戻るボタン・ログアウト確認） - ✅ 完了
 - **demo-login**: Phase 42.2 デモログイン機能（Cloud Functionカスタムトークン方式） - ✅ 完了
-- **demo-environment-improvements**: Phase 43 デモ環境改善・排他制御（保存スキップ・ロック機構） - ✅ 完了
+- **demo-environment-improvements**: Phase 43 デモ環境改善・排他制御（排他ロック・月次レポート連動） - ✅ 完了（Phase 43.2で保存許可に変更）
 - **ai-evaluation-feedback**: Phase 44 AIシフト生成パイプライン改善（動的制約・評価ロジック強化） - ✅ 完了
 - Use `/kiro:spec-status [feature-name]` to check progress
 
@@ -641,27 +641,39 @@ gcloud iam service-accounts get-iam-policy \
 
 ## Phase 43 デモ環境設計ルール（重要）
 
-**背景**: 2025-12-07にデモ環境制限が誤って本番ユーザーにも適用された問題を修正。
+**背景**: 2025-12-07にPhase 43を実装。2025-12-08にPhase 43.2でデモ体験の一貫性を改善。
 
-### 設計原則
+### 設計原則（Phase 43.2で更新）
 
-**デモ環境制限はデモアカウントでログインした場合のみ適用する**
+**デモ環境でも本番環境と同様にFirestoreへ保存を許可する**
+
+Phase 43では「デモ環境では保存しない」設計だったが、以下の問題が発生：
+- AI生成したシフトが月次レポートに反映されない
+- デモ体験の一貫性が損なわれる
+
+Phase 43.2で方針変更：**デモでも保存を許可**（排他制御で複数ユーザー対応済み）
 
 ```typescript
-// ✅ 正しい実装
-const isDemoEnvironment = isDemoUser;  // デモユーザーのみ
+// Phase 43.2: デモ環境でも保存する
+// isDemoEnvironmentはバナー表示のみに使用
+const isDemoEnvironment = isDemoUser;
 
-// ❌ 間違った実装（以前のバグ）
-const isDemoEnvironment = isDemoUser || isDemoFacility;  // 施設も含めていた
+// ❌ 削除されたコード（Phase 43.2）
+// if (isDemoEnvironment) {
+//   showInfo('デモ環境では保存されません');
+//   return;
+// }
 ```
 
-### 理由
+### デモ環境の動作（Phase 43.2）
 
-| ユースケース | 期待される動作 |
-|-------------|---------------|
-| デモアカウント + サンプル施設 | 制限あり（保存スキップ、バナー表示） |
-| 本番アカウント + サンプル施設 | **制限なし**（フル機能テスト可能） |
-| 本番アカウント + 本番施設 | 制限なし（通常操作） |
+| 機能 | デモ環境での動作 |
+|-----|-----------------|
+| AI生成 | ✅ 実行可能・**保存される** |
+| 手動編集 | ✅ 実行可能・**保存される** |
+| 確定 | ✅ 実行可能・**確定される** |
+| 月次レポート | ✅ 保存したシフトが**集計表示** |
+| 排他制御 | ✅ 複数ユーザー同時アクセス時にロック |
 
 ### 判定ロジック
 
@@ -675,17 +687,37 @@ const isDemoUser = userProfile?.provider === 'demo'
 
 const isDemoFacility = selectedFacilityId === DEMO_FACILITY_ID;
 
-// デモ環境制限はデモユーザーの場合のみ（施設単体では判定しない）
+// デモ環境判定（バナー表示用）
 const isDemoEnvironment = isDemoUser;
 ```
 
-### 注意事項
+### 排他制御（LockService）
 
-- `isDemoFacility` は今後の拡張用に保持（UIでのサンプルデータ表示など）
-- デモ環境バナー（🧪）は `isDemoEnvironment` で表示判定
-- 保存スキップも `isDemoEnvironment` で判定
+複数デモユーザーの同時アクセスは排他制御で保護：
+
+```typescript
+// AI生成・保存時にロックを取得
+const lockResult = await LockService.acquireLock(
+  facilityId,
+  yearMonth,
+  userId,
+  'ai-generation'  // または 'saving'
+);
+
+if (!lockResult.success) {
+  // 他のユーザーが操作中 → モーダル表示
+  setLockModalOpen(true);
+  return;
+}
+```
+
+| ロック種別 | タイムアウト |
+|-----------|-------------|
+| AI生成 | 5分 |
+| 保存 | 30秒 |
 
 ### 参考資料
 
 - [Phase 43ドキュメント](docs/phase43-demo-improvements.html)
+- [要件定義書](.kiro/specs/demo-environment-improvements/requirements.md)
 - Serenaメモリ: `phase43_demo_improvements_2025-12-07`
