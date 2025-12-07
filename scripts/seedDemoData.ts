@@ -178,7 +178,7 @@ const db = admin.firestore();
 // ==================== デモデータ定義 ====================
 
 /**
- * デモスタッフデータ（8名）
+ * デモスタッフデータ（12名: 常勤8名 + パート4名）
  *
  * デイサービス（通所介護）の実態に即した人員構成
  * 参考: 厚生労働省 通所介護の人員配置基準
@@ -190,10 +190,22 @@ const db = admin.firestore();
  * - timeSlotPreference: 時間帯希望
  *
  * 人員構成（定員20名のデイサービス基準）:
+ * 【常勤職員 8名】
  * - 管理者 1名（兼生活相談員）
  * - 看護職員 2名
  * - 介護職員 4名
  * - 機能訓練指導員 1名
+ *
+ * 【パート職員 4名】
+ * - 介護職員 4名（週2〜3日勤務、早番・遅番の送迎対応）
+ *
+ * 計算根拠（更新版）:
+ * - 必要人日数: 26日 × 5名/日 = 130人日
+ * - 可能人日数:
+ *   - 常勤8名 × 週4.5回 × 4週 ≒ 144人日
+ *   - パート4名 × 週2.5回 × 4週 ≒ 40人日
+ *   - 合計: 約184人日
+ * - 余裕率: 約41%（十分な余裕）
  *
  * 注意: デイサービスは日中のみ営業のため夜勤なし
  */
@@ -303,6 +315,61 @@ const demoStaffs: Omit<Staff, 'createdAt' | 'updatedAt'>[] = [
     // 理由: 日勤のみスタッフが多すぎると早番・遅番に配置できるスタッフが不足する
     // 詳細: docs/phase44-root-cause-analysis-2025-12-07.md
     timeSlotPreference: 'いつでも可',
+    facilityId: DEMO_FACILITY_ID,
+  },
+  // ==================== パート職員（4名）====================
+  // デイサービスの実態: パート職員が早番・遅番（送迎）を担当
+  // 週2〜3日勤務で常勤職員の不足を補う
+  {
+    staffId: 'staff-nakamura',
+    name: '中村由美',
+    position: '介護職員',
+    certifications: ['介護職員初任者研修'],
+    nightShiftOnly: false,
+    maxConsecutiveDays: 3,  // パートは連勤制限を緩く
+    weeklyWorkCount: { hope: 3, must: 2 },  // 週3日希望
+    availableWeekdays: [1, 2, 3, 4, 5, 6],  // 月〜土
+    unavailableDates: [],
+    timeSlotPreference: 'いつでも可',  // 早番・遅番も対応可
+    facilityId: DEMO_FACILITY_ID,
+  },
+  {
+    staffId: 'staff-kobayashi',
+    name: '小林誠',
+    position: '介護職員',
+    certifications: ['介護職員初任者研修'],
+    nightShiftOnly: false,
+    maxConsecutiveDays: 3,
+    weeklyWorkCount: { hope: 3, must: 2 },  // 週3日希望
+    availableWeekdays: [1, 2, 3, 4, 5, 6],  // 月〜土
+    unavailableDates: [],
+    timeSlotPreference: 'いつでも可',
+    facilityId: DEMO_FACILITY_ID,
+  },
+  {
+    staffId: 'staff-kato',
+    name: '加藤明子',
+    position: '介護職員',
+    certifications: [],  // 資格なし（無資格でも介護補助可能）
+    nightShiftOnly: false,
+    maxConsecutiveDays: 2,
+    weeklyWorkCount: { hope: 2, must: 1 },  // 週2日希望
+    availableWeekdays: [1, 3, 5],  // 月・水・金のみ可
+    unavailableDates: [],
+    timeSlotPreference: 'いつでも可',
+    facilityId: DEMO_FACILITY_ID,
+  },
+  {
+    staffId: 'staff-yoshida',
+    name: '吉田雅也',
+    position: '介護職員',
+    certifications: ['普通自動車免許'],  // 送迎ドライバー兼任
+    nightShiftOnly: false,
+    maxConsecutiveDays: 3,
+    weeklyWorkCount: { hope: 3, must: 2 },  // 週3日希望
+    availableWeekdays: [1, 2, 3, 4, 5, 6],  // 月〜土
+    unavailableDates: [],
+    timeSlotPreference: 'いつでも可',  // 送迎のため早番・遅番も可
     facilityId: DEMO_FACILITY_ID,
   },
 ];
