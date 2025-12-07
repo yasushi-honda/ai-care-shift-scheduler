@@ -36,6 +36,10 @@ import { Timestamp } from 'firebase/firestore';
 // Phase 42: UIデザイン改善コンポーネント
 import { IconButton } from './src/components/IconButton';
 import { ActionToolbar } from './src/components/ActionToolbar';
+// Phase 43: デモ環境改善・排他制御
+import { DemoBanner } from './src/components/DemoBanner';
+import { LockStatusModal } from './src/components/LockStatusModal';
+import { LockService, LockInfo } from './src/services/lockService';
 
 type ViewMode = 'shift' | 'leaveRequest';
 
@@ -67,7 +71,7 @@ function convertToLeaveRequest(documents: LeaveRequestDocument[]): LeaveRequest 
 }
 
 const App: React.FC = () => {
-  const { selectedFacilityId, currentUser, isSuperAdmin, userProfile, selectFacility, signOut } = useAuth();
+  const { selectedFacilityId, currentUser, isSuperAdmin, userProfile, selectFacility, signOut, isDemoEnvironment } = useAuth();
   const { showSuccess, showError, showWithAction } = useToast();
   const navigate = useNavigate();
   const [facilities, setFacilities] = useState<Map<string, Facility>>(new Map());
@@ -109,6 +113,9 @@ const App: React.FC = () => {
   const [versions, setVersions] = useState<ScheduleVersion[]>([]);
   const [versionLoading, setVersionLoading] = useState(false);
   const [bulkCopyModalOpen, setBulkCopyModalOpen] = useState(false);
+  // Phase 43: 排他制御用state
+  const [lockModalOpen, setLockModalOpen] = useState(false);
+  const [currentLockInfo, setCurrentLockInfo] = useState<LockInfo | null>(null);
 
   // Phase 31: アンドゥ履歴スタック（最大10件）
   const [undoStack, setUndoStack] = useState<ShiftHistoryEntry[]>([]);
@@ -999,60 +1006,93 @@ const App: React.FC = () => {
     setError(null);
 
     try {
-      // AI生成
-      const generationResult = await generateShiftSchedule(staffList, requirements, leaveRequests);
+      // Phase 43: ロック取得（デモ環境でも競合防止のため取得）
+      const lockResult = await LockService.acquireLock(
+        selectedFacilityId,
+        requirements.targetMonth,
+        currentUser.uid,
+        'ai-generation',
+        currentUser.email || undefined
+      );
 
-      // 評価結果をstateに保存（Phase 40: AI評価・フィードバック機能）
-      setEvaluation(generationResult.evaluation);
-      // Firestoreリスナー発火時に評価がクリアされるのを防ぐ（BUG-005修正）
-      // 複数回のリスナー発火（キャッシュ、サーバー、更新通知）に対応するため3回スキップ
-      skipEvaluationClearCountRef.current = 3;
-
-      // 既存のスケジュールがあるかチェック
-      if (currentScheduleId) {
-        // 既存スケジュールを更新（バージョン履歴を保持）
-        const updateResult = await ScheduleService.updateSchedule(
-          selectedFacilityId,
-          currentScheduleId,
-          currentUser.uid,
-          {
-            staffSchedules: generationResult.schedule,
-            status: 'draft', // 下書き状態を維持
-          }
-        );
-
-        if (!updateResult.success) {
-          assertResultError(updateResult);
-          showError(`保存に失敗しました: ${updateResult.error.message}`);
-          setError(`保存に失敗しました: ${updateResult.error.message}`);
-          return;
-        }
-
-        showSuccess('シフトを生成し、更新しました');
-      } else {
-        // 新規作成（初回のみ）
-        const saveResult = await ScheduleService.saveSchedule(
-          selectedFacilityId,
-          currentUser.uid,
-          {
-            targetMonth: requirements.targetMonth,
-            staffSchedules: generationResult.schedule,
-            version: 1,
-            status: 'draft',
-          }
-        );
-
-        if (!saveResult.success) {
-          assertResultError(saveResult);
-          showError(`保存に失敗しました: ${saveResult.error.message}`);
-          setError(`保存に失敗しました: ${saveResult.error.message}`);
-          return;
-        }
-
-        showSuccess('シフトを生成し、保存しました');
+      if (!lockResult.success) {
+        setCurrentLockInfo(lockResult.existingLock ?? null);
+        setLockModalOpen(true);
+        return;
       }
 
-      setViewMode('shift');
+      try {
+        // AI生成
+        const generationResult = await generateShiftSchedule(staffList, requirements, leaveRequests);
+
+        // 評価結果をstateに保存（Phase 40: AI評価・フィードバック機能）
+        setEvaluation(generationResult.evaluation);
+        // Firestoreリスナー発火時に評価がクリアされるのを防ぐ（BUG-005修正）
+        // 複数回のリスナー発火（キャッシュ、サーバー、更新通知）に対応するため3回スキップ
+        skipEvaluationClearCountRef.current = 3;
+
+        // Phase 43: デモ環境では保存しない（画面表示のみ）
+        if (isDemoEnvironment) {
+          // 画面に表示するためにstateを更新
+          setSchedule(generationResult.schedule);
+          showSuccess('シフトを生成しました（デモ環境のため保存されません）');
+          setViewMode('shift');
+          return;
+        }
+
+        // 既存のスケジュールがあるかチェック
+        if (currentScheduleId) {
+          // 既存スケジュールを更新（バージョン履歴を保持）
+          const updateResult = await ScheduleService.updateSchedule(
+            selectedFacilityId,
+            currentScheduleId,
+            currentUser.uid,
+            {
+              staffSchedules: generationResult.schedule,
+              status: 'draft', // 下書き状態を維持
+            }
+          );
+
+          if (!updateResult.success) {
+            assertResultError(updateResult);
+            showError(`保存に失敗しました: ${updateResult.error.message}`);
+            setError(`保存に失敗しました: ${updateResult.error.message}`);
+            return;
+          }
+
+          showSuccess('シフトを生成し、更新しました');
+        } else {
+          // 新規作成（初回のみ）
+          const saveResult = await ScheduleService.saveSchedule(
+            selectedFacilityId,
+            currentUser.uid,
+            {
+              targetMonth: requirements.targetMonth,
+              staffSchedules: generationResult.schedule,
+              version: 1,
+              status: 'draft',
+            }
+          );
+
+          if (!saveResult.success) {
+            assertResultError(saveResult);
+            showError(`保存に失敗しました: ${saveResult.error.message}`);
+            setError(`保存に失敗しました: ${saveResult.error.message}`);
+            return;
+          }
+
+          showSuccess('シフトを生成し、保存しました');
+        }
+
+        setViewMode('shift');
+      } finally {
+        // Phase 43: ロック解放
+        await LockService.releaseLock(
+          selectedFacilityId,
+          requirements.targetMonth,
+          currentUser.uid
+        );
+      }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : '不明なエラーが発生しました。';
       setError(errorMessage);
@@ -1061,7 +1101,7 @@ const App: React.FC = () => {
       setIsLoading(false);
       setGeneratingSchedule(false);
     }
-  }, [staffList, requirements, leaveRequests, selectedFacilityId, currentUser, currentScheduleId, showSuccess, showError]);
+  }, [staffList, requirements, leaveRequests, selectedFacilityId, currentUser, currentScheduleId, showSuccess, showError, isDemoEnvironment]);
 
   const handleExportCSV = () => {
     if (schedule.length > 0) {
@@ -1072,6 +1112,18 @@ const App: React.FC = () => {
   };
 
   const handleSaveDraft = useCallback(async () => {
+    // Phase 43: デモ環境では保存しない
+    if (isDemoEnvironment) {
+      showWithAction({
+        message: 'デモ環境では保存されません。本番環境でお試しください。',
+        type: 'info',
+        actionLabel: '閉じる',
+        onAction: () => {},
+        duration: 5000,
+      });
+      return;
+    }
+
     if (!selectedFacilityId || !currentUser || !currentScheduleId) {
       showError('保存に必要な情報が不足しています');
       return;
@@ -1085,35 +1137,71 @@ const App: React.FC = () => {
     setIsLoading(true);
 
     try {
-      const result = await ScheduleService.updateSchedule(
+      // Phase 43: ロック取得
+      const lockResult = await LockService.acquireLock(
         selectedFacilityId,
-        currentScheduleId,
+        requirements.targetMonth,
         currentUser.uid,
-        {
-          staffSchedules: schedule,
-          status: 'draft',
-        }
+        'saving',
+        currentUser.email || undefined
       );
 
-      if (!result.success) {
-        assertResultError(result);
-        showError(`保存に失敗しました: ${result.error.message}`);
+      if (!lockResult.success) {
+        setCurrentLockInfo(lockResult.existingLock ?? null);
+        setLockModalOpen(true);
         return;
       }
 
-      showSuccess('下書きを保存しました');
-      // LocalStorageの下書きを削除
-      const key = `draft-schedule-${selectedFacilityId}-${requirements.targetMonth}`;
-      localStorage.removeItem(key);
+      try {
+        const result = await ScheduleService.updateSchedule(
+          selectedFacilityId,
+          currentScheduleId,
+          currentUser.uid,
+          {
+            staffSchedules: schedule,
+            status: 'draft',
+          }
+        );
+
+        if (!result.success) {
+          assertResultError(result);
+          showError(`保存に失敗しました: ${result.error.message}`);
+          return;
+        }
+
+        showSuccess('下書きを保存しました');
+        // LocalStorageの下書きを削除
+        const key = `draft-schedule-${selectedFacilityId}-${requirements.targetMonth}`;
+        localStorage.removeItem(key);
+      } finally {
+        // Phase 43: ロック解放
+        await LockService.releaseLock(
+          selectedFacilityId,
+          requirements.targetMonth,
+          currentUser.uid
+        );
+      }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : '保存時にエラーが発生しました';
       showError(errorMessage);
     } finally {
       setIsLoading(false);
     }
-  }, [selectedFacilityId, currentUser, currentScheduleId, schedule, requirements.targetMonth, showSuccess, showError]);
+  }, [selectedFacilityId, currentUser, currentScheduleId, schedule, requirements.targetMonth, showSuccess, showError, showWithAction, isDemoEnvironment]);
 
   const handleConfirmSchedule = useCallback(async () => {
+    // Phase 43: デモ環境では確定しない
+    if (isDemoEnvironment) {
+      showWithAction({
+        message: 'デモ環境では確定できません。本番環境でお試しください。',
+        type: 'info',
+        actionLabel: '閉じる',
+        onAction: () => {},
+        duration: 5000,
+      });
+      return;
+    }
+
     if (!selectedFacilityId || !currentUser || !currentScheduleId) {
       showError('確定に必要な情報が不足しています');
       return;
@@ -1155,7 +1243,7 @@ const App: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [selectedFacilityId, currentUser, currentScheduleId, schedule, currentScheduleStatus, requirements.targetMonth, showSuccess, showError]);
+  }, [selectedFacilityId, currentUser, currentScheduleId, schedule, currentScheduleStatus, requirements.targetMonth, showSuccess, showError, showWithAction, isDemoEnvironment]);
 
   const handleShowVersionHistory = useCallback(async () => {
     if (!selectedFacilityId || !currentScheduleId) {
@@ -1228,87 +1316,7 @@ const App: React.FC = () => {
     }
   }, [selectedFacilityId, currentUser, currentScheduleId, showSuccess, showError]);
 
-  const handleGenerateDemo = useCallback(async () => {
-    if (!selectedFacilityId || !currentUser) {
-      showError('施設またはユーザー情報が取得できません');
-      return;
-    }
-
-    setGeneratingSchedule(true);
-    setError(null);
-
-    const [year, month] = requirements.targetMonth.split('-').map(Number);
-    const daysInMonth = new Date(year, month, 0).getDate();
-    const shiftTypes = [...requirements.timeSlots.map(ts => ts.name), '休', '休', '休'];
-
-    const demoSchedule: StaffSchedule[] = staffList.map(staff => {
-      const monthlyShifts: GeneratedShift[] = [];
-      for (let i = 1; i <= daysInMonth; i++) {
-        const date = `${requirements.targetMonth}-${String(i).padStart(2, '0')}`;
-        const randomShiftType = shiftTypes[Math.floor(Math.random() * shiftTypes.length)];
-        monthlyShifts.push({
-          date,
-          plannedShiftType: randomShiftType,
-          shiftType: randomShiftType, // 後方互換性のため
-        });
-      }
-      return { staffId: staff.id, staffName: staff.name, monthlyShifts };
-    });
-
-    // 既存のスケジュールがあるかチェック
-    try {
-      if (currentScheduleId) {
-        // 既存スケジュールを更新（バージョン履歴を保持）
-        const updateResult = await ScheduleService.updateSchedule(
-          selectedFacilityId,
-          currentScheduleId,
-          currentUser.uid,
-          {
-            staffSchedules: demoSchedule,
-            status: 'draft', // 下書き状態を維持
-          }
-        );
-
-        if (!updateResult.success) {
-          assertResultError(updateResult);
-          showError(`保存に失敗しました: ${updateResult.error.message}`);
-          setError(`保存に失敗しました: ${updateResult.error.message}`);
-          return;
-        }
-
-        showSuccess('デモシフトを生成し、更新しました');
-      } else {
-        // 新規作成（初回のみ）
-        const saveResult = await ScheduleService.saveSchedule(
-          selectedFacilityId,
-          currentUser.uid,
-          {
-            targetMonth: requirements.targetMonth,
-            staffSchedules: demoSchedule,
-            version: 1,
-            status: 'draft',
-          }
-        );
-
-        if (!saveResult.success) {
-          assertResultError(saveResult);
-          showError(`保存に失敗しました: ${saveResult.error.message}`);
-          setError(`保存に失敗しました: ${saveResult.error.message}`);
-          return;
-        }
-
-        showSuccess('デモシフトを生成し、保存しました');
-      }
-
-      setViewMode('shift');
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : '保存時にエラーが発生しました';
-      showError(errorMessage);
-      setError(errorMessage);
-    } finally {
-      setGeneratingSchedule(false);
-    }
-  }, [requirements, staffList, selectedFacilityId, currentUser, currentScheduleId, showSuccess, showError]);
+  // Phase 43: 削除 - handleGenerateDemo（開発用ランダムシフト生成は不要）
 
   // 施設選択ハンドラー
   const handleFacilityChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
@@ -1357,8 +1365,19 @@ const App: React.FC = () => {
   );
 
   return (
-    <div className="flex h-screen bg-slate-100 font-sans text-slate-800">
-      <aside className="w-1/3 max-w-lg bg-white shadow-2xl flex flex-col h-screen">
+    <div className="flex flex-col h-screen bg-slate-100 font-sans text-slate-800">
+      {/* Phase 43: デモ環境バナー */}
+      {isDemoEnvironment && <DemoBanner />}
+
+      {/* Phase 43: ロック競合モーダル */}
+      <LockStatusModal
+        isOpen={lockModalOpen}
+        lockInfo={currentLockInfo}
+        onClose={() => setLockModalOpen(false)}
+      />
+
+      <div className="flex flex-1 overflow-hidden">
+      <aside className="w-1/3 max-w-lg bg-white shadow-2xl flex flex-col h-full">
         <header className="p-5 bg-gradient-to-r from-care-dark to-care-secondary text-white shadow-md">
           <div className="flex items-center justify-between mb-3">
             <div>
@@ -1548,8 +1567,8 @@ const App: React.FC = () => {
             <ViewSwitcher />
           </div>
           {/* Phase 42: ActionToolbarで統一されたボタンデザイン */}
+          {/* Phase 43: onDemoClick削除（開発用機能） */}
           <ActionToolbar
-            onDemoClick={handleGenerateDemo}
             onSaveClick={handleSaveDraft}
             onConfirmClick={handleConfirmSchedule}
             onHistoryClick={handleShowVersionHistory}
@@ -1639,6 +1658,7 @@ const App: React.FC = () => {
         isOpen={showKeyboardHelp}
         onClose={() => setShowKeyboardHelp(false)}
       />
+      </div>
     </div>
   );
 };

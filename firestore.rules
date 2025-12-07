@@ -199,6 +199,31 @@ service cloud.firestore {
         allow write: if isAuthenticated() && hasRole(facilityId, 'editor');
       }
 
+      // locks subcollection (Phase 43で実装)
+      // 排他制御用ロック管理
+      match /locks/{lockId} {
+        // 認証済みユーザーが読み取り可能（ロック状態確認）
+        allow read: if isAuthenticated();
+
+        // 認証済みユーザーが作成可能（自分のロックのみ）
+        allow create: if isAuthenticated()
+          && request.resource.data.lockedBy == request.auth.uid;
+
+        // 自分のロックを更新、または期限切れロックを上書き可能
+        allow update: if isAuthenticated()
+          && (
+            // 自分のロックを更新
+            resource.data.lockedBy == request.auth.uid
+            // または期限切れのロックを上書き
+            || resource.data.expiresAt < request.time
+          )
+          && request.resource.data.lockedBy == request.auth.uid;
+
+        // 自分のロックのみ削除可能
+        allow delete: if isAuthenticated()
+          && resource.data.lockedBy == request.auth.uid;
+      }
+
       // invitations subcollection (Phase 2-3で実装予定)
       match /invitations/{invitationId} {
         // super-adminまたはadmin以上で読み取り・作成

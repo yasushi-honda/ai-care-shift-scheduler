@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useEffect, useState, useMemo, ReactNode } from 'react';
 import { User as FirebaseUser, onAuthStateChanged, signInWithPopup, signOut as firebaseSignOut, signInWithCustomToken } from 'firebase/auth';
 import { doc, getDoc, Timestamp } from 'firebase/firestore';
 import { auth, googleProvider, db, authReady } from '../../firebase';
@@ -7,6 +7,10 @@ import { createOrUpdateUser } from '../services/userService';
 
 // LocalStorageキー
 const SELECTED_FACILITY_KEY = 'selectedFacilityId';
+
+// デモユーザー定数（demoSignIn.tsと同期）
+const DEMO_USER_UID = 'demo-user-fixed-uid';
+const DEMO_FACILITY_ID = 'demo-facility-001';
 
 // AuthContext の型定義
 interface AuthContextType {
@@ -20,6 +24,10 @@ interface AuthContextType {
   selectFacility: (facilityId: string) => void;
   hasRole: (facilityId: string, role: FacilityRole) => boolean;
   isSuperAdmin: () => boolean;
+  // Phase 43: デモ環境判定
+  isDemoUser: boolean;
+  isDemoFacility: boolean;
+  isDemoEnvironment: boolean;
 }
 
 // Context の作成
@@ -463,6 +471,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return result;
   };
 
+  // Phase 43: デモ環境判定
+  const isDemoUser = useMemo(() => {
+    return userProfile?.provider === 'demo' || currentUser?.uid === DEMO_USER_UID;
+  }, [userProfile, currentUser]);
+
+  const isDemoFacility = useMemo(() => {
+    return selectedFacilityId === DEMO_FACILITY_ID;
+  }, [selectedFacilityId]);
+
+  const isDemoEnvironment = useMemo(() => {
+    return isDemoUser || isDemoFacility;
+  }, [isDemoUser, isDemoFacility]);
+
   const value: AuthContextType = {
     currentUser,
     userProfile,
@@ -474,6 +495,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     selectFacility,
     hasRole,
     isSuperAdmin,
+    // Phase 43: デモ環境判定
+    isDemoUser,
+    isDemoFacility,
+    isDemoEnvironment,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

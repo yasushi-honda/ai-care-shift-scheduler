@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Phase 43: デモ環境改善・排他制御 - AIシフト自動作成</title>
+    <style>
+        :root {
+            --primary: #4F46E5;
+            --success: #10B981;
+            --warning: #F59E0B;
+            --bg: #F9FAFB;
+            --card: #FFFFFF;
+            --text: #111827;
+            --text-secondary: #6B7280;
+            --border: #E5E7EB;
+            --code-bg: #1F2937;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Sans', 'Noto Sans JP', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.7;
+        }
+        .header {
+            background: linear-gradient(135deg, var(--primary) 0%, #7C3AED 100%);
+            color: white;
+            padding: 2rem 1.5rem;
+        }
+        .header h1 { font-size: 1.5rem; margin-bottom: 0.5rem; }
+        .header p { opacity: 0.9; font-size: 0.95rem; }
+        .container { max-width: 800px; margin: 0 auto; padding: 2rem 1.5rem; }
+        .card {
+            background: var(--card);
+            border-radius: 0.75rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+        .card h2 {
+            font-size: 1.125rem;
+            color: var(--primary);
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid var(--primary);
+        }
+        .feature-grid {
+            display: grid;
+            gap: 1rem;
+        }
+        .feature-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.75rem;
+        }
+        .feature-icon {
+            width: 24px;
+            height: 24px;
+            color: var(--success);
+            flex-shrink: 0;
+            margin-top: 2px;
+        }
+        .feature-text strong { display: block; color: var(--text); }
+        .feature-text span { font-size: 0.875rem; color: var(--text-secondary); }
+        code {
+            background: #F3F4F6;
+            padding: 0.125rem 0.375rem;
+            border-radius: 0.25rem;
+            font-size: 0.875rem;
+            font-family: 'Monaco', 'Consolas', monospace;
+        }
+        .code-block {
+            background: var(--code-bg);
+            color: #E5E7EB;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            overflow-x: auto;
+            font-size: 0.875rem;
+            font-family: 'Monaco', 'Consolas', monospace;
+            margin: 1rem 0;
+        }
+        .file-list { list-style: none; }
+        .file-list li {
+            padding: 0.5rem;
+            border-bottom: 1px solid var(--border);
+            font-size: 0.9rem;
+        }
+        .file-list li:last-child { border-bottom: none; }
+        .file-list code { background: #DBEAFE; color: #1E40AF; }
+        .badge {
+            display: inline-block;
+            padding: 0.25rem 0.5rem;
+            border-radius: 0.25rem;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+        .badge-new { background: #D1FAE5; color: #065F46; }
+        .badge-modified { background: #FEF3C7; color: #92400E; }
+        .badge-deleted { background: #FEE2E2; color: #991B1B; }
+        footer {
+            text-align: center;
+            padding: 1.5rem;
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+        }
+        footer a { color: var(--primary); text-decoration: none; }
+        footer a:hover { text-decoration: underline; }
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: var(--primary);
+            text-decoration: none;
+            margin-bottom: 1rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Phase 43: デモ環境改善・排他制御</h1>
+        <p>デモ環境での安全な操作体験と本番環境での競合防止を実現</p>
+    </div>
+
+    <div class="container">
+        <a href="index.html" class="back-link">
+            <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+            </svg>
+            プロジェクト概要に戻る
+        </a>
+
+        <div class="card">
+            <h2>概要</h2>
+            <p>Phase 43では、デモ環境での安全な操作体験と、本番環境における排他制御（同時編集防止）機能を実装しました。</p>
+            <ul style="margin-top: 1rem; padding-left: 1.5rem;">
+                <li>デモ環境ではAI生成や手動編集を体験可能（保存はスキップ）</li>
+                <li>デモ環境であることを視覚的に明示するバナー表示</li>
+                <li>本番・デモ両環境で排他ロック機構を実装</li>
+                <li>不要な開発用機能（ランダムシフト生成ボタン）を削除</li>
+            </ul>
+        </div>
+
+        <div class="card">
+            <h2>主要機能</h2>
+            <div class="feature-grid">
+                <div class="feature-item">
+                    <svg class="feature-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                    </svg>
+                    <div class="feature-text">
+                        <strong>デモ環境バナー</strong>
+                        <span>画面上部に「デモ環境」バナーを表示。保存されないことを明示</span>
+                    </div>
+                </div>
+                <div class="feature-item">
+                    <svg class="feature-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                    </svg>
+                    <div class="feature-text">
+                        <strong>保存スキップ</strong>
+                        <span>デモ環境ではAI生成結果を画面表示のみ。Firestoreへの書き込みなし</span>
+                    </div>
+                </div>
+                <div class="feature-item">
+                    <svg class="feature-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                    </svg>
+                    <div class="feature-text">
+                        <strong>排他ロック機構</strong>
+                        <span>AI生成/保存時にロックを取得。他ユーザーの同時操作を防止</span>
+                    </div>
+                </div>
+                <div class="feature-item">
+                    <svg class="feature-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                    </svg>
+                    <div class="feature-text">
+                        <strong>ロック競合通知</strong>
+                        <span>他ユーザーが操作中の場合、モーダルで通知</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>技術仕様</h2>
+            <h3 style="font-size: 1rem; margin: 1rem 0 0.5rem;">ロックの種類と有効期限</h3>
+            <table style="width: 100%; border-collapse: collapse; font-size: 0.9rem;">
+                <tr style="background: var(--bg);">
+                    <th style="padding: 0.5rem; text-align: left; border-bottom: 1px solid var(--border);">操作</th>
+                    <th style="padding: 0.5rem; text-align: left; border-bottom: 1px solid var(--border);">有効期限</th>
+                </tr>
+                <tr>
+                    <td style="padding: 0.5rem; border-bottom: 1px solid var(--border);"><code>ai-generation</code></td>
+                    <td style="padding: 0.5rem; border-bottom: 1px solid var(--border);">5分（AI生成は時間がかかるため）</td>
+                </tr>
+                <tr>
+                    <td style="padding: 0.5rem;"><code>saving</code></td>
+                    <td style="padding: 0.5rem;">30秒</td>
+                </tr>
+            </table>
+
+            <h3 style="font-size: 1rem; margin: 1rem 0 0.5rem;">デモ環境の判定</h3>
+            <div class="code-block">
+// AuthContextで判定
+const isDemoUser = userProfile?.provider === 'demo'
+  || currentUser?.uid === 'demo-user-fixed-uid';
+
+const isDemoFacility = selectedFacilityId === 'demo-facility-001';
+
+const isDemoEnvironment = isDemoUser || isDemoFacility;</div>
+        </div>
+
+        <div class="card">
+            <h2>変更ファイル一覧</h2>
+            <ul class="file-list">
+                <li><span class="badge badge-new">NEW</span> <code>src/services/lockService.ts</code> - 排他ロックサービス</li>
+                <li><span class="badge badge-new">NEW</span> <code>src/components/DemoBanner.tsx</code> - デモ環境バナー</li>
+                <li><span class="badge badge-new">NEW</span> <code>src/components/LockStatusModal.tsx</code> - ロック競合モーダル</li>
+                <li><span class="badge badge-modified">MODIFIED</span> <code>src/contexts/AuthContext.tsx</code> - デモ判定追加</li>
+                <li><span class="badge badge-modified">MODIFIED</span> <code>src/components/ActionToolbar.tsx</code> - デモボタン削除</li>
+                <li><span class="badge badge-modified">MODIFIED</span> <code>App.tsx</code> - ロック・デモ対応統合</li>
+                <li><span class="badge badge-modified">MODIFIED</span> <code>firestore.rules</code> - locksサブコレクション追加</li>
+            </ul>
+        </div>
+
+        <div class="card">
+            <h2>Firestore構造</h2>
+            <div class="code-block">
+facilities/{facilityId}/locks/{yearMonth}
+├── lockedBy: string       // ユーザーUID
+├── lockedByEmail?: string // メールアドレス（表示用）
+├── lockedAt: Timestamp    // ロック取得時刻
+├── operation: string      // 'ai-generation' | 'saving'
+└── expiresAt: Timestamp   // 有効期限</div>
+        </div>
+
+        <div class="card">
+            <h2>関連ドキュメント</h2>
+            <ul style="padding-left: 1.5rem;">
+                <li><a href="phase42-2-demo-login.html">Phase 42.2: デモログイン機能</a></li>
+                <li><a href="demo.html">デモ体験ページ</a></li>
+                <li><a href="handoff.html">プロジェクトハンドオフ</a></li>
+            </ul>
+        </div>
+    </div>
+
+    <footer>
+        <p>Phase 43: デモ環境改善・排他制御 | 2025-12-07</p>
+        <p><a href="index.html">プロジェクト概要</a></p>
+    </footer>
+</body>
+</html>

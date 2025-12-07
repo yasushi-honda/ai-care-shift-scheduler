@@ -1,14 +1,19 @@
+/**
+ * ActionToolbar - アクションツールバーコンポーネント
+ *
+ * Phase 42: アクションボタン統合
+ * Phase 43: デモボタン削除（不要な開発用機能）
+ *
+ * シフト表の上部に表示するアクションボタンを統合
+ * - 編集グループ: 下書き保存、確定
+ * - ユーティリティグループ: バージョン履歴、CSVエクスポート
+ */
+
 import React from 'react';
 import { Button } from './Button';
 import { ButtonGroup } from './ButtonGroup';
 
 // Heroicons (Outline)
-const SparklesIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-    <path strokeLinecap="round" strokeLinejoin="round" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.293 2.293a1 1 0 010 1.414L10 16l-4 4-4-4 5.293-5.293a1 1 0 011.414 0L13 13m0 0l2.293 2.293a1 1 0 010 1.414L10 21l-4-4 4-4 3 3z" />
-  </svg>
-);
-
 const SaveIcon = () => (
   <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
     <path strokeLinecap="round" strokeLinejoin="round" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
@@ -34,8 +39,6 @@ const DownloadIcon = () => (
 );
 
 interface ActionToolbarProps {
-  /** デモシフト作成クリック */
-  onDemoClick: () => void;
   /** 下書き保存クリック */
   onSaveClick: () => void;
   /** 確定クリック */
@@ -56,15 +59,7 @@ interface ActionToolbarProps {
   className?: string;
 }
 
-/**
- * Phase 42: アクションツールバーコンポーネント
- *
- * シフト表の上部に表示するアクションボタンを統合
- * - 編集グループ: デモシフト作成、下書き保存、確定
- * - ユーティリティグループ: バージョン履歴、CSVエクスポート
- */
 export function ActionToolbar({
-  onDemoClick,
   onSaveClick,
   onConfirmClick,
   onHistoryClick,
@@ -79,16 +74,6 @@ export function ActionToolbar({
     <div className={`flex items-center gap-4 ${className}`}>
       {/* 編集グループ */}
       <ButtonGroup>
-        <Button
-          variant="primary"
-          size="md"
-          icon={<SparklesIcon />}
-          onClick={onDemoClick}
-          disabled={isLoading}
-          data-testid="demo-shift-button"
-        >
-          デモ
-        </Button>
         <Button
           variant="secondary"
           size="md"
