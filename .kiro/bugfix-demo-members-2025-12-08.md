@@ -87,9 +87,17 @@ if (superAdminId && !members.some(m => m.userId === superAdminId)) {
   });
 }
 
-// デモユーザーを追加（既存になければ）
+// デモユーザーを追加または権限を更新
 const DEMO_USER_UID = 'demo-user-fixed-uid';
-if (!members.some(m => m.userId === DEMO_USER_UID)) {
+const existingDemoUserIndex = members.findIndex(m => m.userId === DEMO_USER_UID);
+if (existingDemoUserIndex >= 0) {
+  // 既存の場合は権限をeditorに更新（viewerから変更）
+  members[existingDemoUserIndex] = {
+    ...members[existingDemoUserIndex],
+    role: 'editor',  // Phase 43.2.1: 保存可能にするためeditor
+  };
+} else {
+  // 新規追加
   members.push({
     userId: DEMO_USER_UID,
     role: 'editor',  // Phase 43.2.1: 保存可能にするためeditor
@@ -109,8 +117,14 @@ const facilityData: Facility = {
 ### 修正のポイント
 
 1. **既存membersの保持**: 施設が既に存在する場合、既存のmembers配列を取得して保持
-2. **デモユーザーの自動追加**: membersにデモユーザーが含まれていなければ、editor権限で追加
-3. **createdAtの保持**: 既存施設の作成日時を維持
+2. **デモユーザーの権限更新**: デモユーザーが既に存在する場合、権限を`editor`に強制更新
+3. **デモユーザーの自動追加**: membersにデモユーザーが含まれていなければ、editor権限で追加
+4. **createdAtの保持**: 既存施設の作成日時を維持
+
+### 追加修正（2回目）
+
+初回修正では「既存になければ追加」というロジックだったため、既存のデモユーザー（viewer権限）がそのまま残ってしまった。
+`findIndex`を使用して既存ユーザーを検索し、存在する場合は権限を強制的に`editor`に更新するロジックに変更。
 
 ---
 

@@ -207,7 +207,7 @@
         <div class="card">
             <div class="card-header">修正内容</div>
             <div class="card-body">
-                <h3>修正後のロジック</h3>
+                <h3>修正後のロジック（最終版）</h3>
                 <div class="mermaid">
                     flowchart TD
                         A[seedDemoData.ts実行] --> B{施設が存在?}
@@ -220,13 +220,19 @@
                         F -->|Yes| H{デモユーザー存在?}
                         G --> H
                         H -->|No| I[デモユーザーをeditorで追加]
-                        H -->|Yes| J[変更なし]
+                        H -->|Yes| J[権限をeditorに強制更新]
                         I --> K[施設データを保存]
                         J --> K
                 </div>
 
+                <div class="warning-box">
+                    <strong>重要（2回目の修正）:</strong><br>
+                    初回修正では「既存になければ追加」というロジックだったため、既存のデモユーザー（viewer権限）がそのまま残ってしまった。<br>
+                    <code>findIndex</code>を使用して既存ユーザーを検索し、存在する場合は権限を強制的に<code>editor</code>に更新するロジックに変更。
+                </div>
+
                 <div class="fix-box">
-                    <strong>修正コード:</strong>
+                    <strong>最終版コード:</strong>
                     <pre><code>// 既存のmembersを取得して保持
 const existingFacility = await facilityRef.get();
 let existingMembers: FacilityMember[] = [];
@@ -240,9 +246,17 @@ if (superAdminId && !members.some(m => m.userId === superAdminId)) {
   members.push({ userId: superAdminId, role: 'super-admin', grantedAt: now });
 }
 
-// デモユーザーを追加（既存になければ）
+// デモユーザーを追加または権限を更新
 const DEMO_USER_UID = 'demo-user-fixed-uid';
-if (!members.some(m => m.userId === DEMO_USER_UID)) {
+const existingDemoUserIndex = members.findIndex(m => m.userId === DEMO_USER_UID);
+if (existingDemoUserIndex >= 0) {
+  // 既存の場合は権限をeditorに更新（viewerから変更）
+  members[existingDemoUserIndex] = {
+    ...members[existingDemoUserIndex],
+    role: 'editor',  // Phase 43.2.1: 保存可能にするためeditor
+  };
+} else {
+  // 新規追加
   members.push({ userId: DEMO_USER_UID, role: 'editor', grantedAt: now });
 }</code></pre>
                 </div>
@@ -260,9 +274,14 @@ if (!members.some(m => m.userId === DEMO_USER_UID)) {
                         <td>保持される</td>
                     </tr>
                     <tr>
-                        <td>デモユーザー</td>
+                        <td>デモユーザー（新規）</td>
                         <td>含まれない</td>
                         <td>自動追加（editor権限）</td>
+                    </tr>
+                    <tr>
+                        <td>デモユーザー（既存）</td>
+                        <td>viewer権限のまま</td>
+                        <td>editor権限に強制更新</td>
                     </tr>
                     <tr>
                         <td>createdAt</td>
@@ -291,7 +310,7 @@ if (!members.some(m => m.userId === DEMO_USER_UID)) {
                     <tr>
                         <td><strong>BUG-009</strong></td>
                         <td>seedDemoData.ts再投入でmembers消失</td>
-                        <td>既存membersを保持、デモユーザー自動追加</td>
+                        <td>既存membersを保持、デモユーザー権限強制更新</td>
                     </tr>
                 </table>
 
@@ -304,8 +323,9 @@ if (!members.some(m => m.userId === DEMO_USER_UID)) {
                             thinkingBudget追加 : Cloud Functions更新
                         section BUG-009
                             権限エラー発生 : Missing permissions
-                            原因特定 : members消失
-                            seedDemoData.ts修正 : 既存members保持
+                            1回目修正 : 既存members保持
+                            再度権限エラー : viewerのまま
+                            2回目修正 : 権限強制更新
                 </div>
             </div>
         </div>
@@ -319,6 +339,7 @@ if (!members.some(m => m.userId === DEMO_USER_UID)) {
                     <li><strong>データ再投入時の副作用に注意</strong>: 既存データを上書きする際、意図しないデータ削除が起こり得る</li>
                     <li><strong>権限問題はログに現れにくい</strong>: クライアント側の「permission denied」だけでは原因特定が困難</li>
                     <li><strong>デモユーザーの権限は複数箇所で管理</strong>: users.facilities[].role と facilities.members[].role の両方が必要</li>
+                    <li><strong>「追加」と「更新」は別ロジック</strong>: 「存在しなければ追加」だけでは、既存データの更新ができない。findIndex等で既存を検索し、権限等を強制更新するロジックが必要</li>
                 </ol>
 
                 <h3>再発防止チェックリスト</h3>
@@ -326,6 +347,7 @@ if (!members.some(m => m.userId === DEMO_USER_UID)) {
                     <li>seedDemoData.ts実行後はデモログインで動作確認</li>
                     <li>既存データを上書きするスクリプトは既存値を保持する設計に</li>
                     <li>権限エラー時はFirestoreのmembersを確認</li>
+                    <li>ユーザー追加ロジックには「既存の場合は更新」も含める</li>
                 </ul>
             </div>
         </div>
