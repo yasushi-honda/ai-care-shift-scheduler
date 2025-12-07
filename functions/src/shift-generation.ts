@@ -153,7 +153,11 @@ export const generateShift = onRequest(
             responseSchema: getShiftSchema(requirements.targetMonth, shiftTypeNames) as any,
             temperature: 0.5,
             maxOutputTokens: 65536,  // Gemini 2.5 Flash thinking mode uses tokens from this budget
-          },
+            // 思考トークンを制限（小規模一括生成用）
+            thinkingConfig: {
+              thinkingBudget: 16384,  // 5名以下なので16Kで十分
+            },
+          } as any,
         });
 
         const responseText = result.response.candidates?.[0]?.content?.parts?.[0]?.text || '';

@@ -343,7 +343,11 @@ export async function generateSkeleton(
       responseSchema: getSkeletonSchema(daysInMonth, hasNightShift) as any,
       temperature: 0.3,
       maxOutputTokens: 65536,  // Gemini 2.5 Flash thinking mode uses tokens from this budget
-    },
+      // 思考トークンを制限（12名スタッフで65535トークン使い切りエラー対策）
+      thinkingConfig: {
+        thinkingBudget: 16384,  // 思考に16K、残りを出力に使用
+      },
+    } as any,
   });
 
   // Vertex AI レスポンス詳細ログ（デバッグ用）
@@ -621,7 +625,11 @@ export async function generateDetailedShifts(
         responseSchema: getDetailedShiftSchema(requirements.targetMonth, daysInMonth, shiftTypeNames) as any,
         temperature: 0.5,
         maxOutputTokens: 65536,  // Gemini 2.5 Flash thinking mode uses tokens from this budget
-      },
+        // 思考トークンを制限（バッチ処理用）
+        thinkingConfig: {
+          thinkingBudget: 8192,  // バッチなので8Kで十分
+        },
+      } as any,
     });
 
     // Vertex AI レスポンス詳細ログ（デバッグ用）
