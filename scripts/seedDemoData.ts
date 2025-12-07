@@ -638,9 +638,17 @@ async function main() {
     });
   }
 
-  // デモユーザーを追加（既存になければ）
+  // デモユーザーを追加または権限を更新
   const DEMO_USER_UID = 'demo-user-fixed-uid';
-  if (!members.some(m => m.userId === DEMO_USER_UID)) {
+  const existingDemoUserIndex = members.findIndex(m => m.userId === DEMO_USER_UID);
+  if (existingDemoUserIndex >= 0) {
+    // 既存の場合は権限をeditorに更新（viewerから変更）
+    members[existingDemoUserIndex] = {
+      ...members[existingDemoUserIndex],
+      role: 'editor',  // Phase 43.2.1: 保存可能にするためeditor
+    };
+  } else {
+    // 新規追加
     members.push({
       userId: DEMO_USER_UID,
       role: 'editor',  // Phase 43.2.1: 保存可能にするためeditor
