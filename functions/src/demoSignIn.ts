@@ -123,8 +123,13 @@ export const demoSignIn = onRequest({
       code: error.code,
       stack: error.stack,
     });
+    // デバッグ用: エラー詳細をレスポンスに含める（本番では削除推奨）
     res.status(500).json({
       error: 'デモログインに失敗しました。しばらく経ってから再度お試しください。',
+      debug: {
+        message: error.message,
+        code: error.code,
+      },
     });
   }
 });
