@@ -272,11 +272,12 @@
     <header>
       <h1>Phase 44: AIシフト生成パイプライン改善</h1>
       <p>Gemini 2.5 Flash による段階的シフト生成の最適化</p>
-      <span class="status-badge status-in-progress">実装中</span>
+      <span class="status-badge status-in-progress">テスト完了・評価中</span>
     </header>
 
     <nav class="nav-tabs">
       <button class="nav-tab active" onclick="showSection('overview')">概要</button>
+      <button class="nav-tab" onclick="showSection('results')">テスト結果</button>
       <button class="nav-tab" onclick="showSection('wbs')">WBS</button>
       <button class="nav-tab" onclick="showSection('gantt')">ガントチャート</button>
       <button class="nav-tab" onclick="showSection('architecture')">システム構成</button>
@@ -336,8 +337,98 @@
         </tbody>
       </table>
 
-      <div class="alert alert-info">
-        <strong>アプローチ:</strong> 人間のエンジニアチームが大規模問題を解決するように、要件分析→骨子設計→詳細配置→検証→調整の段階的プロセスを実装
+      <div class="alert alert-success">
+        <strong>成果:</strong> 根本原因分析により、デモデータの設計問題を特定。データ修正後、充足率が85%→96%に大幅改善。
+      </div>
+    </section>
+
+    <!-- Test Results Section -->
+    <section id="results" class="section">
+      <h2>テスト結果サマリー</h2>
+
+      <div class="metric-grid">
+        <div class="metric-card">
+          <div class="metric-value" style="color: #22c55e;">96%</div>
+          <div class="metric-label">充足率</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-value">13件</div>
+          <div class="metric-label">制約違反</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-value">109秒</div>
+          <div class="metric-label">処理時間</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-value">16/27日</div>
+          <div class="metric-label">完璧な日</div>
+        </div>
+      </div>
+
+      <h3 style="margin-top: 1.5rem;">テスト結果の推移</h3>
+      <div class="mermaid">
+xychart-beta
+    title "充足率の推移"
+    x-axis ["Step 1", "Step 1.5", "データ修正後"]
+    y-axis "充足率 (%)" 0 --> 100
+    bar [85, 89, 96]
+      </div>
+
+      <h3 style="margin-top: 1.5rem;">詳細比較</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>指標</th>
+            <th>Step 1</th>
+            <th>Step 1.5</th>
+            <th>データ修正後</th>
+            <th>目標</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>充足率</td>
+            <td>85%</td>
+            <td>89%</td>
+            <td style="color: #22c55e; font-weight: bold;">96%</td>
+            <td>100%</td>
+          </tr>
+          <tr>
+            <td>早番不足</td>
+            <td>17日</td>
+            <td>15日</td>
+            <td style="color: #22c55e; font-weight: bold;">2日</td>
+            <td>0日</td>
+          </tr>
+          <tr>
+            <td>遅番不足</td>
+            <td>3日</td>
+            <td>0日</td>
+            <td style="color: #22c55e; font-weight: bold;">0日 ✅</td>
+            <td>0日</td>
+          </tr>
+          <tr>
+            <td>制約違反</td>
+            <td>21件</td>
+            <td>18件</td>
+            <td style="color: #22c55e; font-weight: bold;">13件</td>
+            <td>0件</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="alert alert-warning" style="margin-top: 1.5rem;">
+        <strong>発見した根本原因:</strong><br>
+        デモデータで「日勤のみ」スタッフが2名（田中・近藤）いたため、日勤に人員が偏り、早番・遅番が不足していた。<br>
+        近藤の制約を「いつでも可」に変更することで、数学的に制約を満たせるようになった。
+      </div>
+
+      <h3 style="margin-top: 1.5rem;">シフト配分の変化</h3>
+      <div class="mermaid">
+pie title データ修正後のシフト配分
+    "早番 (55人日)" : 55
+    "日勤 (62人日)" : 62
+    "遅番 (27人日)" : 27
       </div>
     </section>
 
