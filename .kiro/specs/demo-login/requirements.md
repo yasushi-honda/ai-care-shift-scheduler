@@ -172,11 +172,13 @@
 
 ### 7.1 IAM権限（必須）
 
-Cloud Functionでカスタムトークンを発行するには、サービスアカウントに以下のロールが必要：
+Cloud Functionでカスタムトークンを発行するには、**サービスアカウントレベル**での権限付与が必要：
 
-| サービスアカウント | ロール | 目的 |
-|-------------------|--------|------|
-| `PROJECT_ID@appspot.gserviceaccount.com` | `roles/iam.serviceAccountTokenCreator` | カスタムトークン発行 |
+| 権限を付与されるSA | 権限を付与するSA | ロール |
+|-------------------|-----------------|--------|
+| `PROJECT_ID@appspot.gserviceaccount.com` | `PROJECT_NUMBER-compute@developer.gserviceaccount.com` | `roles/iam.serviceAccountTokenCreator` |
+
+**重要**: プロジェクトレベルのIAMではなく、サービスアカウントレベルでの権限付与が必要です。
 
 **設定方法**: [setup-guide.md](./setup-guide.md) の「Step 0: IAM権限の設定」を参照
 

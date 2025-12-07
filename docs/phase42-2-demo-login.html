@@ -534,20 +534,33 @@ sequenceDiagram
 
             <h3>IAM権限要件（必須）</h3>
             <div class="highlight-box">
-                <strong>重要:</strong> Cloud Functionでカスタムトークンを発行するには、サービスアカウントに
-                <code>Service Account Token Creator</code>ロールが必要です。
+                <strong>重要:</strong> Cloud Functionでカスタムトークンを発行するには、
+                <strong>サービスアカウントレベル</strong>での権限付与が必要です。
+                プロジェクトレベルのIAMでは不十分です。
             </div>
             <table>
                 <tr>
-                    <th>サービスアカウント</th>
-                    <th>必要なロール</th>
+                    <th>権限を付与されるSA（署名用）</th>
+                    <th>権限を付与するSA（実行用）</th>
+                    <th>ロール</th>
                 </tr>
                 <tr>
                     <td><code>ai-care-shift-scheduler@appspot.gserviceaccount.com</code></td>
+                    <td><code>737067812481-compute@developer.gserviceaccount.com</code></td>
                     <td><code>roles/iam.serviceAccountTokenCreator</code></td>
                 </tr>
             </table>
-            <p><strong>設定方法:</strong> GCP Console → IAM → サービスアカウントに「Service Account Token Creator」ロールを追加</p>
+            <h4>gcloud CLIでの設定方法（推奨）</h4>
+            <pre><code># gcloud認証（期限切れの場合）
+gcloud auth login
+
+# サービスアカウントレベルでIAM権限を付与
+gcloud iam service-accounts add-iam-policy-binding \
+  ai-care-shift-scheduler@appspot.gserviceaccount.com \
+  --project=ai-care-shift-scheduler \
+  --member="serviceAccount:737067812481-compute@developer.gserviceaccount.com" \
+  --role="roles/iam.serviceAccountTokenCreator"</code></pre>
+            <p><strong>注意:</strong> IAM権限の反映には最大7分かかることがあります。</p>
         </div>
 
         <!-- デモアカウント情報 -->

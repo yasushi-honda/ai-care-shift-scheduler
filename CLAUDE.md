@@ -120,6 +120,7 @@ Kiro-style Spec Driven Development implementation using claude code slash comman
 3. **gcloud CLI** (GCP直接操作)
    - Cloud Functions管理: `gcloud functions list/deploy/delete`
    - Firestore管理: `gcloud firestore` (※制限あり)
+   - IAM権限管理: `gcloud iam service-accounts add-iam-policy-binding`
 
 4. **curl/REST API**
    - Cloud Function実行
@@ -142,9 +143,28 @@ git push origin main  # または feature ブランチ
 # → GitHub Actions が自動的に firebase deploy を実行
 ```
 
+#### gcloud CLI認証（Claude Codeから実行可能）
+
+gcloud認証が期限切れの場合、Claude Codeから再認証できます：
+
+```bash
+gcloud auth login
+```
+
+ブラウザで認証画面が開きます。認証完了後、Claude Codeに戻って作業を続行してください。
+
+**よくあるエラーと対処**:
+
+| エラー | 対処 |
+|--------|------|
+| `Reauthentication failed` | `gcloud auth login`を実行 |
+| `Permission denied` | IAM権限を確認（プロジェクトレベル or SAレベル） |
+| `Request had insufficient authentication scopes` | `gcloud auth application-default login`を実行 |
+
 #### トラブルシューティング
 
 Firebase CLI認証エラーが発生した場合:
+
 1. **エラーメッセージを記録しない** - 時間の無駄
 2. **即座にGitHub Flowに切り替える**
 3. **メモリ `firebase_cli_error_handling.md` を参照**
@@ -513,8 +533,9 @@ setTimeout(() => controller.abort(), 180000);  // ❗ 3分
 - [BUG-003修正記録](.kiro/bugfix-gemini-thinking-tokens-2025-12-05.md) - maxOutputTokens
 - [BUG-004修正記録](.kiro/bugfix-timeout-2025-12-05.md) - タイムアウト
 - [BUG-005修正記録](.kiro/bugfix-evaluation-panel-display-2025-12-06.md) - Firestoreリスナー競合
+- [BUG-006修正記録](.kiro/specs/demo-login/setup-guide.md) - Cloud Function IAM権限
 - [ポストモーテム](.kiro/postmortem-gemini-bugs-2025-12-05.md) - 全体分析
-- Serenaメモリ: `gemini_region_critical_rule`, `gemini_max_output_tokens_critical_rule`
+- Serenaメモリ: `gemini_region_critical_rule`, `gemini_max_output_tokens_critical_rule`, `cloud_function_custom_token_iam`
 
 ---
 
@@ -548,3 +569,68 @@ console.log('📊 AI Response Details:', {
 | `SAFETY` | 安全性フィルタ | プロンプト見直し |
 | `OTHER` | その他エラー | ログ詳細確認 |
 
+---
+
+## Cloud Function カスタムトークン発行 IAM設定（重要）
+
+**背景**: BUG-006（2025-12-07）でdemoSignIn関数が500エラー。原因はIAM権限不足。
+
+### 問題
+
+`createCustomToken()`呼び出し時に以下のエラー：
+
+```text
+auth/insufficient-permission
+Permission 'iam.serviceAccounts.signBlob' denied
+```
+
+### 原因
+
+Firebase Admin SDKの`createCustomToken()`は**App Engineサービスアカウント**で署名する。
+Cloud Function（2nd Gen）は**Computeサービスアカウント**で実行される。
+そのため、Cloud Function SAがApp Engine SAに対してToken Creator権限を持つ必要がある。
+
+### 正しい解決方法（サービスアカウントレベル）
+
+```bash
+# ❌ 間違い: プロジェクトレベルでは不十分
+gcloud projects add-iam-policy-binding PROJECT_ID \
+  --member="serviceAccount:..." \
+  --role="roles/iam.serviceAccountTokenCreator"
+
+# ✅ 正解: サービスアカウントレベルで権限付与
+gcloud iam service-accounts add-iam-policy-binding \
+  PROJECT_ID@appspot.gserviceaccount.com \
+  --project=PROJECT_ID \
+  --member="serviceAccount:PROJECT_NUMBER-compute@developer.gserviceaccount.com" \
+  --role="roles/iam.serviceAccountTokenCreator"
+```
+
+### gcloud認証が必要な場合
+
+```bash
+gcloud auth login
+# ブラウザで認証画面が開く
+```
+
+### 確認コマンド
+
+```bash
+# Cloud FunctionのSAを確認
+gcloud functions describe FUNCTION_NAME --region=asia-northeast1 \
+  --format="value(serviceConfig.serviceAccountEmail)"
+
+# IAM権限を確認
+gcloud iam service-accounts get-iam-policy \
+  PROJECT_ID@appspot.gserviceaccount.com
+```
+
+### 注意事項
+
+- IAM権限の反映には**最大7分**かかる
+- 設定直後にエラーが出ても数分待って再試行
+
+### 参考資料
+
+- [setup-guide.md](.kiro/specs/demo-login/setup-guide.md)
+- Serenaメモリ: `cloud_function_custom_token_iam`

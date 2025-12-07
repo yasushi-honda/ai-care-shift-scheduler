@@ -9,36 +9,105 @@
 
 ## Step 0: IAM権限の設定（必須）
 
-Cloud Functionsがカスタムトークンを発行するには、サービスアカウントに
-`Service Account Token Creator` ロールが必要です。
+Cloud Functionsがカスタムトークン（`createCustomToken`）を発行するには、
+**Cloud FunctionのサービスアカウントがApp Engineサービスアカウントに対して
+トークン作成権限を持つ必要があります**。
+
+### 背景知識
+
+Firebase Admin SDKの`createCustomToken()`は内部的に以下を行います：
+1. App Engineデフォルトサービスアカウント（`PROJECT_ID@appspot.gserviceaccount.com`）を使って署名
+2. Cloud Functionのサービスアカウント（`PROJECT_NUMBER-compute@developer.gserviceaccount.com`）が署名リクエストを発行
+
+そのため、**Cloud FunctionのSAがApp Engine SAに対してToken Creatorである必要がある**。
+
+### gcloud CLIで設定する場合（推奨）
+
+#### 1. gcloud認証（期限切れの場合）
+
+```bash
+gcloud auth login
+```
+
+ブラウザで認証画面が開きます。認証完了後、続行してください。
+
+#### 2. Cloud Function実行サービスアカウントの確認
+
+```bash
+gcloud functions describe demoSignIn --region=asia-northeast1 \
+  --project=ai-care-shift-scheduler \
+  --format="value(serviceConfig.serviceAccountEmail)"
+```
+
+出力例: `737067812481-compute@developer.gserviceaccount.com`
+
+#### 3. IAM権限の付与（重要：サービスアカウントレベル）
+
+```bash
+# Cloud Function SAがApp Engine SAに対してトークンを作成できるようにする
+gcloud iam service-accounts add-iam-policy-binding \
+  ai-care-shift-scheduler@appspot.gserviceaccount.com \
+  --project=ai-care-shift-scheduler \
+  --member="serviceAccount:737067812481-compute@developer.gserviceaccount.com" \
+  --role="roles/iam.serviceAccountTokenCreator"
+```
+
+**注意**: プロジェクトレベルのIAM（`gcloud projects add-iam-policy-binding`）では
+不十分です。サービスアカウントレベルでの権限付与が必要です。
 
 ### GCP Consoleで設定する場合
 
-1. [GCP Console IAM](https://console.cloud.google.com/iam-admin/iam?project=ai-care-shift-scheduler) にアクセス
-2. サービスアカウント `ai-care-shift-scheduler@appspot.gserviceaccount.com` を探す
-3. 鉛筆アイコン（編集）をクリック
-4. 「別のロールを追加」をクリック
-5. **Service Account Token Creator** (`roles/iam.serviceAccountTokenCreator`) を選択
-6. 「保存」をクリック
-
-### gcloud CLIで設定する場合
-
-```bash
-gcloud projects add-iam-policy-binding ai-care-shift-scheduler \
-  --member="serviceAccount:ai-care-shift-scheduler@appspot.gserviceaccount.com" \
-  --role="roles/iam.serviceAccountTokenCreator"
-```
+1. [GCP Console - サービスアカウント](https://console.cloud.google.com/iam-admin/serviceaccounts?project=ai-care-shift-scheduler) にアクセス
+2. `ai-care-shift-scheduler@appspot.gserviceaccount.com` をクリック
+3. **権限** タブを選択
+4. **アクセスを許可** をクリック
+5. **新しいプリンシパル**: `737067812481-compute@developer.gserviceaccount.com`
+6. **ロール**: **Service Account Token Creator** を選択
+7. **保存** をクリック
 
 ### 確認方法
 
 ```bash
-gcloud projects get-iam-policy ai-care-shift-scheduler \
-  --flatten="bindings[].members" \
-  --filter="bindings.members:ai-care-shift-scheduler@appspot.gserviceaccount.com" \
-  --format="table(bindings.role)"
+gcloud iam service-accounts get-iam-policy \
+  ai-care-shift-scheduler@appspot.gserviceaccount.com \
+  --project=ai-care-shift-scheduler
 ```
 
-出力に `roles/iam.serviceAccountTokenCreator` が含まれていればOK。
+出力に以下が含まれていればOK：
+```yaml
+bindings:
+- members:
+  - serviceAccount:737067812481-compute@developer.gserviceaccount.com
+  role: roles/iam.serviceAccountTokenCreator
+```
+
+### IAM権限反映の注意
+
+- IAM権限の反映には**最大7分**かかることがあります
+- 設定直後にエラーが出ても、数分待ってから再試行してください
+
+### トラブルシューティング
+
+#### エラー: `Permission 'iam.serviceAccounts.signBlob' denied`
+
+このエラーは以下を意味します：
+1. IAM権限が不足している
+2. IAM権限がまだ反映されていない（最大7分待つ）
+3. 権限の付与先が間違っている（プロジェクトレベルではなくSAレベル）
+
+#### 確認コマンド
+
+```bash
+# Cloud Functionのテスト
+curl -s -X POST \
+  'https://asia-northeast1-ai-care-shift-scheduler.cloudfunctions.net/demoSignIn' \
+  -H 'Content-Type: application/json' \
+  -H 'Origin: https://ai-care-shift-scheduler.web.app' \
+  -d '{}'
+```
+
+成功時: `{"customToken":"eyJhbGciOiJSUz..."}`
+失敗時: `{"error":"...", "debug":{...}}`
 
 ---
 
