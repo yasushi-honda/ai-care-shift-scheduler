@@ -178,7 +178,10 @@ const db = admin.firestore();
 // ==================== デモデータ定義 ====================
 
 /**
- * デモスタッフデータ（10名）
+ * デモスタッフデータ（8名）
+ *
+ * デイサービス（通所介護）の実態に即した人員構成
+ * 参考: 厚生労働省 通所介護の人員配置基準
  *
  * AI生成に必要な全フィールドを含む:
  * - weeklyWorkCount: 週の勤務回数（希望・必須）
@@ -186,22 +189,24 @@ const db = admin.firestore();
  * - unavailableDates: 勤務不可日
  * - timeSlotPreference: 時間帯希望
  *
- * 人員構成:
- * - 管理者 1名（日勤のみ）
- * - 看護職員 2名（いつでも可）
- * - 介護職員 5名（いつでも可）
- * - 夜勤専従 2名（夜勤のみ）
+ * 人員構成（定員20名のデイサービス基準）:
+ * - 管理者 1名（兼生活相談員）
+ * - 看護職員 2名
+ * - 介護職員 4名
+ * - 機能訓練指導員 1名
+ *
+ * 注意: デイサービスは日中のみ営業のため夜勤なし
  */
 const demoStaffs: Omit<Staff, 'createdAt' | 'updatedAt'>[] = [
   {
     staffId: 'staff-tanaka',
     name: '田中太郎',
     position: '管理者',
-    certifications: ['介護福祉士'],
+    certifications: ['介護福祉士', '生活相談員'],
     nightShiftOnly: false,
     maxConsecutiveDays: 5,
     weeklyWorkCount: { hope: 5, must: 4 },
-    availableWeekdays: [1, 2, 3, 4, 5],  // 月〜金
+    availableWeekdays: [1, 2, 3, 4, 5, 6],  // 月〜土（営業日）
     unavailableDates: [],
     timeSlotPreference: '日勤のみ',
     facilityId: DEMO_FACILITY_ID,
@@ -213,8 +218,8 @@ const demoStaffs: Omit<Staff, 'createdAt' | 'updatedAt'>[] = [
     certifications: ['看護師'],
     nightShiftOnly: false,
     maxConsecutiveDays: 5,
-    weeklyWorkCount: { hope: 4, must: 3 },
-    availableWeekdays: [0, 1, 2, 3, 4, 5, 6],  // 全曜日
+    weeklyWorkCount: { hope: 5, must: 4 },
+    availableWeekdays: [1, 2, 3, 4, 5, 6],  // 月〜土
     unavailableDates: [],
     timeSlotPreference: 'いつでも可',
     facilityId: DEMO_FACILITY_ID,
@@ -227,7 +232,7 @@ const demoStaffs: Omit<Staff, 'createdAt' | 'updatedAt'>[] = [
     nightShiftOnly: false,
     maxConsecutiveDays: 5,
     weeklyWorkCount: { hope: 4, must: 3 },
-    availableWeekdays: [0, 1, 2, 3, 4, 5, 6],  // 全曜日
+    availableWeekdays: [1, 2, 3, 4, 5, 6],  // 月〜土
     unavailableDates: [],
     timeSlotPreference: 'いつでも可',
     facilityId: DEMO_FACILITY_ID,
@@ -240,7 +245,7 @@ const demoStaffs: Omit<Staff, 'createdAt' | 'updatedAt'>[] = [
     nightShiftOnly: false,
     maxConsecutiveDays: 5,
     weeklyWorkCount: { hope: 5, must: 4 },
-    availableWeekdays: [0, 1, 2, 3, 4, 5, 6],  // 全曜日
+    availableWeekdays: [1, 2, 3, 4, 5, 6],  // 月〜土
     unavailableDates: [],
     timeSlotPreference: 'いつでも可',
     facilityId: DEMO_FACILITY_ID,
@@ -253,7 +258,7 @@ const demoStaffs: Omit<Staff, 'createdAt' | 'updatedAt'>[] = [
     nightShiftOnly: false,
     maxConsecutiveDays: 5,
     weeklyWorkCount: { hope: 5, must: 4 },
-    availableWeekdays: [0, 1, 2, 3, 4, 5, 6],  // 全曜日
+    availableWeekdays: [1, 2, 3, 4, 5, 6],  // 月〜土
     unavailableDates: [],
     timeSlotPreference: 'いつでも可',
     facilityId: DEMO_FACILITY_ID,
@@ -262,11 +267,11 @@ const demoStaffs: Omit<Staff, 'createdAt' | 'updatedAt'>[] = [
     staffId: 'staff-watanabe',
     name: '渡辺翔太',
     position: '介護職員',
-    certifications: ['介護福祉士'],
+    certifications: ['介護職員初任者研修'],
     nightShiftOnly: false,
     maxConsecutiveDays: 5,
     weeklyWorkCount: { hope: 5, must: 4 },
-    availableWeekdays: [0, 1, 2, 3, 4, 5, 6],  // 全曜日
+    availableWeekdays: [1, 2, 3, 4, 5, 6],  // 月〜土
     unavailableDates: [],
     timeSlotPreference: 'いつでも可',
     facilityId: DEMO_FACILITY_ID,
@@ -275,101 +280,79 @@ const demoStaffs: Omit<Staff, 'createdAt' | 'updatedAt'>[] = [
     staffId: 'staff-yamamoto',
     name: '山本さくら',
     position: '介護職員',
-    certifications: ['介護福祉士'],
-    nightShiftOnly: false,
-    maxConsecutiveDays: 5,
-    weeklyWorkCount: { hope: 5, must: 4 },
-    availableWeekdays: [0, 1, 2, 3, 4, 5, 6],  // 全曜日
-    unavailableDates: [],
-    timeSlotPreference: 'いつでも可',
-    facilityId: DEMO_FACILITY_ID,
-  },
-  {
-    staffId: 'staff-nakamura',
-    name: '中村優子',
-    position: '介護職員',
-    certifications: ['介護福祉士'],
+    certifications: ['介護職員初任者研修'],
     nightShiftOnly: false,
     maxConsecutiveDays: 5,
     weeklyWorkCount: { hope: 4, must: 3 },
-    availableWeekdays: [0, 1, 2, 3, 4, 5, 6],  // 全曜日
+    availableWeekdays: [1, 2, 3, 4, 5, 6],  // 月〜土
     unavailableDates: [],
     timeSlotPreference: 'いつでも可',
     facilityId: DEMO_FACILITY_ID,
   },
   {
-    staffId: 'staff-kobayashi',
-    name: '小林次郎',
-    position: '介護職員',
-    certifications: ['介護福祉士'],
-    nightShiftOnly: true,
-    maxConsecutiveDays: 3,  // 夜勤専従は連勤制限を厳しく
-    weeklyWorkCount: { hope: 3, must: 2 },
-    availableWeekdays: [0, 1, 2, 3, 4, 5, 6],  // 全曜日
+    staffId: 'staff-kondo',
+    name: '近藤理恵',
+    position: '機能訓練指導員',
+    certifications: ['理学療法士'],
+    nightShiftOnly: false,
+    maxConsecutiveDays: 5,
+    weeklyWorkCount: { hope: 5, must: 4 },
+    availableWeekdays: [1, 2, 3, 4, 5, 6],  // 月〜土
     unavailableDates: [],
-    timeSlotPreference: '夜勤のみ',
-    facilityId: DEMO_FACILITY_ID,
-  },
-  {
-    staffId: 'staff-kato',
-    name: '加藤三郎',
-    position: '介護職員',
-    certifications: ['介護福祉士'],
-    nightShiftOnly: true,
-    maxConsecutiveDays: 3,  // 夜勤専従は連勤制限を厳しく
-    weeklyWorkCount: { hope: 3, must: 2 },
-    availableWeekdays: [0, 1, 2, 3, 4, 5, 6],  // 全曜日
-    unavailableDates: [],
-    timeSlotPreference: '夜勤のみ',
+    timeSlotPreference: '日勤のみ',
     facilityId: DEMO_FACILITY_ID,
   },
 ];
 
 /**
- * デモシフト要件
+ * デモシフト要件（デイサービス版）
  *
  * RequirementService形式（timeSlots + requirements Record）に準拠
  * Firestoreパス: /facilities/{facilityId}/requirements/default
  *
- * 人員配置（実現可能な設定）:
- * - 早番: 2名（資格要件なし）
- * - 日勤: 2名（看護師1名以上）
- * - 遅番: 2名（資格要件なし）
- * - 夜勤: 2名（介護福祉士1名以上）
+ * デイサービス（通所介護）の実態に即したシフト設定:
+ * - 営業時間: 8:30〜18:00（送迎含む）
+ * - 営業日: 月〜土（日曜休み）
+ * - 夜勤なし（日中のみ営業）
  *
- * スタッフ10名（日勤可能8名 + 夜勤専従2名）で十分カバー可能
+ * 人員配置（定員20名の基準準拠）:
+ * - 早番: 2名（送迎開始時間に合わせて出勤）
+ * - 日勤: 2名（看護師1名以上 - 法定基準）
+ * - 遅番: 1名（送迎終了まで対応）
+ *
+ * 計算根拠:
+ * - 必要人日数: 26日（月〜土）× 5名/日 = 130人日
+ * - 可能人日数: 8名 × 週4.5回平均 × 4週 ≒ 144人日
+ * - 余裕率: 約11%
+ *
+ * 参考:
+ * - 通所介護の人員配置基準（厚生労働省）
+ * - https://shiftlife.jp/ds-kijun/
+ * - https://ads.kaipoke.biz/day-service/opening/post-93.html
  */
 const demoShiftRequirement: Omit<ShiftRequirement, 'updatedAt'> = {
   targetMonth: TARGET_MONTH,
   timeSlots: [
-    { name: '早番', start: '07:00', end: '16:00', restHours: 1 },
-    { name: '日勤', start: '09:00', end: '18:00', restHours: 1 },
-    { name: '遅番', start: '11:00', end: '20:00', restHours: 1 },
-    { name: '夜勤', start: '17:00', end: '09:00', restHours: 2 },
+    { name: '早番', start: '08:00', end: '17:00', restHours: 1 },  // 送迎開始に対応
+    { name: '日勤', start: '09:00', end: '18:00', restHours: 1 },  // コア時間帯
+    { name: '遅番', start: '10:00', end: '19:00', restHours: 1 },  // 送迎終了まで
   ],
   requirements: {
     '早番': {
-      totalStaff: 2,
+      totalStaff: 2,  // 送迎要員として2名
       requiredQualifications: [],  // 資格要件なし
       requiredRoles: [],
     },
     '日勤': {
-      totalStaff: 2,
+      totalStaff: 2,  // 法定基準（看護師1名以上）
       requiredQualifications: [
-        { qualification: '看護師', count: 1 },  // 看護師1名以上
+        { qualification: '看護師', count: 1 },  // 看護師1名以上（法定）
       ],
       requiredRoles: [],
     },
     '遅番': {
-      totalStaff: 2,
+      totalStaff: 1,  // 送迎終了対応
       requiredQualifications: [],  // 資格要件なし
-      requiredRoles: [],
-    },
-    '夜勤': {
-      totalStaff: 2,
-      requiredQualifications: [
-        { qualification: '介護福祉士', count: 1 },  // 介護福祉士1名以上
-      ],
       requiredRoles: [],
     },
   },
