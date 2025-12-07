@@ -200,7 +200,8 @@ const App: React.FC = () => {
 
   // 要件設定が変更されたときに自動保存
   useEffect(() => {
-    if (!selectedFacilityId) {
+    // Phase 43: デモ環境では自動保存しない
+    if (!selectedFacilityId || isDemoEnvironment) {
       return;
     }
 
@@ -222,7 +223,7 @@ const App: React.FC = () => {
     const timerId = setTimeout(saveRequirement, 1000);
 
     return () => clearTimeout(timerId);
-  }, [selectedFacilityId, requirements]);
+  }, [selectedFacilityId, requirements, isDemoEnvironment]);
 
   // Firestoreからスタッフデータをリアルタイムで購読
   useEffect(() => {
