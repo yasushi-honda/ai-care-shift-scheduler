@@ -7,6 +7,7 @@ export const ROLES: Role[] = [
   Role.Nurse,
   Role.CareManager,
   Role.Operator,
+  Role.FunctionalTrainer,
 ];
 
 export const QUALIFICATIONS: Qualification[] = [
@@ -14,6 +15,9 @@ export const QUALIFICATIONS: Qualification[] = [
   Qualification.RegisteredNurse,
   Qualification.LicensedPracticalNurse,
   Qualification.DriversLicense,
+  Qualification.PhysicalTherapist,
+  Qualification.SocialWorker,
+  Qualification.HomeCareSupportWorker,
 ];
 
 export const TIME_SLOT_PREFERENCES: TimeSlotPreference[] = [

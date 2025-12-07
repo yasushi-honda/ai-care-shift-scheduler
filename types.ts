@@ -6,6 +6,7 @@ export enum Role {
   Nurse = "看護職員",
   CareManager = "ケアマネージャー",
   Operator = "オペレーター",
+  FunctionalTrainer = "機能訓練指導員",
 }
 
 export enum Qualification {
@@ -13,6 +14,9 @@ export enum Qualification {
   RegisteredNurse = "看護師",
   LicensedPracticalNurse = "准看護師",
   DriversLicense = "普通自動車免許",
+  PhysicalTherapist = "理学療法士",
+  SocialWorker = "生活相談員",
+  HomeCareSupportWorker = "介護職員初任者研修",
 }
 
 export enum TimeSlotPreference {
