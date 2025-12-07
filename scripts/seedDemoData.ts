@@ -27,35 +27,57 @@ import readline from 'readline';
 
 // ==================== 型定義 ====================
 
+/**
+ * Staff型（Firestoreスキーマ）
+ * - StaffServiceのフィールド名変換に合わせた形式
+ * - position, certifications, maxConsecutiveDays, nightShiftOnlyはFirestoreスキーマ名
+ */
 interface Staff {
   staffId: string;
   name: string;
-  position: string;
-  certifications: string[];
-  nightShiftOnly: boolean;
-  maxConsecutiveDays: number;
-  maxWorkDays: number;
-  minRestDays: number;
+  position: string;  // Firestore: position → App: role
+  certifications: string[];  // Firestore: certifications → App: qualifications
+  nightShiftOnly: boolean;  // Firestore: nightShiftOnly → App: isNightShiftOnly
+  maxConsecutiveDays: number;  // Firestore: maxConsecutiveDays → App: maxConsecutiveWorkDays
+  // 以下はFirestore/App共通フィールド
+  weeklyWorkCount: { hope: number; must: number };
+  availableWeekdays: number[];  // 0=日, 1=月, ..., 6=土
+  unavailableDates: string[];  // YYYY-MM-DD形式
+  timeSlotPreference: string;  // '日勤のみ', '夜勤のみ', 'いつでも可'
   facilityId: string;
   createdAt: admin.firestore.Timestamp;
   updatedAt: admin.firestore.Timestamp;
 }
 
-interface ShiftRequirement {
-  requirementId: string;
-  targetMonth: string;
-  shiftTypes: ShiftType[];
-  facilityId: string;
-  createdAt: admin.firestore.Timestamp;
-  updatedAt: admin.firestore.Timestamp;
-}
-
-interface ShiftType {
+/**
+ * ShiftTime型（時間帯定義）
+ */
+interface ShiftTime {
   name: string;
-  startTime: string;
-  endTime: string;
-  requiredStaff: number;
-  requiredCertifications: string[];
+  start: string;  // HH:mm
+  end: string;    // HH:mm
+  restHours: number;
+}
+
+/**
+ * DailyRequirement型（各シフトの要件）
+ */
+interface DailyRequirement {
+  totalStaff: number;
+  requiredQualifications: { qualification: string; count: number }[];
+  requiredRoles: { role: string; count: number }[];
+}
+
+/**
+ * ShiftRequirement型（シフト要件設定）
+ * - RequirementServiceが期待する形式
+ * - Firestoreパス: /facilities/{facilityId}/requirements/default
+ */
+interface ShiftRequirement {
+  targetMonth: string;  // YYYY-MM
+  timeSlots: ShiftTime[];
+  requirements: Record<string, DailyRequirement>;
+  updatedAt: admin.firestore.Timestamp;
 }
 
 interface LeaveRequest {
@@ -85,7 +107,17 @@ interface FacilityMember {
 
 const DEMO_FACILITY_ID = 'demo-facility-001';
 const DEMO_FACILITY_NAME = 'サンプル介護施設';
-const TARGET_MONTH = '2025-11';
+
+// 対象月を動的に設定（現在月の翌月）
+function getTargetMonth(): string {
+  const now = new Date();
+  const nextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+  const year = nextMonth.getFullYear();
+  const month = String(nextMonth.getMonth() + 1).padStart(2, '0');
+  return `${year}-${month}`;
+}
+
+const TARGET_MONTH = getTargetMonth();
 
 // ==================== コマンドライン引数 ====================
 
@@ -145,187 +177,248 @@ const db = admin.firestore();
 
 // ==================== デモデータ定義 ====================
 
+/**
+ * デモスタッフデータ（10名）
+ *
+ * AI生成に必要な全フィールドを含む:
+ * - weeklyWorkCount: 週の勤務回数（希望・必須）
+ * - availableWeekdays: 勤務可能曜日（0=日〜6=土）
+ * - unavailableDates: 勤務不可日
+ * - timeSlotPreference: 時間帯希望
+ *
+ * 人員構成:
+ * - 管理者 1名（日勤のみ）
+ * - 看護職員 2名（いつでも可）
+ * - 介護職員 5名（いつでも可）
+ * - 夜勤専従 2名（夜勤のみ）
+ */
 const demoStaffs: Omit<Staff, 'createdAt' | 'updatedAt'>[] = [
   {
     staffId: 'staff-tanaka',
     name: '田中太郎',
     position: '管理者',
-    certifications: ['介護福祉士', '管理者研修修了'],
+    certifications: ['介護福祉士'],
     nightShiftOnly: false,
     maxConsecutiveDays: 5,
-    maxWorkDays: 22,
-    minRestDays: 8,
+    weeklyWorkCount: { hope: 5, must: 4 },
+    availableWeekdays: [1, 2, 3, 4, 5],  // 月〜金
+    unavailableDates: [],
+    timeSlotPreference: '日勤のみ',
     facilityId: DEMO_FACILITY_ID,
   },
   {
     staffId: 'staff-sato',
     name: '佐藤花子',
-    position: '看護師',
-    certifications: ['正看護師'],
+    position: '看護職員',
+    certifications: ['看護師'],
     nightShiftOnly: false,
     maxConsecutiveDays: 5,
-    maxWorkDays: 20,
-    minRestDays: 10,
+    weeklyWorkCount: { hope: 4, must: 3 },
+    availableWeekdays: [0, 1, 2, 3, 4, 5, 6],  // 全曜日
+    unavailableDates: [],
+    timeSlotPreference: 'いつでも可',
     facilityId: DEMO_FACILITY_ID,
   },
   {
     staffId: 'staff-suzuki',
     name: '鈴木美咲',
-    position: '看護師',
-    certifications: ['正看護師'],
+    position: '看護職員',
+    certifications: ['看護師'],
     nightShiftOnly: false,
     maxConsecutiveDays: 5,
-    maxWorkDays: 20,
-    minRestDays: 10,
+    weeklyWorkCount: { hope: 4, must: 3 },
+    availableWeekdays: [0, 1, 2, 3, 4, 5, 6],  // 全曜日
+    unavailableDates: [],
+    timeSlotPreference: 'いつでも可',
     facilityId: DEMO_FACILITY_ID,
   },
   {
     staffId: 'staff-takahashi',
     name: '高橋健太',
-    position: '介護士',
-    certifications: ['介護職員初任者研修'],
+    position: '介護職員',
+    certifications: ['介護福祉士'],
     nightShiftOnly: false,
     maxConsecutiveDays: 5,
-    maxWorkDays: 22,
-    minRestDays: 8,
+    weeklyWorkCount: { hope: 5, must: 4 },
+    availableWeekdays: [0, 1, 2, 3, 4, 5, 6],  // 全曜日
+    unavailableDates: [],
+    timeSlotPreference: 'いつでも可',
     facilityId: DEMO_FACILITY_ID,
   },
   {
     staffId: 'staff-ito',
     name: '伊藤真理',
-    position: '介護士',
+    position: '介護職員',
     certifications: ['介護福祉士'],
     nightShiftOnly: false,
     maxConsecutiveDays: 5,
-    maxWorkDays: 22,
-    minRestDays: 8,
+    weeklyWorkCount: { hope: 5, must: 4 },
+    availableWeekdays: [0, 1, 2, 3, 4, 5, 6],  // 全曜日
+    unavailableDates: [],
+    timeSlotPreference: 'いつでも可',
     facilityId: DEMO_FACILITY_ID,
   },
   {
     staffId: 'staff-watanabe',
     name: '渡辺翔太',
-    position: '介護士',
-    certifications: ['介護職員初任者研修'],
+    position: '介護職員',
+    certifications: ['介護福祉士'],
     nightShiftOnly: false,
     maxConsecutiveDays: 5,
-    maxWorkDays: 22,
-    minRestDays: 8,
+    weeklyWorkCount: { hope: 5, must: 4 },
+    availableWeekdays: [0, 1, 2, 3, 4, 5, 6],  // 全曜日
+    unavailableDates: [],
+    timeSlotPreference: 'いつでも可',
     facilityId: DEMO_FACILITY_ID,
   },
   {
     staffId: 'staff-yamamoto',
     name: '山本さくら',
-    position: '介護士',
+    position: '介護職員',
     certifications: ['介護福祉士'],
     nightShiftOnly: false,
     maxConsecutiveDays: 5,
-    maxWorkDays: 22,
-    minRestDays: 8,
+    weeklyWorkCount: { hope: 5, must: 4 },
+    availableWeekdays: [0, 1, 2, 3, 4, 5, 6],  // 全曜日
+    unavailableDates: [],
+    timeSlotPreference: 'いつでも可',
     facilityId: DEMO_FACILITY_ID,
   },
   {
     staffId: 'staff-nakamura',
     name: '中村優子',
-    position: '介護士',
-    certifications: ['介護職員初任者研修'],
+    position: '介護職員',
+    certifications: ['介護福祉士'],
     nightShiftOnly: false,
     maxConsecutiveDays: 5,
-    maxWorkDays: 20,
-    minRestDays: 10,
+    weeklyWorkCount: { hope: 4, must: 3 },
+    availableWeekdays: [0, 1, 2, 3, 4, 5, 6],  // 全曜日
+    unavailableDates: [],
+    timeSlotPreference: 'いつでも可',
     facilityId: DEMO_FACILITY_ID,
   },
   {
     staffId: 'staff-kobayashi',
     name: '小林次郎',
-    position: '介護士（夜勤専従）',
+    position: '介護職員',
     certifications: ['介護福祉士'],
     nightShiftOnly: true,
-    maxConsecutiveDays: 5,
-    maxWorkDays: 15,
-    minRestDays: 15,
+    maxConsecutiveDays: 3,  // 夜勤専従は連勤制限を厳しく
+    weeklyWorkCount: { hope: 3, must: 2 },
+    availableWeekdays: [0, 1, 2, 3, 4, 5, 6],  // 全曜日
+    unavailableDates: [],
+    timeSlotPreference: '夜勤のみ',
     facilityId: DEMO_FACILITY_ID,
   },
   {
     staffId: 'staff-kato',
     name: '加藤三郎',
-    position: '介護士（夜勤専従）',
+    position: '介護職員',
     certifications: ['介護福祉士'],
     nightShiftOnly: true,
-    maxConsecutiveDays: 5,
-    maxWorkDays: 15,
-    minRestDays: 15,
+    maxConsecutiveDays: 3,  // 夜勤専従は連勤制限を厳しく
+    weeklyWorkCount: { hope: 3, must: 2 },
+    availableWeekdays: [0, 1, 2, 3, 4, 5, 6],  // 全曜日
+    unavailableDates: [],
+    timeSlotPreference: '夜勤のみ',
     facilityId: DEMO_FACILITY_ID,
   },
 ];
 
-const demoShiftRequirements: Omit<ShiftRequirement, 'createdAt' | 'updatedAt'>[] = [
-  {
-    requirementId: 'req-demo-2025-11',
-    targetMonth: TARGET_MONTH,
-    shiftTypes: [
-      {
-        name: '早番',
-        startTime: '07:00',
-        endTime: '16:00',
-        requiredStaff: 2,
-        requiredCertifications: ['介護福祉士'],
-      },
-      {
-        name: '日勤',
-        startTime: '09:00',
-        endTime: '18:00',
-        requiredStaff: 3,
-        requiredCertifications: ['正看護師'],
-      },
-      {
-        name: '遅番',
-        startTime: '11:00',
-        endTime: '20:00',
-        requiredStaff: 2,
-        requiredCertifications: [],
-      },
-      {
-        name: '夜勤',
-        startTime: '17:00',
-        endTime: '09:00',
-        requiredStaff: 2,
-        requiredCertifications: ['介護福祉士'],
-      },
-    ],
-    facilityId: DEMO_FACILITY_ID,
+/**
+ * デモシフト要件
+ *
+ * RequirementService形式（timeSlots + requirements Record）に準拠
+ * Firestoreパス: /facilities/{facilityId}/requirements/default
+ *
+ * 人員配置（実現可能な設定）:
+ * - 早番: 2名（資格要件なし）
+ * - 日勤: 2名（看護師1名以上）
+ * - 遅番: 2名（資格要件なし）
+ * - 夜勤: 2名（介護福祉士1名以上）
+ *
+ * スタッフ10名（日勤可能8名 + 夜勤専従2名）で十分カバー可能
+ */
+const demoShiftRequirement: Omit<ShiftRequirement, 'updatedAt'> = {
+  targetMonth: TARGET_MONTH,
+  timeSlots: [
+    { name: '早番', start: '07:00', end: '16:00', restHours: 1 },
+    { name: '日勤', start: '09:00', end: '18:00', restHours: 1 },
+    { name: '遅番', start: '11:00', end: '20:00', restHours: 1 },
+    { name: '夜勤', start: '17:00', end: '09:00', restHours: 2 },
+  ],
+  requirements: {
+    '早番': {
+      totalStaff: 2,
+      requiredQualifications: [],  // 資格要件なし
+      requiredRoles: [],
+    },
+    '日勤': {
+      totalStaff: 2,
+      requiredQualifications: [
+        { qualification: '看護師', count: 1 },  // 看護師1名以上
+      ],
+      requiredRoles: [],
+    },
+    '遅番': {
+      totalStaff: 2,
+      requiredQualifications: [],  // 資格要件なし
+      requiredRoles: [],
+    },
+    '夜勤': {
+      totalStaff: 2,
+      requiredQualifications: [
+        { qualification: '介護福祉士', count: 1 },  // 介護福祉士1名以上
+      ],
+      requiredRoles: [],
+    },
   },
-];
+};
 
-const demoLeaveRequests: Omit<LeaveRequest, 'createdAt'>[] = [
-  {
-    requestId: 'leave-tanaka-20251115',
-    staffId: 'staff-tanaka',
-    date: '2025-11-15',
-    leaveType: '有給休暇',
-    facilityId: DEMO_FACILITY_ID,
-  },
-  {
-    requestId: 'leave-sato-20251122',
-    staffId: 'staff-sato',
-    date: '2025-11-22',
-    leaveType: '希望休',
-    facilityId: DEMO_FACILITY_ID,
-  },
-  {
-    requestId: 'leave-sato-20251123',
-    staffId: 'staff-sato',
-    date: '2025-11-23',
-    leaveType: '希望休',
-    facilityId: DEMO_FACILITY_ID,
-  },
-  {
-    requestId: 'leave-takahashi-20251110',
-    staffId: 'staff-takahashi',
-    date: '2025-11-10',
-    leaveType: '希望休',
-    facilityId: DEMO_FACILITY_ID,
-  },
-];
+/**
+ * 休暇申請データを動的に生成
+ * 対象月の日付に合わせて休暇申請を作成
+ */
+function generateLeaveRequests(): Omit<LeaveRequest, 'createdAt'>[] {
+  const [year, month] = TARGET_MONTH.split('-').map(Number);
+
+  // 対象月の10日、15日、22日、23日を使用
+  const formatDate = (day: number) =>
+    `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+
+  return [
+    {
+      requestId: `leave-tanaka-${year}${String(month).padStart(2, '0')}15`,
+      staffId: 'staff-tanaka',
+      date: formatDate(15),
+      leaveType: '有給休暇',
+      facilityId: DEMO_FACILITY_ID,
+    },
+    {
+      requestId: `leave-sato-${year}${String(month).padStart(2, '0')}22`,
+      staffId: 'staff-sato',
+      date: formatDate(22),
+      leaveType: '希望休',
+      facilityId: DEMO_FACILITY_ID,
+    },
+    {
+      requestId: `leave-sato-${year}${String(month).padStart(2, '0')}23`,
+      staffId: 'staff-sato',
+      date: formatDate(23),
+      leaveType: '希望休',
+      facilityId: DEMO_FACILITY_ID,
+    },
+    {
+      requestId: `leave-takahashi-${year}${String(month).padStart(2, '0')}10`,
+      staffId: 'staff-takahashi',
+      date: formatDate(10),
+      leaveType: '希望休',
+      facilityId: DEMO_FACILITY_ID,
+    },
+  ];
+}
+
+const demoLeaveRequests = generateLeaveRequests();
 
 // ==================== ヘルパー関数 ====================
 
@@ -382,7 +475,7 @@ async function main() {
     console.log('⚠️  既存のデモデータを削除します:');
     console.log(`   - 施設: ${DEMO_FACILITY_NAME} (${DEMO_FACILITY_ID})`);
     console.log(`   - スタッフ: ${demoStaffs.length}名`);
-    console.log(`   - シフト要件: ${demoShiftRequirements.length}件`);
+    console.log(`   - シフト要件: 1件`);
     console.log(`   - 休暇申請: ${demoLeaveRequests.length}件`);
     console.log('');
 
@@ -400,7 +493,7 @@ async function main() {
   console.log('📦 投入するデモデータ:');
   console.log(`   - 施設: ${DEMO_FACILITY_NAME} (${DEMO_FACILITY_ID})`);
   console.log(`   - スタッフ: ${demoStaffs.length}名`);
-  console.log(`   - シフト要件: ${demoShiftRequirements.length}件（対象月: ${TARGET_MONTH}）`);
+  console.log(`   - シフト要件: 1件（対象月: ${TARGET_MONTH}）`);
   console.log(`   - 休暇申請: ${demoLeaveRequests.length}件`);
   console.log('');
 
@@ -464,17 +557,14 @@ async function main() {
   }
   console.log(`  ✓ スタッフ: ${demoStaffs.length}名`);
 
-  // デモシフト要件の投入
-  for (const req of demoShiftRequirements) {
-    const reqRef = db.collection('facilities').doc(DEMO_FACILITY_ID).collection('requirements').doc(req.requirementId);
-    const reqData: ShiftRequirement = {
-      ...req,
-      createdAt: now,
-      updatedAt: now,
-    };
-    batch.set(reqRef, reqData);
-  }
-  console.log(`  ✓ シフト要件: ${demoShiftRequirements.length}件`);
+  // デモシフト要件の投入（RequirementService形式: /requirements/default）
+  const reqRef = db.collection('facilities').doc(DEMO_FACILITY_ID).collection('requirements').doc('default');
+  const reqData: ShiftRequirement = {
+    ...demoShiftRequirement,
+    updatedAt: now,
+  };
+  batch.set(reqRef, reqData);
+  console.log(`  ✓ シフト要件: 1件（対象月: ${TARGET_MONTH}）`);
 
   // デモ休暇申請の投入
   for (const leave of demoLeaveRequests) {
