@@ -1,9 +1,75 @@
 import React, { useState, useEffect, useRef } from 'react';
-import type { AIEvaluationResult, ConstraintViolation, Recommendation, SimulationResult } from '../../types';
+import type { AIEvaluationResult, ConstraintViolation, ConstraintLevel, Recommendation, SimulationResult } from '../../types';
 
 // 自動展開のしきい値定数
 const AUTO_EXPAND_SCORE_THRESHOLD = 60;
 const AUTO_EXPAND_ERROR_THRESHOLD = 5;
+
+// Phase 53: レベル別UI設定
+const LEVEL_UI_CONFIG: Record<
+  ConstraintLevel,
+  {
+    label: string;
+    labelShort: string;
+    color: string;
+    bgColor: string;
+    borderColor: string;
+    icon: string;
+  }
+> = {
+  1: {
+    label: '絶対必須',
+    labelShort: 'Lv1',
+    color: 'text-red-700',
+    bgColor: 'bg-red-50',
+    borderColor: 'border-red-500',
+    icon: '🚫',
+  },
+  2: {
+    label: '運営必須',
+    labelShort: 'Lv2',
+    color: 'text-orange-700',
+    bgColor: 'bg-orange-50',
+    borderColor: 'border-orange-500',
+    icon: '⚠️',
+  },
+  3: {
+    label: '努力目標',
+    labelShort: 'Lv3',
+    color: 'text-yellow-700',
+    bgColor: 'bg-yellow-50',
+    borderColor: 'border-yellow-500',
+    icon: '💡',
+  },
+  4: {
+    label: '推奨',
+    labelShort: 'Lv4',
+    color: 'text-blue-700',
+    bgColor: 'bg-blue-50',
+    borderColor: 'border-blue-500',
+    icon: 'ℹ️',
+  },
+};
+
+// Phase 53: 制約タイプからデフォルトレベルへのマッピング
+const CONSTRAINT_LEVEL_MAPPING: Record<string, ConstraintLevel> = {
+  nightRestViolation: 1,
+  staffShortage: 2,
+  qualificationMissing: 2,
+  consecutiveWork: 3,
+  leaveRequestIgnored: 3,
+};
+
+// Phase 53: 違反のレベルを取得（level → type → severity の優先順）
+function getViolationLevel(violation: ConstraintViolation): ConstraintLevel {
+  if (violation.level !== undefined) {
+    return violation.level;
+  }
+  if (violation.type && CONSTRAINT_LEVEL_MAPPING[violation.type]) {
+    return CONSTRAINT_LEVEL_MAPPING[violation.type];
+  }
+  return violation.severity === 'error' ? 2 : 3;
+}
 
 // 警告レベル
 type WarningLevel = 'critical' | 'severe' | 'warning' | 'none';
@@ -317,10 +383,16 @@ function ScoreBar({ score }: { score: number }) {
 
 /**
  * 制約違反セクション
+ * Phase 53: レベル別色分け表示を追加
  */
 function ViolationsSection({ violations }: { violations: ConstraintViolation[] }) {
   const [showAll, setShowAll] = useState(false);
-  const displayViolations = showAll ? violations : violations.slice(0, 3);
+
+  // Phase 53: レベル順（重要度高い順）にソート
+  const sortedViolations = [...violations].sort((a, b) => {
+    return getViolationLevel(a) - getViolationLevel(b);
+  });
+  const displayViolations = showAll ? sortedViolations : sortedViolations.slice(0, 3);
 
   // 違反タイプの日本語ラベル
   const violationTypeLabels: Record<string, string> = {
@@ -331,6 +403,16 @@ function ViolationsSection({ violations }: { violations: ConstraintViolation[] }
     leaveRequestIgnored: '休暇申請無視',
   };
 
+  // Phase 53: レベル別カウント
+  const levelCounts = sortedViolations.reduce(
+    (acc, v) => {
+      const level = getViolationLevel(v);
+      acc[level] = (acc[level] || 0) + 1;
+      return acc;
+    },
+    {} as Record<number, number>
+  );
+
   return (
     <div className="mt-4">
       <h4 className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
@@ -340,49 +422,71 @@ function ViolationsSection({ violations }: { violations: ConstraintViolation[] }
         制約違反 ({violations.length}件)
       </h4>
 
+      {/* Phase 53: レベル別サマリー */}
+      <div className="mb-2 flex flex-wrap gap-2">
+        {[1, 2, 3, 4].map((level) => {
+          const count = levelCounts[level] || 0;
+          if (count === 0) return null;
+          const config = LEVEL_UI_CONFIG[level as ConstraintLevel];
+          return (
+            <span
+              key={level}
+              className={`text-xs px-2 py-0.5 rounded ${config.bgColor} ${config.color}`}
+            >
+              {config.icon} {config.label}: {count}件
+            </span>
+          );
+        })}
+        {!levelCounts[1] && (
+          <span className="text-xs px-2 py-0.5 rounded bg-green-50 text-green-700">
+            ✅ 必須条件をすべて満たしています
+          </span>
+        )}
+      </div>
+
       <ul className="space-y-2">
-        {displayViolations.map((violation, index) => (
-          <li
-            key={index}
-            className={`p-3 rounded-lg border-l-4 ${
-              violation.severity === 'error'
-                ? 'bg-red-50 border-red-500'
-                : 'bg-yellow-50 border-yellow-500'
-            }`}
-          >
-            <div className="flex items-start justify-between">
-              <div>
-                <span className={`text-xs font-medium px-1.5 py-0.5 rounded ${
-                  violation.severity === 'error'
-                    ? 'bg-red-100 text-red-700'
-                    : 'bg-yellow-100 text-yellow-700'
-                }`}>
-                  {violationTypeLabels[violation.type] || violation.type}
-                </span>
-                <p className="mt-1 text-sm text-gray-700">{violation.description}</p>
+        {displayViolations.map((violation, index) => {
+          const level = getViolationLevel(violation);
+          const config = LEVEL_UI_CONFIG[level];
+          return (
+            <li
+              key={index}
+              className={`p-3 rounded-lg border-l-4 ${config.bgColor} ${config.borderColor}`}
+            >
+              <div className="flex items-start justify-between">
+                <div>
+                  {/* Phase 53: レベルバッジ */}
+                  <span className={`text-xs font-medium px-1.5 py-0.5 rounded mr-1 ${config.bgColor} ${config.color}`}>
+                    {config.labelShort}
+                  </span>
+                  <span className={`text-xs font-medium px-1.5 py-0.5 rounded ${config.bgColor} ${config.color}`}>
+                    {violationTypeLabels[violation.type] || violation.type}
+                  </span>
+                  <p className="mt-1 text-sm text-gray-700">{violation.description}</p>
+                </div>
               </div>
-            </div>
 
-            {/* 影響スタッフ・日付 */}
-            {(violation.affectedStaff?.length || violation.affectedDates?.length) && (
-              <div className="mt-2 text-xs text-gray-500">
-                {violation.affectedStaff?.length ? (
-                  <span className="mr-3">対象: {violation.affectedStaff.join(', ')}</span>
-                ) : null}
-                {violation.affectedDates?.length ? (
-                  <span>日付: {violation.affectedDates.slice(0, 3).join(', ')}{violation.affectedDates.length > 3 ? `他${violation.affectedDates.length - 3}日` : ''}</span>
-                ) : null}
-              </div>
-            )}
+              {/* 影響スタッフ・日付 */}
+              {(violation.affectedStaff?.length || violation.affectedDates?.length) && (
+                <div className="mt-2 text-xs text-gray-500">
+                  {violation.affectedStaff?.length ? (
+                    <span className="mr-3">対象: {violation.affectedStaff.join(', ')}</span>
+                  ) : null}
+                  {violation.affectedDates?.length ? (
+                    <span>日付: {violation.affectedDates.slice(0, 3).join(', ')}{violation.affectedDates.length > 3 ? `他${violation.affectedDates.length - 3}日` : ''}</span>
+                  ) : null}
+                </div>
+              )}
 
-            {/* 提案 */}
-            {violation.suggestion && (
-              <p className="mt-2 text-xs text-blue-600 bg-blue-50 p-2 rounded">
-                💡 {violation.suggestion}
-              </p>
-            )}
-          </li>
-        ))}
+              {/* 提案 */}
+              {violation.suggestion && (
+                <p className="mt-2 text-xs text-blue-600 bg-blue-50 p-2 rounded">
+                  💡 {violation.suggestion}
+                </p>
+              )}
+            </li>
+          );
+        })}
       </ul>
 
       {violations.length > 3 && (

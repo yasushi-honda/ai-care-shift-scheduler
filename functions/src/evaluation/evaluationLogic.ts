@@ -12,11 +12,19 @@ import {
   ShiftRequirement,
   LeaveRequest,
   ConstraintViolation,
+  ConstraintLevel,
   AIEvaluationResult,
   Recommendation,
   SimulationResult,
   TimeSlotPreference,
 } from '../types';
+import {
+  LEVEL_DEDUCTIONS,
+  getViolationLevel,
+  generateLevelBasedComment,
+  generatePositiveSummary,
+  groupViolationsByLevel,
+} from './constraintLevelMapping';
 
 /**
  * 評価入力データ
@@ -127,8 +135,8 @@ export class EvaluationService {
       input.requirements
     );
 
-    // 改善提案生成
-    const recommendations = this.generateRecommendations(violations, input);
+    // Phase 53: 改善提案生成（スコアを渡す）
+    const recommendations = this.generateRecommendations(violations, input, overallScore);
 
     // Phase 44: 制約分析から追加の改善提案を生成
     for (const suggestion of constraintAnalysisResult.suggestions) {
@@ -151,6 +159,9 @@ export class EvaluationService {
       recommendations
     );
 
+    // Phase 53: ポジティブサマリー生成
+    const positiveSummary = generatePositiveSummary(violations, overallScore, fulfillmentRate);
+
     return {
       overallScore,
       fulfillmentRate,
@@ -159,6 +170,7 @@ export class EvaluationService {
       simulation,
       generatedAt: Timestamp.now(),
       aiComment,
+      positiveSummary, // Phase 53: 追加
       constraintAnalysis: {
         totalStaff: constraintAnalysisResult.totalStaff,
         businessDays: constraintAnalysisResult.businessDays,
@@ -862,17 +874,37 @@ export class EvaluationService {
    * - warning: -5点
    */
   calculateOverallScore(violations: ConstraintViolation[]): number {
-    let score = 100;
+    // 違反をレベル別にグループ化
+    const violationsByLevel: Record<ConstraintLevel, ConstraintViolation[]> = {
+      1: [],
+      2: [],
+      3: [],
+      4: [],
+    };
 
     for (const violation of violations) {
-      if (violation.severity === 'error') {
-        score -= 10;
-      } else if (violation.severity === 'warning') {
-        score -= 5;
-      }
+      const level = getViolationLevel(violation);
+      violationsByLevel[level].push(violation);
     }
 
-    return Math.max(0, score);
+    // レベル1（絶対必須）違反がある場合は即座に0点
+    if (violationsByLevel[1].length > 0) {
+      return 0;
+    }
+
+    // レベル2-4の減点を計算
+    let score = 100;
+
+    // レベル2（運営必須）: 1件あたり12点減点
+    score -= violationsByLevel[2].length * LEVEL_DEDUCTIONS[2];
+
+    // レベル3（努力目標）: 1件あたり4点減点
+    score -= violationsByLevel[3].length * LEVEL_DEDUCTIONS[3];
+
+    // レベル4（推奨）: 減点なし（情報のみ）
+
+    // スコアを0〜100の範囲に正規化
+    return Math.max(0, Math.min(100, score));
   }
 
   /**
@@ -932,12 +964,36 @@ export class EvaluationService {
    */
   private generateRecommendations(
     violations: ConstraintViolation[],
-    input: EvaluationInput
+    input: EvaluationInput,
+    score?: number
   ): Recommendation[] {
     const recommendations: Recommendation[] = [];
+    const grouped = groupViolationsByLevel(violations);
 
-    // 人員不足が多い場合
-    const shortageCount = violations.filter(
+    // Phase 53: レベル別コメント生成を使用
+    const currentScore = score ?? this.calculateOverallScore(violations);
+    const { mainComment, details } = generateLevelBasedComment(violations, currentScore);
+
+    // メインコメントを最優先で追加
+    recommendations.push({
+      priority: grouped[1].length > 0 ? 'high' : grouped[2].length > 5 ? 'high' : 'medium',
+      category: 'general',
+      description: mainComment,
+      action: details.length > 0 ? details[0] : '詳細を確認してください',
+    });
+
+    // 詳細コメントを追加
+    for (let i = 1; i < details.length; i++) {
+      recommendations.push({
+        priority: 'low',
+        category: 'general',
+        description: details[i],
+        action: '',
+      });
+    }
+
+    // 人員不足が多い場合（レベル2）
+    const shortageCount = grouped[2].filter(
       (v) => v.type === 'staffShortage'
     ).length;
     if (shortageCount >= 5) {
@@ -949,52 +1005,42 @@ export class EvaluationService {
       });
     }
 
-    // 連勤超過が多い場合
-    const consecutiveCount = violations.filter(
+    // 連勤超過が多い場合（レベル3）
+    const consecutiveCount = grouped[3].filter(
       (v) => v.type === 'consecutiveWork'
     ).length;
     if (consecutiveCount >= 2) {
       recommendations.push({
-        priority: 'high',
+        priority: 'medium',
         category: 'workload',
         description: '複数スタッフで連勤超過が発生しています',
         action: 'シフトパターンの見直しを検討してください',
       });
     }
 
-    // 夜勤後休息不足がある場合
-    const nightRestCount = violations.filter(
+    // 夜勤後休息不足がある場合（レベル1）
+    const nightRestCount = grouped[1].filter(
       (v) => v.type === 'nightRestViolation'
     ).length;
     if (nightRestCount > 0) {
       recommendations.push({
-        priority: 'medium',
+        priority: 'high',
         category: 'workload',
-        description: '夜勤後の休息が確保されていないケースがあります',
+        description: '夜勤後の休息が確保されていないケースがあります（法令違反）',
         action: '夜勤翌日に明け休みを設定してください',
       });
     }
 
-    // 休暇希望未反映がある場合
-    const leaveIgnoredCount = violations.filter(
+    // 休暇希望未反映がある場合（レベル3）
+    const leaveIgnoredCount = grouped[3].filter(
       (v) => v.type === 'leaveRequestIgnored'
     ).length;
     if (leaveIgnoredCount > 0) {
       recommendations.push({
-        priority: 'medium',
+        priority: 'low',
         category: 'fairness',
         description: '一部の休暇希望が反映されていません',
         action: '可能な範囲で休暇希望を調整してください',
-      });
-    }
-
-    // 違反が少ない場合のポジティブフィードバック
-    if (violations.length === 0) {
-      recommendations.push({
-        priority: 'low',
-        category: 'general',
-        description: 'すべての制約を満たしています',
-        action: 'このシフト案は良好です。確定を検討してください',
       });
     }
 

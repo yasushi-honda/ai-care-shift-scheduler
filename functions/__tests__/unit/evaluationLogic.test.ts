@@ -13,6 +13,8 @@ import {
   Qualification,
   TimeSlotPreference,
   LeaveType,
+  ConstraintViolation,
+  ConstraintLevel,
 } from '../../src/types';
 
 describe('EvaluationService', () => {
@@ -269,39 +271,158 @@ describe('EvaluationService', () => {
     });
   });
 
-  describe('calculateOverallScore', () => {
+  describe('calculateOverallScore（Phase 53: レベル別評価）', () => {
     it('違反がない場合、100点を返す', () => {
       const score = evaluationService.calculateOverallScore([]);
       expect(score).toBe(100);
     });
 
-    it('errorは-10点、warningは-5点', () => {
-      const violations = [
+    it('レベル1（絶対必須）違反がある場合、即座に0点', () => {
+      const violations: ConstraintViolation[] = [
         {
-          type: 'staffShortage' as const,
-          severity: 'error' as const,
-          description: 'テスト',
-        },
-        {
-          type: 'consecutiveWork' as const,
-          severity: 'warning' as const,
-          description: 'テスト',
+          type: 'nightRestViolation',
+          severity: 'error',
+          level: 1 as ConstraintLevel,
+          description: '夜勤後休息不足',
         },
       ];
 
       const score = evaluationService.calculateOverallScore(violations);
-      expect(score).toBe(85); // 100 - 10 - 5 = 85
+      expect(score).toBe(0);
+    });
+
+    it('レベル2（運営必須）は1件あたり12点減点', () => {
+      const violations: ConstraintViolation[] = [
+        {
+          type: 'staffShortage',
+          severity: 'error',
+          level: 2 as ConstraintLevel,
+          description: '人員不足',
+        },
+        {
+          type: 'qualificationMissing',
+          severity: 'error',
+          level: 2 as ConstraintLevel,
+          description: '資格要件未充足',
+        },
+      ];
+
+      const score = evaluationService.calculateOverallScore(violations);
+      expect(score).toBe(76); // 100 - 12*2 = 76
+    });
+
+    it('レベル3（努力目標）は1件あたり4点減点', () => {
+      const violations: ConstraintViolation[] = [
+        {
+          type: 'consecutiveWork',
+          severity: 'warning',
+          level: 3 as ConstraintLevel,
+          description: '連勤超過',
+        },
+        {
+          type: 'leaveRequestIgnored',
+          severity: 'warning',
+          level: 3 as ConstraintLevel,
+          description: '休暇希望未反映',
+        },
+      ];
+
+      const score = evaluationService.calculateOverallScore(violations);
+      expect(score).toBe(92); // 100 - 4*2 = 92
+    });
+
+    it('レベル4（推奨）は減点なし', () => {
+      const violations: ConstraintViolation[] = [
+        {
+          type: 'staffShortage', // typeは仮（将来の推奨事項用）
+          severity: 'warning',
+          level: 4 as ConstraintLevel,
+          description: '推奨事項',
+        },
+        {
+          type: 'staffShortage',
+          severity: 'warning',
+          level: 4 as ConstraintLevel,
+          description: '推奨事項2',
+        },
+      ];
+
+      const score = evaluationService.calculateOverallScore(violations);
+      expect(score).toBe(100); // 減点なし
+    });
+
+    it('レベル2×3件 + レベル3×15件で期待値4点（設計書通り）', () => {
+      const level2Violations: ConstraintViolation[] = Array(3).fill(null).map((_, i) => ({
+        type: 'staffShortage' as const,
+        severity: 'error' as const,
+        level: 2 as ConstraintLevel,
+        description: `人員不足${i + 1}`,
+      }));
+      const level3Violations: ConstraintViolation[] = Array(15).fill(null).map((_, i) => ({
+        type: 'consecutiveWork' as const,
+        severity: 'warning' as const,
+        level: 3 as ConstraintLevel,
+        description: `連勤超過${i + 1}`,
+      }));
+
+      const score = evaluationService.calculateOverallScore([...level2Violations, ...level3Violations]);
+      // 100 - 3*12 - 15*4 = 100 - 36 - 60 = 4
+      expect(score).toBe(4);
+    });
+
+    it('11件以上の軽微な違反（レベル3）でも0点にならない', () => {
+      const violations: ConstraintViolation[] = Array(11).fill(null).map((_, i) => ({
+        type: 'consecutiveWork' as const,
+        severity: 'warning' as const,
+        level: 3 as ConstraintLevel,
+        description: `連勤超過${i + 1}`,
+      }));
+
+      const score = evaluationService.calculateOverallScore(violations);
+      // 100 - 11*4 = 56 (旧ロジックでは 100 - 11*5 = 45)
+      expect(score).toBe(56);
+      expect(score).toBeGreaterThan(0);
+    });
+
+    it('レベル未指定時はtypeからレベルを推定する（後方互換性）', () => {
+      const violations: ConstraintViolation[] = [
+        {
+          type: 'staffShortage', // CONSTRAINT_LEVEL_MAPPING[staffShortage] = 2
+          severity: 'error',
+          // level未指定
+          description: '人員不足',
+        },
+        {
+          type: 'consecutiveWork', // CONSTRAINT_LEVEL_MAPPING[consecutiveWork] = 3
+          severity: 'warning',
+          // level未指定
+          description: '連勤超過',
+        },
+      ];
+
+      const score = evaluationService.calculateOverallScore(violations);
+      // 100 - 12 - 4 = 84
+      expect(score).toBe(84);
     });
 
     it('スコアは0を下回らない', () => {
-      const violations = Array(15).fill({
+      const violations: ConstraintViolation[] = Array(10).fill(null).map((_, i) => ({
         type: 'staffShortage' as const,
         severity: 'error' as const,
-        description: 'テスト',
-      });
+        level: 2 as ConstraintLevel,
+        description: `人員不足${i + 1}`,
+      }));
 
       const score = evaluationService.calculateOverallScore(violations);
-      expect(score).toBe(0); // 100 - 150 = -50 → 0
+      // 100 - 10*12 = -20 → 0
+      expect(score).toBe(0);
+    });
+
+    it('スコアは100を上回らない', () => {
+      // 負の減点は発生しないが、念のためテスト
+      const violations: ConstraintViolation[] = [];
+      const score = evaluationService.calculateOverallScore(violations);
+      expect(score).toBeLessThanOrEqual(100);
     });
   });
 

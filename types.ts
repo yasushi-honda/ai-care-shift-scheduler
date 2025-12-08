@@ -461,11 +461,22 @@ export type ConstraintViolationType =
   | 'leaveRequestIgnored'; // 休暇希望未反映
 
 /**
+ * 制約レベル（4段階）
+ * Phase 53: 制約レベル別評価システム
+ * - 1: 絶対必須（労基法違反 → シフト無効）
+ * - 2: 運営必須（人員・資格基準 → 重大減点）
+ * - 3: 努力目標（希望休・連勤 → 軽微減点）
+ * - 4: 推奨（相性考慮 → 減点なし・情報）
+ */
+export type ConstraintLevel = 1 | 2 | 3 | 4;
+
+/**
  * 制約違反
  */
 export interface ConstraintViolation {
   type: ConstraintViolationType;
-  severity: 'error' | 'warning';
+  severity: 'error' | 'warning';  // 後方互換性のため維持
+  level?: ConstraintLevel;        // Phase 53: 制約レベル（1-4）、未設定時はtypeから推定
   description: string;
   affectedStaff?: string[];   // スタッフID
   affectedDates?: string[];   // YYYY-MM-DD
@@ -503,6 +514,7 @@ export interface AIEvaluationResult {
   simulation: SimulationResult;
   generatedAt: Timestamp;
   aiComment?: string;             // AI総合コメント（200文字以内）
+  positiveSummary?: string;       // Phase 53: ポジティブサマリー
 }
 
 /**
