@@ -74,8 +74,24 @@ function getViolationLevel(violation: ConstraintViolation): ConstraintLevel {
 // 警告レベル
 type WarningLevel = 'critical' | 'severe' | 'warning' | 'none';
 
-function getWarningLevel(score: number): WarningLevel {
-  if (score === 0) return 'critical';
+/**
+ * Phase 53: レベルベースの警告レベル判定
+ * - critical: レベル1違反がある場合のみ
+ * - severe: レベル1なし + スコア30点以下
+ * - warning: レベル1なし + スコア60点未満
+ * - none: それ以外
+ */
+function getWarningLevel(score: number, violations: ConstraintViolation[]): WarningLevel {
+  // レベル1違反があるかチェック
+  const hasLevel1Violation = violations.some(v => {
+    const level = getViolationLevel(v);
+    return level === 1;
+  });
+
+  // レベル1違反がある場合のみ「実現不可能」
+  if (hasLevel1Violation) return 'critical';
+
+  // レベル1違反がない場合はスコアベース（ただしcriticalにはならない）
   if (score <= 30) return 'severe';
   if (score < 60) return 'warning';
   return 'none';
@@ -84,28 +100,28 @@ function getWarningLevel(score: number): WarningLevel {
 // 警告メッセージ設定
 const WARNING_MESSAGES: Record<WarningLevel, { title: string; message: string; bgColor: string; borderColor: string; textColor: string; icon: string } | null> = {
   critical: {
-    title: 'この要件では実現不可能です',
-    message: '人員数が不足しているか、制約が厳しすぎるため、すべての条件を満たすシフトを作成できません。スタッフの追加または要件の緩和を検討してください。',
+    title: '実現不可能なシフトです',
+    message: '労基法違反（夜勤後休息不足など）があるため、このシフトは使用できません。該当箇所を修正してください。',
     bgColor: 'bg-red-50',
     borderColor: 'border-red-500',
     textColor: 'text-red-800',
     icon: '🚫',
   },
   severe: {
-    title: '重大な制約違反があります',
-    message: '多数の制約違反が発生しています。このままでは運用に支障をきたす可能性があります。手動での調整が必要です。',
+    title: '運営上の課題がありますが、手直しで対応可能です',
+    message: '人員不足や資格要件の未充足など、運営に影響する問題があります。詳細を確認し、部分的に調整してください。',
     bgColor: 'bg-orange-50',
     borderColor: 'border-orange-500',
     textColor: 'text-orange-800',
     icon: '⚠️',
   },
   warning: {
-    title: '複数の問題があります',
-    message: 'いくつかの制約違反が検出されました。詳細を確認し、必要に応じて調整してください。',
+    title: '軽微な問題があります',
+    message: '希望休の未反映や連勤超過など、努力目標の未達成があります。可能な範囲で調整を検討してください。',
     bgColor: 'bg-yellow-50',
     borderColor: 'border-yellow-500',
     textColor: 'text-yellow-800',
-    icon: '⚡',
+    icon: '💡',
   },
   none: null,
 };
@@ -173,8 +189,8 @@ export function EvaluationPanel({
   // スコアが-1の場合は評価失敗
   const isEvaluationFailed = overallScore < 0;
 
-  // 警告レベルを取得
-  const warningLevel = isEvaluationFailed ? 'none' : getWarningLevel(overallScore);
+  // 警告レベルを取得（Phase 53: レベルベース判定）
+  const warningLevel = isEvaluationFailed ? 'none' : getWarningLevel(overallScore, constraintViolations || []);
   const warningConfig = WARNING_MESSAGES[warningLevel];
 
   return (
