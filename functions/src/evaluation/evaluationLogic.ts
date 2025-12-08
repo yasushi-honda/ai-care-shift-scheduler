@@ -260,7 +260,19 @@ export class EvaluationService {
       }
     }
 
-    return `現在の要件ではすべての制約を満たすシフトを作成できません。${issueText}${shiftDetailText}人員充足率${fulfillmentRate}%です。`;
+    // Phase 53: レベル1違反（労基法違反）がある場合のメッセージ
+    // レベル1違反がない場合でも呼ばれる可能性があるため、両方のケースに対応
+    const hasLevel1 = violations?.some(v => {
+      const level = getViolationLevel(v);
+      return level === 1;
+    }) ?? false;
+
+    if (hasLevel1) {
+      return `労基法違反（夜勤後休息不足など）があるため、このシフトは使用できません。${issueText}${shiftDetailText}人員充足率${fulfillmentRate}%です。該当箇所を修正してください。`;
+    }
+
+    // レベル1なしの場合：建設的なメッセージ
+    return `運営上の制約違反があります。${issueText}${shiftDetailText}人員充足率${fulfillmentRate}%です。詳細を確認し、必要に応じて調整してください。`;
   }
 
   private generateSevereComment(

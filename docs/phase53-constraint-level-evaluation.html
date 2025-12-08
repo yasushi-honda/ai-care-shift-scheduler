@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Phase 53: 制約レベル別評価システム - AIシフト自動作成システム</title>
+    <meta name="description" content="Phase 53 制約レベル別評価システムの技術ドキュメント">
+
+    <link rel="preconnect" href="https://fonts.gstatic.com">
+    <link rel="preload" href="https://fonts.googleapis.com/css?family=Open+Sans:400,700&display=swap" as="style" type="text/css" crossorigin>
+
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: "Open Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
+            font-size: 16px;
+            line-height: 1.6;
+            color: #606c71;
+            background: #fafbfc;
+        }
+        .page-header {
+            color: #fff;
+            text-align: center;
+            background-color: #155799;
+            background-image: linear-gradient(135deg, #1e3c72 0%, #2a5298 50%, #155799 100%);
+            padding: 2rem 1rem;
+        }
+        .project-name {
+            font-size: 2rem;
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+        }
+        .project-tagline {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+        .main-content {
+            max-width: 64rem;
+            padding: 2rem 1rem;
+            margin: 0 auto;
+        }
+        h1, h2, h3 {
+            margin-top: 2rem;
+            margin-bottom: 1rem;
+            font-weight: 600;
+            color: #1e3c72;
+        }
+        h1 { font-size: 1.75rem; border-bottom: 2px solid #1e3c72; padding-bottom: 0.5rem; }
+        h2 { font-size: 1.5rem; }
+        h3 { font-size: 1.25rem; }
+        hr { height: 1px; margin: 2rem 0; background: #e1e4e8; border: 0; }
+        a { color: #1e6bb8; text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        code {
+            background: #f6f8fa;
+            padding: 0.2rem 0.4rem;
+            border-radius: 3px;
+            font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+            font-size: 0.9em;
+        }
+        pre {
+            background: #f6f8fa;
+            padding: 1rem;
+            border-radius: 6px;
+            overflow-x: auto;
+            margin: 1rem 0;
+        }
+        pre code {
+            background: none;
+            padding: 0;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1rem 0;
+        }
+        th, td {
+            border: 1px solid #e1e4e8;
+            padding: 0.75rem;
+            text-align: left;
+        }
+        th {
+            background: #f6f8fa;
+            font-weight: 600;
+        }
+        .badge {
+            display: inline-block;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+        .badge-success { background: #28a745; color: white; }
+        .badge-info { background: #0366d6; color: white; }
+        .level-1 { background: #DC2626; color: white; }
+        .level-2 { background: #EA580C; color: white; }
+        .level-3 { background: #CA8A04; color: white; }
+        .level-4 { background: #2563EB; color: white; }
+        .card {
+            background: white;
+            border: 1px solid #e1e4e8;
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin: 1rem 0;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        .card-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #1e3c72;
+            margin-bottom: 0.5rem;
+        }
+        .grid-2 {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1rem;
+        }
+        .nav-links {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            margin-top: 1rem;
+        }
+        .nav-link {
+            background: rgba(255,255,255,0.2);
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            text-decoration: none;
+        }
+        .nav-link:hover {
+            background: rgba(255,255,255,0.3);
+            text-decoration: none;
+        }
+        .mermaid {
+            background: white;
+            padding: 1rem;
+            border-radius: 6px;
+            margin: 1rem 0;
+        }
+        ul, ol {
+            margin: 1rem 0 1rem 1.5rem;
+        }
+        li {
+            margin: 0.5rem 0;
+        }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+    <script>mermaid.initialize({startOnLoad:true, theme: 'default'});</script>
+</head>
+<body>
+    <header class="page-header">
+        <h1 class="project-name">Phase 53: 制約レベル別評価システム</h1>
+        <p class="project-tagline">4段階レベル評価による「使えるシフト」の提供</p>
+        <div class="nav-links">
+            <a href="index.html" class="nav-link">ホーム</a>
+            <a href="technical.html" class="nav-link">技術ドキュメント</a>
+            <a href="ai-quality-improvement.html" class="nav-link">AI品質改善</a>
+        </div>
+    </header>
+
+    <main class="main-content">
+        <section>
+            <span class="badge badge-success">実装完了</span>
+            <span class="badge badge-info">本番検証済み</span>
+            <p style="margin-top: 1rem;">
+                <strong>提案者</strong>: 本田 |
+                <strong>完了日</strong>: 2025-12-09
+            </p>
+        </section>
+
+        <hr>
+
+        <h1>概要</h1>
+        <p>
+            各制約条件に4段階の必須レベルを導入し、レベル別の重み付け評価を行うことで、
+            90%充足でも「使えるシフト」として提示できるようにするシステム改善。
+        </p>
+
+        <div class="grid-2">
+            <div class="card">
+                <div class="card-title">変更前の課題</div>
+                <ul>
+                    <li>制約違反11件以上で0点 → 「実現不可能」</li>
+                    <li>充足率90%でも0点になる</li>
+                    <li>軽微な違反も重大な違反と同等扱い</li>
+                </ul>
+            </div>
+            <div class="card">
+                <div class="card-title">変更後の改善</div>
+                <ul>
+                    <li>Lv1違反がない限り0点にならない</li>
+                    <li>レベル別重み付けでスコア計算</li>
+                    <li>「手直しで対応可能」と建設的に案内</li>
+                </ul>
+            </div>
+        </div>
+
+        <hr>
+
+        <h1>制約レベルの定義</h1>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>レベル</th>
+                    <th>名称</th>
+                    <th>対象</th>
+                    <th>減点</th>
+                    <th>色</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><span class="badge level-1">Lv1</span></td>
+                    <td>絶対必須</td>
+                    <td>労基法違反（夜勤後休息不足等）</td>
+                    <td>即0点</td>
+                    <td style="background:#DC2626;color:white">赤</td>
+                </tr>
+                <tr>
+                    <td><span class="badge level-2">Lv2</span></td>
+                    <td>運営必須</td>
+                    <td>人員不足、資格要件未充足</td>
+                    <td>-12点/件</td>
+                    <td style="background:#EA580C;color:white">オレンジ</td>
+                </tr>
+                <tr>
+                    <td><span class="badge level-3">Lv3</span></td>
+                    <td>努力目標</td>
+                    <td>希望休未反映、連勤超過</td>
+                    <td>-4点/件</td>
+                    <td style="background:#CA8A04;color:white">黄</td>
+                </tr>
+                <tr>
+                    <td><span class="badge level-4">Lv4</span></td>
+                    <td>推奨</td>
+                    <td>将来拡張用（相性考慮等）</td>
+                    <td>0点</td>
+                    <td style="background:#2563EB;color:white">青</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <hr>
+
+        <h1>スコア計算ロジック</h1>
+
+        <div class="card">
+            <div class="card-title">計算式</div>
+            <pre><code>スコア = 100 - (Lv2件数 × 12) - (Lv3件数 × 4)
+※ Lv1が1件以上あれば即0点
+※ 最小0点、最大100点に正規化</code></pre>
+        </div>
+
+        <h3>計算例</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>シナリオ</th>
+                    <th>Lv1</th>
+                    <th>Lv2</th>
+                    <th>Lv3</th>
+                    <th>計算</th>
+                    <th>スコア</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>軽微な違反が多い</td>
+                    <td>0</td>
+                    <td>3</td>
+                    <td>15</td>
+                    <td>100 - 36 - 60</td>
+                    <td><strong>4点</strong>（以前は0点）</td>
+                </tr>
+                <tr>
+                    <td>努力目標のみ多数</td>
+                    <td>0</td>
+                    <td>0</td>
+                    <td>18</td>
+                    <td>100 - 0 - 72</td>
+                    <td><strong>28点</strong></td>
+                </tr>
+                <tr>
+                    <td>労基法違反あり</td>
+                    <td>1</td>
+                    <td>2</td>
+                    <td>5</td>
+                    <td>Lv1あり</td>
+                    <td><strong>0点</strong></td>
+                </tr>
+                <tr>
+                    <td>運営基準のみ</td>
+                    <td>0</td>
+                    <td>5</td>
+                    <td>0</td>
+                    <td>100 - 60</td>
+                    <td><strong>40点</strong></td>
+                </tr>
+            </tbody>
+        </table>
+
+        <hr>
+
+        <h1>システムアーキテクチャ</h1>
+
+        <div class="mermaid">
+graph TB
+    subgraph "Cloud Functions"
+        EvalService[EvaluationService]
+        ScoreCalc[calculateOverallScore]
+        CommentGen[generateAIComment]
+        LevelMap[constraintLevelMapping]
+    end
+
+    subgraph "Types"
+        CV[ConstraintViolation]
+        CL[ConstraintLevel]
+    end
+
+    subgraph "Frontend"
+        EP[EvaluationPanel]
+        VS[ViolationsSection]
+        LevelBadge[LevelBadge]
+    end
+
+    EvalService --> CV
+    EvalService --> CL
+    ScoreCalc --> LevelMap
+    CommentGen --> LevelMap
+    EP --> VS
+    VS --> LevelBadge
+        </div>
+
+        <hr>
+
+        <h1>実装済みコンポーネント</h1>
+
+        <h2>バックエンド（Cloud Functions）</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>ファイル</th>
+                    <th>役割</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><code>functions/src/types.ts</code></td>
+                    <td>ConstraintLevel型、levelフィールド追加</td>
+                </tr>
+                <tr>
+                    <td><code>functions/src/evaluation/constraintLevelMapping.ts</code></td>
+                    <td>レベルマッピング設定（新規作成）</td>
+                </tr>
+                <tr>
+                    <td><code>functions/src/evaluation/evaluationLogic.ts</code></td>
+                    <td>レベルベースのスコア計算・コメント生成</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h2>フロントエンド</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>ファイル</th>
+                    <th>役割</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><code>types.ts</code></td>
+                    <td>ConstraintLevel型（フロントエンド用）</td>
+                </tr>
+                <tr>
+                    <td><code>src/components/EvaluationPanel.tsx</code></td>
+                    <td>レベル別表示、色分け、警告メッセージ</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h2>constraintLevelMapping.ts の主要エクスポート</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>名前</th>
+                    <th>種類</th>
+                    <th>説明</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><code>CONSTRAINT_LEVEL_MAPPING</code></td>
+                    <td>定数</td>
+                    <td>制約タイプ → レベルのマッピング</td>
+                </tr>
+                <tr>
+                    <td><code>LEVEL_DEDUCTIONS</code></td>
+                    <td>定数</td>
+                    <td>レベル別減点設定</td>
+                </tr>
+                <tr>
+                    <td><code>LEVEL_UI_CONFIG</code></td>
+                    <td>定数</td>
+                    <td>UI表示設定（色、ラベル）</td>
+                </tr>
+                <tr>
+                    <td><code>getViolationLevel()</code></td>
+                    <td>関数</td>
+                    <td>違反オブジェクトからレベル取得</td>
+                </tr>
+                <tr>
+                    <td><code>groupViolationsByLevel()</code></td>
+                    <td>関数</td>
+                    <td>違反をレベル別にグループ化</td>
+                </tr>
+                <tr>
+                    <td><code>generateLevelBasedComment()</code></td>
+                    <td>関数</td>
+                    <td>レベルベースのAIコメント生成</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <hr>
+
+        <h1>UI表示の変更</h1>
+
+        <h2>警告メッセージの切り替え条件</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>条件</th>
+                    <th>表示メッセージ</th>
+                    <th>アイコン</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Lv1違反あり</td>
+                    <td>実現不可能なシフトです</td>
+                    <td style="color:#DC2626">&#x274C;</td>
+                </tr>
+                <tr>
+                    <td>Lv1なし + スコア30以下</td>
+                    <td>運営上の課題がありますが、手直しで対応可能です</td>
+                    <td style="color:#EA580C">&#x26A0;</td>
+                </tr>
+                <tr>
+                    <td>Lv1なし + スコア60未満</td>
+                    <td>複数の問題がありますが、調整可能です</td>
+                    <td style="color:#CA8A04">&#x26A0;</td>
+                </tr>
+                <tr>
+                    <td>Lv1なし + スコア60以上</td>
+                    <td>（メッセージなし）</td>
+                    <td>-</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h2>必須条件バッジ</h2>
+        <p>Lv1違反が0件の場合、緑色のバッジで「必須条件をすべて満たしています」と表示。</p>
+
+        <hr>
+
+        <h1>将来の拡張ポイント</h1>
+
+        <div class="grid-2">
+            <div class="card">
+                <div class="card-title">UI上でのレベル編集機能</div>
+                <p>条件設定画面で各制約のレベルを変更可能にする</p>
+                <p><strong>工数</strong>: 3-5日</p>
+            </div>
+            <div class="card">
+                <div class="card-title">レベル4（推奨）の活用</div>
+                <p>相性考慮、通勤負担軽減などの推奨項目を追加</p>
+                <p><strong>工数</strong>: 2-3日</p>
+            </div>
+            <div class="card">
+                <div class="card-title">施設別レベルカスタマイズ</div>
+                <p>施設ごとにデフォルトレベルを上書き可能にする</p>
+                <p><strong>工数</strong>: 3-5日</p>
+            </div>
+            <div class="card">
+                <div class="card-title">AIコメント完全レベルベース化</div>
+                <p>残存する「実現不可能」表現を完全に除去</p>
+                <p><strong>工数</strong>: 1日</p>
+            </div>
+        </div>
+
+        <hr>
+
+        <h1>設定変更のみで可能な調整</h1>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>調整項目</th>
+                    <th>変更箇所</th>
+                    <th>工数</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>減点値の調整</td>
+                    <td><code>LEVEL_DEDUCTIONS</code></td>
+                    <td>5分</td>
+                </tr>
+                <tr>
+                    <td>レベルマッピング変更</td>
+                    <td><code>CONSTRAINT_LEVEL_MAPPING</code></td>
+                    <td>5分</td>
+                </tr>
+                <tr>
+                    <td>UI色変更</td>
+                    <td><code>LEVEL_UI_CONFIG</code></td>
+                    <td>5分</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <hr>
+
+        <h1>関連ドキュメント</h1>
+
+        <ul>
+            <li><a href="ai-quality-improvement.html">AI品質改善ガイド</a></li>
+            <li><a href="phase44-ai-shift-pipeline.html">Phase 44: AIシフト生成パイプライン</a></li>
+            <li><a href="phase49-staffing-constraints.html">Phase 49: 人員配置制約</a></li>
+            <li><a href="technical.html">技術ドキュメント</a></li>
+        </ul>
+
+        <hr>
+
+        <footer style="text-align: center; color: #888; font-size: 0.9rem;">
+            <p>AIシフト自動作成システム - Phase 53</p>
+            <p>最終更新: 2025-12-09</p>
+        </footer>
+    </main>
+</body>
+</html>

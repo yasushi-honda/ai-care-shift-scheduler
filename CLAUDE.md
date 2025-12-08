@@ -24,7 +24,7 @@ Kiro-style Spec Driven Development implementation using claude code slash comman
 - **demo-environment-improvements**: Phase 43 デモ環境改善・排他制御（排他ロック・月次レポート連動） - ✅ 完了（Phase 43.2.1で権限修正済み）
 - **ai-evaluation-feedback**: Phase 44 AIシフト生成パイプライン改善（動的制約・評価ロジック強化） - ✅ 完了
 - **ai-generation-progress**: Phase 45 AIシフト生成進行状況表示機能（プログレス表示・UX改善） - 🚧 作業中
-- **constraint-level-evaluation**: Phase 53 制約レベル別評価システム（4段階必須レベル・重み付け評価） - 🆕 初期化済み（提案者: 本田）
+- **constraint-level-evaluation**: Phase 53 制約レベル別評価システム（4段階必須レベル・重み付け評価） - ✅ 完了（提案者: 本田）
 - Use `/kiro:spec-status [feature-name]` to check progress
 
 ## Development Guidelines
@@ -1075,3 +1075,72 @@ Step 3: 論理的矛盾を洗い出す
 - [Phase 48実装記録](.kiro/phase48-consecutive-constraints-implementation-2025-12-08.md)
 - [BUG-017修正記録](.kiro/bugfix-batch-prompt-json-2025-12-08.md) - バッチプロンプトJSONパースエラー
 - Serenaメモリ: `ai_production_quality_review_2025-12-08`, `phase49_staffing_constraints_2025-12-08`
+
+---
+
+## Phase 53: 制約レベル別評価システム（重要）
+
+**背景**: 2025-12-09に本田より提案。制約違反11件以上で0点となり「実現不可能」と表示される課題を解決。
+
+### 4段階レベル定義
+
+| レベル | 名称 | 対象 | 減点 |
+|-------|------|------|------|
+| 1 | 絶対必須 | 労基法違反（夜勤後休息不足等） | **即0点** |
+| 2 | 運営必須 | 人員不足、資格要件未充足 | -12点/件 |
+| 3 | 努力目標 | 希望休未反映、連勤超過 | -4点/件 |
+| 4 | 推奨 | 将来拡張用（相性考慮等） | 0点 |
+
+### スコア計算式
+
+```
+スコア = 100 - (Lv2件数 × 12) - (Lv3件数 × 4)
+※ Lv1が1件以上あれば即0点
+※ 最小0点、最大100点に正規化
+```
+
+### 警告メッセージ表示条件
+
+| 条件 | メッセージ |
+|------|-----------|
+| Lv1違反あり | 「実現不可能なシフトです」 |
+| Lv1なし + スコア30以下 | 「運営上の課題がありますが、手直しで対応可能です」 |
+| Lv1なし + スコア60未満 | 「複数の問題がありますが、調整可能です」 |
+
+**重要**: 「実現不可能」はLv1違反がある場合**のみ**表示される。
+
+### 実装ファイル
+
+| ファイル | 役割 |
+|----------|------|
+| `functions/src/evaluation/constraintLevelMapping.ts` | **新規** - レベルマッピング設定 |
+| `functions/src/evaluation/evaluationLogic.ts` | スコア計算、コメント生成変更 |
+| `src/components/EvaluationPanel.tsx` | レベル別表示、警告メッセージ |
+
+### constraintLevelMapping.ts の主要エクスポート
+
+```typescript
+// 定数
+CONSTRAINT_LEVEL_MAPPING  // 制約タイプ→レベル
+LEVEL_DEDUCTIONS          // レベル別減点設定
+LEVEL_UI_CONFIG           // UI表示設定（色、ラベル）
+
+// 関数
+getViolationLevel()         // 違反オブジェクトからレベル取得
+groupViolationsByLevel()    // 違反をレベル別にグループ化
+generateLevelBasedComment() // レベルベースのAIコメント生成
+```
+
+### 設定変更で調整可能な項目
+
+| 調整項目 | 変更箇所 | 工数 |
+|----------|----------|------|
+| 減点値の調整 | `LEVEL_DEDUCTIONS` | 5分 |
+| レベルマッピング変更 | `CONSTRAINT_LEVEL_MAPPING` | 5分 |
+| UI色変更 | `LEVEL_UI_CONFIG` | 5分 |
+
+### 参考資料
+
+- [実装サマリー](.kiro/specs/constraint-level-evaluation/implementation-summary.md)
+- [GitHub Pages](docs/phase53-constraint-level-evaluation.html)
+- Serenaメモリ: `phase53_constraint_level_evaluation_2025-12-09`
