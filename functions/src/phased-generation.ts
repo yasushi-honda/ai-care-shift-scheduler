@@ -214,6 +214,134 @@ ${individualConstraints}
   return constraints;
 }
 
+
+/**
+ * Phase 49: 日別必要勤務人数の動的制約生成
+ *
+ * 各営業日に必要な勤務人数を計算し、AIに明示的に伝えるプロンプトを生成する。
+ * パート職員の曜日制限を考慮し、日ごとの最大勤務可能人数も計算して表示。
+ *
+ * 設計原則（CLAUDE.md「動的制約生成パターン」より）:
+ * 1. データ駆動型: スタッフデータ・要件データから動的に計算
+ * 2. 条件付き生成: 常に生成（人員充足は最重要制約）
+ * 3. 明示的な警告: 不足が発生すると無効になることを明記
+ * 4. 可読性重視: 日別の数値を表形式で表示
+ *
+ * @param staffList スタッフ一覧
+ * @param requirements シフト要件
+ * @param daysInMonth 月の日数
+ * @returns 日別人員制約のプロンプト文字列
+ */
+function buildDynamicStaffingConstraints(
+  staffList: Staff[],
+  requirements: ShiftRequirement,
+  daysInMonth: number
+): string {
+  const [year, month] = requirements.targetMonth.split('-').map(Number);
+
+  // 1日の合計必要人員
+  const totalStaffPerDay = Object.values(requirements.requirements || {})
+    .reduce((sum, req) => sum + req.totalStaff, 0);
+
+  // 各日の曜日を計算（0=日〜6=土）
+  const getDayOfWeek = (day: number): number => {
+    return new Date(year, month - 1, day).getDay();
+  };
+
+  // 曜日名
+  const weekdayNames = ['日', '月', '火', '水', '木', '金', '土'];
+
+  // 各日の勤務可能人数を計算
+  const dailyAvailability: { day: number; weekday: string; available: number; isBusinessDay: boolean }[] = [];
+
+  for (let day = 1; day <= daysInMonth; day++) {
+    const dow = getDayOfWeek(day);
+    const weekday = weekdayNames[dow];
+    const isBusinessDay = dow !== 0; // 日曜は休業
+
+    // 各スタッフがこの日に勤務可能かチェック
+    let availableCount = 0;
+    for (const staff of staffList) {
+      const availableWeekdays = staff.availableWeekdays || [0, 1, 2, 3, 4, 5, 6];
+      if (availableWeekdays.includes(dow)) {
+        availableCount++;
+      }
+    }
+
+    dailyAvailability.push({
+      day,
+      weekday,
+      available: availableCount,
+      isBusinessDay,
+    });
+  }
+
+  // 問題のある日を特定（勤務可能人数 < 必要人数 × 1.2）
+  const criticalDays = dailyAvailability.filter(d =>
+    d.isBusinessDay && d.available < totalStaffPerDay * 1.2
+  );
+
+  // 日曜日の数を計算
+  let sundayCount = 0;
+  for (let day = 1; day <= daysInMonth; day++) {
+    if (getDayOfWeek(day) === 0) sundayCount++;
+  }
+  const businessDays = daysInMonth - sundayCount;
+
+  // 各スタッフの勤務日数と休日数を計算
+  const staffScheduleInfo = staffList.map(s => {
+    const weeklyWork = s.weeklyWorkCount.hope;
+    const monthlyWork = weeklyWork * 4;  // 4週分
+    const monthlyRest = businessDays - monthlyWork;  // 営業日から勤務日を引いた数
+    return {
+      name: s.name,
+      weeklyWork,
+      monthlyWork,
+      monthlyRest: Math.max(0, monthlyRest),  // マイナスにならないように
+      totalRestDays: sundayCount + Math.max(0, monthlyRest),  // 日曜 + 平日休み
+    };
+  });
+
+  let constraints = `
+## ⚠️ 【日別人員配置制約】（最重要・厳守）
+
+**必要人数**: 各営業日（月〜土）に**必ず${totalStaffPerDay}名**を勤務させてください。
+1人でも不足すると、そのシフトは**無効**になります。
+
+**重要な考え方**:
+- ${staffList.length}名のスタッフで${businessDays}営業日 × ${totalStaffPerDay}名 = **${businessDays * totalStaffPerDay}人日**を埋める必要があります
+- 平均すると各スタッフは約**${Math.ceil((businessDays * totalStaffPerDay) / staffList.length)}日勤務**する必要があります
+- **休日を入れすぎると人員不足になります**
+
+### 📋 各スタッフの勤務・休日数（必ず守ること）
+| 名前 | 週勤務 | 月勤務 | 月休日（日曜除く） | 合計休日 |
+|------|--------|--------|-------------------|---------|
+${staffScheduleInfo.map(s => `| ${s.name} | ${s.weeklyWork}回 | ${s.monthlyWork}日 | ${s.monthlyRest}日 | ${s.totalRestDays}日 |`).join('\n')}
+
+**⚠️ 各スタッフのrestDaysは上記の「合計休日」の数に合わせること！**
+- 日曜（${sundayCount}日）は全員必須
+- 平日休みは「月休日」の数だけ入れる
+- 例: 週5回勤務の人 → restDaysは日曜${sundayCount}日 + 平日休み${Math.max(0, businessDays - 20)}日 = ${sundayCount + Math.max(0, businessDays - 20)}日
+
+`;
+
+  // 問題のある日がある場合、警告を追加
+  if (criticalDays.length > 0) {
+    constraints += `
+### ⚠️ 人員不足リスクのある日
+以下の日は、曜日制限のあるスタッフがいるため、特に注意が必要です：
+`;
+    for (const d of criticalDays) {
+      constraints += `- ${month}月${d.day}日（${d.weekday}）: 勤務可能${d.available}名（必要${totalStaffPerDay}名）\n`;
+    }
+    constraints += `
+**対策**: 上記の日は、勤務可能なスタッフの休日を入れないでください。
+`;
+  }
+
+  return constraints;
+}
+
 /**
  * Phase 1: 骨子生成用スキーマ
  */
@@ -401,6 +529,7 @@ ${requirementsTable}
 5. **パート職員は指定された曜日のみ勤務可能**（詳細は下記参照）
 ${buildDynamicConsecutiveConstraints(staffList)}
 ${buildDynamicPartTimeConstraints(staffList)}
+${buildDynamicStaffingConstraints(staffList, requirements, daysInMonth)}
 ## 努力目標
 - スタッフの希望週勤務回数に近づける
 - 休日を公平に分散させる（週1〜2日の休み）
