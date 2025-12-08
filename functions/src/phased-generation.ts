@@ -45,13 +45,23 @@ const BATCH_SIZE = 10; // 詳細生成時のバッチサイズ（10名 × 30日 
  */
 export function parseGeminiJsonResponse(responseText: string): any {
   try {
-    // Markdownコードブロックを削除（```json ... ``` または ``` ... ```）
     let cleanedText = responseText.trim();
-    if (cleanedText.startsWith('```')) {
-      // 最初の```行を削除
-      cleanedText = cleanedText.replace(/^```(?:json)?\n?/, '');
-      // 最後の```行を削除
-      cleanedText = cleanedText.replace(/\n?```$/, '');
+
+    // BUG-014対応: テキスト中からJSONを抽出（thinkingモードではテキストが含まれる場合がある）
+    // 1. Markdownコードブロック内のJSONを抽出
+    const codeBlockMatch = cleanedText.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+    if (codeBlockMatch) {
+      cleanedText = codeBlockMatch[1].trim();
+    } else {
+      // 2. テキスト中の { ... } または [ ... ] を抽出
+      const jsonObjectMatch = cleanedText.match(/(\{[\s\S]*\})/);
+      const jsonArrayMatch = cleanedText.match(/(\[[\s\S]*\])/);
+
+      if (jsonObjectMatch) {
+        cleanedText = jsonObjectMatch[1];
+      } else if (jsonArrayMatch) {
+        cleanedText = jsonArrayMatch[1];
+      }
     }
 
     // まず素直にパースを試みる
@@ -69,7 +79,6 @@ export function parseGeminiJsonResponse(responseText: string): any {
       cleanedText = cleanedText.replace(/\/\*[\s\S]*?\*\//g, '');
 
       // シングルクォートをダブルクォートに変換（プロパティ名のみ）
-      // 注: 値のシングルクォートは複雑なので、プロパティ名のみ対象
       cleanedText = cleanedText.replace(/([{,]\s*)'/g, '$1"');
       cleanedText = cleanedText.replace(/'\s*:/g, '":');
 
@@ -527,15 +536,33 @@ export async function generateSkeleton(
   console.log('🦴 Phase 1: 骨子生成開始...');
   console.log(`   夜勤シフト: ${hasNightShift ? 'あり' : 'なし（デイサービス）'}`);
 
-  // BUG-013: responseSchemaとthinkingBudgetは非互換（Gemini APIの既知問題）
-  // JSONスキーマを使用するとthinkingBudgetが無視されるため、スキーマを削除
-  // 代わりにプロンプトでJSON形式を明示する
+  // BUG-014: responseMimeType='application/json'もthinkingBudgetを無視する
+  // https://discuss.ai.google.dev/t/latest-google-genai-with-2-5-flash-ignoring-thinking-budget/102497
+  // 解決策: responseMimeTypeを削除し、プロンプトでJSON出力を強制
+  const jsonPrompt = `${prompt}
+
+# 🔴 絶対厳守: JSON出力形式
+以下の形式で**純粋なJSONのみ**を出力してください。説明文や余分なテキストは一切不要です。
+
+\`\`\`json
+{
+  "staffSchedules": [
+    {
+      "staffId": "スタッフID",
+      "staffName": "スタッフ名",
+      "restDays": [休日の日付リスト]
+    }
+  ]
+}
+\`\`\`
+
+**重要**: JSONコードブロック以外のテキストを出力しないでください。`;
+
   const result = await client.models.generateContent({
     model: VERTEX_AI_MODEL,
-    contents: prompt,
+    contents: jsonPrompt,
     config: {
-      responseMimeType: 'application/json',
-      // responseSchema を削除（thinkingBudgetと非互換）
+      // BUG-014: responseMimeType削除（thinkingBudgetと非互換）
       temperature: 0.3,
       maxOutputTokens: 65536,
       thinkingConfig: {
@@ -805,13 +832,29 @@ export async function generateDetailedShifts(
 
     const prompt = buildDetailedPrompt(batch, skeleton, requirements, daysInMonth, hasNightShift);
 
-    // BUG-013: responseSchemaとthinkingBudgetは非互換（Gemini APIの既知問題）
+    // BUG-014: responseMimeType='application/json'もthinkingBudgetを無視する
+    const jsonPrompt = `${prompt}
+
+# 🔴 絶対厳守: JSON出力形式
+以下の形式で**純粋なJSONのみ**を出力してください。説明文は不要です。
+
+\`\`\`json
+{
+  "schedule": [
+    {
+      "staffId": "スタッフID",
+      "staffName": "スタッフ名",
+      "shifts": { "1": "シフト種別", "2": "シフト種別", ... }
+    }
+  ]
+}
+\`\`\``;
+
     const result = await client.models.generateContent({
       model: VERTEX_AI_MODEL,
-      contents: prompt,
+      contents: jsonPrompt,
       config: {
-        responseMimeType: 'application/json',
-        // responseSchema を削除（thinkingBudgetと非互換）
+        // BUG-014: responseMimeType削除（thinkingBudgetと非互換）
         temperature: 0.5,
         maxOutputTokens: 65536,
         thinkingConfig: {
