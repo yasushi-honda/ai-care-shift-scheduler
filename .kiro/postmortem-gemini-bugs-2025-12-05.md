@@ -32,6 +32,8 @@ BUG-013: responseSchemaがthinkingBudgetを無視
     ↓ responseSchema削除
 BUG-014: responseMimeType='application/json'もthinkingBudgetを無視
     ↓ responseMimeType削除 + プロンプトでJSON強制
+BUG-015: generateDetailedShiftsの出力形式が評価ロジックと不一致
+    ↓ 形式変換ロジック追加（shifts → monthlyShifts）
 ✅ 正常動作（検証中）
 ```
 
@@ -203,6 +205,7 @@ export const myFunction = onRequest(
 - [BUG-012: SDK移行](.kiro/bugfix-sdk-migration-2025-12-08.md)
 - [BUG-013: JSONスキーマ問題](.kiro/bugfix-json-schema-thinking-2025-12-08.md)
 - [BUG-014: responseMimeType問題](.kiro/bugfix-responsemimetype-thinking-2025-12-08.md)
+- [BUG-015: 形式変換問題](.kiro/bugfix-schedule-format-conversion-2025-12-08.md)
 
 ### 参考リンク
 - [Google AI Forum: thinkingBudget無視問題](https://discuss.ai.google.dev/t/latest-google-genai-with-2-5-flash-ignoring-thinking-budget/102497)
