@@ -110,6 +110,59 @@ export function parseGeminiJsonResponse(responseText: string): any {
 }
 
 /**
+ * 曜日配列を日本語文字列に変換
+ * @param weekdays 曜日の数値配列（0=日, 1=月, ..., 6=土）
+ * @returns 日本語の曜日文字列（例: "月・水・金"）
+ */
+function formatWeekdays(weekdays: number[]): string {
+  const dayNames = ['日', '月', '火', '水', '木', '金', '土'];
+  if (!weekdays || weekdays.length === 0) return '指定なし';
+  if (weekdays.length === 7) return '全日';
+  if (weekdays.length === 6 && !weekdays.includes(0)) return '月〜土';
+  return weekdays.map(d => dayNames[d]).join('・');
+}
+
+/**
+ * Phase 47: パート職員の勤務制約を動的に生成
+ *
+ * 骨子生成（Phase 1）でパート職員の曜日制限を明示的にプロンプトに含める。
+ * これにより、AIが制限外の曜日に配置しようとするのを防ぐ。
+ *
+ * @param staffList スタッフ一覧
+ * @returns パート職員制約のプロンプト文字列（該当者がいない場合は空文字列）
+ *
+ * @see {@link .kiro/ai-quality-improvement-analysis-2025-12-08.md}
+ */
+function buildDynamicPartTimeConstraints(staffList: Staff[]): string {
+  // パート職員を抽出（週3日以下の希望 または 勤務可能曜日が制限されている）
+  const partTimeStaff = staffList.filter(s => {
+    const availableWeekdays = s.availableWeekdays || [0, 1, 2, 3, 4, 5, 6];
+    const isWeekdayRestricted = availableWeekdays.length < 6 ||
+      (availableWeekdays.length === 6 && availableWeekdays.includes(0));
+    const isPartTime = s.weeklyWorkCount.hope <= 3;
+    return isPartTime || isWeekdayRestricted;
+  });
+
+  if (partTimeStaff.length === 0) {
+    return '';
+  }
+
+  const constraints = partTimeStaff.map(s => {
+    const weekdays = formatWeekdays(s.availableWeekdays || [1, 2, 3, 4, 5, 6]);
+    return `- ${s.name}: 週${s.weeklyWorkCount.hope}日まで、**${weekdays}のみ**勤務可`;
+  }).join('\n');
+
+  return `
+## ⚠️ 【パート職員制約】（厳守）
+以下のスタッフは勤務日数・曜日に**厳格な制限**があります：
+${constraints}
+
+**重要**: 上記スタッフを制限外の曜日に配置すると、シフトが無効になります。
+例えば「月・水・金のみ」のスタッフは、火曜・木曜・土曜には**絶対に**配置しないでください。
+`;
+}
+
+/**
  * Phase 1: 骨子生成用スキーマ
  */
 function getSkeletonSchema(daysInMonth: number, hasNightShift: boolean) {
@@ -188,12 +241,27 @@ function buildSkeletonPrompt(
   const totalStaffPerDay = Object.values(requirements.requirements || {})
     .reduce((sum, req) => sum + req.totalStaff, 0);
 
+  // Phase 47: パート職員の勤務可能曜日制限を含めた情報生成
   const staffInfo = staffList
     .map((s) => {
+      // 基本情報
       const baseInfo = `- ${s.name}(ID:${s.id}): 週${s.weeklyWorkCount.hope}回希望（必須${s.weeklyWorkCount.must}回）`;
+
+      // 勤務可能曜日の制限チェック（月〜土の6日より少ない場合は制限あり）
+      const availableWeekdays = s.availableWeekdays || [0, 1, 2, 3, 4, 5, 6];
+      const isRestricted = availableWeekdays.length < 6 ||
+        (availableWeekdays.length === 6 && availableWeekdays.includes(0)); // 日曜含む6日も制限あり
+      const weekdayRestriction = isRestricted
+        ? ` ⚠️ 【${formatWeekdays(availableWeekdays)}のみ勤務可】`
+        : '';
+
+      // パート職員の識別（週3日以下の希望）
+      const isPartTime = s.weeklyWorkCount.hope <= 3;
+      const partTimeLabel = isPartTime ? ' [パート]' : '';
+
       return hasNightShift
-        ? `${baseInfo}, 夜勤専従=${s.isNightShiftOnly}`
-        : baseInfo;
+        ? `${baseInfo}${partTimeLabel}${weekdayRestriction}, 夜勤専従=${s.isNightShiftOnly}`
+        : `${baseInfo}${partTimeLabel}${weekdayRestriction}`;
     })
     .join('\n');
 
@@ -278,7 +346,8 @@ ${requirementsTable}
 2. 営業日（月〜土）は毎日${totalStaffPerDay}名の勤務者を確保すること
 3. スタッフの休暇希望（${JSON.stringify(leaveRequests)}）を必ず反映すること
 4. 連続勤務は最大5日まで
-
+5. **パート職員は指定された曜日のみ勤務可能**（詳細は下記参照）
+${buildDynamicPartTimeConstraints(staffList)}
 ## 努力目標
 - スタッフの希望週勤務回数に近づける
 - 休日を公平に分散させる（週1〜2日の休み）
@@ -300,6 +369,7 @@ ${requirementsTable}
 □ 全${staffList.length}名分の骨子があるか
 □ 日曜日（${sundays.join(', ')}日）が全員のrestDaysに含まれているか
 □ 各営業日に${totalStaffPerDay}名以上が勤務可能か
+□ パート職員が制限外の曜日に勤務していないか（例: 月・水・金のみの人が火曜に勤務していないか）
 
 重要：全${staffList.length}名分の骨子を必ず出力してください。
 `;
