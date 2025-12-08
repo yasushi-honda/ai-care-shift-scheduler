@@ -72,6 +72,10 @@
             border-radius: 0.5rem;
             overflow-x: auto;
         }
+        pre code {
+            background: transparent;
+            color: #f9fafb;
+        }
         .mermaid {
             background: white;
             padding: 1rem;
@@ -286,20 +290,23 @@ flowchart TD
 
         <h3>設計原則</h3>
         <div class="mermaid">
-mindmap
-  root((動的制約パターン))
-    データ駆動型
-      staffList.filter()
-      ハードコード禁止
-    条件付き生成
-      該当者なければ空文字
-      早期リターン
-    明示的な警告
-      違反は無効
-      厳守を強調
-    可読性重視
-      スタッフ名リスト化
-      具体例を示す
+flowchart TB
+    A((動的制約パターン)) --> B[データ駆動型]
+    A --> C[条件付き生成]
+    A --> D[明示的な警告]
+    A --> E[可読性重視]
+
+    B --> B1["staffList.filter()"]
+    B --> B2[ハードコード禁止]
+
+    C --> C1[該当者なければ空文字]
+    C --> C2[早期リターン]
+
+    D --> D1[違反は無効]
+    D --> D2[厳守を強調]
+
+    E --> E1[スタッフ名リスト化]
+    E --> E2[具体例を示す]
         </div>
 
         <h3>実装済み動的制約一覧</h3>
