@@ -87,6 +87,56 @@ Kiro-style Spec Driven Development implementation using claude code slash comman
 - PRマージ前にCI/CD成功を必須とする
 - 最低1名のレビュー承認を推奨
 
+## 実装前テストルール（重要 - BUG-017/018教訓）
+
+**背景**: BUG-017（JSONパースエラー）とBUG-018（型エラー）は、本番環境で初めて発見された。
+ローカルテストで事前に検出できたはずの問題。
+
+### 原則
+
+**「本番環境で初めてエラーを発見する」状況を絶対に避ける**
+
+### 実装前必須チェック（コード変更時）
+
+1. **型定義を確認**
+   ```bash
+   # 使用する型を必ず確認
+   cat functions/src/types.ts | grep -A 10 "interface TypeName"
+   ```
+
+2. **危険な型キャストを避ける**
+   ```typescript
+   // ❌ 危険 - 絶対に避ける
+   data as unknown as Array<T>
+
+   // ✅ 安全
+   if (Array.isArray(data)) { ... }
+   for (const [key, value] of Object.entries(data)) { ... }
+   ```
+
+3. **TypeScript型チェック実行**
+   ```bash
+   cd functions && npx tsc --noEmit
+   # エラー0件であること
+   ```
+
+4. **思考シミュレーション（AIプロンプト変更時）**
+   - 最悪ケース（最小バッチ、最小人数）で要件が達成可能か確認
+   - 詳細: [ai-prompt-design-checklist.md](.kiro/ai-prompt-design-checklist.md)
+
+### チェックリスト
+
+| # | 項目 | コマンド |
+|---|------|---------|
+| 1 | 型定義確認 | `cat functions/src/types.ts` |
+| 2 | 型チェック | `cd functions && npx tsc --noEmit` |
+| 3 | 思考シミュレーション | [チェックリスト参照](.kiro/ai-prompt-design-checklist.md) |
+| 4 | CodeRabbitレビュー | `coderabbit review ...` |
+
+詳細: [pre-implementation-test-checklist.md](.kiro/pre-implementation-test-checklist.md)
+
+---
+
 ## CI/CD Workflow (重要)
 **コード変更時は必ず以下のワークフローに従うこと**:
 1. コード変更
