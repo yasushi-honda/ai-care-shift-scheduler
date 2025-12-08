@@ -459,24 +459,39 @@ CORSエラーが発生した場合、**CORS設定だけでなく「関数が存�
 
 ## Gemini 2.5 Flash 設定ルール（重要）
 
-### 必須設定
+### 必須: @google/genai SDK使用（BUG-012教訓）
+
+**重要**: `@google-cloud/vertexai` SDKは`thinkingConfig`をサポートしていません。
+必ず`@google/genai` SDKを使用してください。
 
 ```typescript
-// Vertex AI初期化
-const vertexAI = new VertexAI({
+// ✅ 正しい実装（@google/genai SDK）
+import { GoogleGenAI } from '@google/genai';
+
+const client = new GoogleGenAI({
+  vertexai: true,
   project: projectId,
   location: 'asia-northeast1',  // ❗ 日本リージョン必須
 });
 
-const model = vertexAI.getGenerativeModel({
+const result = await client.models.generateContent({
   model: 'gemini-2.5-flash',  // ❗ -latestなし
+  contents: prompt,
+  config: {
+    maxOutputTokens: 65536,  // ❗ 思考モード対応（8192だと不足）
+    thinkingConfig: {
+      thinkingBudget: 16384,  // ✅ 正しく機能する
+    },
+  },
 });
 
-// 生成設定
-generationConfig: {
-  maxOutputTokens: 65536,  // ❗ 思考モード対応（8192だと不足）
-  // ...
-}
+const responseText = result.text || '';  // シンプルなAPI
+```
+
+```typescript
+// ❌ 間違い（@google-cloud/vertexai SDK）- thinkingConfigが無視される
+import { VertexAI } from '@google-cloud/vertexai';
+// このSDKではthinkingConfigが機能しないため使用禁止
 ```
 
 ### なぜ65536か（BUG-003教訓）
@@ -569,8 +584,9 @@ setTimeout(() => controller.abort(), 240000);  // ❗ 4分（BUG-010で延長）
 - [BUG-008修正記録](.kiro/bugfix-thinking-budget-2025-12-08.md) - thinkingBudget制限
 - [BUG-009修正記録](.kiro/bugfix-demo-members-2025-12-08.md) - デモユーザー権限消失
 - [BUG-010修正記録](.kiro/bugfix-timeout-extended-2025-12-08.md) - タイムアウト延長（180s→240s）
+- [BUG-012修正記録](.kiro/bugfix-sdk-migration-2025-12-08.md) - @google/genai SDK移行
 - [ポストモーテム](.kiro/postmortem-gemini-bugs-2025-12-05.md) - 全体分析
-- Serenaメモリ: `gemini_region_critical_rule`, `gemini_max_output_tokens_critical_rule`, `gemini_thinking_budget_critical_rule`, `cloud_function_custom_token_iam`
+- Serenaメモリ: `gemini_region_critical_rule`, `gemini_max_output_tokens_critical_rule`, `gemini_thinking_budget_critical_rule`, `cloud_function_custom_token_iam`, `bug012_sdk_migration_2025-12-08`
 
 ---
 
