@@ -162,6 +162,58 @@ ${constraints}
 `;
 }
 
+
+/**
+ * Phase 48: 連続勤務制約の動的生成
+ *
+ * スタッフごとのmaxConsecutiveWorkDays属性を参照し、
+ * AIに連続勤務制限を明示的に伝えるプロンプトを生成する。
+ *
+ * 設計原則（ai-production-quality-review-2025-12-08.mdより）:
+ * 1. データ駆動型: スタッフデータから動的に抽出
+ * 2. 条件付き生成: 制限があるスタッフのみリスト化
+ * 3. 明示的な警告: 違反時の無効化を明記
+ * 4. 可読性重視: 具体的なスタッフ名をリスト化
+ *
+ * @param staffList スタッフ一覧
+ * @returns 連続勤務制約のプロンプト文字列
+ */
+function buildDynamicConsecutiveConstraints(staffList: Staff[]): string {
+  const DEFAULT_MAX_CONSECUTIVE = 5;
+
+  // 連続勤務制限があるスタッフを抽出（デフォルト5日と異なる場合）
+  const restrictedStaff = staffList.filter(s => {
+    const maxDays = s.maxConsecutiveWorkDays ?? DEFAULT_MAX_CONSECUTIVE;
+    return maxDays < DEFAULT_MAX_CONSECUTIVE;
+  });
+
+  let constraints = `
+## ⚠️ 【連続勤務制約】（厳守）
+**基本ルール**: すべてのスタッフは連続勤務**最大${DEFAULT_MAX_CONSECUTIVE}日**までです。
+6日以上連続で勤務させると、シフトが無効になります。
+
+**推奨**: 休日を適切に分散させ、連続勤務は3〜4日に抑えることを推奨します。
+`;
+
+  // 個別制限があるスタッフがいる場合
+  if (restrictedStaff.length > 0) {
+    const individualConstraints = restrictedStaff.map(s => {
+      const maxDays = s.maxConsecutiveWorkDays ?? DEFAULT_MAX_CONSECUTIVE;
+      return `- ${s.name}: **最大${maxDays}日**まで`;
+    }).join('\n');
+
+    constraints += `
+### 個別制限（より厳しい制限）
+以下のスタッフは基本ルールより厳しい制限があります：
+${individualConstraints}
+
+**重要**: 上記スタッフの連続勤務を制限日数内に抑えてください。
+`;
+  }
+
+  return constraints;
+}
+
 /**
  * Phase 1: 骨子生成用スキーマ
  */
@@ -345,8 +397,9 @@ ${requirementsTable}
 1. **日曜日（${sundays.join(', ')}日）は全員「休」とすること**
 2. 営業日（月〜土）は毎日${totalStaffPerDay}名の勤務者を確保すること
 3. スタッフの休暇希望（${JSON.stringify(leaveRequests)}）を必ず反映すること
-4. 連続勤務は最大5日まで
+4. **連続勤務制限を厳守**（詳細は下記参照）
 5. **パート職員は指定された曜日のみ勤務可能**（詳細は下記参照）
+${buildDynamicConsecutiveConstraints(staffList)}
 ${buildDynamicPartTimeConstraints(staffList)}
 ## 努力目標
 - スタッフの希望週勤務回数に近づける
@@ -369,6 +422,7 @@ ${buildDynamicPartTimeConstraints(staffList)}
 □ 全${staffList.length}名分の骨子があるか
 □ 日曜日（${sundays.join(', ')}日）が全員のrestDaysに含まれているか
 □ 各営業日に${totalStaffPerDay}名以上が勤務可能か
+□ **連続勤務が5日を超えていないか**（休日が適切に分散されているか）
 □ パート職員が制限外の曜日に勤務していないか（例: 月・水・金のみの人が火曜に勤務していないか）
 
 重要：全${staffList.length}名分の骨子を必ず出力してください。
