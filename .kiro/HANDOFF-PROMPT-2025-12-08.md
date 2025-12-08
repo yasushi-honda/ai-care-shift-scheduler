@@ -30,10 +30,11 @@ Gemini 2.5 Flash + Vertex AI を使用して月間シフトを自動生成。
 - `buildDynamicConsecutiveConstraints`関数追加
 - `buildDynamicStaffingConstraints`関数追加
 
-### BUG-012〜014: Gemini thinkingBudget問題（完了・検証待ち）
+### BUG-012〜015: Gemini thinkingBudget問題・形式変換（完了・検証待ち）
 - BUG-012: @google/genai SDKに移行（thinkingConfig対応）
 - BUG-013: responseSchema削除（thinkingBudgetと非互換）
-- **BUG-014: responseMimeType削除（これもthinkingBudgetを無視）**
+- BUG-014: responseMimeType削除（これもthinkingBudgetを無視）
+- **BUG-015: generateDetailedShiftsの出力形式変換追加（shifts → monthlyShifts）**
 - 参考: https://discuss.ai.google.dev/t/latest-google-genai-with-2-5-flash-ignoring-thinking-budget/102497
 
 ## 最優先タスク

@@ -626,6 +626,7 @@ setTimeout(() => controller.abort(), 240000);  // ❗ 4分（BUG-010で延長）
 - [BUG-012修正記録](.kiro/bugfix-sdk-migration-2025-12-08.md) - @google/genai SDK移行
 - [BUG-013修正記録](.kiro/bugfix-json-schema-thinking-2025-12-08.md) - JSONスキーマとthinkingBudgetの非互換性
 - [BUG-014修正記録](.kiro/bugfix-responsemimetype-thinking-2025-12-08.md) - responseMimeTypeとthinkingBudgetの非互換性
+- [BUG-015修正記録](.kiro/bugfix-schedule-format-conversion-2025-12-08.md) - 段階的生成の出力形式変換
 - [ポストモーテム](.kiro/postmortem-gemini-bugs-2025-12-05.md) - 全体分析
 - Serenaメモリ: `gemini_region_critical_rule`, `gemini_max_output_tokens_critical_rule`, `gemini_thinking_budget_critical_rule`, `cloud_function_custom_token_iam`, `bug012_sdk_migration_2025-12-08`
 
