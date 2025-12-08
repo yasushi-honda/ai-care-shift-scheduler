@@ -18,20 +18,23 @@
 介護施設向けのAI自動シフト生成システム。
 Gemini 2.5 Flash + Vertex AI を使用して月間シフトを自動生成。
 
-## 直近の作業内容（Phase 46-48）
+## 直近の作業内容（Phase 46-49 + BUG-012〜014）
 
 ### Phase 46: バグ修正（完了）
 - BUG-008: thinkingBudget制限追加
 - BUG-009: デモユーザー権限同期
 - BUG-010: タイムアウト延長（180s→240s）
 
-### Phase 47: パート職員制約（完了）
+### Phase 47-49: AI品質改善（完了）
 - `buildDynamicPartTimeConstraints`関数追加
-- パート職員の曜日・日数制限をAIに明示
-
-### Phase 48: 連続勤務制約（完了・検証待ち）
 - `buildDynamicConsecutiveConstraints`関数追加
-- 連勤超過11件の問題を解決見込み
+- `buildDynamicStaffingConstraints`関数追加
+
+### BUG-012〜014: Gemini thinkingBudget問題（完了・検証待ち）
+- BUG-012: @google/genai SDKに移行（thinkingConfig対応）
+- BUG-013: responseSchema削除（thinkingBudgetと非互換）
+- **BUG-014: responseMimeType削除（これもthinkingBudgetを無視）**
+- 参考: https://discuss.ai.google.dev/t/latest-google-genai-with-2-5-flash-ignoring-thinking-budget/102497
 
 ## 最優先タスク
 
@@ -54,11 +57,15 @@ Gemini 2.5 Flash + Vertex AI を使用して月間シフトを自動生成。
 3. 明示的な警告: 「違反したシフトは無効」
 4. 可読性重視: スタッフ名をリスト化
 
-### Gemini 2.5 Flash設定
+### Gemini 2.5 Flash設定（重要！）
+- SDK: @google/genai（@google-cloud/vertexaiは使用禁止）
 - location: 'asia-northeast1'（日本リージョン必須）
 - model: 'gemini-2.5-flash'（-latestなし）
 - maxOutputTokens: 65536
 - thinkingBudget: 16384
+- **responseSchema使用禁止**（thinkingBudgetを無視）
+- **responseMimeType使用禁止**（thinkingBudgetを無視）
+- → プロンプト末尾でJSON出力を明示指定
 
 ## 必読ドキュメント
 
@@ -69,9 +76,10 @@ Gemini 2.5 Flash + Vertex AI を使用して月間シフトを自動生成。
 ## Serenaメモリ
 
 以下のメモリを読むことを推奨：
-- `phase48_consecutive_constraints_2025-12-08`
-- `ai_production_quality_review_2025-12-08`
-- `phase46_bug009_final_fix_2025-12-08`
+- `PROJECT_HANDOFF_LATEST` - 最新引継ぎ情報
+- `bug014_responsemimetype_thinking_budget_2025-12-08` - BUG-014
+- `gemini_thinking_budget_critical_rule` - Gemini設定ルール
+- `ai_production_quality_review_2025-12-08` - AI品質レビュー
 
 ## 検証コマンド
 

@@ -1,8 +1,9 @@
-# ポストモーテム: Geminiシフト生成バグ連鎖（BUG-001〜004）
+# ポストモーテム: Geminiシフト生成バグ連鎖（BUG-001〜014）
 
 **作成日**: 2025-12-05
+**最終更新**: 2025-12-08
 **影響範囲**: AIシフト自動生成機能（本番環境）
-**解決日**: 2025-12-05（同日中に全4件を修正）
+**解決日**: BUG-001〜004: 2025-12-05、BUG-012〜014: 2025-12-08
 
 ---
 
@@ -21,7 +22,17 @@ BUG-003: MAX_TOKENS（思考トークンが出力予算を消費）
     ↓ 修正後
 BUG-004: クライアントタイムアウト（60秒 < 処理時間140秒）
     ↓ 修正後
-✅ 正常動作
+✅ 一時的に正常動作
+
+    === 2025-12-08 追加バグ ===
+
+BUG-012: @google-cloud/vertexai SDKがthinkingConfigをサポートしない
+    ↓ @google/genai SDKに移行
+BUG-013: responseSchemaがthinkingBudgetを無視
+    ↓ responseSchema削除
+BUG-014: responseMimeType='application/json'もthinkingBudgetを無視
+    ↓ responseMimeType削除 + プロンプトでJSON強制
+✅ 正常動作（検証中）
 ```
 
 ---
@@ -99,21 +110,37 @@ console.log('📊 AI Response Details:', {
 
 ## 転用可能なナレッジ
 
-### Gemini 2.5 Flash/Pro設定テンプレート
+### Gemini 2.5 Flash/Pro設定テンプレート（BUG-012〜014対応版）
 
 ```typescript
-// 推奨設定（思考モード対応）
-generationConfig: {
-  maxOutputTokens: 65536,    // 思考トークン + 出力トークン
-  temperature: 0.3,          // 構造化出力では低め推奨
-  responseMimeType: 'application/json',
-  responseSchema: {
-    type: SchemaType.OBJECT,
-    properties: {...},
-    propertyOrdering: [...], // 必須！Gemini 2.5で追加
-    required: [...],
+// ⚠️ 重要: responseSchemaとresponseMimeTypeはthinkingBudgetと非互換！
+// 参考: https://discuss.ai.google.dev/t/latest-google-genai-with-2-5-flash-ignoring-thinking-budget/102497
+
+// ❌ 使用禁止（thinkingBudgetが無視される）
+config: {
+  responseSchema: {...},              // BUG-013
+  responseMimeType: 'application/json', // BUG-014
+}
+
+// ✅ 推奨設定（@google/genai SDK使用）
+import { GoogleGenAI } from '@google/genai';
+
+const jsonPrompt = `${prompt}
+# 🔴 絶対厳守: JSON出力形式
+\`\`\`json
+{ "staffSchedules": [...] }
+\`\`\`
+`;
+
+config: {
+  // responseSchema なし
+  // responseMimeType なし
+  temperature: 0.3,
+  maxOutputTokens: 65536,
+  thinkingConfig: {
+    thinkingBudget: 16384,  // ✅ 正しく機能
   },
-},
+}
 ```
 
 ### タイムアウト設計原則
@@ -166,10 +193,19 @@ export const myFunction = onRequest(
 
 ## 関連ドキュメント
 
+### 2025-12-05 バグ
 - [BUG-001: CORS修正](.kiro/bugfix-cors-cloud-functions-2025-12-05.md)
 - [BUG-002: propertyOrdering修正](.kiro/bugfix-gemini-empty-response-2025-12-05.md)
 - [BUG-003: MAX_TOKENS修正](.kiro/bugfix-gemini-thinking-tokens-2025-12-05.md)
 - [BUG-004: タイムアウト修正](.kiro/bugfix-timeout-2025-12-05.md)
+
+### 2025-12-08 バグ
+- [BUG-012: SDK移行](.kiro/bugfix-sdk-migration-2025-12-08.md)
+- [BUG-013: JSONスキーマ問題](.kiro/bugfix-json-schema-thinking-2025-12-08.md)
+- [BUG-014: responseMimeType問題](.kiro/bugfix-responsemimetype-thinking-2025-12-08.md)
+
+### 参考リンク
+- [Google AI Forum: thinkingBudget無視問題](https://discuss.ai.google.dev/t/latest-google-genai-with-2-5-flash-ignoring-thinking-budget/102497)
 - [GitHub Pages: バグ修正記録](docs/index.html)
 
 ---
