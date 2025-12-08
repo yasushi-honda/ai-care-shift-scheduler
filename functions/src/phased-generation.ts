@@ -553,82 +553,8 @@ ${riskDays.map(d => {
 }
 
 
-/**
- * Phase 52: シフト配置ガイド生成
- *
- * timeSlotPreferenceを考慮し、どのスタッフをどのシフトに配置すべきかを提案する。
- * 早番・遅番に配置可能なスタッフを明示し、日勤に偏らないようにガイドする。
- *
- * @param staffList スタッフ一覧
- * @param requirements シフト要件
- * @returns 配置ガイドのプロンプト文字列
- */
-function buildShiftDistributionGuide(
-  staffList: Staff[],
-  requirements: ShiftRequirement
-): string {
-  // シフト種別ごとの必要人数
-  const earlyCount = requirements.requirements?.['早番']?.totalStaff || 0;
-  const dayCount = requirements.requirements?.['日勤']?.totalStaff || 0;
-  const lateCount = requirements.requirements?.['遅番']?.totalStaff || 0;
-
-  // 夜勤がない場合のみ適用（デイサービス）
-  if (earlyCount === 0 && lateCount === 0) {
-    return '';  // 早番・遅番がない場合はガイド不要
-  }
-
-  // timeSlotPreferenceでスタッフを分類
-  // TimeSlotPreferenceは: DayOnly='日勤のみ', NightOnly='夜勤のみ', Any='いつでも可'
-  // as string でキャストして文字列比較（将来のenum拡張に対応）
-  const flexibleStaff = staffList.filter(s => {
-    const pref = s.timeSlotPreference as string | undefined;
-    return pref === 'いつでも可' || pref === TimeSlotPreference.Any || !pref;
-  });
-  const dayOnlyStaff = staffList.filter(s => {
-    const pref = s.timeSlotPreference as string | undefined;
-    return pref === '日勤のみ' || pref === TimeSlotPreference.DayOnly;
-  });
-  // 早番のみ・遅番のみは現状のenumにないが、将来対応に備えて文字列比較を残す
-  const earlyOnlyStaff = staffList.filter(s => {
-    const pref = s.timeSlotPreference as string | undefined;
-    return pref === '早番のみ';
-  });
-  const lateOnlyStaff = staffList.filter(s => {
-    const pref = s.timeSlotPreference as string | undefined;
-    return pref === '遅番のみ';
-  });
-
-  // 看護師を特定
-  const nurses = staffList.filter(s =>
-    (s.qualifications || []).some(q => q.includes('看護'))
-  );
-  const nurseNames = nurses.map(s => s.name);
-
-  // 早番・遅番に配置可能なスタッフ数を計算
-  const earlyCapableStaff = [...flexibleStaff, ...earlyOnlyStaff];
-  const lateCapableStaff = [...flexibleStaff, ...lateOnlyStaff];
-
-  return `
-## ⚠️ 【シフト配置ガイド】（必読）
-
-### スタッフの配置可能シフト
-| 配置先 | 可能なスタッフ | 人数 |
-|--------|---------------|------|
-| 早番 | ${earlyCapableStaff.map(s => s.name).join('、') || 'なし'} | ${earlyCapableStaff.length}名 |
-| 日勤 | ${staffList.map(s => s.name).join('、')} | ${staffList.length}名（全員可） |
-| 遅番 | ${lateCapableStaff.map(s => s.name).join('、') || 'なし'} | ${lateCapableStaff.length}名 |
-
-### 日勤のみのスタッフ（早番・遅番に配置不可）
-${dayOnlyStaff.length > 0 ? dayOnlyStaff.map(s => `- ${s.name}`).join('\n') : '- なし（全員配置可能）'}
-
-### 配置優先ルール
-1. **早番${earlyCount}名**: ${earlyCapableStaff.slice(0, 3).map(s => s.name).join('、')}などから優先的に選択
-2. **遅番${lateCount}名**: ${lateCapableStaff.slice(0, 3).map(s => s.name).join('、')}などから優先的に選択
-3. **日勤${dayCount}名**: 上記以外のスタッフ${nurseNames.length > 0 ? `（看護師${nurseNames.join('、')}を1名以上含む）` : ''}
-
-**重要**: 「日勤のみ」のスタッフを早番・遅番に配置しないでください！
-`;
-}
+// NOTE: buildShiftDistributionGuide関数は削除（Phase 52で未使用のためTS6133エラー回避）
+// 将来必要に応じて再実装予定
 
 
 /**
@@ -1219,7 +1145,8 @@ function buildDetailedPrompt(
   const nurses = staffBatch.filter(s =>
     (s.qualifications || []).some(q => q.includes('看護'))
   ).map(s => s.name);
-  const nurseInfo = nurses.length > 0 ? `（${nurses.join('、')}）` : '';
+  // 看護師情報（将来使用予定）
+  void nurses;
 
   // 各シフトの必要人数を取得
   const earlyCount = requirements.requirements?.['早番']?.totalStaff || 2;
