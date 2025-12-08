@@ -20,6 +20,73 @@ import type {
 const VERTEX_AI_MODEL = 'gemini-2.5-flash';
 const BATCH_SIZE = 10; // 詳細生成時のバッチサイズ（10名 × 30日 = 300セル）
 
+// Phase 51: 429エラー対策 - 指数バックオフリトライ設定
+const RETRY_CONFIG = {
+  maxRetries: 3,           // 最大リトライ回数
+  initialDelayMs: 2000,    // 初期待機時間（2秒）
+  maxDelayMs: 32000,       // 最大待機時間（32秒）
+  backoffMultiplier: 2,    // バックオフ倍率
+};
+
+/**
+ * Phase 51: 切り詰めた指数バックオフ（Truncated Exponential Backoff）リトライ
+ *
+ * 429 (RESOURCE_EXHAUSTED) エラーに対して、Google推奨の指数バックオフを適用
+ * @see https://cloud.google.com/vertex-ai/docs/quotas
+ *
+ * @param operation - リトライ対象の非同期操作
+ * @param operationName - ログ出力用の操作名
+ * @returns 操作結果
+ */
+async function withExponentialBackoff<T>(
+  operation: () => Promise<T>,
+  operationName: string
+): Promise<T> {
+  let lastError: Error | null = null;
+  let delay = RETRY_CONFIG.initialDelayMs;
+
+  for (let attempt = 0; attempt <= RETRY_CONFIG.maxRetries; attempt++) {
+    try {
+      return await operation();
+    } catch (error: any) {
+      lastError = error;
+
+      // 429エラーかどうか判定
+      const is429Error =
+        error?.code === 429 ||
+        error?.status === 429 ||
+        error?.message?.includes('429') ||
+        error?.message?.includes('RESOURCE_EXHAUSTED') ||
+        error?.message?.includes('Resource exhausted');
+
+      // 429以外のエラーは即座に再スロー
+      if (!is429Error) {
+        throw error;
+      }
+
+      // 最後のリトライでも失敗した場合
+      if (attempt === RETRY_CONFIG.maxRetries) {
+        console.error(`❌ ${operationName}: ${RETRY_CONFIG.maxRetries}回のリトライ後も429エラー`);
+        throw error;
+      }
+
+      // ジッター（ランダム性）を追加して衝突を回避
+      const jitter = Math.random() * 1000;
+      const waitTime = Math.min(delay + jitter, RETRY_CONFIG.maxDelayMs);
+
+      console.log(`⚠️ ${operationName}: 429エラー発生、${Math.round(waitTime / 1000)}秒後にリトライ (${attempt + 1}/${RETRY_CONFIG.maxRetries})`);
+
+      await new Promise(resolve => setTimeout(resolve, waitTime));
+
+      // 次のリトライ用に待機時間を倍増
+      delay = Math.min(delay * RETRY_CONFIG.backoffMultiplier, RETRY_CONFIG.maxDelayMs);
+    }
+  }
+
+  // ここに到達することはないが、TypeScript用
+  throw lastError || new Error(`${operationName}: 不明なエラー`);
+}
+
 /**
  * Gemini APIからのJSONレスポンスを安全にパース
  *
@@ -558,18 +625,22 @@ export async function generateSkeleton(
 
 **重要**: JSONコードブロック以外のテキストを出力しないでください。`;
 
-  const result = await client.models.generateContent({
-    model: VERTEX_AI_MODEL,
-    contents: jsonPrompt,
-    config: {
-      // BUG-014: responseMimeType削除（thinkingBudgetと非互換）
-      temperature: 0.3,
-      maxOutputTokens: 65536,
-      thinkingConfig: {
-        thinkingBudget: 16384,  // 思考に16K、残りを出力に使用
+  // Phase 51: 429エラー対策 - 指数バックオフリトライでラップ
+  const result = await withExponentialBackoff(
+    () => client.models.generateContent({
+      model: VERTEX_AI_MODEL,
+      contents: jsonPrompt,
+      config: {
+        // BUG-014: responseMimeType削除（thinkingBudgetと非互換）
+        temperature: 0.3,
+        maxOutputTokens: 65536,
+        thinkingConfig: {
+          thinkingBudget: 16384,  // 思考に16K、残りを出力に使用
+        },
       },
-    },
-  });
+    }),
+    'Phase 1 骨子生成'
+  );
 
   // Vertex AI レスポンス詳細ログ（デバッグ用）
   console.log('📊 Vertex AI Response Details:', {
@@ -876,18 +947,22 @@ export async function generateDetailedShifts(
 }
 \`\`\``;
 
-    const result = await client.models.generateContent({
-      model: VERTEX_AI_MODEL,
-      contents: jsonPrompt,
-      config: {
-        // BUG-014: responseMimeType削除（thinkingBudgetと非互換）
-        temperature: 0.5,
-        maxOutputTokens: 65536,
-        thinkingConfig: {
-          thinkingBudget: 8192,  // バッチなので8Kで十分
+    // Phase 51: 429エラー対策 - 指数バックオフリトライでラップ
+    const result = await withExponentialBackoff(
+      () => client.models.generateContent({
+        model: VERTEX_AI_MODEL,
+        contents: jsonPrompt,
+        config: {
+          // BUG-014: responseMimeType削除（thinkingBudgetと非互換）
+          temperature: 0.5,
+          maxOutputTokens: 65536,
+          thinkingConfig: {
+            thinkingBudget: 8192,  // バッチなので8Kで十分
+          },
         },
-      },
-    });
+      }),
+      `Phase 2 バッチ${batchNum}`
+    );
 
     // Vertex AI レスポンス詳細ログ（デバッグ用）
     console.log(`  📊 Batch ${batchNum} Response:`, {

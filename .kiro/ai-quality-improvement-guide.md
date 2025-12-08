@@ -71,6 +71,7 @@ ${targetStaff.map(s => `- ${s.name}: ...`).join('\n')}
 | 47 | `buildDynamicPartTimeConstraints` | パート職員の曜日・日数制限 | phased-generation.ts |
 | 48 | `buildDynamicConsecutiveConstraints` | 連続勤務制限 | phased-generation.ts |
 | 49 | `buildDynamicStaffingConstraints` | 日別必要勤務人数 | phased-generation.ts |
+| 51 | `withExponentialBackoff` | 429エラーリトライ（指数バックオフ） | phased-generation.ts |
 
 ---
 
@@ -109,6 +110,16 @@ ${targetStaff.map(s => `- ${s.name}: ...`).join('\n')}
 
 ## 改善履歴
 
+### Phase 51（2025-12-08）
+**問題**: 429 (RESOURCE_EXHAUSTED) エラー発生
+**原因**: Vertex AI APIのレート制限に達した（連続リクエスト時）
+**解決**: `withExponentialBackoff`関数を追加
+- 切り詰めた指数バックオフ（Truncated Exponential Backoff）を実装
+- 最大3回リトライ、初期2秒、最大32秒待機
+- ジッター（ランダム性）追加で衝突回避
+- Phase 1骨子生成、Phase 2バッチ生成の両方をラップ
+**結果**: 検証中
+
 ### Phase 50（2025-12-08）
 **問題**: 人員不足77件（充足率21%）
 **原因**: Phase 2で「休日以外の日にも休を出力」していた
@@ -146,8 +157,8 @@ ${targetStaff.map(s => `- ${s.name}: ...`).join('\n')}
 
 ## 次のステップ
 
-### 短期（Phase 50以降）
-- [ ] 自動リトライ機構の追加
+### 短期（Phase 51以降）
+- [x] 自動リトライ機構の追加（Phase 51で完了）
 - [ ] Evalシステムの構築（複数テストケース自動実行）
 
 ### 中期
