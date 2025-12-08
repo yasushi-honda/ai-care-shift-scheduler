@@ -243,103 +243,39 @@ function buildDynamicStaffingConstraints(
   const totalStaffPerDay = Object.values(requirements.requirements || {})
     .reduce((sum, req) => sum + req.totalStaff, 0);
 
-  // 各日の曜日を計算（0=日〜6=土）
-  const getDayOfWeek = (day: number): number => {
-    return new Date(year, month - 1, day).getDay();
-  };
-
-  // 曜日名
-  const weekdayNames = ['日', '月', '火', '水', '木', '金', '土'];
-
-  // 各日の勤務可能人数を計算
-  const dailyAvailability: { day: number; weekday: string; available: number; isBusinessDay: boolean }[] = [];
-
-  for (let day = 1; day <= daysInMonth; day++) {
-    const dow = getDayOfWeek(day);
-    const weekday = weekdayNames[dow];
-    const isBusinessDay = dow !== 0; // 日曜は休業
-
-    // 各スタッフがこの日に勤務可能かチェック
-    let availableCount = 0;
-    for (const staff of staffList) {
-      const availableWeekdays = staff.availableWeekdays || [0, 1, 2, 3, 4, 5, 6];
-      if (availableWeekdays.includes(dow)) {
-        availableCount++;
-      }
-    }
-
-    dailyAvailability.push({
-      day,
-      weekday,
-      available: availableCount,
-      isBusinessDay,
-    });
-  }
-
-  // 問題のある日を特定（勤務可能人数 < 必要人数 × 1.2）
-  const criticalDays = dailyAvailability.filter(d =>
-    d.isBusinessDay && d.available < totalStaffPerDay * 1.2
-  );
-
   // 日曜日の数を計算
   let sundayCount = 0;
   for (let day = 1; day <= daysInMonth; day++) {
-    if (getDayOfWeek(day) === 0) sundayCount++;
+    const dow = new Date(year, month - 1, day).getDay();
+    if (dow === 0) sundayCount++;
   }
   const businessDays = daysInMonth - sundayCount;
 
-  // 各スタッフの勤務日数と休日数を計算
-  const staffScheduleInfo = staffList.map(s => {
-    const weeklyWork = s.weeklyWorkCount.hope;
-    const monthlyWork = weeklyWork * 4;  // 4週分
-    const monthlyRest = businessDays - monthlyWork;  // 営業日から勤務日を引いた数
-    return {
-      name: s.name,
-      weeklyWork,
-      monthlyWork,
-      monthlyRest: Math.max(0, monthlyRest),  // マイナスにならないように
-      totalRestDays: sundayCount + Math.max(0, monthlyRest),  // 日曜 + 平日休み
-    };
-  });
+  // 必要人日数と供給可能人日数を計算
+  const requiredPersonDays = businessDays * totalStaffPerDay;
+  const supplyPersonDays = staffList.reduce((sum, s) => sum + s.weeklyWorkCount.hope * 4, 0);
 
-  let constraints = `
+  // 各スタッフが勤務すべき日数を計算
+  const avgWorkDays = Math.ceil(requiredPersonDays / staffList.length);
+
+  return `
 ## ⚠️ 【日別人員配置制約】（最重要・厳守）
 
-**必要人数**: 各営業日（月〜土）に**必ず${totalStaffPerDay}名**を勤務させてください。
+**絶対条件**: 各営業日（月〜土）に**必ず${totalStaffPerDay}名**を勤務させてください。
 1人でも不足すると、そのシフトは**無効**になります。
 
-**重要な考え方**:
-- ${staffList.length}名のスタッフで${businessDays}営業日 × ${totalStaffPerDay}名 = **${businessDays * totalStaffPerDay}人日**を埋める必要があります
-- 平均すると各スタッフは約**${Math.ceil((businessDays * totalStaffPerDay) / staffList.length)}日勤務**する必要があります
-- **休日を入れすぎると人員不足になります**
+### 計算根拠
+- 必要人日: ${businessDays}営業日 × ${totalStaffPerDay}名 = **${requiredPersonDays}人日**
+- 供給可能: ${staffList.length}名 × 週平均勤務 × 4週 ≒ **${supplyPersonDays}人日**
+- 各スタッフは平均**${avgWorkDays}日/月**勤務が必要
 
-### 📋 各スタッフの勤務・休日数（必ず守ること）
-| 名前 | 週勤務 | 月勤務 | 月休日（日曜除く） | 合計休日 |
-|------|--------|--------|-------------------|---------|
-${staffScheduleInfo.map(s => `| ${s.name} | ${s.weeklyWork}回 | ${s.monthlyWork}日 | ${s.monthlyRest}日 | ${s.totalRestDays}日 |`).join('\n')}
+### 休日ルール（厳守）
+- 週5回勤務 → 月20日勤務、平日休み**${businessDays - 20}日**、合計休日**${sundayCount + Math.max(0, businessDays - 20)}日**
+- 週4回勤務 → 月16日勤務、平日休み**${businessDays - 16}日**、合計休日**${sundayCount + Math.max(0, businessDays - 16)}日**
+- 週3回勤務 → 月12日勤務、平日休み**${businessDays - 12}日**、合計休日**${sundayCount + Math.max(0, businessDays - 12)}日**
 
-**⚠️ 各スタッフのrestDaysは上記の「合計休日」の数に合わせること！**
-- 日曜（${sundayCount}日）は全員必須
-- 平日休みは「月休日」の数だけ入れる
-- 例: 週5回勤務の人 → restDaysは日曜${sundayCount}日 + 平日休み${Math.max(0, businessDays - 20)}日 = ${sundayCount + Math.max(0, businessDays - 20)}日
-
+**⚠️ 休日を入れすぎないこと！** 休日が多すぎると人員不足になります。
 `;
-
-  // 問題のある日がある場合、警告を追加
-  if (criticalDays.length > 0) {
-    constraints += `
-### ⚠️ 人員不足リスクのある日
-以下の日は、曜日制限のあるスタッフがいるため、特に注意が必要です：
-`;
-    for (const d of criticalDays) {
-      constraints += `- ${month}月${d.day}日（${d.weekday}）: 勤務可能${d.available}名（必要${totalStaffPerDay}名）\n`;
-    }
-    constraints += `
-**対策**: 上記の日は、勤務可能なスタッフの休日を入れないでください。
-`;
-  }
-
-  return constraints;
 }
 
 /**
