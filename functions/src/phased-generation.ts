@@ -745,11 +745,35 @@ ${requirementsTable}
 `;
   } else {
     // デイサービスなど夜勤がない施設の場合
+    // Phase 50: 日別配置要件を明示的に計算
+    const [year, month] = requirements.targetMonth.split('-').map(Number);
+    const sundays: number[] = [];
+    for (let day = 1; day <= daysInMonth; day++) {
+      const date = new Date(year, month - 1, day);
+      if (date.getDay() === 0) sundays.push(day);
+    }
+    const businessDays = daysInMonth - sundays.length;
+
+    // 各スタッフの休日数を計算
+    const staffRestInfo = staffBatch.map(s => {
+      const skel = skeleton.staffSchedules.find(sk => sk.staffId === s.id);
+      const restDays = skel?.restDays || [];
+      const nonSundayRest = restDays.filter(d => !sundays.includes(d)).length;
+      const workDays = businessDays - nonSundayRest;
+      return `- ${s.name}: 休日${restDays.length}日（日曜${sundays.filter(d => restDays.includes(d)).length}日＋平日${nonSundayRest}日）→ **勤務${workDays}日**`;
+    }).join('\n');
+
     return `
 以下のスタッフの${requirements.targetMonth}の詳細シフトを生成してください。
-**骨子（休日）は既に決定済み**なので、それに従って詳細シフト区分を割り当ててください。
 
-**重要**: この施設はデイサービスのため、**夜勤はありません**。
+# 🔴 最重要ルール（絶対に違反しないこと）
+**各営業日（月〜土）に合計${totalStaffPerDay}名を配置すること。1人でも不足は許されません。**
+
+## このバッチの勤務予定
+${staffRestInfo}
+
+**重要**: 上記の「勤務日」には必ず早番・日勤・遅番のいずれかを割り当ててください。
+休日以外の日に「休」を入れてはいけません！
 
 # 対象スタッフ（${staffBatch.length}名）
 ${staffInfo}
@@ -761,6 +785,7 @@ ${shiftDescription}
 | シフト | 必要人数 | 資格要件 |
 |--------|----------|----------|
 ${requirementsTable}
+| **合計** | **${totalStaffPerDay}名/日** | - |
 
 # ⚠️ シフト配分の優先ルール（必ず守ること）
 **日勤に偏った配置をしないでください。以下の順序でシフトを配分してください：**
@@ -773,19 +798,20 @@ ${requirementsTable}
 ✅ 良い例: 早番${earlyCount}名、日勤${dayCount}名、遅番${lateCount}名（バランス良い）
 ${dynamicConstraints}
 # 制約
-- 骨子で指定された休日は変更しないこと
-- 休日以外の日は、必要人員を満たすようシフトを割り当てる
-- 日曜日は全員「休」とすること
+- 骨子で指定された休日の日だけ「休」を出力すること
+- **休日以外の日は、必ず早番・日勤・遅番のいずれかを割り当てること**
+- 日曜日（${sundays.join(', ')}日）は全員「休」とすること
 - **夜勤や明け休みは絶対に使用しないこと**
 - **日勤に${dayCount + 1}名以上配置しないこと**（他のシフトが不足する原因になる）
 
-# 出力前チェックリスト
-□ 各営業日の早番が${earlyCount}名いるか ← 最重要！
+# 出力前チェックリスト（すべて確認してから出力）
+□ 各営業日（${businessDays}日分）の早番が${earlyCount}名いるか ← 最重要！
 □ 各営業日の遅番が${lateCount}名いるか
 □ 各営業日の日勤が${dayCount}名いるか（看護師1名含む）
 □ 日勤が${dayCount + 1}名以上の日がないか
-□ 日曜日は全員「休」になっているか
-□ 休日のスタッフは「休」になっているか
+□ 日曜日（${sundays.join(', ')}日）は全員「休」になっているか
+□ 休日のスタッフだけ「休」になっているか（休日以外に「休」がないか確認！）
+□ 各日の合計勤務者数が${totalStaffPerDay}名以上か
 
 # 出力
 各スタッフの${requirements.targetMonth}の全${daysInMonth}日分の詳細シフトをJSON形式で出力してください。
@@ -875,6 +901,15 @@ export async function generateDetailedShifts(
   }
 
   console.log(`✅ Phase 2完了: ${allSchedules.length}名分の詳細シフト生成`);
+
+  // Phase 50: デバッグログ追加 - シフト配分の確認
+  const shiftCounts: Record<string, number> = {};
+  for (const schedule of allSchedules as any[]) {
+    for (const shiftType of Object.values(schedule.shifts || {})) {
+      shiftCounts[shiftType as string] = (shiftCounts[shiftType as string] || 0) + 1;
+    }
+  }
+  console.log('📊 シフト配分:', shiftCounts);
 
   // 形式変換: { shifts: { "1": "日勤", ... } } → { monthlyShifts: [{ date: "2025-01-01", shiftType: "日勤" }, ...] }
   const convertedSchedules: StaffSchedule[] = allSchedules.map((schedule: any) => {
