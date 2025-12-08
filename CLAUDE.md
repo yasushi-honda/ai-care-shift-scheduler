@@ -986,6 +986,26 @@ ${targetStaff.map(s => `- ${s.name}: ...`).join('\n')}
 3. [ ] 出力前チェックリストに確認項目を追加したか
 4. [ ] 対応する評価チェックが`EvaluationService`に存在するか
 5. [ ] Serenaメモリを更新したか
+6. [ ] **論理的整合性チェック完了か** ← BUG-017教訓（[詳細](.kiro/ai-prompt-design-checklist.md)）
+
+### ⚠️ プロンプト設計時の必須チェック（BUG-017教訓）
+
+**本番デプロイ前に必ず思考シミュレーションを実施すること**
+
+```
+Step 1: 最悪ケースのパラメータを特定
+  - 最小バッチサイズ（例: 2名）
+  - 最小勤務可能人数
+
+Step 2: AIの立場で要件を読む
+  - 「2名で5名/日を配置せよ」→ 不可能と判断されないか？
+
+Step 3: 論理的矛盾を洗い出す
+  - バッチサイズ vs 必要人数（絶対値は危険）
+  - 要件を相対化（「目安」「比例配分」）
+```
+
+詳細: [AIプロンプト設計チェックリスト](.kiro/ai-prompt-design-checklist.md)
 
 ### SLA目標
 
@@ -998,7 +1018,9 @@ ${targetStaff.map(s => `- ${s.name}: ...`).join('\n')}
 ### 参考資料
 
 - [AI品質改善ガイド](.kiro/ai-quality-improvement-guide.md) - ドキュメントドリブン改善のマスターガイド
+- [AIプロンプト設計チェックリスト](.kiro/ai-prompt-design-checklist.md) - 論理的整合性チェック（BUG-017教訓）
 - [AI品質レビュー](.kiro/ai-production-quality-review-2025-12-08.md)
 - [Phase 49実装記録](docs/phase49-staffing-constraints.html) - 日別人員配置制約
 - [Phase 48実装記録](.kiro/phase48-consecutive-constraints-implementation-2025-12-08.md)
+- [BUG-017修正記録](.kiro/bugfix-batch-prompt-json-2025-12-08.md) - バッチプロンプトJSONパースエラー
 - Serenaメモリ: `ai_production_quality_review_2025-12-08`, `phase49_staffing_constraints_2025-12-08`
