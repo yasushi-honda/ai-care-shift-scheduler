@@ -196,9 +196,15 @@
 };</code></pre>
 
                 <div class="warning-box">
-                    <strong>セキュリティルールとの関係:</strong><br>
-                    Firestoreルールの<code>isMember()</code>関数は<code>facilities.members</code>配列をチェックする。
-                    デモユーザーがmembersに存在しないため、書き込みが拒否された。
+                    <strong>セキュリティルールとの関係（重要な発見）:</strong><br>
+                    Firestoreルールの<code>hasRole()</code>関数は<code>users.facilities</code>配列を参照する（<code>facilities.members</code>ではない）。<br>
+                    <pre><code>// firestore.rules (L14-34)
+function hasRole(facilityId, requiredRole) {
+  let userProfile = getUserProfile();  // users/{uid}を取得
+  let facilities = userProfile.facilities;  // ← ここを参照！
+  return checkFacilityRole(facilities, index, facilityId, requiredRole);
+}</code></pre>
+                    そのため、<code>facilities.members</code>だけ更新しても権限は反映されない。
                 </div>
             </div>
         </div>
@@ -231,6 +237,15 @@
                     <code>findIndex</code>を使用して既存ユーザーを検索し、存在する場合は権限を強制的に<code>editor</code>に更新するロジックに変更。
                 </div>
 
+                <div class="error-box">
+                    <strong>重要（3回目の修正）:</strong><br>
+                    2回目修正後も権限エラーが再発。調査の結果、セキュリティルールが参照しているのは<code>facilities.members</code>ではなく<code>users.facilities</code>であることが判明。<br><br>
+                    <strong>問題の状態:</strong><br>
+                    <code>facilities/demo-facility-001.members[].role = editor ✓</code><br>
+                    <code>users/demo-user-fixed-uid.facilities[].role = viewer ✗</code><br><br>
+                    <strong>解決策:</strong> 両コレクションを同期して更新するように修正。
+                </div>
+
                 <div class="fix-box">
                     <strong>最終版コード:</strong>
                     <pre><code>// 既存のmembersを取得して保持
@@ -258,6 +273,22 @@ if (existingDemoUserIndex >= 0) {
 } else {
   // 新規追加
   members.push({ userId: DEMO_USER_UID, role: 'editor', grantedAt: now });
+}
+
+// 【3回目修正】users.facilitiesも同期して更新
+const demoUserRef = db.collection('users').doc(DEMO_USER_UID);
+const demoUserDoc = await demoUserRef.get();
+if (demoUserDoc.exists) {
+  const userData = demoUserDoc.data();
+  if (userData?.facilities) {
+    const userFacilities = userData.facilities.map((f) => {
+      if (f.facilityId === DEMO_FACILITY_ID) {
+        return { ...f, role: 'editor' };  // users側も同期
+      }
+      return f;
+    });
+    batch.update(demoUserRef, { facilities: userFacilities });
+  }
 }</code></pre>
                 </div>
 
@@ -284,11 +315,30 @@ if (existingDemoUserIndex >= 0) {
                         <td>editor権限に強制更新</td>
                     </tr>
                     <tr>
+                        <td>users.facilities同期</td>
+                        <td>更新されない</td>
+                        <td>facilities.membersと同期して更新</td>
+                    </tr>
+                    <tr>
                         <td>createdAt</td>
                         <td>常に現在時刻</td>
                         <td>既存値を保持</td>
                     </tr>
                 </table>
+
+                <h3>権限データの二重管理構造</h3>
+                <div class="mermaid">
+                    graph LR
+                        subgraph "Single Source of Truth"
+                            A["users/{uid}.facilities[]<br/>セキュリティルールが参照"]
+                        end
+                        subgraph "非正規化データ"
+                            B["facilities/{id}.members[]<br/>UI表示用"]
+                        end
+                        A <-->|"同期必須"| B
+                        style A fill:#ff6b6b,color:white
+                        style B fill:#4ecdc4,color:white
+                </div>
             </div>
         </div>
 
@@ -324,8 +374,11 @@ if (existingDemoUserIndex >= 0) {
                         section BUG-009
                             権限エラー発生 : Missing permissions
                             1回目修正 : 既存members保持
-                            再度権限エラー : viewerのまま
                             2回目修正 : 権限強制更新
+                            3回目修正 : users.facilities同期
+                        section BUG-010
+                            タイムアウト : 処理時間198s > 180s
+                            タイムアウト延長 : 180s→240s
                 </div>
             </div>
         </div>
@@ -336,19 +389,31 @@ if (existingDemoUserIndex >= 0) {
             <div class="card-body">
                 <h3>重要な学び</h3>
                 <ol>
+                    <li><strong>権限エラー発生時は最初にセキュリティルールを読む</strong>: どのコレクションを参照しているかを確認することが最重要</li>
                     <li><strong>データ再投入時の副作用に注意</strong>: 既存データを上書きする際、意図しないデータ削除が起こり得る</li>
                     <li><strong>権限問題はログに現れにくい</strong>: クライアント側の「permission denied」だけでは原因特定が困難</li>
-                    <li><strong>デモユーザーの権限は複数箇所で管理</strong>: users.facilities[].role と facilities.members[].role の両方が必要</li>
-                    <li><strong>「追加」と「更新」は別ロジック</strong>: 「存在しなければ追加」だけでは、既存データの更新ができない。findIndex等で既存を検索し、権限等を強制更新するロジックが必要</li>
+                    <li><strong>権限データは2箇所に存在する</strong>: users.facilities[].role（SoT）と facilities.members[].role（非正規化）の両方を同期して更新</li>
+                    <li><strong>「追加」と「更新」は別ロジック</strong>: findIndex等で既存を検索し、権限等を強制更新するロジックが必要</li>
+                    <li><strong>同じエラーが2回続いたらアプローチを変える</strong>: 修正が効かない場合は根本原因の見直しが必要</li>
                 </ol>
 
                 <h3>再発防止チェックリスト</h3>
                 <ul>
+                    <li>権限エラー時は<code>firestore.rules</code>を最初に読む</li>
+                    <li><code>npx tsx scripts/verifyDemoPermissions.ts</code>でデータ整合性を確認</li>
                     <li>seedDemoData.ts実行後はデモログインで動作確認</li>
-                    <li>既存データを上書きするスクリプトは既存値を保持する設計に</li>
-                    <li>権限エラー時はFirestoreのmembersを確認</li>
+                    <li>権限変更時は<code>users.facilities</code>と<code>facilities.members</code>の両方を更新</li>
                     <li>ユーザー追加ロジックには「既存の場合は更新」も含める</li>
                 </ul>
+
+                <h3>検証スクリプト</h3>
+                <div class="fix-box">
+                    <code>npx tsx scripts/verifyDemoPermissions.ts</code><br><br>
+                    このスクリプトは以下を検証します：<br>
+                    1. users/{demo-user-fixed-uid}.facilities[].role<br>
+                    2. facilities/{demo-facility-001}.members[].role<br>
+                    3. 両者が一致しているか（データ整合性チェック）
+                </div>
             </div>
         </div>
     </div>

@@ -764,3 +764,76 @@ if (!lockResult.success) {
 - [Phase 43ドキュメント](docs/phase43-demo-improvements.html)
 - [要件定義書](.kiro/specs/demo-environment-improvements/requirements.md)
 - Serenaメモリ: `phase43_demo_improvements_2025-12-07`
+
+---
+
+## 権限管理ルール（重要 - BUG-009教訓）
+
+**背景**: BUG-009（2025-12-08）で権限エラーが3回修正しても解決しなかった。原因はセキュリティルールの参照先を誤認識していたこと。
+
+### 権限データの二重管理構造
+
+権限情報は**2箇所**に保存されており、**両方を同期して更新する必要がある**：
+
+```
+users/{userId}.facilities[]        ← Single Source of Truth（セキュリティルールが参照）
+  ├─ facilityId: string
+  ├─ role: FacilityRole
+  └─ grantedAt: Timestamp
+
+facilities/{facilityId}.members[]  ← 非正規化データ（UI表示用）
+  ├─ userId: string
+  ├─ role: FacilityRole
+  └─ email: string
+```
+
+### セキュリティルールの参照先
+
+```javascript
+// firestore.rules (L14-34)
+function hasRole(facilityId, requiredRole) {
+  let userProfile = getUserProfile();  // users/{uid}を取得
+  let facilities = userProfile.facilities;  // ← ここだけ参照！
+  return checkFacilityRole(facilities, index, facilityId, requiredRole);
+}
+```
+
+**重要**: セキュリティルールは`users.facilities`**のみ**を参照。`facilities.members`は**参照されない**。
+
+### 権限変更時の必須実装
+
+```typescript
+// 必ずトランザクションで両方を更新
+await db.runTransaction(async (transaction) => {
+  // 1. users.facilitiesを更新
+  transaction.update(userRef, {
+    facilities: admin.firestore.FieldValue.arrayUnion({
+      facilityId,
+      role: 'editor',
+      grantedAt: now,
+    }),
+  });
+
+  // 2. facilities.membersを更新
+  transaction.update(facilityRef, {
+    members: admin.firestore.FieldValue.arrayUnion({
+      userId,
+      role: 'editor',
+      email,
+    }),
+  });
+});
+```
+
+### 権限エラーデバッグチェックリスト
+
+1. **セキュリティルールを読む**: `cat firestore.rules | grep -A 20 "function hasRole"`
+2. **検証スクリプト実行**: `npx tsx scripts/verifyDemoPermissions.ts`
+3. **両コレクションを確認**: users側とfacilities側の権限が一致しているか
+4. **修正後は両方更新**: users.facilitiesとfacilities.membersの両方を更新
+
+### 参考資料
+
+- [ポストモーテム](.kiro/postmortem-bug009-permission-sync-2025-12-08.md)
+- [BUG-009修正記録](.kiro/bugfix-demo-members-2025-12-08.md)
+- Serenaメモリ: `bug009_permission_sync_postmortem_2025-12-08`
