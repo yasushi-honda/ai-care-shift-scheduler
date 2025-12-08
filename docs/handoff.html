@@ -350,6 +350,56 @@ timeline
         </div>
 
         <div class="card">
+            <h2>5.00. Phase 47-51 AI生成品質改善（2025-12-08）</h2>
+
+            <div class="success-box">
+                <strong>ステータス:</strong> 完了（2025-12-08）<br>
+                <strong>目的:</strong> 動的制約生成パターンの拡充とエラー対策
+            </div>
+
+            <h3>実装済み動的制約</h3>
+            <table>
+                <tr>
+                    <th>Phase</th>
+                    <th>関数</th>
+                    <th>役割</th>
+                </tr>
+                <tr>
+                    <td>47</td>
+                    <td><code>buildDynamicPartTimeConstraints()</code></td>
+                    <td>パート職員の曜日・日数制限</td>
+                </tr>
+                <tr>
+                    <td>48</td>
+                    <td><code>buildDynamicConsecutiveConstraints()</code></td>
+                    <td>連続勤務制限（5日まで）</td>
+                </tr>
+                <tr>
+                    <td>49</td>
+                    <td><code>buildDynamicStaffingConstraints()</code></td>
+                    <td>日別必要勤務人数</td>
+                </tr>
+                <tr>
+                    <td>50</td>
+                    <td>buildDetailedPrompt改善</td>
+                    <td>休日ルール明確化・デバッグログ追加</td>
+                </tr>
+                <tr>
+                    <td>51</td>
+                    <td><code>withExponentialBackoff()</code></td>
+                    <td>429エラー自動リトライ（指数バックオフ）</td>
+                </tr>
+            </table>
+
+            <h3>関連ドキュメント</h3>
+            <ul>
+                <li><a href="ai-shift-algorithm.html">AIシフト生成アルゴリズム</a></li>
+                <li><a href="ai-quality-improvement.html">AI品質改善ガイド</a></li>
+                <li><code>.kiro/ai-quality-improvement-guide.md</code> - マスターガイド</li>
+            </ul>
+        </div>
+
+        <div class="card">
             <h2>5.01. Phase 43/43.1 デモ環境改善（完了）</h2>
 
             <div class="success-box">

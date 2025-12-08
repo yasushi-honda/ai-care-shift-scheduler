@@ -611,6 +611,33 @@ setTimeout(() => controller.abort(), 240000);  // ❗ 4分（BUG-010で延長）
 想定処理時間 × 1.2 < クライアント timeout (240s) < サーバー timeout (300s)
 ```
 
+### 429エラー（RESOURCE_EXHAUSTED）対策（Phase 51）
+
+**背景**: 2025-12-08にVertex AI APIのレート制限エラーが発生。連続リクエスト時に429エラー。
+
+**解決策**: `withExponentialBackoff`関数で自動リトライを実装
+
+```typescript
+// phased-generation.ts
+const RETRY_CONFIG = {
+  maxRetries: 3,           // 最大リトライ回数
+  initialDelayMs: 2000,    // 初期待機時間（2秒）
+  maxDelayMs: 32000,       // 最大待機時間（32秒）
+  backoffMultiplier: 2,    // バックオフ倍率
+};
+
+// API呼び出しをラップ
+const result = await withExponentialBackoff(
+  () => client.models.generateContent({...}),
+  'generateSkeleton'  // 操作名（ログ用）
+);
+```
+
+**注意事項**:
+- リトライでも解決しない場合は、Vertex AIのクォータ増加申請が必要
+- 連続テスト時は間隔を空けて実行すること（最低30秒）
+- 本番環境では通常の利用では問題なし
+
 ### 関連ドキュメント
 
 - [BUG-001修正記録](.kiro/bugfix-cors-cloud-functions-2025-12-05.md) - CORS
@@ -627,6 +654,7 @@ setTimeout(() => controller.abort(), 240000);  // ❗ 4分（BUG-010で延長）
 - [BUG-013修正記録](.kiro/bugfix-json-schema-thinking-2025-12-08.md) - JSONスキーマとthinkingBudgetの非互換性
 - [BUG-014修正記録](.kiro/bugfix-responsemimetype-thinking-2025-12-08.md) - responseMimeTypeとthinkingBudgetの非互換性
 - [BUG-015修正記録](.kiro/bugfix-schedule-format-conversion-2025-12-08.md) - 段階的生成の出力形式変換
+- [BUG-016対策](.kiro/ai-quality-improvement-guide.md#phase-512025-12-08) - 429エラー指数バックオフリトライ
 - [ポストモーテム](.kiro/postmortem-gemini-bugs-2025-12-05.md) - 全体分析
 - Serenaメモリ: `gemini_region_critical_rule`, `gemini_max_output_tokens_critical_rule`, `gemini_thinking_budget_critical_rule`, `cloud_function_custom_token_iam`, `bug012_sdk_migration_2025-12-08`
 
