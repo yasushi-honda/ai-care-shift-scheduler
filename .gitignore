@@ -37,3 +37,6 @@ dist-ssr
 /playwright-report/
 /playwright/.cache/
 coverage/
+
+# Functions test results
+functions/test-results/
