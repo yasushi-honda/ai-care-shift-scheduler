@@ -1,5 +1,5 @@
 import { onRequest } from 'firebase-functions/v2/https';
-import { VertexAI } from '@google-cloud/vertexai';
+import { GoogleGenAI } from '@google/genai';
 import { TimeSlotPreference } from './types';
 import type { Staff, ShiftRequirement, ShiftTime, LeaveRequest, StaffSchedule, AIEvaluationResult } from './types';
 import { generateSkeleton, generateDetailedShifts, parseGeminiJsonResponse } from './phased-generation';
@@ -130,13 +130,11 @@ export const generateShift = onRequest(
         // 5名以下：従来の一括生成（高速）
         console.log(`📊 小規模シフト生成（${staffList.length}名）: 一括生成モード`);
 
-        const vertexAI = new VertexAI({
+        // @google/genai SDK を使用（thinkingConfig をサポート）
+        const client = new GoogleGenAI({
+          vertexai: true,
           project: projectId,
           location: 'asia-northeast1',
-        });
-
-        const model = vertexAI.getGenerativeModel({
-          model: VERTEX_AI_MODEL,
         });
 
         const prompt = buildShiftPrompt(staffList, requirements, leaveRequests);
@@ -146,23 +144,25 @@ export const generateShift = onRequest(
         const shiftTypeNames = (requirements.timeSlots || []).map((slot: ShiftTime) => slot.name);
 
         console.log('🤖 Vertex AI 呼び出し開始...');
-        const result = await model.generateContent({
-          contents: [{ role: 'user', parts: [{ text: prompt }] }],
-          generationConfig: {
+        const result = await client.models.generateContent({
+          model: VERTEX_AI_MODEL,
+          contents: prompt,
+          config: {
             responseMimeType: 'application/json',
             responseSchema: getShiftSchema(requirements.targetMonth, shiftTypeNames) as any,
             temperature: 0.5,
             maxOutputTokens: 65536,  // Gemini 2.5 Flash thinking mode uses tokens from this budget
             // 思考トークンを制限（小規模一括生成用）
+            // BUG-012: @google/genai SDKでthinkingConfigが正しくサポートされる
             thinkingConfig: {
               thinkingBudget: 16384,  // 5名以下なので16Kで十分
             },
-          } as any,
+          },
         });
 
-        const responseText = result.response.candidates?.[0]?.content?.parts?.[0]?.text || '';
+        const responseText = result.text || '';
         scheduleData = parseGeminiJsonResponse(responseText);
-        tokensUsed = result.response.usageMetadata?.totalTokenCount || 0;
+        tokensUsed = result.usageMetadata?.totalTokenCount || 0;
         console.log('✅ 一括生成完了');
 
       } else {

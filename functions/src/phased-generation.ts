@@ -5,7 +5,7 @@
  * Phase 3: 統合
  */
 
-import { VertexAI } from '@google-cloud/vertexai';
+import { GoogleGenAI } from '@google/genai';
 import {
   TimeSlotPreference,
 } from './types';
@@ -512,45 +512,41 @@ export async function generateSkeleton(
   const shiftTypeNames = (requirements.timeSlots || []).map(t => t.name);
   const hasNightShift = shiftTypeNames.some(name => name.includes('夜'));
 
-  const vertexAI = new VertexAI({
+  // @google/genai SDK を使用（thinkingConfig をサポート）
+  const client = new GoogleGenAI({
+    vertexai: true,
     project: projectId,
     location: 'asia-northeast1',
-  });
-
-  const model = vertexAI.getGenerativeModel({
-    model: VERTEX_AI_MODEL,
   });
 
   const prompt = buildSkeletonPrompt(staffList, requirements, leaveRequests, daysInMonth, hasNightShift);
 
   console.log('🦴 Phase 1: 骨子生成開始...');
   console.log(`   夜勤シフト: ${hasNightShift ? 'あり' : 'なし（デイサービス）'}`);
-  const result = await model.generateContent({
-    contents: [{ role: 'user', parts: [{ text: prompt }] }],
-    generationConfig: {
+
+  const result = await client.models.generateContent({
+    model: VERTEX_AI_MODEL,
+    contents: prompt,
+    config: {
       responseMimeType: 'application/json',
       responseSchema: getSkeletonSchema(daysInMonth, hasNightShift) as any,
       temperature: 0.3,
       maxOutputTokens: 65536,  // Gemini 2.5 Flash thinking mode uses tokens from this budget
       // 思考トークンを制限（12名スタッフで65535トークン使い切りエラー対策）
+      // BUG-012: @google/genai SDKでthinkingConfigが正しくサポートされる
       thinkingConfig: {
         thinkingBudget: 16384,  // 思考に16K、残りを出力に使用
       },
-    } as any,
+    },
   });
 
   // Vertex AI レスポンス詳細ログ（デバッグ用）
-  const response = result.response;
-  const candidate = response.candidates?.[0];
   console.log('📊 Vertex AI Response Details:', {
-    candidatesCount: response.candidates?.length || 0,
-    finishReason: candidate?.finishReason || 'N/A',
-    safetyRatings: candidate?.safetyRatings || [],
-    blockReason: (response as any).promptFeedback?.blockReason || 'N/A',
-    usageMetadata: response.usageMetadata || {},
+    finishReason: result.candidates?.[0]?.finishReason || 'N/A',
+    usageMetadata: result.usageMetadata || {},
   });
 
-  const responseText = candidate?.content?.parts?.[0]?.text || '';
+  const responseText = result.text || '';
   const skeleton = parseGeminiJsonResponse(responseText) as ScheduleSkeleton;
   console.log(`✅ Phase 1完了: ${skeleton.staffSchedules.length}名分の骨子生成`);
 
@@ -785,13 +781,11 @@ export async function generateDetailedShifts(
   const shiftTypeNames = (requirements.timeSlots || []).map(t => t.name);
   const hasNightShift = shiftTypeNames.some(name => name.includes('夜'));
 
-  const vertexAI = new VertexAI({
+  // @google/genai SDK を使用（thinkingConfig をサポート）
+  const client = new GoogleGenAI({
+    vertexai: true,
     project: projectId,
     location: 'asia-northeast1',
-  });
-
-  const model = vertexAI.getGenerativeModel({
-    model: VERTEX_AI_MODEL,
   });
 
   const allSchedules: StaffSchedule[] = [];
@@ -807,30 +801,29 @@ export async function generateDetailedShifts(
 
     const prompt = buildDetailedPrompt(batch, skeleton, requirements, daysInMonth, hasNightShift);
 
-    const result = await model.generateContent({
-      contents: [{ role: 'user', parts: [{ text: prompt }] }],
-      generationConfig: {
+    const result = await client.models.generateContent({
+      model: VERTEX_AI_MODEL,
+      contents: prompt,
+      config: {
         responseMimeType: 'application/json',
         responseSchema: getDetailedShiftSchema(requirements.targetMonth, daysInMonth, shiftTypeNames) as any,
         temperature: 0.5,
         maxOutputTokens: 65536,  // Gemini 2.5 Flash thinking mode uses tokens from this budget
         // 思考トークンを制限（バッチ処理用）
+        // BUG-012: @google/genai SDKでthinkingConfigが正しくサポートされる
         thinkingConfig: {
           thinkingBudget: 8192,  // バッチなので8Kで十分
         },
-      } as any,
+      },
     });
 
     // Vertex AI レスポンス詳細ログ（デバッグ用）
-    const batchResponse = result.response;
-    const batchCandidate = batchResponse.candidates?.[0];
     console.log(`  📊 Batch ${batchNum} Response:`, {
-      finishReason: batchCandidate?.finishReason || 'N/A',
-      blockReason: (batchResponse as any).promptFeedback?.blockReason || 'N/A',
-      outputTokens: batchResponse.usageMetadata?.candidatesTokenCount || 0,
+      finishReason: result.candidates?.[0]?.finishReason || 'N/A',
+      outputTokens: result.usageMetadata?.candidatesTokenCount || 0,
     });
 
-    const batchResponseText = batchCandidate?.content?.parts?.[0]?.text || '';
+    const batchResponseText = result.text || '';
     const batchResult = parseGeminiJsonResponse(batchResponseText);
     allSchedules.push(...batchResult.schedule);
   }
