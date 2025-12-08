@@ -891,6 +891,7 @@ ${targetStaff.map(s => `- ${s.name}: ...`).join('\n')}
 | `buildDynamicNurseConstraints` | 44 | 看護師配置要件 | phased-generation.ts |
 | `buildDynamicPartTimeConstraints` | 47 | パート職員の曜日・日数制限 | phased-generation.ts |
 | `buildDynamicConsecutiveConstraints` | 48 | 連続勤務制限 | phased-generation.ts |
+| `buildDynamicStaffingConstraints` | 49 | 日別必要勤務人数 | phased-generation.ts |
 
 ### 新しい制約を追加する際のチェックリスト
 
@@ -910,6 +911,8 @@ ${targetStaff.map(s => `- ${s.name}: ...`).join('\n')}
 
 ### 参考資料
 
+- [AI品質改善ガイド](.kiro/ai-quality-improvement-guide.md) - ドキュメントドリブン改善のマスターガイド
 - [AI品質レビュー](.kiro/ai-production-quality-review-2025-12-08.md)
+- [Phase 49実装記録](docs/phase49-staffing-constraints.html) - 日別人員配置制約
 - [Phase 48実装記録](.kiro/phase48-consecutive-constraints-implementation-2025-12-08.md)
-- Serenaメモリ: `ai_production_quality_review_2025-12-08`
+- Serenaメモリ: `ai_production_quality_review_2025-12-08`, `phase49_staffing_constraints_2025-12-08`

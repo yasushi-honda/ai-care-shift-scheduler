@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI品質改善ガイド - AI Care Shift Scheduler</title>
+    <style>
+        :root {
+            --primary: #2563eb;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --gray-50: #f9fafb;
+            --gray-100: #f3f4f6;
+            --gray-700: #374151;
+            --gray-900: #111827;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.6;
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 2rem;
+            background: var(--gray-50);
+            color: var(--gray-900);
+        }
+        h1 { color: var(--primary); border-bottom: 3px solid var(--primary); padding-bottom: 0.5rem; }
+        h2 { color: var(--gray-700); margin-top: 2rem; }
+        .card {
+            background: white;
+            border-radius: 0.5rem;
+            padding: 1.5rem;
+            margin: 1rem 0;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        .principle-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+        }
+        .principle-card {
+            background: linear-gradient(135deg, var(--primary), #3b82f6);
+            color: white;
+            padding: 1.5rem;
+            border-radius: 0.5rem;
+            text-align: center;
+        }
+        .principle-card h3 { margin: 0 0 0.5rem 0; font-size: 1rem; }
+        .principle-card p { margin: 0; font-size: 0.875rem; opacity: 0.9; }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1rem 0;
+        }
+        th, td {
+            border: 1px solid #e5e7eb;
+            padding: 0.75rem;
+            text-align: left;
+        }
+        th { background: var(--gray-100); }
+        pre {
+            background: var(--gray-900);
+            color: #f9fafb;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            overflow-x: auto;
+            font-size: 0.875rem;
+        }
+        .code-keyword { color: #c084fc; }
+        .code-string { color: #86efac; }
+        .code-comment { color: #9ca3af; }
+        .flow-diagram {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 1rem;
+            padding: 2rem;
+            flex-wrap: wrap;
+        }
+        .flow-step {
+            background: var(--primary);
+            color: white;
+            padding: 1rem 1.5rem;
+            border-radius: 0.5rem;
+            font-weight: 600;
+        }
+        .flow-arrow {
+            font-size: 1.5rem;
+            color: var(--gray-700);
+        }
+        .sla-table tr:nth-child(even) { background: var(--gray-50); }
+        .nav { margin-bottom: 2rem; }
+        .nav a { color: var(--primary); margin-right: 1rem; }
+        .timeline {
+            position: relative;
+            padding-left: 2rem;
+        }
+        .timeline::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: var(--primary);
+        }
+        .timeline-item {
+            position: relative;
+            padding-bottom: 2rem;
+        }
+        .timeline-item::before {
+            content: '';
+            position: absolute;
+            left: -2rem;
+            top: 0;
+            width: 14px;
+            height: 14px;
+            background: var(--primary);
+            border-radius: 50%;
+            border: 3px solid white;
+            box-shadow: 0 0 0 2px var(--primary);
+        }
+        .phase-badge {
+            display: inline-block;
+            background: var(--primary);
+            color: white;
+            padding: 0.125rem 0.5rem;
+            border-radius: 0.25rem;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body>
+    <nav class="nav">
+        <a href="index.html">Home</a>
+        <a href="phase49-staffing-constraints.html">Phase 49</a>
+        <a href="phase48-consecutive-constraints.html">Phase 48</a>
+    </nav>
+
+    <h1>AI品質改善ガイド</h1>
+
+    <p>LLMベースのシフト生成システムの品質を<strong>ドキュメントドリブン</strong>で継続的に改善するためのガイド</p>
+
+    <h2>基本アプローチ</h2>
+
+    <div class="flow-diagram">
+        <div class="flow-step">テスト</div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step">分析</div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step">改善</div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step">ドキュメント化</div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step">テスト</div>
+    </div>
+
+    <h2>動的制約生成パターン（4原則）</h2>
+
+    <div class="principle-grid">
+        <div class="principle-card">
+            <h3>1. データ駆動型</h3>
+            <p>ハードコードせず、staffListから動的に抽出</p>
+        </div>
+        <div class="principle-card">
+            <h3>2. 条件付き生成</h3>
+            <p>該当者がいなければ空文字を返す</p>
+        </div>
+        <div class="principle-card">
+            <h3>3. 明示的な警告</h3>
+            <p>「違反したシフトは無効」と明記</p>
+        </div>
+        <div class="principle-card">
+            <h3>4. 可読性重視</h3>
+            <p>具体的なスタッフ名をリスト化</p>
+        </div>
+    </div>
+
+    <h2>実装テンプレート</h2>
+
+    <pre>
+<span class="code-keyword">function</span> buildDynamic<span class="code-string">[ConstraintName]</span>Constraints(staffList: Staff[]): string {
+  <span class="code-comment">// 1. 該当スタッフを抽出（データ駆動型）</span>
+  <span class="code-keyword">const</span> targetStaff = staffList.filter(s => <span class="code-comment">/* 条件 */</span>);
+
+  <span class="code-comment">// 2. 基本制約を記述</span>
+  <span class="code-keyword">let</span> constraints = <span class="code-string">`
+## ⚠️ 【制約名】（厳守）
+**重要**: この制約に違反したシフトは無効です。
+`</span>;
+
+  <span class="code-comment">// 3. 該当者がいなければ早期リターン（条件付き生成）</span>
+  <span class="code-keyword">if</span> (targetStaff.length === 0) {
+    <span class="code-keyword">return</span> constraints;
+  }
+
+  <span class="code-comment">// 4. 個別制限を追加（可読性重視）</span>
+  constraints += targetStaff.map(s => <span class="code-string">`- ${s.name}: ...`</span>).join(<span class="code-string">'\n'</span>);
+
+  <span class="code-keyword">return</span> constraints;
+}
+    </pre>
+
+    <h2>実装済み動的制約</h2>
+
+    <div class="timeline">
+        <div class="timeline-item">
+            <span class="phase-badge">Phase 49</span>
+            <h3>buildDynamicStaffingConstraints</h3>
+            <p>日別必要勤務人数の動的制約。各スタッフの月間勤務・休日数を表形式で明示。</p>
+        </div>
+        <div class="timeline-item">
+            <span class="phase-badge">Phase 48</span>
+            <h3>buildDynamicConsecutiveConstraints</h3>
+            <p>連続勤務制限の動的制約。個別制限を名前付きリスト化、「6日以上で無効」と明示。</p>
+        </div>
+        <div class="timeline-item">
+            <span class="phase-badge">Phase 47</span>
+            <h3>buildDynamicPartTimeConstraints</h3>
+            <p>パート職員の曜日・日数制限。勤務可能曜日を具体的に表示。</p>
+        </div>
+        <div class="timeline-item">
+            <span class="phase-badge">Phase 44</span>
+            <h3>buildDynamicTimeSlotConstraints / NurseConstraints</h3>
+            <p>時間帯希望（日勤のみ/夜勤のみ）と看護師配置要件。</p>
+        </div>
+    </div>
+
+    <h2>品質目標（SLA）</h2>
+
+    <table class="sla-table">
+        <tr>
+            <th>指標</th>
+            <th>目標値</th>
+            <th>許容範囲</th>
+            <th>現状</th>
+        </tr>
+        <tr>
+            <td>人員充足率</td>
+            <td>100%</td>
+            <td>95%以上</td>
+            <td>検証中</td>
+        </tr>
+        <tr>
+            <td>制約違反数</td>
+            <td>0件</td>
+            <td>10件以下</td>
+            <td>検証中</td>
+        </tr>
+        <tr>
+            <td>連続勤務超過</td>
+            <td>0件</td>
+            <td>0件</td>
+            <td>0件 ✓</td>
+        </tr>
+        <tr>
+            <td>生成時間</td>
+            <td>3分以内</td>
+            <td>5分以内</td>
+            <td>2-4分</td>
+        </tr>
+    </table>
+
+    <h2>問題分析フレームワーク</h2>
+
+    <div class="card">
+        <h3>エラー発生時のチェックリスト</h3>
+        <ol>
+            <li><strong>エラーの種類を特定</strong>
+                <ul>
+                    <li>人員不足（どのシフト？どの日？）</li>
+                    <li>連続勤務超過</li>
+                    <li>時間帯希望違反</li>
+                    <li>パート職員の曜日違反</li>
+                </ul>
+            </li>
+            <li><strong>根本原因を分析</strong>
+                <ul>
+                    <li>プロンプトに制約が含まれているか？</li>
+                    <li>AIが制約を理解しているか？（警告が明確か）</li>
+                    <li>データに問題はないか？</li>
+                </ul>
+            </li>
+            <li><strong>改善策を検討</strong>
+                <ul>
+                    <li>既存の動的制約を強化？</li>
+                    <li>新しい動的制約を追加？</li>
+                    <li>プロンプトの表現を変更？</li>
+                </ul>
+            </li>
+        </ol>
+    </div>
+
+    <h2>今後のロードマップ</h2>
+
+    <table>
+        <tr>
+            <th>フェーズ</th>
+            <th>項目</th>
+            <th>優先度</th>
+        </tr>
+        <tr>
+            <td>短期</td>
+            <td>自動リトライ機構の追加</td>
+            <td>高</td>
+        </tr>
+        <tr>
+            <td>短期</td>
+            <td>Evalシステムの構築（複数テストケース自動実行）</td>
+            <td>高</td>
+        </tr>
+        <tr>
+            <td>中期</td>
+            <td>ハイブリッドアプローチ（LLM + 制約ソルバー）</td>
+            <td>中</td>
+        </tr>
+        <tr>
+            <td>長期</td>
+            <td>シフトデータ蓄積・Fine-tuning検討</td>
+            <td>低</td>
+        </tr>
+    </table>
+
+    <footer style="margin-top: 3rem; padding-top: 1rem; border-top: 1px solid #e5e7eb; color: #6b7280; font-size: 0.875rem;">
+        <p>AI Care Shift Scheduler - AI Quality Improvement Guide</p>
+        <p>最終更新: 2025-12-08</p>
+    </footer>
+</body>
+</html>
