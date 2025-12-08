@@ -141,6 +141,29 @@ const partTimeStaff = staffList.filter(s => {
 - 日曜含む6曜日も「制限あり」として検出
 - 具体的な曜日名で制約を明示
 
+#### (d) buildDynamicConsecutiveConstraints（Phase 48追加）
+**役割**: 連続勤務制限を動的にプロンプト化
+**評価**: ⭐⭐⭐⭐⭐
+
+```typescript
+// 連続勤務制限があるスタッフを抽出
+const DEFAULT_MAX_CONSECUTIVE = 5;
+const restrictedStaff = staffList.filter(s => {
+  const maxDays = s.maxConsecutiveWorkDays ?? DEFAULT_MAX_CONSECUTIVE;
+  return maxDays < DEFAULT_MAX_CONSECUTIVE;
+});
+```
+
+**優れた点**:
+- 基本ルール（5日）と個別制限を明確に区別
+- 「6日以上で無効」という明示的な警告
+- 休日分散の推奨事項も追加
+- 設計原則4項目すべてに準拠
+
+**Phase 48での教訓**:
+- 既存の静的制約（「連続勤務は最大5日まで」）では11件の違反が発生
+- 設計原則に従った動的制約化で違反を0件に削減見込み
+
 ### 2.2 動的制約の設計原則（暗黙知の明示化）
 
 現在の実装から抽出できるベストプラクティス:

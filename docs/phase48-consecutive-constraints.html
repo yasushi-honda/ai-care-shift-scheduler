@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Phase 48: 連続勤務制約の動的生成</title>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+  <style>
+    :root {
+      --primary: #2563eb;
+      --secondary: #64748b;
+      --success: #22c55e;
+      --warning: #f59e0b;
+      --danger: #ef4444;
+      --bg: #f8fafc;
+      --card-bg: #ffffff;
+      --text: #1e293b;
+      --border: #e2e8f0;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      padding: 1rem;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 2rem;
+      padding: 1.5rem;
+      background: linear-gradient(135deg, var(--primary), #1d4ed8);
+      color: white;
+      border-radius: 12px;
+    }
+
+    header h1 {
+      font-size: 1.75rem;
+      margin-bottom: 0.5rem;
+    }
+
+    header p {
+      opacity: 0.9;
+      font-size: 0.95rem;
+    }
+
+    .status-badge {
+      display: inline-block;
+      padding: 0.25rem 0.75rem;
+      border-radius: 9999px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      margin-top: 0.5rem;
+    }
+
+    .status-complete {
+      background: var(--success);
+      color: white;
+    }
+
+    .card {
+      background: var(--card-bg);
+      border-radius: 12px;
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+
+    .card h2 {
+      font-size: 1.25rem;
+      margin-bottom: 1rem;
+      padding-bottom: 0.5rem;
+      border-bottom: 2px solid var(--border);
+      color: var(--primary);
+    }
+
+    .card h3 {
+      font-size: 1rem;
+      margin: 1rem 0 0.5rem;
+      color: var(--secondary);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 1rem 0;
+    }
+
+    th, td {
+      padding: 0.75rem;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+    }
+
+    th {
+      background: var(--bg);
+      font-weight: 600;
+    }
+
+    .check-icon {
+      color: var(--success);
+    }
+
+    .cross-icon {
+      color: var(--danger);
+    }
+
+    pre {
+      background: #1e293b;
+      color: #e2e8f0;
+      padding: 1rem;
+      border-radius: 8px;
+      overflow-x: auto;
+      font-size: 0.85rem;
+      line-height: 1.5;
+    }
+
+    code {
+      font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 1rem;
+    }
+
+    .metric-card {
+      background: linear-gradient(135deg, var(--primary), #3b82f6);
+      color: white;
+      padding: 1.25rem;
+      border-radius: 12px;
+      text-align: center;
+    }
+
+    .metric-card.success {
+      background: linear-gradient(135deg, var(--success), #16a34a);
+    }
+
+    .metric-card.warning {
+      background: linear-gradient(135deg, var(--warning), #d97706);
+    }
+
+    .metric-card .value {
+      font-size: 2rem;
+      font-weight: 700;
+    }
+
+    .metric-card .label {
+      font-size: 0.85rem;
+      opacity: 0.9;
+    }
+
+    .timeline {
+      position: relative;
+      padding-left: 2rem;
+    }
+
+    .timeline::before {
+      content: '';
+      position: absolute;
+      left: 0.5rem;
+      top: 0;
+      bottom: 0;
+      width: 2px;
+      background: var(--border);
+    }
+
+    .timeline-item {
+      position: relative;
+      margin-bottom: 1.5rem;
+    }
+
+    .timeline-item::before {
+      content: '';
+      position: absolute;
+      left: -1.75rem;
+      top: 0.25rem;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: var(--primary);
+    }
+
+    .timeline-item.done::before {
+      background: var(--success);
+    }
+
+    .principle-list {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 1rem;
+    }
+
+    .principle-item {
+      background: var(--bg);
+      padding: 1rem;
+      border-radius: 8px;
+      border-left: 4px solid var(--primary);
+    }
+
+    .principle-item h4 {
+      color: var(--primary);
+      margin-bottom: 0.5rem;
+    }
+
+    .mermaid {
+      text-align: center;
+      margin: 1rem 0;
+    }
+
+    footer {
+      text-align: center;
+      padding: 1.5rem;
+      color: var(--secondary);
+      font-size: 0.85rem;
+    }
+
+    a {
+      color: var(--primary);
+      text-decoration: none;
+    }
+
+    a:hover {
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>Phase 48: 連続勤務制約の動的生成</h1>
+      <p>AI生成シフトの連勤超過問題を動的制約生成で解決</p>
+      <span class="status-badge status-complete">完了</span>
+    </header>
+
+    <!-- 概要 -->
+    <div class="card">
+      <h2>1. 概要</h2>
+      <p>Phase 47でパート職員制約を追加後、AI生成シフトで11件の連続勤務超過が発生。
+      設計原則に照らし合わせた結果、連続勤務制約だけが静的記述のままであることが判明。
+      動的制約生成パターンに従って<code>buildDynamicConsecutiveConstraints</code>関数を実装。</p>
+    </div>
+
+    <!-- Before/After -->
+    <div class="card">
+      <h2>2. Before / After</h2>
+      <div class="grid">
+        <div class="metric-card warning">
+          <div class="label">Before（制約違反）</div>
+          <div class="value">15件</div>
+          <div class="label">連勤超過11件 + 人員不足4件</div>
+        </div>
+        <div class="metric-card success">
+          <div class="label">After（期待値）</div>
+          <div class="value">4-5件</div>
+          <div class="label">連勤超過0件 + 人員不足4件</div>
+        </div>
+        <div class="metric-card">
+          <div class="label">総合スコア改善</div>
+          <div class="value">5 → 70+</div>
+          <div class="label">SLA目標達成見込み</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 根本原因分析 -->
+    <div class="card">
+      <h2>3. 根本原因分析（ドキュメントドリブン）</h2>
+      <p>設計原則（<code>ai-production-quality-review-2025-12-08.md</code>）との照合結果:</p>
+      <table>
+        <thead>
+          <tr>
+            <th>原則</th>
+            <th>パート職員</th>
+            <th>時間帯希望</th>
+            <th>看護師配置</th>
+            <th>連続勤務</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>1. データ駆動型</td>
+            <td class="check-icon">✅</td>
+            <td class="check-icon">✅</td>
+            <td class="check-icon">✅</td>
+            <td class="cross-icon">❌ 固定値</td>
+          </tr>
+          <tr>
+            <td>2. 条件付き生成</td>
+            <td class="check-icon">✅</td>
+            <td class="check-icon">✅</td>
+            <td class="check-icon">✅</td>
+            <td class="cross-icon">❌ 一律記載</td>
+          </tr>
+          <tr>
+            <td>3. 明示的な警告</td>
+            <td class="check-icon">✅</td>
+            <td class="check-icon">✅</td>
+            <td class="check-icon">✅</td>
+            <td class="cross-icon">❌ なし</td>
+          </tr>
+          <tr>
+            <td>4. 可読性重視</td>
+            <td class="check-icon">✅</td>
+            <td class="check-icon">✅</td>
+            <td class="check-icon">✅</td>
+            <td class="cross-icon">❌ なし</td>
+          </tr>
+        </tbody>
+      </table>
+      <p><strong>結論</strong>: 連続勤務制約だけが設計原則に従っていなかった。</p>
+    </div>
+
+    <!-- 実装内容 -->
+    <div class="card">
+      <h2>4. 実装内容</h2>
+      <h3>buildDynamicConsecutiveConstraints関数</h3>
+      <pre><code>function buildDynamicConsecutiveConstraints(staffList: Staff[]): string {
+  const DEFAULT_MAX_CONSECUTIVE = 5;
+
+  // 連続勤務制限があるスタッフを抽出（データ駆動型）
+  const restrictedStaff = staffList.filter(s => {
+    const maxDays = s.maxConsecutiveWorkDays ?? DEFAULT_MAX_CONSECUTIVE;
+    return maxDays < DEFAULT_MAX_CONSECUTIVE;
+  });
+
+  let constraints = `
+## ⚠️ 【連続勤務制約】（厳守）
+**基本ルール**: すべてのスタッフは連続勤務**最大5日**までです。
+6日以上連続で勤務させると、シフトが無効になります。
+
+**推奨**: 休日を適切に分散させ、連続勤務は3〜4日に抑えることを推奨します。
+`;
+
+  // 個別制限があるスタッフがいる場合（条件付き生成）
+  if (restrictedStaff.length > 0) {
+    const individualConstraints = restrictedStaff.map(s => {
+      const maxDays = s.maxConsecutiveWorkDays ?? DEFAULT_MAX_CONSECUTIVE;
+      return `- ${s.name}: **最大${maxDays}日**まで`;
+    }).join('\n');
+
+    constraints += `
+### 個別制限（より厳しい制限）
+以下のスタッフは基本ルールより厳しい制限があります：
+${individualConstraints}
+`;
+  }
+
+  return constraints;
+}</code></pre>
+    </div>
+
+    <!-- 設計原則 -->
+    <div class="card">
+      <h2>5. 動的制約生成の設計原則</h2>
+      <div class="principle-list">
+        <div class="principle-item">
+          <h4>1. データ駆動型</h4>
+          <p>ハードコードせず、staffListから動的に抽出</p>
+        </div>
+        <div class="principle-item">
+          <h4>2. 条件付き生成</h4>
+          <p>該当者がいなければ空文字/基本ルールのみ返す</p>
+        </div>
+        <div class="principle-item">
+          <h4>3. 明示的な警告</h4>
+          <p>「この制約に違反したシフトは無効です」と明記</p>
+        </div>
+        <div class="principle-item">
+          <h4>4. 可読性重視</h4>
+          <p>具体的なスタッフ名と制限値をリスト化</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- 実装済み動的制約 -->
+    <div class="card">
+      <h2>6. 実装済み動的制約一覧</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>関数名</th>
+            <th>Phase</th>
+            <th>役割</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>buildDynamicTimeSlotConstraints</code></td>
+            <td>44</td>
+            <td>時間帯希望（日勤のみ/夜勤のみ）</td>
+          </tr>
+          <tr>
+            <td><code>buildDynamicNurseConstraints</code></td>
+            <td>44</td>
+            <td>看護師配置要件</td>
+          </tr>
+          <tr>
+            <td><code>buildDynamicPartTimeConstraints</code></td>
+            <td>47</td>
+            <td>パート職員の曜日・日数制限</td>
+          </tr>
+          <tr>
+            <td><code>buildDynamicConsecutiveConstraints</code></td>
+            <td>48</td>
+            <td>連続勤務制限</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- フロー図 -->
+    <div class="card">
+      <h2>7. 動的制約生成フロー</h2>
+      <div class="mermaid">
+flowchart TD
+    A[staffList] --> B[buildDynamicConsecutiveConstraints]
+    B --> C{個別制限<br/>スタッフあり?}
+    C -->|いない| D[基本ルールのみ出力]
+    C -->|いる| E[基本ルール + 個別制限出力]
+    D --> F[buildSkeletonPrompt]
+    E --> F
+    F --> G[Gemini API]
+    G --> H[ScheduleSkeleton生成]
+      </div>
+    </div>
+
+    <!-- SLA目標 -->
+    <div class="card">
+      <h2>8. SLA目標</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>指標</th>
+            <th>目標値</th>
+            <th>Phase 47後</th>
+            <th>Phase 48後（期待）</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>充足率</td>
+            <td>95%以上</td>
+            <td class="check-icon">97% ✅</td>
+            <td class="check-icon">97% ✅</td>
+          </tr>
+          <tr>
+            <td>制約違反</td>
+            <td>10件以下</td>
+            <td class="cross-icon">15件 ❌</td>
+            <td class="check-icon">4-5件 ✅</td>
+          </tr>
+          <tr>
+            <td>総合スコア</td>
+            <td>70点以上</td>
+            <td class="cross-icon">5点 ❌</td>
+            <td class="check-icon">70-80点 ✅</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- 検証方法 -->
+    <div class="card">
+      <h2>9. 検証方法</h2>
+      <div class="timeline">
+        <div class="timeline-item done">
+          <strong>Step 1: デプロイ確認</strong>
+          <p><code>gh run list --limit 1</code> でGitHub Actionsの成功を確認</p>
+        </div>
+        <div class="timeline-item">
+          <strong>Step 2: 本番テスト</strong>
+          <p>デモログインでAI自動生成を実行し、評価パネルを確認</p>
+        </div>
+        <div class="timeline-item">
+          <strong>Step 3: ログ確認</strong>
+          <p><code>gcloud functions logs read generateShift --region=asia-northeast1</code></p>
+        </div>
+      </div>
+    </div>
+
+    <!-- 関連ドキュメント -->
+    <div class="card">
+      <h2>10. 関連ドキュメント</h2>
+      <ul>
+        <li><a href=".kiro/phase48-consecutive-constraints-implementation-2025-12-08.md">Phase 48実装記録</a></li>
+        <li><a href=".kiro/ai-production-quality-review-2025-12-08.md">AI品質レビュー</a></li>
+        <li><a href=".kiro/HANDOFF-2025-12-08.md">引継ぎドキュメント</a></li>
+        <li><a href="phase44-ai-shift-pipeline.html">Phase 44: AIシフト生成パイプライン</a></li>
+      </ul>
+    </div>
+
+    <footer>
+      <p>作成者: Claude Opus 4.5 | 最終更新: 2025-12-08</p>
+      <p><a href="index.html">ドキュメント一覧に戻る</a></p>
+    </footer>
+  </div>
+
+  <script>
+    mermaid.initialize({ startOnLoad: true, theme: 'default' });
+  </script>
+</body>
+</html>

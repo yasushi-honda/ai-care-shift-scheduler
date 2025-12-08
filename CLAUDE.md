@@ -837,3 +837,79 @@ await db.runTransaction(async (transaction) => {
 - [ポストモーテム](.kiro/postmortem-bug009-permission-sync-2025-12-08.md)
 - [BUG-009修正記録](.kiro/bugfix-demo-members-2025-12-08.md)
 - Serenaメモリ: `bug009_permission_sync_postmortem_2025-12-08`
+
+---
+
+## 動的制約生成パターン（重要 - Phase 44-48で確立）
+
+**背景**: Phase 44-48でAI生成品質を改善するために確立した設計パターン。静的な制約記述ではAIが無視しやすいため、動的に具体的な制約を生成する。
+
+### 設計原則（4項目）
+
+| 原則 | 説明 | 例 |
+|-----|------|-----|
+| データ駆動型 | ハードコードせずスタッフデータから抽出 | `staffList.filter(...)` |
+| 条件付き生成 | 該当者がいなければ空文字を返す | `if (staff.length === 0) return ''` |
+| 明示的な警告 | 「この制約に違反したシフトは無効」 | `⚠️ 【制約名】（厳守）` |
+| 可読性重視 | 具体的なスタッフ名をリスト化 | `- 田中太郎: **最大3日**まで` |
+
+### 実装テンプレート
+
+```typescript
+function buildDynamic[ConstraintName]Constraints(staffList: Staff[]): string {
+  // 1. 該当スタッフを抽出（データ駆動型）
+  const targetStaff = staffList.filter(s => /* 条件 */);
+
+  // 2. 基本制約を記述
+  let constraints = `
+## ⚠️ 【制約名】（厳守）
+基本ルール...
+
+**重要**: この制約に違反したシフトは無効です。
+`;
+
+  // 3. 該当者がいなければ早期リターン（条件付き生成）
+  if (targetStaff.length === 0) {
+    return constraints;  // または空文字
+  }
+
+  // 4. 個別制限を追加（可読性重視）
+  constraints += `
+### 個別制限
+${targetStaff.map(s => `- ${s.name}: ...`).join('\n')}
+`;
+
+  return constraints;
+}
+```
+
+### 実装済み動的制約一覧
+
+| 関数名 | Phase | 役割 | ファイル |
+|-------|-------|------|---------|
+| `buildDynamicTimeSlotConstraints` | 44 | 時間帯希望（日勤のみ/夜勤のみ） | phased-generation.ts |
+| `buildDynamicNurseConstraints` | 44 | 看護師配置要件 | phased-generation.ts |
+| `buildDynamicPartTimeConstraints` | 47 | パート職員の曜日・日数制限 | phased-generation.ts |
+| `buildDynamicConsecutiveConstraints` | 48 | 連続勤務制限 | phased-generation.ts |
+
+### 新しい制約を追加する際のチェックリスト
+
+1. [ ] 4つの設計原則を満たしているか
+2. [ ] `buildSkeletonPrompt`に組み込んでいるか
+3. [ ] 出力前チェックリストに確認項目を追加したか
+4. [ ] 対応する評価チェックが`EvaluationService`に存在するか
+5. [ ] Serenaメモリを更新したか
+
+### SLA目標
+
+| 指標 | 目標値 | 説明 |
+|-----|-------|------|
+| 充足率 | 95%以上 | 必要人員が満たされている割合 |
+| 制約違反 | 10件以下 | 全種類の違反合計 |
+| 生成時間 | 5分以内 | 15名以下の場合 |
+
+### 参考資料
+
+- [AI品質レビュー](.kiro/ai-production-quality-review-2025-12-08.md)
+- [Phase 48実装記録](.kiro/phase48-consecutive-constraints-implementation-2025-12-08.md)
+- Serenaメモリ: `ai_production_quality_review_2025-12-08`
