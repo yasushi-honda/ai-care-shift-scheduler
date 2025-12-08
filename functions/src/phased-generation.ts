@@ -280,7 +280,10 @@ function buildDynamicStaffingConstraints(
 
 /**
  * Phase 1: 骨子生成用スキーマ
+ * NOTE: BUG-013により現在未使用（responseSchemaとthinkingBudgetの非互換性）
+ * Googleが修正後に再度使用予定
  */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function getSkeletonSchema(daysInMonth: number, hasNightShift: boolean) {
   // 夜勤がない場合は夜勤関連フィールドを含めない
   const staffProperties: Record<string, any> = {
@@ -524,16 +527,17 @@ export async function generateSkeleton(
   console.log('🦴 Phase 1: 骨子生成開始...');
   console.log(`   夜勤シフト: ${hasNightShift ? 'あり' : 'なし（デイサービス）'}`);
 
+  // BUG-013: responseSchemaとthinkingBudgetは非互換（Gemini APIの既知問題）
+  // JSONスキーマを使用するとthinkingBudgetが無視されるため、スキーマを削除
+  // 代わりにプロンプトでJSON形式を明示する
   const result = await client.models.generateContent({
     model: VERTEX_AI_MODEL,
     contents: prompt,
     config: {
       responseMimeType: 'application/json',
-      responseSchema: getSkeletonSchema(daysInMonth, hasNightShift) as any,
+      // responseSchema を削除（thinkingBudgetと非互換）
       temperature: 0.3,
-      maxOutputTokens: 65536,  // Gemini 2.5 Flash thinking mode uses tokens from this budget
-      // 思考トークンを制限（12名スタッフで65535トークン使い切りエラー対策）
-      // BUG-012: @google/genai SDKでthinkingConfigが正しくサポートされる
+      maxOutputTokens: 65536,
       thinkingConfig: {
         thinkingBudget: 16384,  // 思考に16K、残りを出力に使用
       },
@@ -801,16 +805,15 @@ export async function generateDetailedShifts(
 
     const prompt = buildDetailedPrompt(batch, skeleton, requirements, daysInMonth, hasNightShift);
 
+    // BUG-013: responseSchemaとthinkingBudgetは非互換（Gemini APIの既知問題）
     const result = await client.models.generateContent({
       model: VERTEX_AI_MODEL,
       contents: prompt,
       config: {
         responseMimeType: 'application/json',
-        responseSchema: getDetailedShiftSchema(requirements.targetMonth, daysInMonth, shiftTypeNames) as any,
+        // responseSchema を削除（thinkingBudgetと非互換）
         temperature: 0.5,
-        maxOutputTokens: 65536,  // Gemini 2.5 Flash thinking mode uses tokens from this budget
-        // 思考トークンを制限（バッチ処理用）
-        // BUG-012: @google/genai SDKでthinkingConfigが正しくサポートされる
+        maxOutputTokens: 65536,
         thinkingConfig: {
           thinkingBudget: 8192,  // バッチなので8Kで十分
         },
@@ -838,8 +841,9 @@ export async function generateDetailedShifts(
  * @param targetMonth 対象月 (YYYY-MM)
  * @param daysInMonth 月の日数
  * @param shiftTypeNames シフト種類名のリスト（例: ['早番', '日勤', '遅番']）
+ * NOTE: BUG-013により現在未使用（responseSchemaとthinkingBudgetの非互換性）
  */
-function getDetailedShiftSchema(targetMonth: string, daysInMonth: number, shiftTypeNames: string[]) {
+function _getDetailedShiftSchema(targetMonth: string, daysInMonth: number, shiftTypeNames: string[]) {
   // シフト種類に「休」を追加（夜勤がある場合のみ「明け休み」も追加）
   const hasNightShift = shiftTypeNames.some(name => name.includes('夜'));
   const allShiftTypes = [...shiftTypeNames, '休'];
@@ -885,3 +889,8 @@ function getDetailedShiftSchema(targetMonth: string, daysInMonth: number, shiftT
     required: ['schedule'],
   };
 }
+
+// BUG-013: responseSchemaとthinkingBudgetの非互換性により一時的に未使用
+// Googleが修正後に再度使用予定
+void getSkeletonSchema;
+void _getDetailedShiftSchema;

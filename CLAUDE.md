@@ -526,7 +526,34 @@ generationConfig: {
 | generateDetailedShifts | 8192 | バッチ処理、スケルトン参照で思考量削減 |
 | 小規模一括生成 | 16384 | 5名以下、一括で全制約を考慮 |
 
+### responseSchemaとthinkingBudgetの非互換性（BUG-013教訓）
+
+**重要**: `responseSchema`と`thinkingConfig.thinkingBudget`を同時に使用すると、**thinkingBudgetが無視される**（Gemini APIの既知問題）。
+
+```typescript
+// ❌ 間違い: thinkingBudgetが無視される
+config: {
+  responseSchema: getShiftSchema(...),  // JSONスキーマ
+  thinkingConfig: {
+    thinkingBudget: 16384,  // 無視される！
+  },
+}
+
+// ✅ 正しい: responseSchemaを削除
+config: {
+  responseMimeType: 'application/json',  // JSON出力は維持
+  // responseSchema なし
+  thinkingConfig: {
+    thinkingBudget: 16384,  // 正しく機能
+  },
+}
+```
+
+**現状**: JSONスキーマ関数は将来のGoogle修正後に復活予定で保持。
+
 ### propertyOrdering必須（BUG-002教訓）
+
+**注意**: BUG-013の修正により現在responseSchemaは未使用だが、将来復活時は以下を遵守：
 
 responseSchemaには必ず`propertyOrdering`を指定：
 
@@ -585,6 +612,7 @@ setTimeout(() => controller.abort(), 240000);  // ❗ 4分（BUG-010で延長）
 - [BUG-009修正記録](.kiro/bugfix-demo-members-2025-12-08.md) - デモユーザー権限消失
 - [BUG-010修正記録](.kiro/bugfix-timeout-extended-2025-12-08.md) - タイムアウト延長（180s→240s）
 - [BUG-012修正記録](.kiro/bugfix-sdk-migration-2025-12-08.md) - @google/genai SDK移行
+- [BUG-013修正記録](.kiro/bugfix-json-schema-thinking-2025-12-08.md) - JSONスキーマとthinkingBudgetの非互換性
 - [ポストモーテム](.kiro/postmortem-gemini-bugs-2025-12-05.md) - 全体分析
 - Serenaメモリ: `gemini_region_critical_rule`, `gemini_max_output_tokens_critical_rule`, `gemini_thinking_budget_critical_rule`, `cloud_function_custom_token_iam`, `bug012_sdk_migration_2025-12-08`
 

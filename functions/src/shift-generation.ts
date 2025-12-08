@@ -140,20 +140,20 @@ export const generateShift = onRequest(
         const prompt = buildShiftPrompt(staffList, requirements, leaveRequests);
         console.log('📝 プロンプト生成完了');
 
-        // シフト種類名をtimeSlotsから抽出
-        const shiftTypeNames = (requirements.timeSlots || []).map((slot: ShiftTime) => slot.name);
+        // シフト種類名をtimeSlotsから抽出（BUG-013によりスキーマ未使用のため保留）
+        const _shiftTypeNames = (requirements.timeSlots || []).map((slot: ShiftTime) => slot.name);
+        void _shiftTypeNames;  // BUG-013: responseSchemaとthinkingBudgetの非互換性で一時的に未使用
 
         console.log('🤖 Vertex AI 呼び出し開始...');
+        // BUG-013: responseSchemaとthinkingBudgetは非互換（Gemini APIの既知問題）
         const result = await client.models.generateContent({
           model: VERTEX_AI_MODEL,
           contents: prompt,
           config: {
             responseMimeType: 'application/json',
-            responseSchema: getShiftSchema(requirements.targetMonth, shiftTypeNames) as any,
+            // responseSchema を削除（thinkingBudgetと非互換）
             temperature: 0.5,
-            maxOutputTokens: 65536,  // Gemini 2.5 Flash thinking mode uses tokens from this budget
-            // 思考トークンを制限（小規模一括生成用）
-            // BUG-012: @google/genai SDKでthinkingConfigが正しくサポートされる
+            maxOutputTokens: 65536,
             thinkingConfig: {
               thinkingBudget: 16384,  // 5名以下なので16Kで十分
             },
@@ -473,8 +473,9 @@ function formatLeaveRequests(leaveRequests: LeaveRequest, staffList: Staff[]): s
  *
  * @param targetMonth 対象月 (YYYY-MM)
  * @param shiftTypeNames シフト種類名のリスト（例: ['早番', '日勤', '遅番']）
+ * NOTE: BUG-013により現在未使用（responseSchemaとthinkingBudgetの非互換性）
  */
-function getShiftSchema(targetMonth: string, shiftTypeNames: string[]) {
+function _getShiftSchema(targetMonth: string, shiftTypeNames: string[]) {
   // シフト種類に「休」と「明け休み」を追加（夜勤がある場合のみ明け休み）
   const hasNightShift = shiftTypeNames.some(name => name.includes('夜'));
   const allShiftTypes = [...shiftTypeNames, '休'];
@@ -534,3 +535,7 @@ function getShiftSchema(targetMonth: string, shiftTypeNames: string[]) {
     required: ['schedule'],
   };
 }
+
+// BUG-013: responseSchemaとthinkingBudgetの非互換性により一時的に未使用
+// Googleが修正後に再度使用予定
+void _getShiftSchema;
