@@ -887,8 +887,18 @@ export class EvaluationService {
       violationsByLevel[level].push(violation);
     }
 
+    // Phase 53: デバッグログ
+    console.log('📊 [Phase 53] レベル別違反件数:', {
+      level1: violationsByLevel[1].length,
+      level2: violationsByLevel[2].length,
+      level3: violationsByLevel[3].length,
+      level4: violationsByLevel[4].length,
+      level1Violations: violationsByLevel[1].map(v => ({ type: v.type, desc: v.description.substring(0, 50) })),
+    });
+
     // レベル1（絶対必須）違反がある場合は即座に0点
     if (violationsByLevel[1].length > 0) {
+      console.log('⚠️ [Phase 53] レベル1違反があるため0点:', violationsByLevel[1].map(v => v.type));
       return 0;
     }
 
