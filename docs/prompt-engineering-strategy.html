@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>プロンプトエンジニアリング戦略 - AI Care Shift Scheduler</title>
+    <style>
+        :root {
+            --primary: #2563eb;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --purple: #8b5cf6;
+            --gray-50: #f9fafb;
+            --gray-100: #f3f4f6;
+            --gray-700: #374151;
+            --gray-900: #111827;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.6;
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 2rem;
+            background: var(--gray-50);
+            color: var(--gray-900);
+        }
+        h1 { color: var(--primary); border-bottom: 3px solid var(--primary); padding-bottom: 0.5rem; }
+        h2 { color: var(--gray-700); margin-top: 2rem; }
+        h3 { color: var(--purple); }
+        .card {
+            background: white;
+            border-radius: 0.5rem;
+            padding: 1.5rem;
+            margin: 1rem 0;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        .card-danger { border-left: 4px solid var(--danger); }
+        .card-success { border-left: 4px solid var(--success); }
+        .card-warning { border-left: 4px solid var(--warning); }
+        .card-primary { border-left: 4px solid var(--primary); }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1rem 0;
+        }
+        th, td {
+            border: 1px solid #e5e7eb;
+            padding: 0.75rem;
+            text-align: left;
+        }
+        th { background: var(--gray-100); }
+        code {
+            background: var(--gray-100);
+            padding: 0.125rem 0.375rem;
+            border-radius: 0.25rem;
+            font-size: 0.875rem;
+        }
+        pre {
+            background: var(--gray-900);
+            color: #f9fafb;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            overflow-x: auto;
+            font-size: 0.875rem;
+        }
+        .badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.875rem;
+            font-weight: 600;
+        }
+        .badge-primary { background: #dbeafe; color: #1e40af; }
+        .badge-success { background: #d1fae5; color: #065f46; }
+        .badge-warning { background: #fef3c7; color: #92400e; }
+        .option-card {
+            background: white;
+            border-radius: 0.5rem;
+            padding: 1.5rem;
+            margin: 1rem 0;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        .option-card h3 {
+            margin-top: 0;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .flow-diagram {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            padding: 1.5rem;
+            flex-wrap: wrap;
+            background: var(--gray-100);
+            border-radius: 0.5rem;
+        }
+        .flow-step {
+            background: var(--primary);
+            color: white;
+            padding: 0.75rem 1rem;
+            border-radius: 0.5rem;
+            font-weight: 600;
+            font-size: 0.875rem;
+        }
+        .flow-arrow {
+            font-size: 1.25rem;
+            color: var(--gray-700);
+        }
+        .nav { margin-bottom: 2rem; }
+        .nav a { color: var(--primary); margin-right: 1rem; }
+        .pros-cons {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+        .pros { background: #d1fae5; padding: 1rem; border-radius: 0.5rem; }
+        .cons { background: #fee2e2; padding: 1rem; border-radius: 0.5rem; }
+        .pros h4 { color: #065f46; margin-top: 0; }
+        .cons h4 { color: #991b1b; margin-top: 0; }
+        .highlight-box {
+            background: linear-gradient(135deg, #dbeafe, #e0e7ff);
+            padding: 1.5rem;
+            border-radius: 0.5rem;
+            margin: 1rem 0;
+        }
+    </style>
+</head>
+<body>
+    <nav class="nav">
+        <a href="index.html">Home</a>
+        <a href="phase49-staffing-constraints.html">Phase 49</a>
+        <a href="ai-quality-improvement.html">AI品質改善ガイド</a>
+    </nav>
+
+    <h1>プロンプトエンジニアリング戦略</h1>
+
+    <p>
+        <span class="badge badge-primary">Strategy Doc</span>
+        <span class="badge badge-success">2025-12-08</span>
+    </p>
+
+    <div class="card card-danger">
+        <h3>BUG-011: MAX_TOKENSエラーの教訓</h3>
+        <pre>
+finishReason: 'MAX_TOKENS'
+thoughtsTokenCount: 65535
+candidatesTokenCount: 0  &larr; 出力トークンがゼロ！
+        </pre>
+        <p><strong>問題</strong>: プロンプトが複雑すぎて思考トークンを使い切り、出力用の予算が枯渇</p>
+        <p><strong>アンチパターン</strong>: プロンプトを「短くする」だけでは解決しない。情報量を減らすとAI品質が低下する。</p>
+    </div>
+
+    <h2>現在のアーキテクチャ</h2>
+
+    <div class="flow-diagram">
+        <div class="flow-step">Phase 1<br>骨子生成</div>
+        <div class="flow-arrow">&rarr;</div>
+        <div class="flow-step">skeleton</div>
+        <div class="flow-arrow">&rarr;</div>
+        <div class="flow-step">Phase 2<br>詳細生成 &times;N</div>
+        <div class="flow-arrow">&rarr;</div>
+        <div class="flow-step">完成シフト</div>
+    </div>
+
+    <div class="card">
+        <h3>現在のプロンプト構成（Phase 1）</h3>
+        <table>
+            <tr>
+                <th>セクション</th>
+                <th>目的</th>
+                <th>トークン消費</th>
+            </tr>
+            <tr>
+                <td>スタッフ情報</td>
+                <td>各スタッフの制約</td>
+                <td>中〜高（人数比例）</td>
+            </tr>
+            <tr>
+                <td>動的制約</td>
+                <td>パート・連勤・人員配置</td>
+                <td><strong>高</strong>（BUG-011の原因）</td>
+            </tr>
+            <tr>
+                <td>必要人員テーブル</td>
+                <td>シフト別必要人数</td>
+                <td>低</td>
+            </tr>
+            <tr>
+                <td>出力前チェック</td>
+                <td>自己検証リスト</td>
+                <td>低</td>
+            </tr>
+        </table>
+    </div>
+
+    <h2>段階的プロンプト分割アプローチ</h2>
+
+    <div class="highlight-box">
+        <h3>設計原則</h3>
+        <ol>
+            <li><strong>関心の分離</strong>: 各フェーズは1つの関心に集中</li>
+            <li><strong>累積コンテキスト</strong>: 後続フェーズは前フェーズの結果を受け取る</li>
+            <li><strong>検証と修正の分離</strong>: 生成と検証を別フェーズに</li>
+        </ol>
+    </div>
+
+    <h2>提案アーキテクチャ</h2>
+
+    <div class="option-card" style="border-left: 4px solid var(--success);">
+        <h3><span class="badge badge-success">推奨</span> オプションA: 3段階生成</h3>
+
+        <div class="flow-diagram">
+            <div class="flow-step">Phase 1a<br>休日パターン</div>
+            <div class="flow-arrow">&rarr;</div>
+            <div class="flow-step">Phase 1b<br>人員配置検証</div>
+            <div class="flow-arrow">&rarr;</div>
+            <div class="flow-step">Phase 2<br>詳細生成</div>
+        </div>
+
+        <div class="pros-cons">
+            <div class="pros">
+                <h4>メリット</h4>
+                <ul>
+                    <li>各フェーズのプロンプトサイズが小さくなる</li>
+                    <li>思考トークン消費が分散される</li>
+                    <li>問題発生時の切り分けが容易</li>
+                </ul>
+            </div>
+            <div class="cons">
+                <h4>デメリット</h4>
+                <ul>
+                    <li>API呼び出し回数が増加（コスト・レイテンシ）</li>
+                    <li>フェーズ間のデータ整合性管理が必要</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <div class="option-card" style="border-left: 4px solid var(--primary);">
+        <h3><span class="badge badge-primary">短期対応</span> オプションB: 動的制約の遅延注入</h3>
+
+        <div class="flow-diagram">
+            <div class="flow-step">Phase 1<br>基本骨子</div>
+            <div class="flow-arrow">&rarr;</div>
+            <div class="flow-step" style="background: var(--warning);">Phase 1.5<br>検証・修正</div>
+            <div class="flow-arrow">&rarr;</div>
+            <div class="flow-step">Phase 2<br>詳細生成</div>
+        </div>
+
+        <div class="pros-cons">
+            <div class="pros">
+                <h4>メリット</h4>
+                <ul>
+                    <li>現行アーキテクチャへの変更が最小限</li>
+                    <li>検証フェーズで制約を詳細に説明できる</li>
+                </ul>
+            </div>
+            <div class="cons">
+                <h4>デメリット</h4>
+                <ul>
+                    <li>修正が大規模な場合、反復が必要</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <div class="option-card" style="border-left: 4px solid var(--purple);">
+        <h3><span class="badge badge-warning">中長期</span> オプションC: ハイブリッドアプローチ</h3>
+
+        <div class="flow-diagram">
+            <div class="flow-step">LLM<br>休日パターン</div>
+            <div class="flow-arrow">&rarr;</div>
+            <div class="flow-step" style="background: var(--purple);">制約ソルバー<br>人員最適化</div>
+            <div class="flow-arrow">&rarr;</div>
+            <div class="flow-step">LLM<br>詳細割当</div>
+        </div>
+
+        <div class="pros-cons">
+            <div class="pros">
+                <h4>メリット</h4>
+                <ul>
+                    <li>数学的保証が得られる（人員不足ゼロ）</li>
+                    <li>LLMの柔軟性とソルバーの正確性を組み合わせ</li>
+                </ul>
+            </div>
+            <div class="cons">
+                <h4>デメリット</h4>
+                <ul>
+                    <li>実装コストが高い</li>
+                    <li>追加の依存関係（OR-Tools等）</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <h2>トークン予算管理</h2>
+
+    <div class="card">
+        <h3>Gemini 2.5 Flash設定</h3>
+        <table>
+            <tr>
+                <th>パラメータ</th>
+                <th>値</th>
+                <th>説明</th>
+            </tr>
+            <tr>
+                <td><code>maxOutputTokens</code></td>
+                <td>65536</td>
+                <td>思考+出力の合計予算</td>
+            </tr>
+            <tr>
+                <td><code>thinkingBudget</code></td>
+                <td>16384</td>
+                <td>思考トークンの上限</td>
+            </tr>
+            <tr>
+                <td>残り</td>
+                <td>49152</td>
+                <td>出力用トークン</td>
+            </tr>
+        </table>
+    </div>
+
+    <div class="card card-warning">
+        <h3>スタッフ数別の推奨設定</h3>
+        <table>
+            <tr>
+                <th>スタッフ数</th>
+                <th>thinkingBudget</th>
+                <th>推奨対応</th>
+            </tr>
+            <tr>
+                <td>1-5名</td>
+                <td>8192</td>
+                <td>現行アーキテクチャで十分</td>
+            </tr>
+            <tr>
+                <td>6-10名</td>
+                <td>16384</td>
+                <td>現行アーキテクチャ（現在の設定）</td>
+            </tr>
+            <tr>
+                <td>11-15名</td>
+                <td>16384</td>
+                <td>オプションBを検討</td>
+            </tr>
+            <tr>
+                <td>16名以上</td>
+                <td>16384</td>
+                <td>オプションA（3段階化）が必須</td>
+            </tr>
+        </table>
+    </div>
+
+    <h2>プロンプト設計ベストプラクティス</h2>
+
+    <div class="card card-success">
+        <h3>1. 情報密度 vs 明示性</h3>
+        <p><strong>推奨</strong>: 重要な制約は明示的に、背景情報は高密度で</p>
+        <pre>
+## 必須条件（厳守）  &larr; 明示的
+1. 営業日は5名確保
+
+## スタッフ情報  &larr; 表形式で高密度
+| 名前 | 週勤務 | 制約 |
+        </pre>
+    </div>
+
+    <div class="card card-success">
+        <h3>2. 自己検証の組み込み</h3>
+        <pre>
+# 出力前チェック
+&square; 全スタッフ分の出力があるか
+&square; 日曜日が休日に含まれているか
+&square; 連続勤務が5日を超えていないか
+        </pre>
+        <p>AIに自己チェックを促すことで違反率が低下</p>
+    </div>
+
+    <div class="card card-success">
+        <h3>3. ネガティブ指示の活用</h3>
+        <pre>
+**&Warning; 休日を入れすぎないこと！**
+        </pre>
+        <p>「やってはいけないこと」はLLMが従いやすい</p>
+    </div>
+
+    <h2>次のステップ</h2>
+
+    <table>
+        <tr>
+            <th>フェーズ</th>
+            <th>項目</th>
+            <th>優先度</th>
+        </tr>
+        <tr>
+            <td>短期</td>
+            <td>BUG-011修正のテスト・検証</td>
+            <td>高</td>
+        </tr>
+        <tr>
+            <td>短期</td>
+            <td>オプションB（validateSkeleton）の実装検討</td>
+            <td>中</td>
+        </tr>
+        <tr>
+            <td>中期</td>
+            <td>プロンプトトークン計測の自動化</td>
+            <td>中</td>
+        </tr>
+        <tr>
+            <td>長期</td>
+            <td>オプションC（制約ソルバー統合）の検討</td>
+            <td>低</td>
+        </tr>
+    </table>
+
+    <h2>関連ドキュメント</h2>
+    <ul>
+        <li><a href="phase49-staffing-constraints.html">Phase 49: 日別人員配置制約</a></li>
+        <li><a href="ai-quality-improvement.html">AI品質改善ガイド</a></li>
+        <li><a href="phase48-consecutive-constraints.html">Phase 48: 連続勤務制約</a></li>
+    </ul>
+
+    <footer style="margin-top: 3rem; padding-top: 1rem; border-top: 1px solid #e5e7eb; color: #6b7280; font-size: 0.875rem;">
+        <p>AI Care Shift Scheduler - Prompt Engineering Strategy</p>
+        <p>作成日: 2025-12-08</p>
+    </footer>
+</body>
+</html>
