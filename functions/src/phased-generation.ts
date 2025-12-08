@@ -471,14 +471,18 @@ function buildDailyAvailabilityAnalysis(
   }
 
   // 休暇申請を日付→スタッフIDのマップに変換
+  // LeaveRequest型は { [staffId: string]: { [date: string]: LeaveType } } のRecord型
   const leaveByDate: Map<string, Set<string>> = new Map();
-  if (leaveRequests) {
-    for (const leave of leaveRequests as unknown as Array<{ staffId: string; date: string }>) {
-      const dateStr = leave.date;
-      if (!leaveByDate.has(dateStr)) {
-        leaveByDate.set(dateStr, new Set());
+  if (leaveRequests && typeof leaveRequests === 'object') {
+    for (const [staffId, dateMap] of Object.entries(leaveRequests)) {
+      if (dateMap && typeof dateMap === 'object') {
+        for (const dateStr of Object.keys(dateMap)) {
+          if (!leaveByDate.has(dateStr)) {
+            leaveByDate.set(dateStr, new Set());
+          }
+          leaveByDate.get(dateStr)!.add(staffId);
+        }
       }
-      leaveByDate.get(dateStr)!.add(leave.staffId);
     }
   }
 
