@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AIシフト生成アルゴリズム - AI Care Shift Scheduler</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+    <style>
+        :root {
+            --primary: #2563eb;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --gray-50: #f9fafb;
+            --gray-100: #f3f4f6;
+            --gray-700: #374151;
+            --gray-900: #111827;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.6;
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 2rem;
+            background: var(--gray-50);
+            color: var(--gray-900);
+        }
+        h1 { color: var(--primary); border-bottom: 3px solid var(--primary); padding-bottom: 0.5rem; }
+        h2 { color: var(--gray-700); margin-top: 2rem; border-left: 4px solid var(--primary); padding-left: 1rem; }
+        h3 { color: var(--gray-700); }
+        .badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.875rem;
+            font-weight: 600;
+        }
+        .badge-success { background: #d1fae5; color: #065f46; }
+        .badge-warning { background: #fef3c7; color: #92400e; }
+        .badge-info { background: #dbeafe; color: #1e40af; }
+        .card {
+            background: white;
+            border-radius: 0.5rem;
+            padding: 1.5rem;
+            margin: 1rem 0;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        .card-info { border-left: 4px solid var(--primary); }
+        .card-success { border-left: 4px solid var(--success); }
+        .card-warning { border-left: 4px solid var(--warning); }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1rem 0;
+        }
+        th, td {
+            border: 1px solid #e5e7eb;
+            padding: 0.75rem;
+            text-align: left;
+        }
+        th { background: var(--gray-100); }
+        code {
+            background: var(--gray-100);
+            padding: 0.125rem 0.375rem;
+            border-radius: 0.25rem;
+            font-size: 0.875rem;
+        }
+        pre {
+            background: var(--gray-900);
+            color: #f9fafb;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            overflow-x: auto;
+        }
+        .mermaid {
+            background: white;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            margin: 1rem 0;
+        }
+        .nav { margin-bottom: 2rem; }
+        .nav a { color: var(--primary); margin-right: 1rem; text-decoration: none; }
+        .nav a:hover { text-decoration: underline; }
+        .toc {
+            background: white;
+            padding: 1rem 1.5rem;
+            border-radius: 0.5rem;
+            margin-bottom: 2rem;
+        }
+        .toc ul { margin: 0; padding-left: 1.5rem; }
+        .toc li { margin: 0.5rem 0; }
+        .phase-badge {
+            display: inline-block;
+            padding: 0.125rem 0.5rem;
+            border-radius: 0.25rem;
+            font-size: 0.75rem;
+            font-weight: 600;
+            margin-left: 0.5rem;
+        }
+    </style>
+</head>
+<body>
+    <nav class="nav">
+        <a href="index.html">Home</a>
+        <a href="ai-quality-improvement.html">AI品質改善ガイド</a>
+        <a href="phase49-staffing-constraints.html">Phase 49</a>
+        <a href="prompt-engineering-strategy.html">プロンプト戦略</a>
+    </nav>
+
+    <h1>AIシフト生成アルゴリズム</h1>
+    <p><span class="badge badge-info">最終更新: 2025-12-08</span> <span class="badge badge-success">Phase 50</span></p>
+
+    <div class="toc">
+        <strong>目次</strong>
+        <ul>
+            <li><a href="#overview">概要</a></li>
+            <li><a href="#architecture">システムアーキテクチャ</a></li>
+            <li><a href="#phased-generation">段階的生成アルゴリズム</a></li>
+            <li><a href="#dynamic-constraints">動的制約生成パターン</a></li>
+            <li><a href="#improvement-history">改善履歴</a></li>
+            <li><a href="#quality-metrics">品質指標</a></li>
+        </ul>
+    </div>
+
+    <section id="overview">
+        <h2>概要</h2>
+        <div class="card card-info">
+            <p>本システムは<strong>Gemini 2.5 Flash</strong>を使用したLLMベースのシフト自動生成システムです。</p>
+            <p>大規模なスタッフ数（12名以上）に対応するため、<strong>段階的生成（Phased Generation）</strong>アルゴリズムを採用しています。</p>
+        </div>
+
+        <h3>技術スタック</h3>
+        <table>
+            <tr><th>コンポーネント</th><th>技術</th></tr>
+            <tr><td>AI Model</td><td>Gemini 2.5 Flash (gemini-2.5-flash)</td></tr>
+            <tr><td>SDK</td><td>@google/genai (thinkingConfig対応)</td></tr>
+            <tr><td>Region</td><td>asia-northeast1 (東京)</td></tr>
+            <tr><td>Runtime</td><td>Cloud Functions (Node.js 20)</td></tr>
+        </table>
+    </section>
+
+    <section id="architecture">
+        <h2>システムアーキテクチャ</h2>
+
+        <h3>全体フロー</h3>
+        <div class="mermaid">
+sequenceDiagram
+    participant U as ユーザー
+    participant F as Frontend
+    participant CF as Cloud Function
+    participant AI as Gemini 2.5 Flash
+    participant FS as Firestore
+
+    U->>F: AI生成ボタン押下
+    F->>CF: POST /generateShift
+
+    Note over CF: Phase 1: 骨子生成
+    CF->>AI: buildSkeletonPrompt()
+    AI-->>CF: ScheduleSkeleton (休日・夜勤パターン)
+
+    Note over CF: Phase 2: 詳細生成（バッチ処理）
+    loop 各バッチ（10名単位）
+        CF->>AI: buildDetailedPrompt()
+        AI-->>CF: StaffSchedule[]
+    end
+
+    Note over CF: 評価ロジック実行
+    CF->>CF: EvaluationService.evaluateSchedule()
+
+    CF->>FS: シフト保存
+    CF-->>F: 生成結果 + 評価
+    F-->>U: 評価パネル表示
+        </div>
+
+        <h3>コンポーネント図</h3>
+        <div class="mermaid">
+graph TB
+    subgraph "Frontend (React)"
+        A[ShiftManagement.tsx]
+        B[GeminiService]
+    end
+
+    subgraph "Cloud Functions"
+        C[shift-generation.ts]
+        D[phased-generation.ts]
+        E[EvaluationService]
+    end
+
+    subgraph "AI Layer"
+        F[Gemini 2.5 Flash]
+        G[動的制約生成]
+    end
+
+    subgraph "Data Layer"
+        H[Firestore]
+    end
+
+    A --> B
+    B -->|POST /generateShift| C
+    C --> D
+    D --> G
+    G --> F
+    D --> E
+    C --> H
+        </div>
+    </section>
+
+    <section id="phased-generation">
+        <h2>段階的生成アルゴリズム</h2>
+
+        <div class="card card-warning">
+            <h3>なぜ段階的生成が必要か</h3>
+            <p>12名×31日 = 372セルのシフトを一括生成すると、トークン制限や品質低下が発生します。</p>
+            <p>そこで、<strong>骨子生成（Phase 1）→ 詳細生成（Phase 2）</strong>の2段階に分割しています。</p>
+        </div>
+
+        <h3>Phase 1: 骨子生成（Skeleton Generation）</h3>
+        <div class="mermaid">
+flowchart TD
+    A[スタッフ情報入力] --> B[buildSkeletonPrompt]
+    B --> C{夜勤あり?}
+
+    C -->|Yes| D[夜勤・休日パターン生成]
+    C -->|No| E[休日パターンのみ生成]
+
+    D --> F[動的制約追加]
+    E --> F
+
+    F --> G[buildDynamicConsecutiveConstraints]
+    F --> H[buildDynamicPartTimeConstraints]
+    F --> I[buildDynamicStaffingConstraints]
+
+    G --> J[Gemini API呼び出し]
+    H --> J
+    I --> J
+
+    J --> K[ScheduleSkeleton]
+    K --> L[休日: restDays]
+    K --> M[夜勤: nightShiftDays]
+        </div>
+
+        <h4>出力形式</h4>
+        <pre><code>{
+  "staffSchedules": [
+    {
+      "staffId": "staff-001",
+      "staffName": "田中太郎",
+      "restDays": [5, 8, 12, 15, 19, 22, 26, 29],
+      "nightShiftDays": []
+    }
+  ]
+}</code></pre>
+
+        <h3>Phase 2: 詳細生成（Detailed Generation）</h3>
+        <div class="mermaid">
+flowchart TD
+    A[ScheduleSkeleton] --> B[スタッフをバッチ分割]
+    B --> C[バッチ1: 10名]
+    B --> D[バッチ2: 2名]
+
+    C --> E[buildDetailedPrompt]
+    D --> E
+
+    E --> F[各スタッフの勤務日数計算]
+    E --> G[日別配置要件明示]
+    E --> H[シフト配分ルール]
+
+    F --> I[Gemini API呼び出し]
+    G --> I
+    H --> I
+
+    I --> J[shifts形式出力]
+    J --> K[monthlyShifts形式に変換]
+    K --> L[EvaluationService]
+        </div>
+
+        <h4>Phase 50での改善点</h4>
+        <div class="card card-success">
+            <p><strong>問題</strong>: Phase 2で「休日以外の日にも休を出力」してしまい、充足率21%に低下</p>
+            <p><strong>解決</strong>: 各スタッフの休日数・勤務日数を明示し、「休日以外に休を入れてはいけない」ルールを強調</p>
+        </div>
+    </section>
+
+    <section id="dynamic-constraints">
+        <h2>動的制約生成パターン</h2>
+
+        <h3>設計原則</h3>
+        <div class="mermaid">
+mindmap
+  root((動的制約パターン))
+    データ駆動型
+      staffList.filter()
+      ハードコード禁止
+    条件付き生成
+      該当者なければ空文字
+      早期リターン
+    明示的な警告
+      違反は無効
+      厳守を強調
+    可読性重視
+      スタッフ名リスト化
+      具体例を示す
+        </div>
+
+        <h3>実装済み動的制約一覧</h3>
+        <table>
+            <tr>
+                <th>Phase</th>
+                <th>関数名</th>
+                <th>役割</th>
+                <th>適用先</th>
+            </tr>
+            <tr>
+                <td><span class="phase-badge" style="background:#dbeafe;color:#1e40af;">44</span></td>
+                <td>buildDynamicTimeSlotConstraints</td>
+                <td>時間帯希望（日勤のみ/夜勤のみ）</td>
+                <td>Phase 2</td>
+            </tr>
+            <tr>
+                <td><span class="phase-badge" style="background:#dbeafe;color:#1e40af;">44</span></td>
+                <td>buildDynamicNurseConstraints</td>
+                <td>看護師配置要件</td>
+                <td>Phase 2</td>
+            </tr>
+            <tr>
+                <td><span class="phase-badge" style="background:#fef3c7;color:#92400e;">47</span></td>
+                <td>buildDynamicPartTimeConstraints</td>
+                <td>パート職員の曜日・日数制限</td>
+                <td>Phase 1</td>
+            </tr>
+            <tr>
+                <td><span class="phase-badge" style="background:#fef3c7;color:#92400e;">48</span></td>
+                <td>buildDynamicConsecutiveConstraints</td>
+                <td>連続勤務制限</td>
+                <td>Phase 1</td>
+            </tr>
+            <tr>
+                <td><span class="phase-badge" style="background:#d1fae5;color:#065f46;">49</span></td>
+                <td>buildDynamicStaffingConstraints</td>
+                <td>日別必要勤務人数</td>
+                <td>Phase 1</td>
+            </tr>
+        </table>
+
+        <h3>クラス図</h3>
+        <div class="mermaid">
+classDiagram
+    class PhasedGeneration {
+        +generateSkeleton(staffList, requirements)
+        +generateDetailedShifts(staffList, skeleton, requirements)
+        -buildSkeletonPrompt()
+        -buildDetailedPrompt()
+    }
+
+    class DynamicConstraints {
+        +buildDynamicTimeSlotConstraints()
+        +buildDynamicNurseConstraints()
+        +buildDynamicPartTimeConstraints()
+        +buildDynamicConsecutiveConstraints()
+        +buildDynamicStaffingConstraints()
+    }
+
+    class EvaluationService {
+        +evaluateSchedule(schedule, requirements)
+        -checkStaffShortage()
+        -checkConsecutiveWork()
+        -checkNurseRequirements()
+    }
+
+    PhasedGeneration --> DynamicConstraints : uses
+    PhasedGeneration --> EvaluationService : evaluates
+        </div>
+    </section>
+
+    <section id="improvement-history">
+        <h2>改善履歴</h2>
+
+        <div class="mermaid">
+timeline
+    title AIシフト生成品質改善の歴史
+    section Phase 44-46
+        Phase 44 : 動的制約パターン確立
+                 : TimeSlot/Nurse制約追加
+        Phase 45 : プログレス表示追加
+        Phase 46 : バグ修正(BUG-008~010)
+    section Phase 47-49
+        Phase 47 : パート職員曜日制限
+                 : 曜日制限違反0件達成
+        Phase 48 : 連続勤務制限
+                 : 連続勤務超過0件達成
+        Phase 49 : 日別人員配置制約
+                 : Phase 1骨子改善
+    section Phase 50
+        Phase 50 : Phase 2詳細改善
+                 : 休日以外の休出力防止
+                 : 充足率改善目標
+        </div>
+
+        <h3>Phase別の問題と解決</h3>
+        <table>
+            <tr>
+                <th>Phase</th>
+                <th>問題</th>
+                <th>根本原因</th>
+                <th>解決策</th>
+                <th>結果</th>
+            </tr>
+            <tr>
+                <td>47</td>
+                <td>パート曜日制限違反</td>
+                <td>制約がプロンプトに未記載</td>
+                <td>buildDynamicPartTimeConstraints追加</td>
+                <td style="color:green;">0件達成</td>
+            </tr>
+            <tr>
+                <td>48</td>
+                <td>連続勤務超過11件</td>
+                <td>静的な一文のみでAIが無視</td>
+                <td>buildDynamicConsecutiveConstraints追加</td>
+                <td style="color:green;">0件達成</td>
+            </tr>
+            <tr>
+                <td>49</td>
+                <td>人員不足14件</td>
+                <td>Phase 1で休日が偏る</td>
+                <td>buildDynamicStaffingConstraints追加</td>
+                <td style="color:orange;">検証中</td>
+            </tr>
+            <tr>
+                <td>50</td>
+                <td>人員不足77件（充足率21%）</td>
+                <td>Phase 2で休日以外に休を出力</td>
+                <td>Phase 2プロンプト強化</td>
+                <td style="color:orange;">検証中</td>
+            </tr>
+        </table>
+    </section>
+
+    <section id="quality-metrics">
+        <h2>品質指標（SLA）</h2>
+
+        <table>
+            <tr>
+                <th>指標</th>
+                <th>目標値</th>
+                <th>許容範囲</th>
+                <th>測定方法</th>
+            </tr>
+            <tr>
+                <td>人員充足率</td>
+                <td>100%</td>
+                <td>95%以上</td>
+                <td>EvaluationService.fulfillmentRate</td>
+            </tr>
+            <tr>
+                <td>制約違反数</td>
+                <td>0件</td>
+                <td>10件以下</td>
+                <td>EvaluationService.violationCount</td>
+            </tr>
+            <tr>
+                <td>連続勤務超過</td>
+                <td>0件</td>
+                <td>0件</td>
+                <td>checkConsecutiveWork()</td>
+            </tr>
+            <tr>
+                <td>生成時間</td>
+                <td>3分以内</td>
+                <td>5分以内</td>
+                <td>Cloud Functionsログ</td>
+            </tr>
+        </table>
+
+        <h3>評価フロー</h3>
+        <div class="mermaid">
+flowchart LR
+    A[生成結果] --> B{充足率 >= 95%?}
+    B -->|Yes| C{違反数 <= 10?}
+    B -->|No| F[要改善]
+    C -->|Yes| D{連続勤務超過 = 0?}
+    C -->|No| F
+    D -->|Yes| E[SLA達成]
+    D -->|No| F
+        </div>
+    </section>
+
+    <footer style="margin-top: 3rem; padding-top: 1rem; border-top: 1px solid #e5e7eb; color: #6b7280; font-size: 0.875rem;">
+        <p>作成: Claude Opus 4.5 | 最終更新: 2025-12-08 | <a href="https://github.com/yasushi-honda/ai-care-shift-scheduler">GitHub</a></p>
+    </footer>
+
+    <script>
+        mermaid.initialize({ startOnLoad: true, theme: 'default' });
+    </script>
+</body>
+</html>
