@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BUG-010: タイムアウト延長修正記録 - AI介護シフトスケジューラー</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+    <style>
+        :root {
+            --primary-color: #2c3e50;
+            --secondary-color: #3498db;
+            --success-color: #27ae60;
+            --danger-color: #e74c3c;
+            --warning-color: #f39c12;
+            --bg-color: #ecf0f1;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.6;
+            color: var(--primary-color);
+            background: var(--bg-color);
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        header {
+            background: linear-gradient(135deg, var(--secondary-color), #2980b9);
+            color: white;
+            padding: 30px 20px;
+            text-align: center;
+        }
+        header h1 { font-size: 1.8rem; margin-bottom: 10px; }
+        header p { opacity: 0.9; }
+        .badge {
+            display: inline-block;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: bold;
+            margin: 5px;
+        }
+        .badge-medium { background: var(--warning-color); color: white; }
+        .badge-fixed { background: var(--success-color); color: white; }
+        .card {
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin: 20px 0;
+            overflow: hidden;
+        }
+        .card-header {
+            background: var(--primary-color);
+            color: white;
+            padding: 15px 20px;
+            font-weight: bold;
+        }
+        .card-body { padding: 20px; }
+        .error-box {
+            background: #fdedec;
+            border-left: 4px solid var(--danger-color);
+            padding: 15px;
+            margin: 15px 0;
+            font-family: monospace;
+            font-size: 0.9rem;
+            overflow-x: auto;
+        }
+        .fix-box {
+            background: #eafaf1;
+            border-left: 4px solid var(--success-color);
+            padding: 15px;
+            margin: 15px 0;
+        }
+        .info-box {
+            background: #ebf5fb;
+            border-left: 4px solid var(--secondary-color);
+            padding: 15px;
+            margin: 15px 0;
+        }
+        .mermaid {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 15px 0;
+            overflow-x: auto;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: left;
+        }
+        th { background: var(--primary-color); color: white; }
+        tr:nth-child(even) { background: #f9f9f9; }
+        code {
+            background: #f4f4f4;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+        }
+        pre {
+            background: #2c3e50;
+            color: #ecf0f1;
+            padding: 15px;
+            border-radius: 8px;
+            overflow-x: auto;
+            margin: 15px 0;
+        }
+        pre code { background: none; color: inherit; }
+        .nav-links {
+            background: var(--primary-color);
+            padding: 10px 20px;
+        }
+        .nav-links a {
+            color: white;
+            text-decoration: none;
+            margin-right: 20px;
+        }
+        .nav-links a:hover { text-decoration: underline; }
+        .timeline-visual {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin: 15px 0;
+            flex-wrap: wrap;
+        }
+        .timeline-item {
+            background: var(--secondary-color);
+            color: white;
+            padding: 10px 15px;
+            border-radius: 5px;
+            text-align: center;
+            min-width: 100px;
+        }
+        .timeline-arrow {
+            font-size: 1.5rem;
+            color: var(--primary-color);
+        }
+    </style>
+</head>
+<body>
+    <nav class="nav-links">
+        <a href="index.html">ホーム</a>
+        <a href="technical.html">技術ドキュメント</a>
+        <a href="bugfix-thinking-budget-2025-12-08.html">BUG-008</a>
+        <a href="bugfix-demo-members-2025-12-08.html">BUG-009</a>
+        <a href="handoff.html">AI引継ぎ</a>
+    </nav>
+
+    <header>
+        <h1>BUG-010: タイムアウト延長修正記録</h1>
+        <p>12名スタッフでクライアント側タイムアウトが不足する問題</p>
+        <div style="margin-top: 15px;">
+            <span class="badge badge-medium">重大度: 中</span>
+            <span class="badge badge-fixed">修正済み</span>
+        </div>
+    </header>
+
+    <div class="container">
+        <!-- 概要 -->
+        <div class="card">
+            <div class="card-header">問題概要</div>
+            <div class="card-body">
+                <h3>症状</h3>
+                <div class="error-box">
+                    <strong>コンソールエラー:</strong><br>
+                    AbortError: signal is aborted without reason<br><br>
+                    <strong>UIメッセージ:</strong><br>
+                    リクエストがタイムアウトしました。シフト生成に時間がかかっています。
+                </div>
+
+                <h3>発生条件</h3>
+                <ul>
+                    <li>12名スタッフ（Phase 46でパート職員4名追加後）</li>
+                    <li>Gemini 2.5 Flash思考モードで処理時間が3分超過</li>
+                    <li>クライアント側タイムアウト180秒を超過</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- 原因分析 -->
+        <div class="card">
+            <div class="card-header">根本原因</div>
+            <div class="card-body">
+                <h3>処理時間の分析</h3>
+                <div class="mermaid">
+                    gantt
+                        title シフト生成処理時間（12名スタッフ）
+                        dateFormat ss
+                        axisFormat %S秒
+
+                        section Phase 1
+                        骨子生成（思考27K tokens）: p1, 00, 86s
+
+                        section Phase 2
+                        Batch 1（10名）: p2a, after p1, 64s
+                        Batch 2（2名）: p2b, after p2a, 48s
+
+                        section タイムアウト
+                        クライアント180秒: milestone, crit, 180, 0s
+                </div>
+
+                <div class="info-box">
+                    <strong>処理時間の内訳:</strong>
+                    <table>
+                        <tr><th>フェーズ</th><th>所要時間</th><th>累計</th></tr>
+                        <tr><td>Phase 1: 骨子生成</td><td>86秒</td><td>86秒</td></tr>
+                        <tr><td>Phase 2 Batch 1</td><td>64秒</td><td>150秒</td></tr>
+                        <tr><td>Phase 2 Batch 2</td><td>48秒</td><td>198秒</td></tr>
+                    </table>
+                    <p><strong>結論:</strong> 198秒 > 180秒（タイムアウト）→ AbortError</p>
+                </div>
+
+                <h3>問題の構造</h3>
+                <div class="mermaid">
+                    flowchart LR
+                        A[クライアント] -->|リクエスト| B[Cloud Functions]
+                        B -->|Gemini API| C[Vertex AI]
+                        C -->|198秒後| B
+                        B -->|レスポンス| A
+
+                        style A fill:#e74c3c,color:white
+
+                        subgraph timeout[タイムアウト設定]
+                            D[クライアント: 180秒]
+                            E[サーバー: 300秒]
+                        end
+                </div>
+            </div>
+        </div>
+
+        <!-- 修正内容 -->
+        <div class="card">
+            <div class="card-header">修正内容</div>
+            <div class="card-body">
+                <h3>タイムアウト延長</h3>
+                <div class="fix-box">
+                    <strong>修正コード (services/geminiService.ts):</strong>
+                    <pre><code>// 修正前
+const timeoutId = setTimeout(() => controller.abort(), 180000); // 3分
+
+// 修正後
+// タイムアウト設定（4分 = 240秒）
+// Gemini 2.5 Flash思考モードにより、12名規模で約3-4分かかる
+// BUG-010対策: 180秒では12名スタッフで不足するため延長
+const timeoutId = setTimeout(() => controller.abort(), 240000); // 4分</code></pre>
+                </div>
+
+                <h3>デバッグログ強化（BUG-009教訓）</h3>
+                <div class="fix-box">
+                    <strong>追加コード (src/contexts/AuthContext.tsx):</strong>
+                    <pre><code>// BUG-009対策: 権限情報を明示的にログ出力
+const facilityRoles = userProfile?.facilities?.map((f) => ({
+  facilityId: f.facilityId,
+  role: f.role,
+})) || [];
+console.log('[Phase 21 Debug] AuthContext:', {
+  currentUser: user?.uid || null,
+  userProfileExists: !!userProfile,
+  selectedFacilityId,
+  facilityRoles, // 権限情報を追加
+});</code></pre>
+                </div>
+
+                <h3>タイムアウト設計原則</h3>
+                <div class="mermaid">
+                    flowchart LR
+                        A[想定処理時間<br>200秒] --> B[クライアント<br>240秒]
+                        B --> C[サーバー<br>300秒]
+
+                        style A fill:#27ae60,color:white
+                        style B fill:#3498db,color:white
+                        style C fill:#2c3e50,color:white
+                </div>
+
+                <table>
+                    <tr>
+                        <th>スタッフ数</th>
+                        <th>想定処理時間</th>
+                        <th>推奨タイムアウト</th>
+                    </tr>
+                    <tr><td>5名以下</td><td>60-90秒</td><td>120秒</td></tr>
+                    <tr><td>6-10名</td><td>90-150秒</td><td>180秒</td></tr>
+                    <tr><td>11-15名</td><td>150-240秒</td><td>240秒</td></tr>
+                    <tr><td>16名以上</td><td>240秒以上</td><td>300秒</td></tr>
+                </table>
+            </div>
+        </div>
+
+        <!-- 2025-12-08 バグ修正サマリー -->
+        <div class="card">
+            <div class="card-header">2025-12-08 バグ修正サマリー</div>
+            <div class="card-body">
+                <div class="mermaid">
+                    timeline
+                        title 2025-12-08 バグ修正タイムライン
+                        section BUG-008
+                            パート職員追加 : seedDemoData.ts修正
+                            MAX_TOKENSエラー : 思考トークン65535消費
+                            thinkingBudget追加 : 16384制限
+                        section BUG-009
+                            権限エラー発生 : Missing permissions
+                            1回目修正 : 既存members保持
+                            2回目修正 : 権限強制更新
+                        section BUG-010
+                            タイムアウト発生 : AbortError
+                            タイムアウト延長 : 180s→240s
+                            権限ログ追加 : facilityRoles
+                </div>
+
+                <table>
+                    <tr>
+                        <th>BUG ID</th>
+                        <th>問題</th>
+                        <th>解決策</th>
+                    </tr>
+                    <tr>
+                        <td><a href="bugfix-thinking-budget-2025-12-08.html">BUG-008</a></td>
+                        <td>thinkingBudget過消費でMAX_TOKENSエラー</td>
+                        <td>thinkingBudget: 16384で制限</td>
+                    </tr>
+                    <tr>
+                        <td><a href="bugfix-demo-members-2025-12-08.html">BUG-009</a></td>
+                        <td>seedDemoData.ts再投入でmembers消失</td>
+                        <td>既存members保持、権限強制更新</td>
+                    </tr>
+                    <tr>
+                        <td><strong>BUG-010</strong></td>
+                        <td>12名スタッフでタイムアウト</td>
+                        <td>タイムアウト180s→240s、権限ログ追加</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+
+        <!-- 学び -->
+        <div class="card">
+            <div class="card-header">学びと再発防止</div>
+            <div class="card-body">
+                <h3>重要な学び</h3>
+                <ol>
+                    <li><strong>処理時間はスタッフ数に比例</strong>: パート職員追加で処理時間が増加することを想定すべき</li>
+                    <li><strong>余裕を持ったタイムアウト設計</strong>: 想定処理時間の1.2-1.5倍を設定</li>
+                    <li><strong>デバッグログは先に仕込む</strong>: 権限ログをあらかじめ出力しておくと問題発見が早い</li>
+                </ol>
+
+                <h3>再発防止チェックリスト</h3>
+                <ul>
+                    <li>スタッフ数増加時はタイムアウト設定を確認</li>
+                    <li>Cloud Functionsログで実際の処理時間を計測</li>
+                    <li>タイムアウト < 想定処理時間 × 1.3 の場合は延長を検討</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        mermaid.initialize({ startOnLoad: true, theme: 'default' });
+    </script>
+</body>
+</html>

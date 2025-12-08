@@ -524,29 +524,37 @@ responseSchema: {
 }
 ```
 
-### タイムアウト設定ルール（BUG-004教訓）
+### タイムアウト設定ルール（BUG-004/BUG-010教訓）
 
-Gemini 2.5 Flash思考モードは処理に時間がかかる（10名規模で約2-3分）。
+Gemini 2.5 Flash思考モードは処理に時間がかかる。スタッフ数により異なる。
+
+**スタッフ数とタイムアウトの目安**:
+
+| スタッフ数 | 想定処理時間 | 推奨クライアントタイムアウト |
+|-----------|-------------|----------------------------|
+| 5名以下 | 60-90秒 | 120秒 |
+| 6-10名 | 90-150秒 | 180秒 |
+| 11-15名 | 150-240秒 | 240秒（現在の設定） |
+| 16名以上 | 240秒以上 | 300秒 |
 
 **必須設定**:
 
 ```typescript
 // Cloud Functions (shift-generation.ts)
 export const generateShift = onRequest({
-  timeoutSeconds: 300,  // ❗ 5分（思考モード対応）
+  timeoutSeconds: 300,  // ❗ 5分（サーバー側最大）
   // ...
 });
 
 // フロントエンド (geminiService.ts)
 const controller = new AbortController();
-setTimeout(() => controller.abort(), 180000);  // ❗ 3分
+setTimeout(() => controller.abort(), 240000);  // ❗ 4分（BUG-010で延長）
 ```
 
 **設計原則**:
 
 ```text
-クライアント timeout (180s) < サーバー timeout (300s)
-サーバー timeout (300s) > 想定処理時間 (140s) × 2
+想定処理時間 × 1.2 < クライアント timeout (240s) < サーバー timeout (300s)
 ```
 
 ### 関連ドキュメント
@@ -554,12 +562,13 @@ setTimeout(() => controller.abort(), 180000);  // ❗ 3分
 - [BUG-001修正記録](.kiro/bugfix-cors-cloud-functions-2025-12-05.md) - CORS
 - [BUG-002修正記録](.kiro/bugfix-gemini-empty-response-2025-12-05.md) - propertyOrdering
 - [BUG-003修正記録](.kiro/bugfix-gemini-thinking-tokens-2025-12-05.md) - maxOutputTokens
-- [BUG-004修正記録](.kiro/bugfix-timeout-2025-12-05.md) - タイムアウト
+- [BUG-004修正記録](.kiro/bugfix-timeout-2025-12-05.md) - タイムアウト（60s→180s）
 - [BUG-005修正記録](.kiro/bugfix-evaluation-panel-display-2025-12-06.md) - Firestoreリスナー競合
 - [BUG-006修正記録](.kiro/specs/demo-login/setup-guide.md) - Cloud Function IAM権限
 - [BUG-007修正記録](.kiro/bugfix-demo-data-sync-2025-12-08.md) - デモデータ同期
 - [BUG-008修正記録](.kiro/bugfix-thinking-budget-2025-12-08.md) - thinkingBudget制限
 - [BUG-009修正記録](.kiro/bugfix-demo-members-2025-12-08.md) - デモユーザー権限消失
+- [BUG-010修正記録](.kiro/bugfix-timeout-extended-2025-12-08.md) - タイムアウト延長（180s→240s）
 - [ポストモーテム](.kiro/postmortem-gemini-bugs-2025-12-05.md) - 全体分析
 - Serenaメモリ: `gemini_region_critical_rule`, `gemini_max_output_tokens_critical_rule`, `gemini_thinking_budget_critical_rule`, `cloud_function_custom_token_iam`
 
