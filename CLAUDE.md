@@ -526,30 +526,42 @@ generationConfig: {
 | generateDetailedShifts | 8192 | バッチ処理、スケルトン参照で思考量削減 |
 | 小規模一括生成 | 16384 | 5名以下、一括で全制約を考慮 |
 
-### responseSchemaとthinkingBudgetの非互換性（BUG-013教訓）
+### responseSchemaとresponseMimeTypeのthinkingBudget非互換性（BUG-013/014教訓）
 
-**重要**: `responseSchema`と`thinkingConfig.thinkingBudget`を同時に使用すると、**thinkingBudgetが無視される**（Gemini APIの既知問題）。
+**重要**: `responseSchema`と`responseMimeType`の**どちらも**`thinkingConfig.thinkingBudget`を無視する（Gemini APIの既知問題）。
+
+参考: https://discuss.ai.google.dev/t/latest-google-genai-with-2-5-flash-ignoring-thinking-budget/102497
 
 ```typescript
-// ❌ 間違い: thinkingBudgetが無視される
+// ❌ 間違い（BUG-013）: responseSchemaがthinkingBudgetを無視
 config: {
-  responseSchema: getShiftSchema(...),  // JSONスキーマ
-  thinkingConfig: {
-    thinkingBudget: 16384,  // 無視される！
-  },
+  responseSchema: getShiftSchema(...),
+  thinkingConfig: { thinkingBudget: 16384 },  // 無視される！
 }
 
-// ✅ 正しい: responseSchemaを削除
+// ❌ 間違い（BUG-014）: responseMimeTypeもthinkingBudgetを無視
 config: {
-  responseMimeType: 'application/json',  // JSON出力は維持
+  responseMimeType: 'application/json',
+  thinkingConfig: { thinkingBudget: 16384 },  // 無視される！
+}
+
+// ✅ 正しい: 両方削除し、プロンプトでJSON形式を指示
+const jsonPrompt = `${prompt}
+
+# 🔴 絶対厳守: JSON出力形式
+\`\`\`json
+{ "staffSchedules": [...] }
+\`\`\`
+`;
+
+config: {
   // responseSchema なし
-  thinkingConfig: {
-    thinkingBudget: 16384,  // 正しく機能
-  },
+  // responseMimeType なし
+  thinkingConfig: { thinkingBudget: 16384 },  // ✅ 正しく機能
 }
 ```
 
-**現状**: JSONスキーマ関数は将来のGoogle修正後に復活予定で保持。
+**現状**: JSONモード関連オプションは全て削除。プロンプトでJSON出力を強制。
 
 ### propertyOrdering必須（BUG-002教訓）
 
@@ -613,6 +625,7 @@ setTimeout(() => controller.abort(), 240000);  // ❗ 4分（BUG-010で延長）
 - [BUG-010修正記録](.kiro/bugfix-timeout-extended-2025-12-08.md) - タイムアウト延長（180s→240s）
 - [BUG-012修正記録](.kiro/bugfix-sdk-migration-2025-12-08.md) - @google/genai SDK移行
 - [BUG-013修正記録](.kiro/bugfix-json-schema-thinking-2025-12-08.md) - JSONスキーマとthinkingBudgetの非互換性
+- [BUG-014修正記録](.kiro/bugfix-responsemimetype-thinking-2025-12-08.md) - responseMimeTypeとthinkingBudgetの非互換性
 - [ポストモーテム](.kiro/postmortem-gemini-bugs-2025-12-05.md) - 全体分析
 - Serenaメモリ: `gemini_region_critical_rule`, `gemini_max_output_tokens_critical_rule`, `gemini_thinking_budget_critical_rule`, `cloud_function_custom_token_iam`, `bug012_sdk_migration_2025-12-08`
 
