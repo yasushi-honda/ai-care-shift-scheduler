@@ -112,8 +112,13 @@ for (const [key, value] of Object.entries(data))
 
 ### 確認事項
 - [x] TypeScript型チェック通過
-- [ ] デプロイ成功
-- [ ] AI生成正常動作
+- [x] デプロイ成功（2025-12-08 12:03 UTC）
+- [ ] AI生成正常動作（ユーザーによる本番テスト待ち）
+
+### デプロイ確認
+- **CI/CD Run ID**: 20027319866
+- **関数**: `generateShift(asia-northeast1)` - Successful update operation
+- **コミット**: `2fae092` (TS6133修正含む)
 
 ---
 
