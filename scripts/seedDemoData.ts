@@ -667,6 +667,24 @@ async function main() {
   batch.set(facilityRef, facilityData);
   console.log(`  ✓ 施設: ${DEMO_FACILITY_NAME}`);
 
+  // BUG-009対策: usersコレクションのfacilities配列も更新
+  // セキュリティルールはusers.facilitiesを参照するため、両方を同期する必要がある
+  const demoUserRef = db.collection('users').doc(DEMO_USER_UID);
+  const demoUserDoc = await demoUserRef.get();
+  if (demoUserDoc.exists) {
+    const userData = demoUserDoc.data();
+    if (userData?.facilities) {
+      const userFacilities = userData.facilities.map((f: { facilityId: string; role: string; grantedAt: FirebaseFirestore.Timestamp }) => {
+        if (f.facilityId === DEMO_FACILITY_ID) {
+          return { ...f, role: 'editor' };  // Phase 43.2.1: viewerをeditorに更新
+        }
+        return f;
+      });
+      batch.update(demoUserRef, { facilities: userFacilities });
+      console.log(`  ✓ デモユーザー権限更新: users/${DEMO_USER_UID}.facilities[].role = editor`);
+    }
+  }
+
   // デモスタッフの投入
   for (const staff of demoStaffs) {
     const staffRef = db.collection('facilities').doc(DEMO_FACILITY_ID).collection('staff').doc(staff.staffId);

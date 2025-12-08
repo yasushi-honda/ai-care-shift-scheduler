@@ -126,14 +126,53 @@ const facilityData: Facility = {
 初回修正では「既存になければ追加」というロジックだったため、既存のデモユーザー（viewer権限）がそのまま残ってしまった。
 `findIndex`を使用して既存ユーザーを検索し、存在する場合は権限を強制的に`editor`に更新するロジックに変更。
 
+### 追加修正（3回目）
+
+2回目修正後も権限エラーが再発。調査の結果、セキュリティルールが参照しているのは`facilities.members`ではなく`users.facilities`であることが判明。
+
+```
+セキュリティルール (firestore.rules L14-34):
+function hasRole(facilityId, requiredRole) {
+  let userProfile = getUserProfile();  // ← users/{uid}を取得
+  let facilities = userProfile.facilities;  // ← users.facilitiesを参照
+  ...
+}
+```
+
+**問題の状態**:
+| コレクション | デモユーザーの権限 |
+|-------------|------------------|
+| `facilities/demo-facility-001.members[]` | editor ✓ |
+| `users/demo-user-fixed-uid.facilities[]` | viewer ✗ |
+
+**修正**: seedDemoData.tsで`facilities.members`だけでなく`users.facilities`も同時に更新するように修正。
+
+```typescript
+// BUG-009対策: usersコレクションのfacilities配列も更新
+const demoUserRef = db.collection('users').doc(DEMO_USER_UID);
+const demoUserDoc = await demoUserRef.get();
+if (demoUserDoc.exists) {
+  const userData = demoUserDoc.data();
+  if (userData?.facilities) {
+    const userFacilities = userData.facilities.map((f) => {
+      if (f.facilityId === DEMO_FACILITY_ID) {
+        return { ...f, role: 'editor' };
+      }
+      return f;
+    });
+    batch.update(demoUserRef, { facilities: userFacilities });
+  }
+}
+```
+
 ---
 
 ## 4. 影響範囲
 
 | 影響対象 | 影響内容 |
 |---------|---------|
-| seedDemoData.ts | membersの処理ロジック変更 |
-| Firestore | デモ施設のmembers配列更新 |
+| seedDemoData.ts | membersの処理ロジック変更 + users.facilities更新追加 |
+| Firestore | デモ施設のmembers配列 + usersのfacilities配列を同期 |
 | デモ環境 | シフト保存が可能に |
 
 ---
@@ -170,6 +209,8 @@ const facilityData: Facility = {
 1. **データ再投入時の副作用に注意**: 既存データを上書きする際、意図しないデータ削除が起こり得る
 2. **権限問題はログに現れにくい**: クライアント側の「permission denied」だけでは原因特定が困難
 3. **デモユーザーの権限は複数箇所で管理**: users.facilities[].role と facilities.members[].role の両方が必要
+4. **セキュリティルールの参照先を確認**: 実際のルールがどのコレクションを参照しているかを確認することが重要
+5. **権限データの同期が必要**: 複数箇所に権限情報がある場合、すべてを同期して更新する必要がある
 
 ---
 
