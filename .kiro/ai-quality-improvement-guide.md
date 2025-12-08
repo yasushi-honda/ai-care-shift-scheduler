@@ -72,6 +72,10 @@ ${targetStaff.map(s => `- ${s.name}: ...`).join('\n')}
 | 48 | `buildDynamicConsecutiveConstraints` | 連続勤務制限 | phased-generation.ts |
 | 49 | `buildDynamicStaffingConstraints` | 日別必要勤務人数 | phased-generation.ts |
 | 51 | `withExponentialBackoff` | 429エラーリトライ（指数バックオフ） | phased-generation.ts |
+| 52 | `buildDailyAvailabilityAnalysis` | 日別勤務可能人数・リスク日特定 | phased-generation.ts |
+| 52 | `buildShiftDistributionGuide` | シフト配置ガイド（早番・遅番候補者明示） | phased-generation.ts |
+| 52 | `logPhase1Start/Complete` | Phase 1トレーサビリティログ | phased-generation.ts |
+| 52 | `logPhase2BatchComplete` | Phase 2バッチトレーサビリティログ | phased-generation.ts |
 
 ---
 
@@ -109,6 +113,27 @@ ${targetStaff.map(s => `- ${s.name}: ...`).join('\n')}
 ---
 
 ## 改善履歴
+
+### Phase 52（2025-12-08）
+**問題**: デモデータで充足率91%・エラー17件（人員不足）・スコア0点
+**原因分析**:
+1. Phase 1骨子で休日が偏り、一部の日に勤務者が不足
+2. Phase 2で早番・遅番より日勤に偏る
+3. 日別勤務可能人数の可視化不足（パート職員の曜日制限）
+
+**解決**: 動的制約強化とトレーサビリティログを実装
+- `buildDailyAvailabilityAnalysis`: 日別勤務可能人数を計算し不足リスク日を特定
+- `buildShiftDistributionGuide`: シフト配置ガイドを動的生成（早番・遅番に配置可能なスタッフを明示）
+- `buildDynamicStaffingConstraints`強化: 日別分析と個別スタッフ情報を統合
+- トレーサビリティログ: `logPhase1Start/Complete`, `logPhase2BatchComplete`
+
+**設計原則**:
+- データ駆動型（ハードコードなし）
+- 条件付き生成（該当者がいなければ空文字）
+- 明示的な警告（違反は無効と明記）
+- 可読性重視（具体的なスタッフ名をリスト化）
+
+**結果**: 検証中
 
 ### Phase 51（2025-12-08）
 **問題**: 429 (RESOURCE_EXHAUSTED) エラー発生
