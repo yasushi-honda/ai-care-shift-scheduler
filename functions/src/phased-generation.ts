@@ -1273,17 +1273,20 @@ ${requirementsTable}
       return `- ${s.name}: 休日${restDays.length}日（日曜${sundays.filter(d => restDays.includes(d)).length}日＋平日${nonSundayRest}日）→ **勤務${workDays}日**`;
     }).join('\n');
 
+    // 全スタッフ数を計算するための注記を追加
+    const totalStaffCount = skeleton.staffSchedules.length;
+
     return `
-以下のスタッフの${requirements.targetMonth}の詳細シフトを生成してください。
+# 🔴 重要: このバッチについて
+**このバッチは全${totalStaffCount}名中の${staffBatch.length}名分です。**
+他のバッチと合わせて全体の人員配置を満たします。
+このバッチのスタッフについてのみ、骨子に従って詳細シフトを割り当ててください。
 
-# 🔴 最重要ルール（絶対に違反しないこと）
-**各営業日（月〜土）に合計${totalStaffPerDay}名を配置すること。1人でも不足は許されません。**
-
-## このバッチの勤務予定
+## このバッチの勤務予定（骨子に基づく）
 ${staffRestInfo}
 
-**重要**: 上記の「勤務日」には必ず早番・日勤・遅番のいずれかを割り当ててください。
-休日以外の日に「休」を入れてはいけません！
+**タスク**: 上記の「勤務日」に対して早番・日勤・遅番のいずれかを割り当ててください。
+休日以外の日に「休」を入れないでください。
 
 # 対象スタッフ（${staffBatch.length}名）
 ${staffInfo}
@@ -1291,42 +1294,44 @@ ${staffInfo}
 # シフト区分（日中のみ）
 ${shiftDescription}
 
-# 【絶対条件】各日の必要人員
-| シフト | 必要人数 | 資格要件 |
-|--------|----------|----------|
-${requirementsTable}
-| **合計** | **${totalStaffPerDay}名/日** | - |
+# シフト配分の参考情報
+| シフト | 必要人数（全体） | このバッチでの目安 |
+|--------|------------------|-------------------|
+| 早番 | ${earlyCount}名/日 | ${Math.max(1, Math.round(earlyCount * staffBatch.length / totalStaffCount))}名程度 |
+| 日勤 | ${dayCount}名/日 | ${Math.max(1, Math.round(dayCount * staffBatch.length / totalStaffCount))}名程度 |
+| 遅番 | ${lateCount}名/日 | ${Math.max(1, Math.round(lateCount * staffBatch.length / totalStaffCount))}名程度 |
 
-# ⚠️ シフト配分の優先ルール（必ず守ること）
-**日勤に偏った配置をしないでください。以下の順序でシフトを配分してください：**
-
-1. **まず早番${earlyCount}名を確保** ← 最優先！
-2. **次に遅番${lateCount}名を確保**
-3. **残りのスタッフを日勤${dayCount}名に配置**（看護師${nurseInfo}を必ず1名含む）
-
-❌ 悪い例: 早番1名、日勤4名、遅番0名（日勤に偏りすぎ）
-✅ 良い例: 早番${earlyCount}名、日勤${dayCount}名、遅番${lateCount}名（バランス良い）
-${buildShiftDistributionGuide(staffBatch, requirements)}
+**注意**: 上記は目安です。バッチ単位で厳密に満たす必要はありません。
 ${dynamicConstraints}
 # 制約
 - 骨子で指定された休日の日だけ「休」を出力すること
 - **休日以外の日は、必ず早番・日勤・遅番のいずれかを割り当てること**
 - 日曜日（${sundays.join(', ')}日）は全員「休」とすること
 - **夜勤や明け休みは絶対に使用しないこと**
-- **日勤に${dayCount + 1}名以上配置しないこと**（他のシフトが不足する原因になる）
+- 各シフト（早番・日勤・遅番）をバランスよく配分すること
 
-# 出力前チェックリスト（すべて確認してから出力）
-□ 各営業日（${businessDays}日分）の早番が${earlyCount}名いるか ← 最重要！
-□ 各営業日の遅番が${lateCount}名いるか
-□ 各営業日の日勤が${dayCount}名いるか（看護師1名含む）
-□ 日勤が${dayCount + 1}名以上の日がないか
+# 出力チェックリスト
 □ 日曜日（${sundays.join(', ')}日）は全員「休」になっているか
 □ 休日のスタッフだけ「休」になっているか（休日以外に「休」がないか確認！）
-□ 各日の合計勤務者数が${totalStaffPerDay}名以上か
+□ 早番・日勤・遅番がバランスよく配分されているか
 
-# 出力
-各スタッフの${requirements.targetMonth}の全${daysInMonth}日分の詳細シフトをJSON形式で出力してください。
-日付は必ず「${dateExamples}」のように${requirements.targetMonth}の日付を使用してください。
+# 🔴 出力形式（必須）
+**必ずJSON形式で出力してください。説明文は不要です。**
+各スタッフの${requirements.targetMonth}の全${daysInMonth}日分の詳細シフトを以下の形式で出力:
+
+\`\`\`json
+{
+  "schedule": [
+    {
+      "staffId": "スタッフID",
+      "staffName": "スタッフ名",
+      "shifts": { "1": "シフト種別", "2": "シフト種別", ... }
+    }
+  ]
+}
+\`\`\`
+
+日付のキーは「1」「2」...「${daysInMonth}」の数字です。
 shiftTypeは「${shiftTypeNames.join('」「')}」「休」のいずれかを使用してください。
 `;
   }
