@@ -292,26 +292,28 @@ ${individualConstraints}
 
 
 /**
- * Phase 49: 日別必要勤務人数の動的制約生成
+ * Phase 49/52: 日別必要勤務人数の動的制約生成（強化版）
  *
  * 各営業日に必要な勤務人数を計算し、AIに明示的に伝えるプロンプトを生成する。
- * パート職員の曜日制限を考慮し、日ごとの最大勤務可能人数も計算して表示。
+ * Phase 52で日別分析結果を統合し、リスク日の警告を追加。
  *
  * 設計原則（CLAUDE.md「動的制約生成パターン」より）:
  * 1. データ駆動型: スタッフデータ・要件データから動的に計算
- * 2. 条件付き生成: 常に生成（人員充足は最重要制約）
+ * 2. 条件付き生成: リスク日がある場合のみ警告を追加
  * 3. 明示的な警告: 不足が発生すると無効になることを明記
  * 4. 可読性重視: 日別の数値を表形式で表示
  *
  * @param staffList スタッフ一覧
  * @param requirements シフト要件
  * @param daysInMonth 月の日数
+ * @param leaveRequests 休暇申請（オプション）
  * @returns 日別人員制約のプロンプト文字列
  */
 function buildDynamicStaffingConstraints(
   staffList: Staff[],
   requirements: ShiftRequirement,
-  daysInMonth: number
+  daysInMonth: number,
+  leaveRequests?: LeaveRequest
 ): string {
   const [year, month] = requirements.targetMonth.split('-').map(Number);
 
@@ -334,7 +336,37 @@ function buildDynamicStaffingConstraints(
   // 各スタッフが勤務すべき日数を計算
   const avgWorkDays = Math.ceil(requiredPersonDays / staffList.length);
 
-  return `
+  // Phase 52: 日別分析を実行してリスク日を特定
+  const analysis = buildDailyAvailabilityAnalysis(staffList, requirements, daysInMonth, leaveRequests);
+
+  // 各スタッフの勤務可能日数と必要勤務日数を計算
+  const staffWorkTable = staffList.map(s => {
+    const weeklyHope = s.weeklyWorkCount.hope;
+    const monthlyTarget = weeklyHope * 4;  // 月間目標
+    const availableWeekdays = s.availableWeekdays || [0, 1, 2, 3, 4, 5, 6];
+    // その人が勤務できる営業日数を計算
+    const availableBusinessDays = analysis.dailyStats.filter(stat =>
+      availableWeekdays.includes(stat.weekdayNum)
+    ).length;
+    return {
+      name: s.name,
+      weeklyHope,
+      monthlyTarget,
+      availableBusinessDays,
+      // ゼロ除算を防ぐ（勤務可能日数が0の場合は100%とする）
+      mustWorkRatio: availableBusinessDays > 0
+        ? Math.round(monthlyTarget / availableBusinessDays * 100)
+        : 100,
+    };
+  });
+
+  // 週勤務希望が少ないスタッフ（パート）をハイライト
+  const partTimeWarning = staffWorkTable
+    .filter(s => s.weeklyHope <= 3)
+    .map(s => `- ${s.name}: 週${s.weeklyHope}日希望 → 月${s.monthlyTarget}日勤務（勤務可能日の${s.mustWorkRatio}%）`)
+    .join('\n');
+
+  let result = `
 ## ⚠️ 【日別人員配置制約】（最重要・厳守）
 
 **絶対条件**: 各営業日（月〜土）に**必ず${totalStaffPerDay}名**を勤務させてください。
@@ -352,7 +384,405 @@ function buildDynamicStaffingConstraints(
 
 **⚠️ 休日を入れすぎないこと！** 休日が多すぎると人員不足になります。
 `;
+
+  // Phase 52: パート職員の警告
+  if (partTimeWarning) {
+    result += `
+### パート職員の勤務目安
+以下のスタッフは勤務日数が限られています。勤務可能日はできるだけ勤務させてください：
+${partTimeWarning}
+`;
+  }
+
+  // Phase 52: リスク日の警告を追加
+  if (analysis.riskDays.length > 0) {
+    result += analysis.summary;
+  }
+
+  return result;
 }
+
+
+// ============================================================================
+// Phase 52: 日別分析とトレーサビリティログ
+// ============================================================================
+
+/**
+ * Phase 52: 日別勤務可能人数分析インターフェース
+ *
+ * 各営業日に勤務可能なスタッフ数を計算し、人員不足リスクを特定する。
+ * トレーサビリティログおよびプロンプト生成で使用。
+ */
+interface DailyAvailability {
+  day: number;
+  weekday: string;
+  weekdayNum: number;  // 0=日, 1=月, ...
+  availableCount: number;
+  requiredCount: number;
+  margin: number;
+  isRisk: boolean;
+  availableStaff: string[];
+}
+
+interface DailyAvailabilityAnalysis {
+  dailyStats: DailyAvailability[];
+  riskDays: number[];
+  businessDays: number;
+  sundays: number[];
+  summary: string;
+}
+
+/**
+ * Phase 52: 日別勤務可能人数を分析
+ *
+ * パート職員の曜日制限を考慮し、各営業日に何人勤務可能かを計算する。
+ * 人員不足リスクのある日を特定し、プロンプトに警告を追加する。
+ *
+ * 設計原則:
+ * 1. データ駆動型: staffList.availableWeekdaysから動的に計算
+ * 2. 条件付き生成: リスク日がある場合のみ警告を追加
+ * 3. 明示的な警告: 具体的な日付と勤務可能スタッフ名を表示
+ * 4. 可読性重視: 日別の表形式で表示
+ *
+ * @param staffList スタッフ一覧
+ * @param requirements シフト要件
+ * @param daysInMonth 月の日数
+ * @param leaveRequests 休暇申請（オプション）
+ * @returns 日別分析結果
+ */
+function buildDailyAvailabilityAnalysis(
+  staffList: Staff[],
+  requirements: ShiftRequirement,
+  daysInMonth: number,
+  leaveRequests?: LeaveRequest
+): DailyAvailabilityAnalysis {
+  const [year, month] = requirements.targetMonth.split('-').map(Number);
+  const weekdayNames = ['日', '月', '火', '水', '木', '金', '土'];
+
+  // 1日の合計必要人員
+  const totalStaffPerDay = Object.values(requirements.requirements || {})
+    .reduce((sum, req) => sum + req.totalStaff, 0);
+
+  // 日曜日リスト
+  const sundays: number[] = [];
+  for (let day = 1; day <= daysInMonth; day++) {
+    const dow = new Date(year, month - 1, day).getDay();
+    if (dow === 0) sundays.push(day);
+  }
+
+  // 休暇申請を日付→スタッフIDのマップに変換
+  const leaveByDate: Map<string, Set<string>> = new Map();
+  if (leaveRequests) {
+    for (const leave of leaveRequests as unknown as Array<{ staffId: string; date: string }>) {
+      const dateStr = leave.date;
+      if (!leaveByDate.has(dateStr)) {
+        leaveByDate.set(dateStr, new Set());
+      }
+      leaveByDate.get(dateStr)!.add(leave.staffId);
+    }
+  }
+
+  const dailyStats: DailyAvailability[] = [];
+  const riskDays: number[] = [];
+
+  for (let day = 1; day <= daysInMonth; day++) {
+    const dow = new Date(year, month - 1, day).getDay();
+
+    // 日曜日はスキップ
+    if (dow === 0) continue;
+
+    const dateStr = `${requirements.targetMonth}-${String(day).padStart(2, '0')}`;
+    const leavingStaff = leaveByDate.get(dateStr) || new Set();
+
+    // その日に勤務可能なスタッフをフィルタリング
+    const availableStaff = staffList.filter(s => {
+      // 休暇申請があるスタッフは除外
+      if (leavingStaff.has(s.id)) return false;
+
+      // 曜日制限をチェック
+      const availableWeekdays = s.availableWeekdays || [0, 1, 2, 3, 4, 5, 6];
+      return availableWeekdays.includes(dow);
+    });
+
+    const margin = availableStaff.length - totalStaffPerDay;
+    const isRisk = margin < 2;  // 余裕が2名未満はリスク
+
+    if (isRisk) {
+      riskDays.push(day);
+    }
+
+    dailyStats.push({
+      day,
+      weekday: weekdayNames[dow],
+      weekdayNum: dow,
+      availableCount: availableStaff.length,
+      requiredCount: totalStaffPerDay,
+      margin,
+      isRisk,
+      availableStaff: availableStaff.map(s => s.name),
+    });
+  }
+
+  // サマリー生成
+  let summary = '';
+  if (riskDays.length > 0) {
+    summary = `
+### ⚠️ 【人員不足リスク日】（特に注意）
+以下の日は勤務可能スタッフが少ないため、**休日を入れないこと**を強く推奨します：
+
+${riskDays.map(d => {
+  const stat = dailyStats.find(s => s.day === d)!;
+  return `- **${d}日（${stat.weekday}）**: 勤務可能${stat.availableCount}名（必要${stat.requiredCount}名）→ ${stat.availableStaff.join('、')}`;
+}).join('\n')}
+
+**重要**: 上記の日に休日を入れると人員不足になります。全員勤務させてください。
+`;
+  }
+
+  return {
+    dailyStats,
+    riskDays,
+    businessDays: dailyStats.length,
+    sundays,
+    summary,
+  };
+}
+
+
+/**
+ * Phase 52: シフト配置ガイド生成
+ *
+ * timeSlotPreferenceを考慮し、どのスタッフをどのシフトに配置すべきかを提案する。
+ * 早番・遅番に配置可能なスタッフを明示し、日勤に偏らないようにガイドする。
+ *
+ * @param staffList スタッフ一覧
+ * @param requirements シフト要件
+ * @returns 配置ガイドのプロンプト文字列
+ */
+function buildShiftDistributionGuide(
+  staffList: Staff[],
+  requirements: ShiftRequirement
+): string {
+  // シフト種別ごとの必要人数
+  const earlyCount = requirements.requirements?.['早番']?.totalStaff || 0;
+  const dayCount = requirements.requirements?.['日勤']?.totalStaff || 0;
+  const lateCount = requirements.requirements?.['遅番']?.totalStaff || 0;
+
+  // 夜勤がない場合のみ適用（デイサービス）
+  if (earlyCount === 0 && lateCount === 0) {
+    return '';  // 早番・遅番がない場合はガイド不要
+  }
+
+  // timeSlotPreferenceでスタッフを分類
+  // TimeSlotPreferenceは: DayOnly='日勤のみ', NightOnly='夜勤のみ', Any='いつでも可'
+  // as string でキャストして文字列比較（将来のenum拡張に対応）
+  const flexibleStaff = staffList.filter(s => {
+    const pref = s.timeSlotPreference as string | undefined;
+    return pref === 'いつでも可' || pref === TimeSlotPreference.Any || !pref;
+  });
+  const dayOnlyStaff = staffList.filter(s => {
+    const pref = s.timeSlotPreference as string | undefined;
+    return pref === '日勤のみ' || pref === TimeSlotPreference.DayOnly;
+  });
+  // 早番のみ・遅番のみは現状のenumにないが、将来対応に備えて文字列比較を残す
+  const earlyOnlyStaff = staffList.filter(s => {
+    const pref = s.timeSlotPreference as string | undefined;
+    return pref === '早番のみ';
+  });
+  const lateOnlyStaff = staffList.filter(s => {
+    const pref = s.timeSlotPreference as string | undefined;
+    return pref === '遅番のみ';
+  });
+
+  // 看護師を特定
+  const nurses = staffList.filter(s =>
+    (s.qualifications || []).some(q => q.includes('看護'))
+  );
+  const nurseNames = nurses.map(s => s.name);
+
+  // 早番・遅番に配置可能なスタッフ数を計算
+  const earlyCapableStaff = [...flexibleStaff, ...earlyOnlyStaff];
+  const lateCapableStaff = [...flexibleStaff, ...lateOnlyStaff];
+
+  return `
+## ⚠️ 【シフト配置ガイド】（必読）
+
+### スタッフの配置可能シフト
+| 配置先 | 可能なスタッフ | 人数 |
+|--------|---------------|------|
+| 早番 | ${earlyCapableStaff.map(s => s.name).join('、') || 'なし'} | ${earlyCapableStaff.length}名 |
+| 日勤 | ${staffList.map(s => s.name).join('、')} | ${staffList.length}名（全員可） |
+| 遅番 | ${lateCapableStaff.map(s => s.name).join('、') || 'なし'} | ${lateCapableStaff.length}名 |
+
+### 日勤のみのスタッフ（早番・遅番に配置不可）
+${dayOnlyStaff.length > 0 ? dayOnlyStaff.map(s => `- ${s.name}`).join('\n') : '- なし（全員配置可能）'}
+
+### 配置優先ルール
+1. **早番${earlyCount}名**: ${earlyCapableStaff.slice(0, 3).map(s => s.name).join('、')}などから優先的に選択
+2. **遅番${lateCount}名**: ${lateCapableStaff.slice(0, 3).map(s => s.name).join('、')}などから優先的に選択
+3. **日勤${dayCount}名**: 上記以外のスタッフ${nurseNames.length > 0 ? `（看護師${nurseNames.join('、')}を1名以上含む）` : ''}
+
+**重要**: 「日勤のみ」のスタッフを早番・遅番に配置しないでください！
+`;
+}
+
+
+/**
+ * Phase 52: トレーサビリティログ - Phase 1開始
+ *
+ * 構造化ログでPhase 1の入力情報を記録する。
+ * Cloud Loggingで検索・分析可能な形式。
+ */
+function logPhase1Start(
+  staffList: Staff[],
+  requirements: ShiftRequirement,
+  analysis: DailyAvailabilityAnalysis
+): void {
+  const logData = {
+    phase: 'phase1_start',
+    timestamp: new Date().toISOString(),
+    targetMonth: requirements.targetMonth,
+    staffCount: staffList.length,
+    businessDays: analysis.businessDays,
+    sundayCount: analysis.sundays.length,
+    riskDays: analysis.riskDays,
+    riskDayCount: analysis.riskDays.length,
+    staffSummary: staffList.map(s => ({
+      id: s.id,
+      name: s.name,
+      weeklyHope: s.weeklyWorkCount.hope,
+      timeSlotPreference: s.timeSlotPreference,
+      availableWeekdays: s.availableWeekdays || [0, 1, 2, 3, 4, 5, 6],
+    })),
+    requirementsSummary: Object.entries(requirements.requirements || {}).map(([name, req]) => ({
+      shiftName: name,
+      totalStaff: req.totalStaff,
+      qualifications: req.requiredQualifications,
+    })),
+  };
+
+  console.log('📋 [Phase 1 Start]', JSON.stringify(logData, null, 2));
+}
+
+
+/**
+ * Phase 52: トレーサビリティログ - Phase 1完了
+ *
+ * 骨子生成結果のサマリーを記録する。
+ * 各スタッフの休日数・勤務日数を集計。
+ */
+function logPhase1Complete(
+  skeleton: ScheduleSkeleton,
+  analysis: DailyAvailabilityAnalysis
+): void {
+  // 日別勤務者数を計算
+  const dailyWorkerCount: Record<number, number> = {};
+  for (const stat of analysis.dailyStats) {
+    dailyWorkerCount[stat.day] = 0;
+  }
+
+  for (const staff of skeleton.staffSchedules) {
+    const restDays = new Set(staff.restDays || []);
+    for (const stat of analysis.dailyStats) {
+      if (!restDays.has(stat.day)) {
+        dailyWorkerCount[stat.day]++;
+      }
+    }
+  }
+
+  // 不足日を検出
+  const requiredCount = analysis.dailyStats[0]?.requiredCount || 5;
+  const shortageDays = Object.entries(dailyWorkerCount)
+    .filter(([_, count]) => count < requiredCount)
+    .map(([day, count]) => ({ day: Number(day), count, shortage: requiredCount - count }));
+
+  const logData = {
+    phase: 'phase1_complete',
+    timestamp: new Date().toISOString(),
+    staffScheduleCount: skeleton.staffSchedules.length,
+    skeletonSummary: skeleton.staffSchedules.map(s => ({
+      staffId: s.staffId,
+      staffName: s.staffName,
+      restDayCount: s.restDays?.length || 0,
+      workDayCount: analysis.businessDays - (s.restDays?.filter(d => !analysis.sundays.includes(d)).length || 0),
+    })),
+    dailyWorkerCount,
+    shortageDays,
+    shortageDayCount: shortageDays.length,
+  };
+
+  console.log('✅ [Phase 1 Complete]', JSON.stringify(logData, null, 2));
+
+  // 警告ログ
+  if (shortageDays.length > 0) {
+    console.warn(`⚠️ [Phase 1 Warning] ${shortageDays.length}日で人員不足の可能性:`,
+      shortageDays.map(d => `${d.day}日(${d.count}名)`).join(', ')
+    );
+  }
+}
+
+
+/**
+ * Phase 52: トレーサビリティログ - Phase 2バッチ完了
+ *
+ * 各バッチの生成結果を記録する。
+ * シフト配分を集計して偏りを検出。
+ */
+function logPhase2BatchComplete(
+  batchIndex: number,
+  batchStaff: Staff[],
+  batchResult: Array<{ staffId: string; staffName: string; shifts: Record<string, string> }>,
+  requirements: ShiftRequirement
+): void {
+  // シフト配分を集計
+  const shiftDistribution: Record<string, number> = {};
+  const dailyDistribution: Record<number, Record<string, number>> = {};
+
+  for (const schedule of batchResult) {
+    for (const [day, shiftType] of Object.entries(schedule.shifts || {})) {
+      shiftDistribution[shiftType] = (shiftDistribution[shiftType] || 0) + 1;
+
+      const dayNum = Number(day);
+      if (!dailyDistribution[dayNum]) {
+        dailyDistribution[dayNum] = {};
+      }
+      dailyDistribution[dayNum][shiftType] = (dailyDistribution[dayNum][shiftType] || 0) + 1;
+    }
+  }
+
+  // 期待値との比較
+  const totalDays = Object.keys(batchResult[0]?.shifts || {}).filter(d => batchResult[0].shifts[d] !== '休').length;
+  const expectedEarly = (requirements.requirements?.['早番']?.totalStaff || 0) * totalDays / batchStaff.length * batchResult.length;
+  const expectedDay = (requirements.requirements?.['日勤']?.totalStaff || 0) * totalDays / batchStaff.length * batchResult.length;
+  const expectedLate = (requirements.requirements?.['遅番']?.totalStaff || 0) * totalDays / batchStaff.length * batchResult.length;
+
+  const logData = {
+    phase: 'phase2_batch_complete',
+    timestamp: new Date().toISOString(),
+    batchIndex,
+    batchStaffCount: batchStaff.length,
+    staffNames: batchStaff.map(s => s.name),
+    shiftDistribution,
+    expectedDistribution: {
+      early: Math.round(expectedEarly),
+      day: Math.round(expectedDay),
+      late: Math.round(expectedLate),
+    },
+  };
+
+  console.log(`📝 [Phase 2 Batch ${batchIndex}]`, JSON.stringify(logData, null, 2));
+
+  // 偏り警告
+  const actualEarly = shiftDistribution['早番'] || 0;
+  const actualLate = shiftDistribution['遅番'] || 0;
+  if (actualEarly < expectedEarly * 0.5) {
+    console.warn(`⚠️ [Phase 2 Batch ${batchIndex} Warning] 早番が不足: 実際${actualEarly} < 期待${Math.round(expectedEarly)}`);
+  }
+  if (actualLate < expectedLate * 0.5) {
+    console.warn(`⚠️ [Phase 2 Batch ${batchIndex} Warning] 遅番が不足: 実際${actualLate} < 期待${Math.round(expectedLate)}`);
+  }
+}
+
 
 /**
  * Phase 1: 骨子生成用スキーマ
@@ -591,6 +1021,12 @@ export async function generateSkeleton(
   const shiftTypeNames = (requirements.timeSlots || []).map(t => t.name);
   const hasNightShift = shiftTypeNames.some(name => name.includes('夜'));
 
+  // Phase 52: 日別分析を実行（トレーサビリティログ用）
+  const analysis = buildDailyAvailabilityAnalysis(staffList, requirements, daysInMonth, leaveRequests);
+
+  // Phase 52: トレーサビリティログ - Phase 1開始
+  logPhase1Start(staffList, requirements, analysis);
+
   // @google/genai SDK を使用（thinkingConfig をサポート）
   const client = new GoogleGenAI({
     vertexai: true,
@@ -651,6 +1087,9 @@ export async function generateSkeleton(
   const responseText = result.text || '';
   const skeleton = parseGeminiJsonResponse(responseText) as ScheduleSkeleton;
   console.log(`✅ Phase 1完了: ${skeleton.staffSchedules.length}名分の骨子生成`);
+
+  // Phase 52: トレーサビリティログ - Phase 1完了
+  logPhase1Complete(skeleton, analysis);
 
   return skeleton;
 }
@@ -867,6 +1306,7 @@ ${requirementsTable}
 
 ❌ 悪い例: 早番1名、日勤4名、遅番0名（日勤に偏りすぎ）
 ✅ 良い例: 早番${earlyCount}名、日勤${dayCount}名、遅番${lateCount}名（バランス良い）
+${buildShiftDistributionGuide(staffBatch, requirements)}
 ${dynamicConstraints}
 # 制約
 - 骨子で指定された休日の日だけ「休」を出力すること
@@ -972,6 +1412,10 @@ export async function generateDetailedShifts(
 
     const batchResponseText = result.text || '';
     const batchResult = parseGeminiJsonResponse(batchResponseText);
+
+    // Phase 52: トレーサビリティログ - バッチ完了
+    logPhase2BatchComplete(batchNum, batch, batchResult.schedule, requirements);
+
     allSchedules.push(...batchResult.schedule);
   }
 
