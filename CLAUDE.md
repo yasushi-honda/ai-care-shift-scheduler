@@ -25,6 +25,7 @@ Kiro-style Spec Driven Development implementation using claude code slash comman
 - **ai-evaluation-feedback**: Phase 44 AIシフト生成パイプライン改善（動的制約・評価ロジック強化） - ✅ 完了
 - **ai-generation-progress**: Phase 45 AIシフト生成進行状況表示機能（プログレス表示・UX改善） - 🚧 作業中
 - **constraint-level-evaluation**: Phase 53 制約レベル別評価システム（4段階必須レベル・重み付け評価） - ✅ 完了（提案者: 本田）
+- **evaluation-history-reevaluate**: Phase 54 AI評価履歴・再評価機能（履歴復元・手動再評価ボタン） - 📋 計画中（提案者: 本田）
 - Use `/kiro:spec-status [feature-name]` to check progress
 
 ## Development Guidelines

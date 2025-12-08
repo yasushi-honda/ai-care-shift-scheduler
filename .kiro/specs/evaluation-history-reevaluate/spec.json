@@ -1,0 +1,69 @@
+{
+  "id": "evaluation-history-reevaluate",
+  "name": "AI評価履歴・再評価機能",
+  "phase": 54,
+  "status": "planning",
+  "priority": "high",
+  "proposedBy": "本田",
+  "createdAt": "2025-12-09",
+  "updatedAt": "2025-12-09",
+  "description": "Phase 40の残タスク（評価履歴UI）を完了し、手動編集後のAI再評価機能を追加する",
+  "goals": [
+    "年月切替時に過去の評価履歴を自動復元",
+    "手動編集後のシフトをボタン一つで再評価",
+    "過去の評価履歴を一覧表示・比較"
+  ],
+  "requirements": {
+    "file": "requirements.md",
+    "status": "draft",
+    "acceptanceCriteria": [
+      "FR-54.1: 年月切替時に該当月の評価が自動表示される",
+      "FR-54.2: 「シフトを評価」ボタンで現在のシフトが評価される",
+      "FR-54.3: 過去の評価履歴がリスト表示される",
+      "FR-54.4: AIコメントは常に表示、詳細は折りたたみ可能"
+    ]
+  },
+  "design": {
+    "file": "design.md",
+    "status": "draft",
+    "keyDecisions": [
+      "再評価は確認ボタン方式（リアルタイムではない）",
+      "評価履歴はインライン表示（タブ切替）",
+      "新規Cloud Function reevaluateShift を追加"
+    ]
+  },
+  "tasks": {
+    "file": "tasks.md",
+    "status": "not_started",
+    "estimatedDays": 4.5
+  },
+  "dependencies": [
+    {
+      "phase": 40,
+      "name": "ai-evaluation-feedback",
+      "relationship": "extends"
+    }
+  ],
+  "relatedPhases": [40, 44, 53],
+  "files": {
+    "backend": [
+      "functions/src/reevaluate-shift.ts",
+      "functions/src/index.ts"
+    ],
+    "frontend": [
+      "src/components/EvaluationPanel.tsx",
+      "src/components/EvaluationHistory.tsx",
+      "src/components/ShiftTable.tsx",
+      "src/services/evaluationHistoryService.ts"
+    ],
+    "types": [
+      "types.ts",
+      "functions/src/types.ts"
+    ]
+  },
+  "documentation": {
+    "githubPages": "docs/phase54-evaluation-history-reevaluate.html",
+    "claudeMd": true,
+    "serenaMemory": "phase54_evaluation_history_reevaluate_2025-12-09"
+  }
+}

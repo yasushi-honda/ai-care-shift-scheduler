@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Phase 54: AI評価履歴・再評価機能 | AIシフト自動作成システム</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+    <script>mermaid.initialize({startOnLoad:true, theme: 'neutral'});</script>
+    <style>
+        .gradient-bg { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+        .card { background: white; border-radius: 0.75rem; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <!-- ヘッダー -->
+    <header class="gradient-bg text-white py-8">
+        <div class="max-w-6xl mx-auto px-4">
+            <nav class="text-sm mb-4 opacity-80">
+                <a href="index.html" class="hover:underline">ドキュメント</a> &gt;
+                <span>Phase 54</span>
+            </nav>
+            <h1 class="text-3xl font-bold">Phase 54: AI評価履歴・再評価機能</h1>
+            <p class="mt-2 opacity-90">評価履歴の永続化と手動編集後の再評価</p>
+            <div class="mt-4 flex gap-4 text-sm">
+                <span class="bg-white/20 px-3 py-1 rounded-full">ステータス: 計画中</span>
+                <span class="bg-white/20 px-3 py-1 rounded-full">工数: 4.5日</span>
+                <span class="bg-white/20 px-3 py-1 rounded-full">提案者: 本田</span>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-6xl mx-auto px-4 py-8">
+        <!-- 概要 -->
+        <section class="card p-6 mb-8">
+            <h2 class="text-xl font-bold text-gray-800 mb-4">概要</h2>
+            <p class="text-gray-600 leading-relaxed">
+                Phase 40「AI評価・フィードバック機能」で実装された評価履歴保存機能を拡張し、
+                <strong>年月切替時の評価復元</strong>と<strong>手動編集後の再評価</strong>を実現します。
+                これにより、ユーザーはシフト品質を継続的に確認・改善できるようになります。
+            </p>
+        </section>
+
+        <!-- 背景と課題 -->
+        <section class="card p-6 mb-8">
+            <h2 class="text-xl font-bold text-gray-800 mb-4">背景と課題</h2>
+            <div class="grid md:grid-cols-2 gap-6">
+                <div>
+                    <h3 class="font-semibold text-gray-700 mb-2">現状の課題</h3>
+                    <ul class="space-y-2 text-gray-600">
+                        <li class="flex items-start gap-2">
+                            <span class="text-red-500">&#x2717;</span>
+                            <span>年月切替・ページリロードで評価が消える</span>
+                        </li>
+                        <li class="flex items-start gap-2">
+                            <span class="text-red-500">&#x2717;</span>
+                            <span>手動編集後のシフト品質が確認できない</span>
+                        </li>
+                        <li class="flex items-start gap-2">
+                            <span class="text-red-500">&#x2717;</span>
+                            <span>過去の評価との比較ができない</span>
+                        </li>
+                    </ul>
+                </div>
+                <div>
+                    <h3 class="font-semibold text-gray-700 mb-2">Phase 54で実現すること</h3>
+                    <ul class="space-y-2 text-gray-600">
+                        <li class="flex items-start gap-2">
+                            <span class="text-green-500">&#x2713;</span>
+                            <span>評価履歴の自動復元</span>
+                        </li>
+                        <li class="flex items-start gap-2">
+                            <span class="text-green-500">&#x2713;</span>
+                            <span>「シフトを評価」ボタンで再評価</span>
+                        </li>
+                        <li class="flex items-start gap-2">
+                            <span class="text-green-500">&#x2713;</span>
+                            <span>評価履歴一覧の表示</span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <!-- 機能要件 -->
+        <section class="card p-6 mb-8">
+            <h2 class="text-xl font-bold text-gray-800 mb-4">機能要件</h2>
+            <div class="space-y-6">
+                <!-- FR-54.1 -->
+                <div class="border-l-4 border-blue-500 pl-4">
+                    <h3 class="font-semibold text-gray-700">FR-54.1: 評価履歴の自動復元</h3>
+                    <p class="text-gray-600 mt-1">年月切替時・ページリロード時に、該当月の最新AI評価を自動的に表示</p>
+                    <div class="mt-2 text-sm text-gray-500">
+                        <span class="inline-block bg-gray-100 px-2 py-0.5 rounded mr-2">Firestoreから取得</span>
+                        <span class="inline-block bg-gray-100 px-2 py-0.5 rounded">ローディング表示対応</span>
+                    </div>
+                </div>
+
+                <!-- FR-54.2 -->
+                <div class="border-l-4 border-green-500 pl-4">
+                    <h3 class="font-semibold text-gray-700">FR-54.2: 手動編集後のAI再評価</h3>
+                    <p class="text-gray-600 mt-1">「シフトを評価」ボタン押下で現在のシフトをAIが評価</p>
+                    <div class="mt-2 text-sm text-gray-500">
+                        <span class="inline-block bg-gray-100 px-2 py-0.5 rounded mr-2">Cloud Function呼び出し</span>
+                        <span class="inline-block bg-gray-100 px-2 py-0.5 rounded">履歴として保存</span>
+                    </div>
+                </div>
+
+                <!-- FR-54.3 -->
+                <div class="border-l-4 border-purple-500 pl-4">
+                    <h3 class="font-semibold text-gray-700">FR-54.3: 評価履歴一覧表示</h3>
+                    <p class="text-gray-600 mt-1">過去の評価履歴をリスト表示し、比較可能に</p>
+                    <div class="mt-2 text-sm text-gray-500">
+                        <span class="inline-block bg-gray-100 px-2 py-0.5 rounded mr-2">直近10件表示</span>
+                        <span class="inline-block bg-gray-100 px-2 py-0.5 rounded">詳細展開可能</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- UI設計 -->
+        <section class="card p-6 mb-8">
+            <h2 class="text-xl font-bold text-gray-800 mb-4">UI設計</h2>
+            <div class="bg-gray-100 p-4 rounded-lg font-mono text-sm">
+                <pre class="whitespace-pre-wrap text-gray-700">
+┌─────────────────────────────────────────────────────────┐
+│ シフト表                              [シフトを評価] 📊 │
+├─────────────────────────────────────────────────────────┤
+│ [AI評価] 85点  エラー0  警告3              ▼           │
+│ ─────────────────────────────────────────────────────── │
+│ 💬 AIコメント:                                          │
+│ 今月のシフトは概ね良好です。連勤が3名で発生しています。 │
+├─────────────────────────────────────────────────────────┤
+│ [現在の評価] [履歴]                                     │
+│                                                         │
+│ ▼ 詳細（展開時のみ表示）                                │
+│   - サマリー（スコア、充足率、違反件数）               │
+│   - 制約違反リスト                                      │
+│   - 改善提案                                            │
+└─────────────────────────────────────────────────────────┘
+                </pre>
+            </div>
+        </section>
+
+        <!-- アーキテクチャ -->
+        <section class="card p-6 mb-8">
+            <h2 class="text-xl font-bold text-gray-800 mb-4">システムアーキテクチャ</h2>
+            <div class="mermaid">
+graph TB
+    subgraph Frontend
+        ST[ShiftTable.tsx]
+        EP[EvaluationPanel.tsx]
+        EH[EvaluationHistory.tsx]
+    end
+
+    subgraph CloudFunctions
+        GS[generateShift]
+        RE[reevaluateShift - 新規]
+        EL[evaluationLogic]
+    end
+
+    subgraph Firestore
+        AH[(aiGenerationHistory)]
+    end
+
+    ST -->|生成| GS
+    ST -->|再評価| RE
+    GS --> EL
+    RE --> EL
+    GS -->|保存| AH
+    RE -->|保存| AH
+    ST -->|履歴取得| AH
+    EP --> EH
+            </div>
+        </section>
+
+        <!-- フロー図 -->
+        <section class="card p-6 mb-8">
+            <h2 class="text-xl font-bold text-gray-800 mb-4">処理フロー</h2>
+
+            <h3 class="font-semibold text-gray-700 mb-2">年月切替時の評価復元</h3>
+            <div class="mermaid">
+sequenceDiagram
+    actor User as ユーザー
+    participant ST as ShiftTable
+    participant FS as Firestore
+    participant EP as EvaluationPanel
+
+    User->>ST: 年月切替
+    ST->>FS: 最新評価取得
+    FS-->>ST: 評価データ
+    ST->>EP: 表示更新
+            </div>
+
+            <h3 class="font-semibold text-gray-700 mt-6 mb-2">手動再評価フロー</h3>
+            <div class="mermaid">
+sequenceDiagram
+    actor User as ユーザー
+    participant ST as ShiftTable
+    participant CF as reevaluateShift
+    participant FS as Firestore
+
+    User->>ST: 「シフトを評価」クリック
+    ST->>CF: 再評価リクエスト
+    CF->>CF: 評価計算
+    CF->>FS: 履歴保存
+    CF-->>ST: 評価結果
+    ST->>User: 評価表示
+            </div>
+        </section>
+
+        <!-- 実装計画 -->
+        <section class="card p-6 mb-8">
+            <h2 class="text-xl font-bold text-gray-800 mb-4">実装計画</h2>
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm">
+                    <thead class="bg-gray-100">
+                        <tr>
+                            <th class="px-4 py-2 text-left">サブフェーズ</th>
+                            <th class="px-4 py-2 text-left">内容</th>
+                            <th class="px-4 py-2 text-left">工数</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y">
+                        <tr>
+                            <td class="px-4 py-2">54.1</td>
+                            <td class="px-4 py-2">データモデル拡張（evaluationType追加）</td>
+                            <td class="px-4 py-2">0.5日</td>
+                        </tr>
+                        <tr>
+                            <td class="px-4 py-2">54.2</td>
+                            <td class="px-4 py-2">reevaluateShift Cloud Function実装</td>
+                            <td class="px-4 py-2">1日</td>
+                        </tr>
+                        <tr>
+                            <td class="px-4 py-2">54.3</td>
+                            <td class="px-4 py-2">評価履歴自動復元（フロントエンド）</td>
+                            <td class="px-4 py-2">1日</td>
+                        </tr>
+                        <tr>
+                            <td class="px-4 py-2">54.4</td>
+                            <td class="px-4 py-2">「シフトを評価」ボタン実装</td>
+                            <td class="px-4 py-2">0.5日</td>
+                        </tr>
+                        <tr>
+                            <td class="px-4 py-2">54.5</td>
+                            <td class="px-4 py-2">評価履歴一覧UI実装</td>
+                            <td class="px-4 py-2">1日</td>
+                        </tr>
+                        <tr>
+                            <td class="px-4 py-2">54.6</td>
+                            <td class="px-4 py-2">テスト・デバッグ</td>
+                            <td class="px-4 py-2">0.5日</td>
+                        </tr>
+                        <tr class="bg-blue-50 font-semibold">
+                            <td class="px-4 py-2" colspan="2">合計</td>
+                            <td class="px-4 py-2">4.5日</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- 関連Phase -->
+        <section class="card p-6 mb-8">
+            <h2 class="text-xl font-bold text-gray-800 mb-4">関連Phase</h2>
+            <div class="grid md:grid-cols-3 gap-4">
+                <a href="phase40-ai-evaluation.html" class="block p-4 border rounded-lg hover:bg-gray-50">
+                    <div class="font-semibold text-gray-700">Phase 40</div>
+                    <div class="text-sm text-gray-500">AI評価・フィードバック機能</div>
+                    <div class="text-xs text-blue-600 mt-1">本Phaseの基盤</div>
+                </a>
+                <a href="phase53-constraint-level-evaluation.html" class="block p-4 border rounded-lg hover:bg-gray-50">
+                    <div class="font-semibold text-gray-700">Phase 53</div>
+                    <div class="text-sm text-gray-500">制約レベル別評価システム</div>
+                    <div class="text-xs text-blue-600 mt-1">評価ロジックの拡張</div>
+                </a>
+                <a href="phase44-dynamic-constraints.html" class="block p-4 border rounded-lg hover:bg-gray-50">
+                    <div class="font-semibold text-gray-700">Phase 44</div>
+                    <div class="text-sm text-gray-500">動的制約生成</div>
+                    <div class="text-xs text-blue-600 mt-1">評価対象の制約定義</div>
+                </a>
+            </div>
+        </section>
+
+        <!-- 将来拡張 -->
+        <section class="card p-6 mb-8">
+            <h2 class="text-xl font-bold text-gray-800 mb-4">将来拡張</h2>
+            <ul class="space-y-2 text-gray-600">
+                <li class="flex items-start gap-2">
+                    <span class="text-gray-400">&#x25CB;</span>
+                    <span>リアルタイム評価（編集ごとに自動評価、デバウンス付き）</span>
+                </li>
+                <li class="flex items-start gap-2">
+                    <span class="text-gray-400">&#x25CB;</span>
+                    <span>評価スコア推移グラフ</span>
+                </li>
+                <li class="flex items-start gap-2">
+                    <span class="text-gray-400">&#x25CB;</span>
+                    <span>評価結果のPDF/CSVエクスポート</span>
+                </li>
+            </ul>
+        </section>
+    </main>
+
+    <!-- フッター -->
+    <footer class="bg-gray-800 text-white py-6 mt-12">
+        <div class="max-w-6xl mx-auto px-4 text-center text-sm">
+            <p>AIシフト自動作成システム - Phase 54 ドキュメント</p>
+            <p class="mt-1 opacity-70">作成日: 2025-12-09 | 提案者: 本田</p>
+        </div>
+    </footer>
+</body>
+</html>
