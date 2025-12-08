@@ -875,7 +875,23 @@ export async function generateDetailedShifts(
   }
 
   console.log(`✅ Phase 2完了: ${allSchedules.length}名分の詳細シフト生成`);
-  return allSchedules;
+
+  // 形式変換: { shifts: { "1": "日勤", ... } } → { monthlyShifts: [{ date: "2025-01-01", shiftType: "日勤" }, ...] }
+  const convertedSchedules: StaffSchedule[] = allSchedules.map((schedule: any) => {
+    const monthlyShifts = Object.entries(schedule.shifts || {}).map(([day, shiftType]) => ({
+      date: `${requirements.targetMonth}-${String(day).padStart(2, '0')}`,
+      shiftType: shiftType as string,
+    }));
+
+    return {
+      staffId: schedule.staffId,
+      staffName: schedule.staffName,
+      monthlyShifts,
+    };
+  });
+
+  console.log(`✅ 形式変換完了: ${convertedSchedules.length}名分をmonthlyShifts形式に変換`);
+  return convertedSchedules;
 }
 
 /**
