@@ -1678,6 +1678,8 @@ const App: React.FC = () => {
                 evaluation={evaluation}
                 onReevaluate={handleReevaluate}
                 isReevaluating={isReevaluating}
+                facilityId={selectedFacilityId}
+                onSelectEvaluation={setEvaluation}
               />
             )
           ) : (

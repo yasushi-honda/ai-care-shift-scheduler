@@ -4,6 +4,7 @@ import type { StaffSchedule, GeneratedShift, FacilityShiftSettings, AIEvaluation
 import { WEEKDAYS, DEFAULT_SHIFT_TYPES, DEFAULT_SHIFT_CYCLE } from '../constants';
 import { ShiftEditConfirmModal } from '../src/components/ShiftEditConfirmModal';
 import { EvaluationPanel } from '../src/components/EvaluationPanel';
+import { EvaluationHistory } from '../src/components/EvaluationHistory';
 
 interface ShiftTableProps {
   schedule: StaffSchedule[];
@@ -21,6 +22,10 @@ interface ShiftTableProps {
   onReevaluate?: () => void;
   /** Phase 54: 再評価中フラグ */
   isReevaluating?: boolean;
+  /** Phase 54: 施設ID（評価履歴取得用） */
+  facilityId?: string;
+  /** Phase 54: 評価選択コールバック */
+  onSelectEvaluation?: (evaluation: AIEvaluationResult) => void;
 }
 
 const getShiftColor = (shiftType: string) => {
@@ -72,7 +77,7 @@ interface EditModalData {
   currentShift: GeneratedShift | null;
 }
 
-const ShiftTable: React.FC<ShiftTableProps> = ({ schedule, targetMonth, onShiftChange, onShiftUpdate, onBulkCopyClick, onQuickShiftChange, shiftSettings, evaluation, onReevaluate, isReevaluating }) => {
+const ShiftTable: React.FC<ShiftTableProps> = ({ schedule, targetMonth, onShiftChange, onShiftUpdate, onBulkCopyClick, onQuickShiftChange, shiftSettings, evaluation, onReevaluate, isReevaluating, facilityId, onSelectEvaluation }) => {
   const [editingShift, setEditingShift] = useState<{ staffId: string, date: string } | null>(null);
   const [showEditModal, setShowEditModal] = useState(false);
   const [editModalData, setEditModalData] = useState<EditModalData | null>(null);
@@ -432,6 +437,16 @@ const ShiftTable: React.FC<ShiftTableProps> = ({ schedule, targetMonth, onShiftC
         <div className="mb-4">
           <EvaluationPanel evaluation={evaluation} />
         </div>
+      )}
+
+      {/* Phase 54: 評価履歴一覧 */}
+      {facilityId && targetMonth && (
+        <EvaluationHistory
+          facilityId={facilityId}
+          targetMonth={targetMonth}
+          onSelectEvaluation={onSelectEvaluation}
+          className="mb-4"
+        />
       )}
 
       {/* 一括コピーボタン */}
