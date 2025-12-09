@@ -509,6 +509,58 @@ CORSエラーが発生した場合、**CORS設定だけでなく「関数が存�
 
 詳細: [BUG-001修正記録](.kiro/bugfix-cors-cloud-functions-2025-12-05.md)
 
+## Firestoreインデックス管理ルール（重要 - BUG-019教訓）
+
+**背景**: 2025-12-09にBUG-019発生。`aiGenerationHistory`インデックスがデプロイされていなかった。2つの問題が重なっていた。
+
+### サブコレクションのインデックス設定
+
+サブコレクション（例: `facilities/{facilityId}/aiGenerationHistory`）に複合クエリを実行する場合：
+
+```json
+// ✅ 正しい設定
+{
+  "collectionGroup": "aiGenerationHistory",
+  "queryScope": "COLLECTION_GROUP",  // ❗ サブコレクションは必ずCOLLECTION_GROUP
+  "fields": [...]
+}
+
+// ❌ 間違い（COLLECTION）
+{
+  "queryScope": "COLLECTION"  // サブコレクションでは機能しない
+}
+```
+
+### 単一フィールドインデックスは定義不要
+
+```json
+// ❌ 不要（Firestoreが自動作成、手動定義すると400エラー）
+{
+  "collectionGroup": "facilities",
+  "fields": [{ "fieldPath": "createdAt", "order": "DESCENDING" }]
+}
+```
+
+### CI/CDでのインデックスデプロイ
+
+```bash
+# ✅ 正しい設定（firestore:indexesを含む）
+firebase deploy --only firestore:rules,firestore:indexes
+
+# ❌ 間違い（indexesが抜けている）
+firebase deploy --only firestore:rules
+```
+
+### チェックリスト
+
+| # | 項目 | 確認コマンド |
+|---|------|-------------|
+| 1 | インデックス定義確認 | `cat firestore.indexes.json` |
+| 2 | CI/CDに`firestore:indexes`含む | `cat .github/workflows/ci.yml \| grep firestore:indexes` |
+| 3 | デプロイ後ログ確認 | `gh run view <id> --log \| grep "deployed indexes"` |
+
+詳細: [BUG-019修正記録](.kiro/bugfix-firestore-index-aiGenerationHistory-2025-12-09.md)
+
 ## Gemini 2.5 Flash 設定ルール（重要）
 
 ### 必須: @google/genai SDK使用（BUG-012教訓）
@@ -709,7 +761,7 @@ const result = await withExponentialBackoff(
 - [BUG-016対策](.kiro/ai-quality-improvement-guide.md#phase-512025-12-08) - 429エラー指数バックオフリトライ
 - [BUG-019修正記録](.kiro/bugfix-firestore-index-aiGenerationHistory-2025-12-09.md) - aiGenerationHistoryインデックス（COLLECTION_GROUP）
 - [ポストモーテム](.kiro/postmortem-gemini-bugs-2025-12-05.md) - 全体分析
-- Serenaメモリ: `gemini_region_critical_rule`, `gemini_max_output_tokens_critical_rule`, `gemini_thinking_budget_critical_rule`, `cloud_function_custom_token_iam`, `bug012_sdk_migration_2025-12-08`, `firestore_indexes_cache`
+- Serenaメモリ: `gemini_region_critical_rule`, `gemini_max_output_tokens_critical_rule`, `gemini_thinking_budget_critical_rule`, `cloud_function_custom_token_iam`, `bug012_sdk_migration_2025-12-08`, `firestore_indexes_cache`, `bug019_firestore_index_cicd_2025-12-09`
 
 ---
 
