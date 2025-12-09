@@ -45,6 +45,7 @@ import { AIGenerationProgress } from './src/components/AIGenerationProgress';
 import { useAIGenerationProgress } from './src/hooks/useAIGenerationProgress';
 // Phase 54: 評価履歴サービス
 import { getLatestEvaluationForMonth } from './src/services/evaluationHistoryService';
+import { reevaluateShift } from './src/services/reevaluateService';
 
 type ViewMode = 'shift' | 'leaveRequest';
 
@@ -121,6 +122,8 @@ const App: React.FC = () => {
   // Phase 43: 排他制御用state
   const [lockModalOpen, setLockModalOpen] = useState(false);
   const [currentLockInfo, setCurrentLockInfo] = useState<LockInfo | null>(null);
+  // Phase 54: 再評価中フラグ
+  const [isReevaluating, setIsReevaluating] = useState(false);
 
   // Phase 45: AI生成プログレス表示
   const aiProgress = useAIGenerationProgress();
@@ -1143,6 +1146,52 @@ const App: React.FC = () => {
     }
   };
 
+  /**
+   * Phase 54: シフト再評価ハンドラー
+   * 手動編集後のシフトをCloud Functionで再評価
+   */
+  const handleReevaluate = useCallback(async () => {
+    if (!selectedFacilityId || !currentUser) {
+      showError('再評価に必要な情報が不足しています');
+      return;
+    }
+
+    if (schedule.length === 0) {
+      showError('評価するシフトがありません');
+      return;
+    }
+
+    setIsReevaluating(true);
+    console.log('📊 [Phase 54] 再評価開始');
+
+    try {
+      const result = await reevaluateShift({
+        facilityId: selectedFacilityId,
+        targetMonth: requirements.targetMonth,
+        staffSchedules: schedule,
+        staffList,
+        requirements,
+        leaveRequests,
+      });
+
+      if (result.error) {
+        showError(`再評価に失敗しました: ${result.error}`);
+      } else if (result.evaluation) {
+        setEvaluation(result.evaluation);
+        showSuccess('シフトを評価しました');
+        console.log('✅ [Phase 54] 再評価完了:', {
+          score: result.evaluation.overallScore,
+          historyId: result.historyId,
+        });
+      }
+    } catch (err) {
+      console.error('❌ [Phase 54] 再評価エラー:', err);
+      showError('再評価中にエラーが発生しました');
+    } finally {
+      setIsReevaluating(false);
+    }
+  }, [selectedFacilityId, currentUser, schedule, staffList, requirements, leaveRequests, showError, showSuccess]);
+
   const handleSaveDraft = useCallback(async () => {
     if (!selectedFacilityId || !currentUser || !currentScheduleId) {
       showError('保存に必要な情報が不足しています');
@@ -1627,6 +1676,8 @@ const App: React.FC = () => {
                 onQuickShiftChange={handleQuickShiftChange}
                 shiftSettings={shiftSettings}
                 evaluation={evaluation}
+                onReevaluate={handleReevaluate}
+                isReevaluating={isReevaluating}
               />
             )
           ) : (

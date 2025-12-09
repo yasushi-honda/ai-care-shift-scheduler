@@ -17,6 +17,10 @@ interface ShiftTableProps {
   shiftSettings?: FacilityShiftSettings;
   /** Phase 40: AI評価結果（オプション） */
   evaluation?: AIEvaluationResult | null;
+  /** Phase 54: シフト再評価コールバック */
+  onReevaluate?: () => void;
+  /** Phase 54: 再評価中フラグ */
+  isReevaluating?: boolean;
 }
 
 const getShiftColor = (shiftType: string) => {
@@ -68,7 +72,7 @@ interface EditModalData {
   currentShift: GeneratedShift | null;
 }
 
-const ShiftTable: React.FC<ShiftTableProps> = ({ schedule, targetMonth, onShiftChange, onShiftUpdate, onBulkCopyClick, onQuickShiftChange, shiftSettings, evaluation }) => {
+const ShiftTable: React.FC<ShiftTableProps> = ({ schedule, targetMonth, onShiftChange, onShiftUpdate, onBulkCopyClick, onQuickShiftChange, shiftSettings, evaluation, onReevaluate, isReevaluating }) => {
   const [editingShift, setEditingShift] = useState<{ staffId: string, date: string } | null>(null);
   const [showEditModal, setShowEditModal] = useState(false);
   const [editModalData, setEditModalData] = useState<EditModalData | null>(null);
@@ -389,6 +393,40 @@ const ShiftTable: React.FC<ShiftTableProps> = ({ schedule, targetMonth, onShiftC
 
   return (
     <>
+      {/* Phase 54: シフト評価ボタンと評価パネル */}
+      <div className="mb-4 flex flex-col sm:flex-row sm:items-start gap-4">
+        {/* 評価ボタン */}
+        {onReevaluate && schedule.length > 0 && (
+          <button
+            type="button"
+            onClick={onReevaluate}
+            disabled={isReevaluating}
+            className={`px-4 py-2 rounded-lg flex items-center gap-2 transition-colors ${
+              isReevaluating
+                ? 'bg-gray-400 cursor-not-allowed'
+                : 'bg-purple-600 hover:bg-purple-700 text-white'
+            }`}
+          >
+            {isReevaluating ? (
+              <>
+                <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                評価中...
+              </>
+            ) : (
+              <>
+                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+                </svg>
+                シフトを評価
+              </>
+            )}
+          </button>
+        )}
+      </div>
+
       {/* Phase 40: AI評価パネル */}
       {evaluation && (
         <div className="mb-4">
