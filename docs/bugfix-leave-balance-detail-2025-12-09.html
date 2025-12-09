@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>BUG-021: 休暇残高詳細ボタンエラー修正 - AIシフト自動作成システム</title>
+
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: "Open Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
+            font-size: 16px;
+            line-height: 1.6;
+            color: #606c71;
+            max-width: 64rem;
+            margin: 0 auto;
+            padding: 2rem 1rem;
+        }
+        h1, h2, h3 { color: #0366d6; margin-top: 2rem; margin-bottom: 1rem; }
+        h1 { font-size: 1.75rem; border-bottom: 2px solid #e74c3c; padding-bottom: 0.5rem; }
+        h2 { font-size: 1.5rem; }
+        h3 { font-size: 1.25rem; }
+        a { color: #1e6bb8; }
+        code { background: #f6f8fa; padding: 0.2rem 0.4rem; border-radius: 4px; font-size: 0.9rem; }
+        pre { background: #f6f8fa; padding: 1rem; border-radius: 8px; overflow-x: auto; margin: 1rem 0; }
+        pre code { background: none; padding: 0; }
+        .badge { display: inline-block; padding: 0.25rem 0.75rem; border-radius: 1rem; font-size: 0.85rem; font-weight: 600; }
+        .badge-resolved { background: #28a745; color: white; }
+        .badge-high { background: #e74c3c; color: white; }
+        .back-link { display: inline-block; margin-bottom: 1rem; padding: 0.5rem 1rem; background: #f6f8fa; border: 1px solid #d1d5da; border-radius: 4px; }
+        table { width: 100%; border-collapse: collapse; margin: 1rem 0; }
+        th, td { padding: 0.75rem; border: 1px solid #d1d5da; text-align: left; }
+        th { background: #f6f8fa; }
+        .error-box { background: #ffeaea; border: 1px solid #e74c3c; border-radius: 8px; padding: 1rem; margin: 1rem 0; }
+        .solution-box { background: #e8f5e9; border: 1px solid #28a745; border-radius: 8px; padding: 1rem; margin: 1rem 0; }
+    </style>
+</head>
+<body>
+    <a href="bugfix-index.html" class="back-link">&larr; バグ修正一覧に戻る</a>
+
+    <h1>BUG-021: 休暇残高管理の詳細ボタンエラー修正</h1>
+
+    <p>
+        <span class="badge badge-resolved">解決済み</span>
+        <span class="badge badge-high">重要度: 高</span>
+    </p>
+    <p><strong>修正日</strong>: 2025-12-09</p>
+
+    <h2>概要</h2>
+    <p>「休暇残高管理」セクションでスタッフの「詳細」ボタンをクリックすると、JavaScriptエラーが発生する問題を修正。</p>
+
+    <h2>現象</h2>
+
+    <div class="error-box">
+        <strong>エラーメッセージ:</strong>
+        <pre><code>Error fetching staff leave balance: TypeError: Cannot read properties of undefined (reading 'split')
+    at Ys (App--DyVKMO6.js:4:17948)</code></pre>
+    </div>
+
+    <h3>再現手順</h3>
+    <ol>
+        <li>シフト管理画面を開く</li>
+        <li>「休暇残高管理」アコーディオンを展開</li>
+        <li>任意のスタッフの「詳細」ボタンをクリック</li>
+        <li>エラーが発生</li>
+    </ol>
+
+    <h2>根本原因</h2>
+
+    <h3>props名の不一致</h3>
+    <p><code>App.tsx</code>で<code>LeaveBalanceDashboard</code>コンポーネントに渡すプロパティ名が、コンポーネントの期待する名前と一致していなかった。</p>
+
+    <table>
+        <tr>
+            <th>渡していた値</th>
+            <th>期待される値</th>
+        </tr>
+        <tr>
+            <td><code>targetMonth</code></td>
+            <td><code>yearMonth</code></td>
+        </tr>
+        <tr>
+            <td><code>onSaveSettings</code>（未使用）</td>
+            <td>-</td>
+        </tr>
+        <tr>
+            <td><code>disabled</code>（未使用）</td>
+            <td>-</td>
+        </tr>
+        <tr>
+            <td><code>currentUserId</code>（欠落）</td>
+            <td><code>currentUserId</code></td>
+        </tr>
+    </table>
+
+    <h3>エラー発生の流れ</h3>
+    <ol>
+        <li><code>yearMonth</code>が<code>undefined</code>（props名が<code>targetMonth</code>だったため）</li>
+        <li>「詳細」ボタンクリック → <code>handleShowDetail</code> → <code>getOrCreateBalance</code></li>
+        <li><code>getStaffLeaveBalance(facilityId, staffId, yearMonth, settings)</code> 呼び出し</li>
+        <li><code>getPreviousYearMonth(undefined)</code> → <code>undefined.split('-')</code> → TypeError</li>
+    </ol>
+
+    <h2>修正内容</h2>
+
+    <div class="solution-box">
+        <h3>1. App.tsx (1567-1574行)</h3>
+        <pre><code>// Before
+&lt;LeaveBalanceDashboard
+  facilityId={selectedFacilityId || ''}
+  staffList={staffList}
+  targetMonth={requirements.targetMonth}  // ❌ 間違い
+  leaveSettings={leaveSettings}
+  onSaveSettings={handleSaveLeaveSettings}  // 未使用
+  disabled={!selectedFacilityId}  // 未使用
+/&gt;
+
+// After
+&lt;LeaveBalanceDashboard
+  facilityId={selectedFacilityId || ''}
+  staffList={staffList}
+  yearMonth={requirements.targetMonth}  // ✅ 修正
+  leaveSettings={leaveSettings}
+  currentUserId={currentUser?.uid || ''}  // ✅ 追加
+/&gt;</code></pre>
+    </div>
+
+    <div class="solution-box">
+        <h3>2. LeaveBalanceDashboard.tsx (91-96行)</h3>
+        <p>防御的プログラミングとして早期リターンを追加:</p>
+        <pre><code>const getOrCreateBalance = useCallback(async (staffId: string): Promise&lt;StaffLeaveBalance | null&gt; =&gt; {
+  // 防御的チェック: facilityIdまたはyearMonthが未設定の場合は早期リターン
+  if (!facilityId || !yearMonth) {
+    console.warn('getOrCreateBalance: facilityId or yearMonth is not set');
+    return null;
+  }
+  // ...
+}, [facilityId, yearMonth, leaveSettings, balances]);</code></pre>
+    </div>
+
+    <h2>変更ファイル</h2>
+    <table>
+        <tr>
+            <th>ファイル</th>
+            <th>変更内容</th>
+        </tr>
+        <tr>
+            <td><code>App.tsx</code></td>
+            <td>props名修正、未使用props削除、currentUserId追加</td>
+        </tr>
+        <tr>
+            <td><code>src/components/LeaveBalanceDashboard.tsx</code></td>
+            <td>防御的チェック追加</td>
+        </tr>
+    </table>
+
+    <h2>教訓</h2>
+    <ul>
+        <li>TypeScriptの型定義が正しくても、props名のタイポ/不一致は検出できない場合がある</li>
+        <li>ランタイムエラーログを定期的に監視することが重要</li>
+        <li>防御的プログラミング（早期リターン）で予期せぬundefinedを防ぐ</li>
+    </ul>
+
+    <h2>関連</h2>
+    <ul>
+        <li><a href="bugfix-leave-balance-permission-2025-12-09.html">BUG-022: 休暇残高パーミッションエラー</a>（同日発生）</li>
+        <li><a href="bugfix-index.html">バグ修正一覧</a></li>
+    </ul>
+
+    <hr>
+    <p style="text-align: center; color: #999; font-size: 0.9rem;">作成者: Claude Opus 4.5 | 最終更新: 2025-12-09</p>
+</body>
+</html>

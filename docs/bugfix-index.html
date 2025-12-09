@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>バグ修正記録一覧 - AIシフト自動作成システム</title>
+    <meta name="description" content="AIシフト自動作成システムのバグ修正記録・ポストモーテム一覧">
+
+    <link rel="preconnect" href="https://fonts.gstatic.com">
+    <link rel="preload" href="https://fonts.googleapis.com/css?family=Open+Sans:400,700&display=swap" as="style" type="text/css" crossorigin>
+
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: "Open Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
+            font-size: 16px;
+            line-height: 1.5;
+            color: #606c71;
+        }
+        .page-header {
+            color: #fff;
+            text-align: center;
+            background-color: #c0392b;
+            background-image: linear-gradient(135deg, #c0392b 0%, #e74c3c 50%, #f39c12 100%);
+            padding: 2rem 1rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+        }
+        .project-name {
+            margin-top: 0;
+            margin-bottom: 0.5rem;
+            font-size: 2rem;
+            font-weight: bold;
+            color: #ffffff;
+        }
+        .project-tagline {
+            font-weight: normal;
+            opacity: 0.95;
+            font-size: 1.1rem;
+            color: #fff;
+        }
+        .main-content {
+            max-width: 64rem;
+            padding: 2rem 1rem;
+            margin: 0 auto;
+            font-size: 1rem;
+        }
+        h1, h2, h3 {
+            margin-top: 2rem;
+            margin-bottom: 1rem;
+            font-weight: 600;
+            color: #c0392b;
+        }
+        h1 { font-size: 1.75rem; }
+        h2 { font-size: 1.5rem; }
+        h3 { font-size: 1.25rem; }
+        hr {
+            height: 2px;
+            padding: 0;
+            margin: 2rem 0;
+            background-color: #eff0f1;
+            border: 0;
+        }
+        a { color: #1e6bb8; text-decoration: none; }
+        a:hover { text-decoration: underline; }
+
+        .back-link {
+            display: inline-block;
+            margin-bottom: 1rem;
+            padding: 0.5rem 1rem;
+            background: #f6f8fa;
+            border: 1px solid #d1d5da;
+            border-radius: 4px;
+            color: #0366d6;
+        }
+        .back-link:hover {
+            background: #e9ecef;
+            text-decoration: none;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 1rem;
+            margin: 1.5rem 0;
+        }
+        .stat-card {
+            padding: 1.25rem;
+            border-radius: 8px;
+            text-align: center;
+            color: white;
+        }
+        .stat-card.resolved { background: linear-gradient(135deg, #27ae60 0%, #2ecc71 100%); }
+        .stat-card.critical { background: linear-gradient(135deg, #c0392b 0%, #e74c3c 100%); }
+        .stat-card.warning { background: linear-gradient(135deg, #f39c12 0%, #f1c40f 100%); }
+        .stat-card.info { background: linear-gradient(135deg, #3498db 0%, #2980b9 100%); }
+        .stat-number { font-size: 2rem; font-weight: bold; }
+        .stat-label { font-size: 0.85rem; opacity: 0.9; }
+
+        .bug-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1.5rem 0;
+            font-size: 0.95rem;
+        }
+        .bug-table th, .bug-table td {
+            padding: 0.75rem 1rem;
+            border: 1px solid #d1d5da;
+            text-align: left;
+        }
+        .bug-table th {
+            background: #f6f8fa;
+            font-weight: 600;
+            color: #24292e;
+        }
+        .bug-table tr:hover { background: #f8f9fa; }
+
+        .badge {
+            display: inline-block;
+            padding: 0.2rem 0.6rem;
+            border-radius: 1rem;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+        .badge-resolved { background: #28a745; color: white; }
+        .badge-critical { background: #c0392b; color: white; }
+        .badge-high { background: #e74c3c; color: white; }
+        .badge-medium { background: #f39c12; color: white; }
+        .badge-low { background: #3498db; color: white; }
+
+        .category-section {
+            background: #f6f8fa;
+            border: 1px solid #d1d5da;
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin: 1.5rem 0;
+        }
+        .category-section h3 {
+            margin-top: 0;
+            color: #24292e;
+        }
+
+        .timeline {
+            border-left: 3px solid #d1d5da;
+            padding-left: 1.5rem;
+            margin: 1rem 0;
+        }
+        .timeline-item {
+            position: relative;
+            margin-bottom: 1.5rem;
+        }
+        .timeline-item::before {
+            content: '';
+            position: absolute;
+            left: -1.75rem;
+            top: 0.25rem;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #28a745;
+            border: 2px solid white;
+        }
+        .timeline-date {
+            font-size: 0.85rem;
+            color: #6a737d;
+            font-weight: 600;
+        }
+        .timeline-title {
+            font-weight: 600;
+            color: #24292e;
+        }
+        .timeline-desc {
+            color: #586069;
+            font-size: 0.9rem;
+        }
+
+        .lesson-card {
+            background: #fff3cd;
+            border: 1px solid #ffc107;
+            border-radius: 8px;
+            padding: 1rem 1.5rem;
+            margin: 1rem 0;
+        }
+        .lesson-card h4 {
+            margin: 0 0 0.5rem;
+            color: #856404;
+        }
+
+        .site-footer {
+            padding-top: 2rem;
+            margin-top: 2rem;
+            border-top: solid 1px #eff0f1;
+            text-align: center;
+            font-size: 0.9rem;
+        }
+    </style>
+</head>
+<body>
+    <header class="page-header" role="banner">
+        <h1 class="project-name">バグ修正記録一覧</h1>
+        <p class="project-tagline">AIシフト自動作成システム - 障害対応・ポストモーテム</p>
+    </header>
+
+    <main class="main-content" role="main">
+        <a href="index.html" class="back-link">&larr; トップページに戻る</a>
+
+        <h1>概要</h1>
+
+        <p>本ページでは、AIシフト自動作成システムで発生したバグの修正記録と、得られた教訓をまとめています。</p>
+
+        <div class="stats-grid">
+            <div class="stat-card resolved">
+                <div class="stat-number">22</div>
+                <div class="stat-label">総バグ数</div>
+            </div>
+            <div class="stat-card resolved">
+                <div class="stat-number">22</div>
+                <div class="stat-label">解決済み</div>
+            </div>
+            <div class="stat-card info">
+                <div class="stat-number">2</div>
+                <div class="stat-label">ポストモーテム</div>
+            </div>
+            <div class="stat-card warning">
+                <div class="stat-number">8</div>
+                <div class="stat-label">Gemini関連</div>
+            </div>
+        </div>
+
+        <hr>
+
+        <h2>バグ一覧（時系列）</h2>
+
+        <table class="bug-table">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>日付</th>
+                    <th>カテゴリ</th>
+                    <th>概要</th>
+                    <th>重要度</th>
+                    <th>詳細</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>BUG-022</td>
+                    <td>2025-12-09</td>
+                    <td>権限</td>
+                    <td>休暇残高管理パーミッションエラー（Firestore直接更新で解決）</td>
+                    <td><span class="badge badge-high">高</span></td>
+                    <td><a href="bugfix-leave-balance-permission-2025-12-09.html">詳細</a></td>
+                </tr>
+                <tr>
+                    <td>BUG-021</td>
+                    <td>2025-12-09</td>
+                    <td>UI</td>
+                    <td>休暇残高「詳細」ボタンエラー（props名不一致）</td>
+                    <td><span class="badge badge-high">高</span></td>
+                    <td><a href="bugfix-leave-balance-detail-2025-12-09.html">詳細</a></td>
+                </tr>
+                <tr>
+                    <td>BUG-020</td>
+                    <td>2025-12-09</td>
+                    <td>UI</td>
+                    <td>アコーディオン展開時UI重複（CSS Grid方式に変更）</td>
+                    <td><span class="badge badge-medium">中</span></td>
+                    <td><a href="bugfix-accordion-overlap-2025-12-09.html">詳細</a></td>
+                </tr>
+                <tr>
+                    <td>BUG-019</td>
+                    <td>2025-12-09</td>
+                    <td>Firestore</td>
+                    <td>aiGenerationHistoryインデックス（COLLECTION_GROUP）</td>
+                    <td><span class="badge badge-high">高</span></td>
+                    <td><a href="bugfix-firestore-index-2025-12-09.html">詳細</a></td>
+                </tr>
+                <tr>
+                    <td>BUG-018</td>
+                    <td>2025-12-08</td>
+                    <td>AI</td>
+                    <td>バッチプロンプト型エラー（配列キャスト問題）</td>
+                    <td><span class="badge badge-critical">緊急</span></td>
+                    <td>-</td>
+                </tr>
+                <tr>
+                    <td>BUG-017</td>
+                    <td>2025-12-08</td>
+                    <td>AI</td>
+                    <td>バッチプロンプトJSONパースエラー（論理矛盾）</td>
+                    <td><span class="badge badge-critical">緊急</span></td>
+                    <td>-</td>
+                </tr>
+                <tr>
+                    <td>BUG-016</td>
+                    <td>2025-12-08</td>
+                    <td>AI</td>
+                    <td>429エラー（RESOURCE_EXHAUSTED）指数バックオフ</td>
+                    <td><span class="badge badge-medium">中</span></td>
+                    <td>-</td>
+                </tr>
+                <tr>
+                    <td>BUG-015</td>
+                    <td>2025-12-08</td>
+                    <td>AI</td>
+                    <td>段階的生成の出力形式変換エラー</td>
+                    <td><span class="badge badge-high">高</span></td>
+                    <td>-</td>
+                </tr>
+                <tr>
+                    <td>BUG-014</td>
+                    <td>2025-12-08</td>
+                    <td>Gemini</td>
+                    <td>responseMimeTypeとthinkingBudgetの非互換性</td>
+                    <td><span class="badge badge-critical">緊急</span></td>
+                    <td>-</td>
+                </tr>
+                <tr>
+                    <td>BUG-013</td>
+                    <td>2025-12-08</td>
+                    <td>Gemini</td>
+                    <td>JSONスキーマとthinkingBudgetの非互換性</td>
+                    <td><span class="badge badge-critical">緊急</span></td>
+                    <td>-</td>
+                </tr>
+                <tr>
+                    <td>BUG-012</td>
+                    <td>2025-12-08</td>
+                    <td>Gemini</td>
+                    <td>@google/genai SDK移行</td>
+                    <td><span class="badge badge-high">高</span></td>
+                    <td>-</td>
+                </tr>
+                <tr>
+                    <td>BUG-010</td>
+                    <td>2025-12-08</td>
+                    <td>タイムアウト</td>
+                    <td>タイムアウト延長修正（180秒→240秒）</td>
+                    <td><span class="badge badge-medium">中</span></td>
+                    <td><a href="bugfix-timeout-extended-2025-12-08.html">詳細</a></td>
+                </tr>
+                <tr>
+                    <td>BUG-009</td>
+                    <td>2025-12-08</td>
+                    <td>権限</td>
+                    <td>デモユーザー権限消失（users.facilities同期）</td>
+                    <td><span class="badge badge-critical">緊急</span></td>
+                    <td><a href="bugfix-demo-members-2025-12-08.html">詳細</a></td>
+                </tr>
+                <tr>
+                    <td>BUG-008</td>
+                    <td>2025-12-08</td>
+                    <td>Gemini</td>
+                    <td>thinkingBudget制限修正（思考トークン過消費）</td>
+                    <td><span class="badge badge-high">高</span></td>
+                    <td><a href="bugfix-thinking-budget-2025-12-08.html">詳細</a></td>
+                </tr>
+                <tr>
+                    <td>BUG-007</td>
+                    <td>2025-12-08</td>
+                    <td>デモ</td>
+                    <td>デモデータ同期問題</td>
+                    <td><span class="badge badge-medium">中</span></td>
+                    <td>-</td>
+                </tr>
+                <tr>
+                    <td>BUG-006</td>
+                    <td>2025-12-07</td>
+                    <td>IAM</td>
+                    <td>Cloud Function IAM権限（カスタムトークン発行）</td>
+                    <td><span class="badge badge-high">高</span></td>
+                    <td>-</td>
+                </tr>
+                <tr>
+                    <td>BUG-005</td>
+                    <td>2025-12-06</td>
+                    <td>Firestore</td>
+                    <td>Firestoreリスナー競合（評価パネル表示）</td>
+                    <td><span class="badge badge-medium">中</span></td>
+                    <td>-</td>
+                </tr>
+                <tr>
+                    <td>BUG-004</td>
+                    <td>2025-12-05</td>
+                    <td>タイムアウト</td>
+                    <td>タイムアウト修正（60秒→180秒）</td>
+                    <td><span class="badge badge-high">高</span></td>
+                    <td><a href="bugfix-timeout-2025-12-05.html">詳細</a></td>
+                </tr>
+                <tr>
+                    <td>BUG-003</td>
+                    <td>2025-12-05</td>
+                    <td>Gemini</td>
+                    <td>思考トークン修正（maxOutputTokens増加）</td>
+                    <td><span class="badge badge-critical">緊急</span></td>
+                    <td><a href="bugfix-thinking-tokens-2025-12-05.html">詳細</a></td>
+                </tr>
+                <tr>
+                    <td>BUG-002</td>
+                    <td>2025-12-05</td>
+                    <td>Gemini</td>
+                    <td>空レスポンス修正（propertyOrdering追加）</td>
+                    <td><span class="badge badge-critical">緊急</span></td>
+                    <td><a href="bugfix-gemini-2025-12-05.html">詳細</a></td>
+                </tr>
+                <tr>
+                    <td>BUG-001</td>
+                    <td>2025-12-05</td>
+                    <td>CORS</td>
+                    <td>CORSエラー修正（Cloud Functions未デプロイ）</td>
+                    <td><span class="badge badge-critical">緊急</span></td>
+                    <td><a href="bugfix-cors-2025-12-05.html">詳細</a></td>
+                </tr>
+            </tbody>
+        </table>
+
+        <hr>
+
+        <h2>ポストモーテム</h2>
+
+        <div class="category-section">
+            <h3>2025-12-05: Gemini APIバグ連鎖</h3>
+            <p>BUG-001〜004が連続発生。Cloud Functions未デプロイ、propertyOrdering欠落、maxOutputTokens不足、タイムアウト不足が連鎖的に問題を引き起こした。</p>
+            <p><a href="postmortem-gemini-bugs-2025-12-05.html" style="color: #8e44ad; font-weight: bold;">ポストモーテム詳細を読む &rarr;</a></p>
+        </div>
+
+        <div class="category-section">
+            <h3>2025-12-08: 権限同期問題（BUG-009）</h3>
+            <p>3回修正しても解決しなかった問題。セキュリティルールが参照する<code>users.facilities</code>と非正規化データの<code>facilities.members</code>の二重管理が原因。</p>
+            <p><a href="postmortem-permission-sync-2025-12-08.html" style="color: #8e44ad; font-weight: bold;">ポストモーテム詳細を読む &rarr;</a></p>
+        </div>
+
+        <hr>
+
+        <h2>カテゴリ別サマリー</h2>
+
+        <div class="category-section">
+            <h3>Gemini API関連（8件）</h3>
+            <p>Gemini 2.5 Flash特有の問題が多数発生。特に<strong>thinkingConfig</strong>と<strong>responseSchema/responseMimeType</strong>の非互換性は要注意。</p>
+            <ul>
+                <li><strong>propertyOrdering必須</strong>: responseSchemaには必ず指定</li>
+                <li><strong>maxOutputTokens: 65536</strong>: 思考モード対応で大きめに設定</li>
+                <li><strong>thinkingBudget: 16384</strong>: 思考トークン制限必須</li>
+                <li><strong>responseSchema/responseMimeType禁止</strong>: thinkingBudgetと非互換</li>
+                <li><strong>@google/genai SDK使用</strong>: @google-cloud/vertexaiは非対応</li>
+            </ul>
+        </div>
+
+        <div class="category-section">
+            <h3>権限・認証関連（3件）</h3>
+            <p>Firestoreセキュリティルールと権限データの同期問題が複数回発生。</p>
+            <ul>
+                <li><strong>二重管理に注意</strong>: <code>users.facilities</code>（正）と<code>facilities.members</code>（非正規化）</li>
+                <li><strong>セキュリティルールはusers.facilitiesのみ参照</strong></li>
+                <li><strong>Cloud Functionによる上書きに注意</strong></li>
+            </ul>
+        </div>
+
+        <div class="category-section">
+            <h3>CI/CD関連（2件）</h3>
+            <p>デプロイ失敗がマスクされる問題が発生。</p>
+            <ul>
+                <li><strong>デプロイログを必ず確認</strong>: <code>|| echo</code>でエラーがマスクされる可能性</li>
+                <li><strong>関数デプロイ成功を個別確認</strong>: <code>functions[functionName] Successful</code></li>
+                <li><strong>firestore:indexesを忘れずに</strong>: rulesだけでは不十分</li>
+            </ul>
+        </div>
+
+        <hr>
+
+        <h2>主要な教訓</h2>
+
+        <div class="lesson-card">
+            <h4>教訓1: 本番環境で初めてエラーを発見しない</h4>
+            <p>ローカルで型チェック（<code>npx tsc --noEmit</code>）と思考シミュレーションを必ず実施。</p>
+        </div>
+
+        <div class="lesson-card">
+            <h4>教訓2: デプロイログを必ず確認</h4>
+            <p>CI/CDが成功でも個別関数が失敗している可能性。<code>409 unable to queue</code>等のエラーを見逃さない。</p>
+        </div>
+
+        <div class="lesson-card">
+            <h4>教訓3: 問題継続時はFirestoreの実データを確認</h4>
+            <p>コード修正が正しくても、既存データが古いままの場合がある。直接確認・更新が必要。</p>
+        </div>
+
+        <div class="lesson-card">
+            <h4>教訓4: Gemini APIの制約を理解</h4>
+            <p>thinkingConfig, responseSchema, responseMimeTypeの組み合わせ制約を把握。公式ドキュメントにない制約も多い。</p>
+        </div>
+
+        <hr>
+
+        <h2>関連リソース</h2>
+
+        <ul>
+            <li><a href="index.html">プロジェクト概要</a></li>
+            <li><a href="ai-shift-algorithm.html">AIシフト生成アルゴリズム</a></li>
+            <li><a href="ai-quality-improvement.html">AI品質改善ガイド</a></li>
+            <li><a href="handoff.html">引き継ぎドキュメント</a></li>
+        </ul>
+
+        <hr>
+
+        <footer class="site-footer">
+            <p><strong>最終更新</strong>: 2025年12月9日（BUG-021/022追加）</p>
+            <p><a href="index.html">&larr; トップページに戻る</a></p>
+        </footer>
+    </main>
+</body>
+</html>
