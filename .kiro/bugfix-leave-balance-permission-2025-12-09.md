@@ -98,7 +98,40 @@ facilities: [{
 
 - [x] TypeScript型チェック通過
 - [x] CodeRabbitレビュー完了
-- [x] CI/CDパイプライン実行中
+- [x] CI/CDパイプライン成功
+- [x] 本番環境で動作確認完了
+
+---
+
+## 追加修正（2025-12-09 18:45）
+
+### 問題の継続
+
+Cloud Function修正後も問題が継続。再調査の結果、以下を発見：
+
+1. **demoSignIn関数のデプロイがHTTP 409エラーで失敗**していた（CI/CDは`|| echo`でマスク）
+2. 再デプロイ後も、**ユーザーが再ログインしたタイミングが関数デプロイ完了より前**だった
+3. Firestoreの`users/{uid}.facilities[].role`が**依然として`viewer`のまま**だった
+
+### 追加修正
+
+Firestoreの`users/demo-user-fixed-uid`ドキュメントを直接更新：
+
+```typescript
+await userRef.update({
+  facilities: [{
+    facilityId: 'demo-facility-001',
+    role: 'editor',  // viewer -> editor
+    grantedAt: now,
+  }],
+});
+```
+
+### 教訓（追加）
+
+1. **Cloud Functionデプロイログを必ず確認**（409エラー等の失敗がマスクされる可能性）
+2. **関数デプロイ後は必ず再ログインのタイミングを確認**
+3. **問題継続時はFirestoreの実データを直接確認**
 
 ---
 
