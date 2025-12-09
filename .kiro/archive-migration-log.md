@@ -222,5 +222,88 @@ CLAUDE.mdから直接参照されているため現在位置を維持:
 
 ---
 
-## 段階4以降の作業ログ
-（実施時に追記）
+## 段階4: bugfixes整理（スキップ）
+
+**理由**: すべてのbugfixファイルはCLAUDE.mdから直接参照されているため、移動禁止対象。現状維持。
+
+---
+
+## 段階5: 命名規則の統一（スキップ）
+
+**理由**: 既存ファイルは全て`YYYY-MM-DD`形式で一貫しており、CLAUDE.mdからの参照もこの形式。変更するとリンク切れが発生するため、現状維持。
+
+---
+
+## 最終報告
+
+### 完了日時
+2025-12-09
+
+### 実施内容サマリー
+
+| 段階 | 内容 | 結果 |
+|------|------|------|
+| 1 | 事前準備・影響分析 | ✅ 完了 |
+| 2 | アーカイブ構造の導入 | ✅ 43ファイル移動 |
+| 3 | auth-data-persistence整理 | ✅ 157ファイル整理 |
+| 4 | bugfixes整理 | ⏭️ スキップ（参照あり） |
+| 5 | 命名規則の統一 | ⏭️ スキップ（一貫性あり） |
+
+### 効果
+
+| 指標 | 変更前 | 変更後 |
+|------|--------|--------|
+| .kiro/ ルート直下MDファイル | 61 | 23 |
+| auth-data-persistence ルートファイル | 144 | 4 |
+| care-staff-schedule-compliance ルートファイル | 21 | 3 |
+| フォルダ構造 | 4フォルダ | 3フォルダ |
+
+### 新しいフォルダ構造
+
+```
+.kiro/
+├── archive/                    # 新設: 履歴ドキュメント
+│   ├── 2025-10/               # 2ファイル
+│   ├── 2025-11/               # 22ファイル
+│   └── 2025-12/               # 19ファイル
+├── specs/                      # 変更あり
+│   ├── auth-data-persistence/
+│   │   ├── archive/           # 新設: 140ファイル
+│   │   ├── requirements.md
+│   │   ├── design.md
+│   │   ├── tasks.md
+│   │   └── spec.json
+│   ├── care-staff-schedule-compliance/
+│   │   ├── archive/           # 新設: 17ファイル + diagrams/
+│   │   ├── requirements.md
+│   │   ├── design.md
+│   │   └── tasks.md
+│   └── [その他28 spec]/        # 変更なし
+├── steering/                   # 変更なし
+├── bugfix-*.md (15ファイル)    # 移動禁止（CLAUDE.md参照）
+├── postmortem-*.md (2ファイル) # 移動禁止（CLAUDE.md参照）
+├── ai-*.md (3ファイル)         # 移動禁止（CLAUDE.md参照）
+├── pre-implementation-test-checklist.md
+├── phase48-*.md                # 移動禁止（CLAUDE.md参照）
+└── archive-migration-log.md    # このファイル
+```
+
+### コミット履歴
+
+1. `92e7ca7` - chore(.kiro): 段階2 - アーカイブ構造の導入
+2. `298a738` - chore(.kiro): 段階3 - specs内archive整理
+
+### ロールバック方法
+
+バックアップから復元:
+```bash
+rm -rf .kiro/
+cp -r /tmp/kiro-backup-20251209/ .kiro/
+```
+
+### 今後の推奨事項
+
+1. **定期的なアーカイブ整理**: 月次でarchive/に移動
+2. **新規ファイル作成時**: 命名規則`YYYY-MM-DD`を遵守
+3. **大規模spec完了時**: コアファイル以外をarchive/に移動
+4. **サイズ削減が必要な場合**: archive/フォルダを別リポジトリに切り出しを検討
