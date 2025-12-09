@@ -89,6 +89,12 @@ export const LeaveBalanceDashboard: React.FC<LeaveBalanceDashboardProps> = ({
 
   // スタッフの残高を取得（存在しない場合は初期化）
   const getOrCreateBalance = useCallback(async (staffId: string): Promise<StaffLeaveBalance | null> => {
+    // 防御的チェック: facilityIdまたはyearMonthが未設定の場合は早期リターン
+    if (!facilityId || !yearMonth) {
+      console.warn('getOrCreateBalance: facilityId or yearMonth is not set');
+      return null;
+    }
+
     const existing = balances.get(staffId);
     if (existing) return existing;
 

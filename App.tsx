@@ -1567,10 +1567,9 @@ const App: React.FC = () => {
             <LeaveBalanceDashboard
               facilityId={selectedFacilityId || ''}
               staffList={staffList}
-              targetMonth={requirements.targetMonth}
+              yearMonth={requirements.targetMonth}
               leaveSettings={leaveSettings}
-              onSaveSettings={handleSaveLeaveSettings}
-              disabled={!selectedFacilityId}
+              currentUserId={currentUser?.uid || ''}
             />
           </Accordion>
           <Accordion title="事業所のシフト要件設定" icon={<ClipboardIcon/>}>
