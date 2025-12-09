@@ -80,6 +80,9 @@ q = query(
 ## 関連Phase
 - Phase 54: AI評価履歴・再評価機能（このPhaseで`aiGenerationHistory`の複合クエリを追加）
 
+## 修正完了日時
+2025-12-09 11:21 JST
+
 ## 参考リンク
 - [Firestore複合インデックス](https://firebase.google.com/docs/firestore/query-data/index-overview)
 - [コレクショングループクエリ](https://firebase.google.com/docs/firestore/query-data/queries#collection-group-query)
