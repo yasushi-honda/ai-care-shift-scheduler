@@ -301,8 +301,8 @@ jobs:
           # Hosting deploymentを優先（最も重要）
           firebase deploy --only hosting --project ai-care-shift-scheduler --non-interactive
 
-          # Firestore Rules deployment
-          firebase deploy --only firestore:rules --project ai-care-shift-scheduler --non-interactive
+          # Firestore Rules + Indexes deployment
+          firebase deploy --only firestore:rules,firestore:indexes --project ai-care-shift-scheduler --non-interactive
 
           # Functions deployment（失敗してもワークフロー全体は成功扱い）
           firebase deploy --only functions --project ai-care-shift-scheduler --non-interactive || echo "⚠️ Functions deployment had warnings (non-critical)"
@@ -338,7 +338,7 @@ jobs:
           echo "## デプロイ完了 🚀" >> $GITHUB_STEP_SUMMARY
           echo "✅ Firebase Hostingへのデプロイ完了" >> $GITHUB_STEP_SUMMARY
           echo "✅ Cloud Functionsへのデプロイ完了（またはスキップ）" >> $GITHUB_STEP_SUMMARY
-          echo "✅ Firestore Security Rulesへのデプロイ完了" >> $GITHUB_STEP_SUMMARY
+          echo "✅ Firestore Security Rules/Indexesへのデプロイ完了" >> $GITHUB_STEP_SUMMARY
           echo "🔗 本番環境: https://ai-care-shift-scheduler.web.app" >> $GITHUB_STEP_SUMMARY
           echo "📁 ファイル数: $(find dist -type f | wc -l)" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
