@@ -177,5 +177,50 @@ CLAUDE.mdから直接参照されているため現在位置を維持:
 
 ---
 
-## 段階3以降の作業ログ
+## 段階3: auth-data-persistence整理
+
+### 3.1 実施内容
+
+**対象**: `specs/auth-data-persistence/` (2.3MB, 144ファイル)
+
+コアファイル以外をarchiveサブフォルダに移動:
+
+**保持したファイル（4ファイル）:**
+- `requirements.md`
+- `design.md`
+- `tasks.md`
+- `spec.json`
+
+**archive/に移動したファイル（140ファイル）:**
+- 進捗ログ（phase0-*, phase13-*, phase14-*, phase15-*, phase16-*, phase17-*, phase18-*, phase19-*, phase20-*, phase21-*）
+- テストガイド（*-manual-test-guide-*, *-e2e-design-*）
+- バグ修正記録（bugfix-*）
+- サマリー類（*-completion-*, *-summary-*, *-diagram-*）
+
+### 3.2 care-staff-schedule-compliance整理
+
+**対象**: `specs/care-staff-schedule-compliance/` (328KB, 21ファイル)
+
+**保持したファイル（3ファイル）:**
+- `requirements.md`
+- `design.md`
+- `tasks.md`
+
+**archive/に移動したファイル（17ファイル + diagrams/フォルダ）:**
+- ハンドオフ関連（HANDOFF*.md, *_HANDOFF*.md, NEXT_SESSION_GUIDE.md）
+- 進捗ログ（phase25-*, phase26-*）
+- diagrams/フォルダ全体
+
+### 3.3 効果
+
+| 指標 | 変更前 | 変更後 |
+|------|--------|--------|
+| auth-data-persistence ルートファイル | 144 | 4 |
+| care-staff-schedule-compliance ルートファイル | 21 | 3 |
+
+**注**: ファイルは削除せず archive/ に移動。総サイズは変わらないが、ナビゲーションが大幅に改善。
+
+---
+
+## 段階4以降の作業ログ
 （実施時に追記）
