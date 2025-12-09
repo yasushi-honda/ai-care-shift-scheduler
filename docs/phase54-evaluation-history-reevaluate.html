@@ -23,7 +23,7 @@
             <h1 class="text-3xl font-bold">Phase 54: AI評価履歴・再評価機能</h1>
             <p class="mt-2 opacity-90">評価履歴の永続化と手動編集後の再評価</p>
             <div class="mt-4 flex gap-4 text-sm">
-                <span class="bg-white/20 px-3 py-1 rounded-full">ステータス: 計画中</span>
+                <span class="bg-green-500/80 px-3 py-1 rounded-full">✓ ステータス: 完了</span>
                 <span class="bg-white/20 px-3 py-1 rounded-full">工数: 4.5日</span>
                 <span class="bg-white/20 px-3 py-1 rounded-full">提案者: 本田</span>
             </div>
@@ -209,9 +209,9 @@ sequenceDiagram
             </div>
         </section>
 
-        <!-- 実装計画 -->
+        <!-- 実装計画（WBS） -->
         <section class="card p-6 mb-8">
-            <h2 class="text-xl font-bold text-gray-800 mb-4">実装計画</h2>
+            <h2 class="text-xl font-bold text-gray-800 mb-4">実装計画（WBS）</h2>
             <div class="overflow-x-auto">
                 <table class="w-full text-sm">
                     <thead class="bg-gray-100">
@@ -219,45 +219,99 @@ sequenceDiagram
                             <th class="px-4 py-2 text-left">サブフェーズ</th>
                             <th class="px-4 py-2 text-left">内容</th>
                             <th class="px-4 py-2 text-left">工数</th>
+                            <th class="px-4 py-2 text-left">ステータス</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y">
-                        <tr>
+                        <tr class="bg-green-50">
                             <td class="px-4 py-2">54.1</td>
                             <td class="px-4 py-2">データモデル拡張（evaluationType追加）</td>
                             <td class="px-4 py-2">0.5日</td>
+                            <td class="px-4 py-2"><span class="text-green-600">✓ 完了</span></td>
                         </tr>
-                        <tr>
+                        <tr class="bg-green-50">
                             <td class="px-4 py-2">54.2</td>
                             <td class="px-4 py-2">reevaluateShift Cloud Function実装</td>
                             <td class="px-4 py-2">1日</td>
+                            <td class="px-4 py-2"><span class="text-green-600">✓ 完了</span></td>
                         </tr>
-                        <tr>
+                        <tr class="bg-green-50">
                             <td class="px-4 py-2">54.3</td>
                             <td class="px-4 py-2">評価履歴自動復元（フロントエンド）</td>
                             <td class="px-4 py-2">1日</td>
+                            <td class="px-4 py-2"><span class="text-green-600">✓ 完了</span></td>
                         </tr>
-                        <tr>
+                        <tr class="bg-green-50">
                             <td class="px-4 py-2">54.4</td>
                             <td class="px-4 py-2">「シフトを評価」ボタン実装</td>
                             <td class="px-4 py-2">0.5日</td>
+                            <td class="px-4 py-2"><span class="text-green-600">✓ 完了</span></td>
                         </tr>
-                        <tr>
+                        <tr class="bg-green-50">
                             <td class="px-4 py-2">54.5</td>
                             <td class="px-4 py-2">評価履歴一覧UI実装</td>
                             <td class="px-4 py-2">1日</td>
+                            <td class="px-4 py-2"><span class="text-green-600">✓ 完了</span></td>
                         </tr>
-                        <tr>
+                        <tr class="bg-green-50">
                             <td class="px-4 py-2">54.6</td>
                             <td class="px-4 py-2">テスト・デバッグ</td>
                             <td class="px-4 py-2">0.5日</td>
+                            <td class="px-4 py-2"><span class="text-green-600">✓ 完了</span></td>
                         </tr>
                         <tr class="bg-blue-50 font-semibold">
                             <td class="px-4 py-2" colspan="2">合計</td>
                             <td class="px-4 py-2">4.5日</td>
+                            <td class="px-4 py-2"></td>
                         </tr>
                     </tbody>
                 </table>
+            </div>
+        </section>
+
+        <!-- ガントチャート -->
+        <section class="card p-6 mb-8">
+            <h2 class="text-xl font-bold text-gray-800 mb-4">ガントチャート</h2>
+            <div class="mermaid">
+gantt
+    title Phase 54 実装スケジュール
+    dateFormat YYYY-MM-DD
+    section データ基盤
+    54.1 データモデル拡張         :done, p541, 2025-12-09, 1d
+    section Backend
+    54.2 reevaluateShift CF     :done, p542, after p541, 1d
+    section Frontend
+    54.3 評価履歴自動復元         :done, p543, after p542, 1d
+    54.4 シフトを評価ボタン       :done, p544, after p543, 1d
+    54.5 評価履歴一覧UI          :done, p545, after p544, 1d
+    section QA
+    54.6 テスト・デバッグ          :done, p546, after p545, 1d
+            </div>
+        </section>
+
+        <!-- 実装ファイル一覧 -->
+        <section class="card p-6 mb-8">
+            <h2 class="text-xl font-bold text-gray-800 mb-4">実装ファイル一覧</h2>
+            <div class="space-y-4">
+                <div>
+                    <h3 class="font-semibold text-gray-700 mb-2">新規ファイル</h3>
+                    <ul class="text-sm text-gray-600 space-y-1 font-mono bg-gray-100 p-3 rounded">
+                        <li>functions/src/reevaluateShift.ts - 再評価Cloud Function</li>
+                        <li>src/services/reevaluateService.ts - 再評価サービス</li>
+                        <li>src/components/EvaluationHistory.tsx - 評価履歴一覧コンポーネント</li>
+                    </ul>
+                </div>
+                <div>
+                    <h3 class="font-semibold text-gray-700 mb-2">変更ファイル</h3>
+                    <ul class="text-sm text-gray-600 space-y-1 font-mono bg-gray-100 p-3 rounded">
+                        <li>types.ts - EvaluationType型、AIGenerationHistory拡張</li>
+                        <li>functions/src/types.ts - 同上（Cloud Functions側）</li>
+                        <li>functions/src/index.ts - reevaluateShift export追加</li>
+                        <li>src/services/evaluationHistoryService.ts - saveEvaluationHistory拡張</li>
+                        <li>App.tsx - 評価履歴復元、再評価ハンドラ追加</li>
+                        <li>components/ShiftTable.tsx - 再評価ボタン、履歴一覧統合</li>
+                    </ul>
+                </div>
             </div>
         </section>
 
@@ -307,7 +361,7 @@ sequenceDiagram
     <footer class="bg-gray-800 text-white py-6 mt-12">
         <div class="max-w-6xl mx-auto px-4 text-center text-sm">
             <p>AIシフト自動作成システム - Phase 54 ドキュメント</p>
-            <p class="mt-1 opacity-70">作成日: 2025-12-09 | 提案者: 本田</p>
+            <p class="mt-1 opacity-70">作成日: 2025-12-09 | 完了日: 2025-12-09 | 提案者: 本田</p>
         </div>
     </footer>
 </body>

@@ -2,11 +2,12 @@
   "id": "evaluation-history-reevaluate",
   "name": "AI評価履歴・再評価機能",
   "phase": 54,
-  "status": "planning",
+  "status": "completed",
   "priority": "high",
   "proposedBy": "本田",
   "createdAt": "2025-12-09",
   "updatedAt": "2025-12-09",
+  "completedAt": "2025-12-09",
   "description": "Phase 40の残タスク（評価履歴UI）を完了し、手動編集後のAI再評価機能を追加する",
   "goals": [
     "年月切替時に過去の評価履歴を自動復元",
@@ -15,7 +16,7 @@
   ],
   "requirements": {
     "file": "requirements.md",
-    "status": "draft",
+    "status": "approved",
     "acceptanceCriteria": [
       "FR-54.1: 年月切替時に該当月の評価が自動表示される",
       "FR-54.2: 「シフトを評価」ボタンで現在のシフトが評価される",
@@ -25,7 +26,7 @@
   },
   "design": {
     "file": "design.md",
-    "status": "draft",
+    "status": "approved",
     "keyDecisions": [
       "再評価は確認ボタン方式（リアルタイムではない）",
       "評価履歴はインライン表示（タブ切替）",
@@ -34,8 +35,9 @@
   },
   "tasks": {
     "file": "tasks.md",
-    "status": "not_started",
-    "estimatedDays": 4.5
+    "status": "completed",
+    "estimatedDays": 4.5,
+    "actualDays": 1
   },
   "dependencies": [
     {
