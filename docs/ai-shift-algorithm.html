@@ -38,6 +38,7 @@
         .badge-success { background: #d1fae5; color: #065f46; }
         .badge-warning { background: #fef3c7; color: #92400e; }
         .badge-info { background: #dbeafe; color: #1e40af; }
+        .badge-danger { background: #fee2e2; color: #991b1b; }
         .card {
             background: white;
             border-radius: 0.5rem;
@@ -48,6 +49,7 @@
         .card-info { border-left: 4px solid var(--primary); }
         .card-success { border-left: 4px solid var(--success); }
         .card-warning { border-left: 4px solid var(--warning); }
+        .card-danger { border-left: 4px solid var(--danger); }
         table {
             width: 100%;
             border-collapse: collapse;
@@ -101,30 +103,93 @@
             font-weight: 600;
             margin-left: 0.5rem;
         }
+        .highlight-box {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 1.5rem;
+            border-radius: 0.5rem;
+            margin: 1rem 0;
+        }
+        .highlight-box h3 { color: white; margin-top: 0; }
+        .level-badge {
+            display: inline-block;
+            padding: 0.25rem 0.5rem;
+            border-radius: 0.25rem;
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: white;
+        }
+        .level-1 { background: #DC2626; }
+        .level-2 { background: #EA580C; }
+        .level-3 { background: #CA8A04; }
+        .level-4 { background: #2563EB; }
     </style>
 </head>
 <body>
     <nav class="nav">
         <a href="index.html">Home</a>
         <a href="ai-quality-improvement.html">AI品質改善ガイド</a>
-        <a href="phase49-staffing-constraints.html">Phase 49</a>
+        <a href="phase53-constraint-level-evaluation.html">Phase 53 評価システム</a>
         <a href="prompt-engineering-strategy.html">プロンプト戦略</a>
     </nav>
 
     <h1>AIシフト生成アルゴリズム</h1>
-    <p><span class="badge badge-info">最終更新: 2025-12-08</span> <span class="badge badge-success">Phase 50</span></p>
+    <p><span class="badge badge-info">最終更新: 2025-12-09</span> <span class="badge badge-success">Phase 53</span></p>
 
     <div class="toc">
         <strong>目次</strong>
         <ul>
+            <li><a href="#positioning">AIアシストとしての位置づけ</a></li>
             <li><a href="#overview">概要</a></li>
             <li><a href="#architecture">システムアーキテクチャ</a></li>
             <li><a href="#phased-generation">段階的生成アルゴリズム</a></li>
             <li><a href="#dynamic-constraints">動的制約生成パターン</a></li>
+            <li><a href="#evaluation-system">評価システム（Phase 53）</a></li>
             <li><a href="#improvement-history">改善履歴</a></li>
             <li><a href="#quality-metrics">品質指標</a></li>
         </ul>
     </div>
+
+    <section id="positioning">
+        <h2>AIアシストとしての位置づけ</h2>
+
+        <div class="highlight-box">
+            <h3>本システムの目的</h3>
+            <p><strong>完全自動シフト生成ではなく、AIアシストによる「叩き台」提供</strong></p>
+            <p>管理者の負担を軽減し、意思決定を支援することが目的です。</p>
+        </div>
+
+        <div class="card card-info">
+            <h4>できること</h4>
+            <ul>
+                <li>シフト作成の「叩き台」を高速に生成（手作業で数時間 → 数分）</li>
+                <li>制約違反を検出し、4段階レベルで優先度を明示</li>
+                <li>繰り返し生成が可能（納得いくまで再生成）</li>
+                <li>改善提案を自動生成</li>
+            </ul>
+        </div>
+
+        <div class="card card-warning">
+            <h4>限界と注意事項</h4>
+            <ul>
+                <li>100%の制約充足を保証するものではありません</li>
+                <li>最終確認・調整は人間が行う前提です</li>
+                <li>LLMベースのため、同じ入力でも異なる結果が出る場合があります</li>
+                <li>法的責任を伴う意思決定の完全自動化には適しません</li>
+            </ul>
+        </div>
+
+        <h3>推奨運用フロー</h3>
+        <div class="mermaid">
+flowchart LR
+    A[AI生成] --> B[評価確認]
+    B --> C{問題あり?}
+    C -->|Yes| D[手動調整]
+    C -->|No| E[確定]
+    D --> B
+    C -->|再生成| A
+        </div>
+    </section>
 
     <section id="overview">
         <h2>概要</h2>
@@ -135,11 +200,12 @@
 
         <h3>技術スタック</h3>
         <table>
-            <tr><th>コンポーネント</th><th>技術</th></tr>
-            <tr><td>AI Model</td><td>Gemini 2.5 Flash (gemini-2.5-flash)</td></tr>
-            <tr><td>SDK</td><td>@google/genai (thinkingConfig対応)</td></tr>
-            <tr><td>Region</td><td>asia-northeast1 (東京)</td></tr>
-            <tr><td>Runtime</td><td>Cloud Functions (Node.js 20)</td></tr>
+            <tr><th>コンポーネント</th><th>技術</th><th>備考</th></tr>
+            <tr><td>AI Model</td><td>Gemini 2.5 Flash</td><td>思考モード（thinkingConfig）対応</td></tr>
+            <tr><td>SDK</td><td>@google/genai</td><td>thinkingBudget: 16384</td></tr>
+            <tr><td>Region</td><td>asia-northeast1</td><td>東京リージョン</td></tr>
+            <tr><td>Runtime</td><td>Cloud Functions</td><td>Node.js 20, タイムアウト300秒</td></tr>
+            <tr><td>リトライ</td><td>指数バックオフ</td><td>Phase 51で追加</td></tr>
         </table>
     </section>
 
@@ -168,8 +234,9 @@ sequenceDiagram
         AI-->>CF: StaffSchedule[]
     end
 
-    Note over CF: 評価ロジック実行
+    Note over CF: Phase 53: レベル別評価
     CF->>CF: EvaluationService.evaluateSchedule()
+    CF->>CF: constraintLevelMapping
 
     CF->>FS: シフト保存
     CF-->>F: 生成結果 + 評価
@@ -182,12 +249,15 @@ graph TB
     subgraph "Frontend (React)"
         A[ShiftManagement.tsx]
         B[GeminiService]
+        EP[EvaluationPanel]
     end
 
     subgraph "Cloud Functions"
         C[shift-generation.ts]
         D[phased-generation.ts]
         E[EvaluationService]
+        CLM[constraintLevelMapping]
+        RB[withExponentialBackoff]
     end
 
     subgraph "AI Layer"
@@ -203,9 +273,13 @@ graph TB
     B -->|POST /generateShift| C
     C --> D
     D --> G
+    D --> RB
+    RB --> F
     G --> F
     D --> E
+    E --> CLM
     C --> H
+    EP --> CLM
         </div>
     </section>
 
@@ -233,14 +307,15 @@ flowchart TD
     F --> G[buildDynamicConsecutiveConstraints]
     F --> H[buildDynamicPartTimeConstraints]
     F --> I[buildDynamicStaffingConstraints]
+    F --> J[buildDailyAvailabilityAnalysis]
 
-    G --> J[Gemini API呼び出し]
-    H --> J
-    I --> J
+    G --> K[withExponentialBackoff]
+    H --> K
+    I --> K
+    J --> K
 
-    J --> K[ScheduleSkeleton]
-    K --> L[休日: restDays]
-    K --> M[夜勤: nightShiftDays]
+    K --> L[Gemini API呼び出し]
+    L --> M[ScheduleSkeleton]
         </div>
 
         <h4>出力形式</h4>
@@ -260,28 +335,23 @@ flowchart TD
 flowchart TD
     A[ScheduleSkeleton] --> B[スタッフをバッチ分割]
     B --> C[バッチ1: 10名]
-    B --> D[バッチ2: 2名]
+    B --> D[バッチ2: 残り]
 
     C --> E[buildDetailedPrompt]
     D --> E
 
     E --> F[各スタッフの勤務日数計算]
-    E --> G[日別配置要件明示]
+    E --> G[buildDetailedDynamicConstraints]
     E --> H[シフト配分ルール]
 
-    F --> I[Gemini API呼び出し]
+    F --> I[withExponentialBackoff]
     G --> I
     H --> I
 
-    I --> J[shifts形式出力]
-    J --> K[monthlyShifts形式に変換]
-    K --> L[EvaluationService]
-        </div>
-
-        <h4>Phase 50での改善点</h4>
-        <div class="card card-success">
-            <p><strong>問題</strong>: Phase 2で「休日以外の日にも休を出力」してしまい、充足率21%に低下</p>
-            <p><strong>解決</strong>: 各スタッフの休日数・勤務日数を明示し、「休日以外に休を入れてはいけない」ルールを強調</p>
+    I --> J[Gemini API呼び出し]
+    J --> K[shifts形式出力]
+    K --> L[monthlyShifts形式に変換]
+    L --> M[EvaluationService]
         </div>
     </section>
 
@@ -347,6 +417,30 @@ flowchart TB
                 <td>日別必要勤務人数</td>
                 <td>Phase 1</td>
             </tr>
+            <tr>
+                <td><span class="phase-badge" style="background:#e0e7ff;color:#3730a3;">51</span></td>
+                <td>withExponentialBackoff</td>
+                <td>429エラーリトライ（指数バックオフ）</td>
+                <td>両Phase</td>
+            </tr>
+            <tr>
+                <td><span class="phase-badge" style="background:#e0e7ff;color:#3730a3;">52</span></td>
+                <td>buildDailyAvailabilityAnalysis</td>
+                <td>日別勤務可能人数・リスク日特定</td>
+                <td>Phase 1</td>
+            </tr>
+            <tr>
+                <td><span class="phase-badge" style="background:#e0e7ff;color:#3730a3;">52</span></td>
+                <td>logPhase1Start/Complete</td>
+                <td>Phase 1トレーサビリティログ</td>
+                <td>Phase 1</td>
+            </tr>
+            <tr>
+                <td><span class="phase-badge" style="background:#e0e7ff;color:#3730a3;">52</span></td>
+                <td>logPhase2BatchComplete</td>
+                <td>Phase 2バッチトレーサビリティログ</td>
+                <td>Phase 2</td>
+            </tr>
         </table>
 
         <h3>クラス図</h3>
@@ -357,6 +451,7 @@ classDiagram
         +generateDetailedShifts(staffList, skeleton, requirements)
         -buildSkeletonPrompt()
         -buildDetailedPrompt()
+        -withExponentialBackoff()
     }
 
     class DynamicConstraints {
@@ -365,6 +460,7 @@ classDiagram
         +buildDynamicPartTimeConstraints()
         +buildDynamicConsecutiveConstraints()
         +buildDynamicStaffingConstraints()
+        +buildDailyAvailabilityAnalysis()
     }
 
     class EvaluationService {
@@ -372,11 +468,78 @@ classDiagram
         -checkStaffShortage()
         -checkConsecutiveWork()
         -checkNurseRequirements()
+        -calculateOverallScore()
+    }
+
+    class ConstraintLevelMapping {
+        +CONSTRAINT_LEVEL_MAPPING
+        +LEVEL_DEDUCTIONS
+        +getViolationLevel()
+        +groupViolationsByLevel()
     }
 
     PhasedGeneration --> DynamicConstraints : uses
     PhasedGeneration --> EvaluationService : evaluates
+    EvaluationService --> ConstraintLevelMapping : uses
         </div>
+    </section>
+
+    <section id="evaluation-system">
+        <h2>評価システム（Phase 53）</h2>
+
+        <div class="card card-success">
+            <h3>4段階レベル評価</h3>
+            <p>制約違反を重要度別に分類し、建設的なフィードバックを提供します。</p>
+        </div>
+
+        <h3>制約レベル定義</h3>
+        <table>
+            <tr>
+                <th>レベル</th>
+                <th>名称</th>
+                <th>対象</th>
+                <th>減点</th>
+            </tr>
+            <tr>
+                <td><span class="level-badge level-1">Lv1</span></td>
+                <td>絶対必須</td>
+                <td>労基法違反（夜勤後休息不足等）</td>
+                <td>即0点</td>
+            </tr>
+            <tr>
+                <td><span class="level-badge level-2">Lv2</span></td>
+                <td>運営必須</td>
+                <td>人員不足、資格要件未充足</td>
+                <td>-12点/件</td>
+            </tr>
+            <tr>
+                <td><span class="level-badge level-3">Lv3</span></td>
+                <td>努力目標</td>
+                <td>希望休未反映、連勤超過</td>
+                <td>-4点/件</td>
+            </tr>
+            <tr>
+                <td><span class="level-badge level-4">Lv4</span></td>
+                <td>推奨</td>
+                <td>将来拡張用（相性考慮等）</td>
+                <td>0点</td>
+            </tr>
+        </table>
+
+        <h3>スコア計算式</h3>
+        <pre><code>スコア = 100 - (Lv2件数 × 12) - (Lv3件数 × 4)
+※ Lv1が1件以上あれば即0点
+※ 最小0点、最大100点に正規化</code></pre>
+
+        <h3>改善点（Before/After）</h3>
+        <table>
+            <tr><th>Before</th><th>After</th></tr>
+            <tr><td>違反11件で即0点</td><td>レベル別重み付け評価</td></tr>
+            <tr><td>「実現不可能」固定表示</td><td>建設的メッセージ</td></tr>
+            <tr><td>全違反を同等扱い</td><td>優先度に応じた色分け表示</td></tr>
+        </table>
+
+        <p><a href="phase53-constraint-level-evaluation.html">Phase 53詳細ドキュメント →</a></p>
     </section>
 
     <section id="improvement-history">
@@ -390,17 +553,20 @@ timeline
                  : TimeSlot/Nurse制約追加
         Phase 45 : プログレス表示追加
         Phase 46 : バグ修正(BUG-008~010)
-    section Phase 47-49
+    section Phase 47-50
         Phase 47 : パート職員曜日制限
                  : 曜日制限違反0件達成
         Phase 48 : 連続勤務制限
                  : 連続勤務超過0件達成
         Phase 49 : 日別人員配置制約
-                 : Phase 1骨子改善
-    section Phase 50
         Phase 50 : Phase 2詳細改善
-                 : 休日以外の休出力防止
-                 : 充足率改善目標
+    section Phase 51-53
+        Phase 51 : 429エラー対策
+                 : 指数バックオフリトライ
+        Phase 52 : 日別分析強化
+                 : トレーサビリティログ
+        Phase 53 : 4段階レベル評価
+                 : 建設的メッセージ
         </div>
 
         <h3>Phase別の問題と解決</h3>
@@ -431,14 +597,28 @@ timeline
                 <td>人員不足14件</td>
                 <td>Phase 1で休日が偏る</td>
                 <td>buildDynamicStaffingConstraints追加</td>
-                <td style="color:orange;">検証中</td>
+                <td style="color:green;">改善</td>
             </tr>
             <tr>
-                <td>50</td>
-                <td>人員不足77件（充足率21%）</td>
-                <td>Phase 2で休日以外に休を出力</td>
-                <td>Phase 2プロンプト強化</td>
-                <td style="color:orange;">検証中</td>
+                <td>51</td>
+                <td>429 RESOURCE_EXHAUSTED</td>
+                <td>連続APIリクエスト</td>
+                <td>withExponentialBackoff追加</td>
+                <td style="color:green;">解決</td>
+            </tr>
+            <tr>
+                <td>52</td>
+                <td>デバッグ困難</td>
+                <td>ログ不足</td>
+                <td>トレーサビリティログ追加</td>
+                <td style="color:green;">改善</td>
+            </tr>
+            <tr>
+                <td>53</td>
+                <td>違反多数で0点表示</td>
+                <td>全違反を同等扱い</td>
+                <td>4段階レベル評価</td>
+                <td style="color:green;">解決</td>
             </tr>
         </table>
     </section>
@@ -460,16 +640,16 @@ timeline
                 <td>EvaluationService.fulfillmentRate</td>
             </tr>
             <tr>
-                <td>制約違反数</td>
+                <td>Lv1違反</td>
                 <td>0件</td>
-                <td>10件以下</td>
-                <td>EvaluationService.violationCount</td>
+                <td>0件</td>
+                <td>労基法違反は許容しない</td>
             </tr>
             <tr>
-                <td>連続勤務超過</td>
-                <td>0件</td>
-                <td>0件</td>
-                <td>checkConsecutiveWork()</td>
+                <td>総合スコア</td>
+                <td>80点以上</td>
+                <td>60点以上</td>
+                <td>レベル別重み付け計算</td>
             </tr>
             <tr>
                 <td>生成時間</td>
@@ -482,18 +662,19 @@ timeline
         <h3>評価フロー</h3>
         <div class="mermaid">
 flowchart LR
-    A[生成結果] --> B{充足率 >= 95%?}
-    B -->|Yes| C{違反数 <= 10?}
-    B -->|No| F[要改善]
-    C -->|Yes| D{連続勤務超過 = 0?}
-    C -->|No| F
+    A[生成結果] --> B{Lv1違反 = 0?}
+    B -->|No| F[要修正: 労基法違反]
+    B -->|Yes| C{スコア >= 60?}
+    C -->|Yes| D{充足率 >= 95%?}
+    C -->|No| G[要調整: 手直しで対応可能]
     D -->|Yes| E[SLA達成]
-    D -->|No| F
+    D -->|No| G
         </div>
     </section>
 
     <footer style="margin-top: 3rem; padding-top: 1rem; border-top: 1px solid #e5e7eb; color: #6b7280; font-size: 0.875rem;">
-        <p>作成: Claude Opus 4.5 | 最終更新: 2025-12-08 | <a href="https://github.com/yasushi-honda/ai-care-shift-scheduler">GitHub</a></p>
+        <p>作成: Claude Opus 4.5 | 最終更新: 2025-12-09 | <a href="https://github.com/yasushi-honda/ai-care-shift-scheduler">GitHub</a></p>
+        <p><a href="phase53-constraint-level-evaluation.html">Phase 53詳細</a> | <a href="ai-quality-improvement.html">AI品質改善ガイド</a></p>
     </footer>
 
     <script>
