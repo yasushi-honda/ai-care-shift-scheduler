@@ -337,6 +337,29 @@ gantt
             </div>
         </section>
 
+        <!-- トラブルシューティング -->
+        <section class="card p-6 mb-8">
+            <h2 class="text-xl font-bold text-gray-800 mb-4">トラブルシューティング</h2>
+            <div class="space-y-4">
+                <!-- BUG-019 -->
+                <div class="border-l-4 border-red-500 pl-4">
+                    <h3 class="font-semibold text-gray-700">BUG-019: Firestoreインデックスエラー</h3>
+                    <p class="text-gray-600 text-sm mt-1">
+                        <strong>症状:</strong> 「The query requires an index」エラーで評価履歴が取得できない
+                    </p>
+                    <p class="text-gray-600 text-sm mt-1">
+                        <strong>原因:</strong> <code>aiGenerationHistory</code>サブコレクションのインデックスが<code>COLLECTION</code>スコープで定義されていた
+                    </p>
+                    <p class="text-gray-600 text-sm mt-1">
+                        <strong>解決:</strong> <code>firestore.indexes.json</code>で<code>queryScope: "COLLECTION_GROUP"</code>に変更
+                    </p>
+                    <p class="text-gray-500 text-xs mt-2">
+                        詳細: <a href="https://github.com/yasushi-honda/ai-care-shift-scheduler/blob/main/.kiro/bugfix-firestore-index-aiGenerationHistory-2025-12-09.md" class="text-blue-600 hover:underline">.kiro/bugfix-firestore-index-aiGenerationHistory-2025-12-09.md</a>
+                    </p>
+                </div>
+            </div>
+        </section>
+
         <!-- 将来拡張 -->
         <section class="card p-6 mb-8">
             <h2 class="text-xl font-bold text-gray-800 mb-4">将来拡張</h2>

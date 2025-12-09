@@ -118,7 +118,7 @@
     },
     {
       "collectionGroup": "aiGenerationHistory",
-      "queryScope": "COLLECTION",
+      "queryScope": "COLLECTION_GROUP",
       "fields": [
         {
           "fieldPath": "targetMonth",
