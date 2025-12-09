@@ -518,6 +518,13 @@ export interface AIEvaluationResult {
 }
 
 /**
+ * 評価タイプ（Phase 54）
+ * - ai_generated: AI生成時の自動評価
+ * - manual_reevaluate: 手動編集後の再評価
+ */
+export type EvaluationType = 'ai_generated' | 'manual_reevaluate';
+
+/**
  * AI生成履歴（Firestore保存用）
  */
 export interface AIGenerationHistory {
@@ -527,6 +534,14 @@ export interface AIGenerationHistory {
   evaluation: AIEvaluationResult; // 評価結果
   generatedBy: string;           // ユーザーID
   createdAt: Timestamp;
+  // Phase 54 追加フィールド
+  evaluationType?: EvaluationType;  // 評価タイプ（後方互換性のためオプショナル）
+  metadata?: {
+    model?: string;
+    tokensUsed?: number;
+    generationDuration?: number;
+    reevaluatedFrom?: string;     // 再評価元の履歴ID
+  };
 }
 
 /**
