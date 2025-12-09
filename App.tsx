@@ -43,6 +43,8 @@ import { LockService, LockInfo } from './src/services/lockService';
 // Phase 45: AI生成プログレス表示
 import { AIGenerationProgress } from './src/components/AIGenerationProgress';
 import { useAIGenerationProgress } from './src/hooks/useAIGenerationProgress';
+// Phase 54: 評価履歴サービス
+import { getLatestEvaluationForMonth } from './src/services/evaluationHistoryService';
 
 type ViewMode = 'shift' | 'leaveRequest';
 
@@ -325,14 +327,30 @@ const App: React.FC = () => {
             setCurrentScheduleId(null);
             setCurrentScheduleStatus('draft');
           }
-          // Phase 40: 既存スケジュールロード時は評価をクリア
-          // （評価は新規生成時のみ有効なため）
-          // ただし、AI生成直後のリスナー発火時はクリアしない（BUG-005修正）
+          // Phase 54: 評価履歴の自動復元
+          // AI生成直後のリスナー発火時は復元をスキップ（BUG-005修正）
           // 複数回のリスナー発火に対応するため、カウンターを使用
           if (skipEvaluationClearCountRef.current > 0) {
             skipEvaluationClearCountRef.current -= 1;
           } else {
-            setEvaluation(null);
+            // Phase 54: Firestoreから最新の評価履歴を取得して復元
+            getLatestEvaluationForMonth(selectedFacilityId, requirements.targetMonth)
+              .then((history) => {
+                if (history && history.evaluation) {
+                  console.log('📊 [Phase 54] 評価履歴を復元:', {
+                    targetMonth: requirements.targetMonth,
+                    score: history.evaluation.overallScore,
+                    evaluationType: history.evaluationType || 'ai_generated',
+                  });
+                  setEvaluation(history.evaluation);
+                } else {
+                  setEvaluation(null);
+                }
+              })
+              .catch((err) => {
+                console.error('評価履歴の取得に失敗:', err);
+                setEvaluation(null);
+              });
           }
           setLoadingSchedule(false);
           setScheduleError(null);
