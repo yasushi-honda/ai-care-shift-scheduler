@@ -762,6 +762,7 @@ const result = await withExponentialBackoff(
 - [BUG-019修正記録](.kiro/bugfix-firestore-index-aiGenerationHistory-2025-12-09.md) - aiGenerationHistoryインデックス（COLLECTION_GROUP）
 - [BUG-020修正記録](.kiro/bugfix-accordion-overlap-2025-12-09.md) - アコーディオン展開時のUI重複（CSS Grid方式に変更）
 - [BUG-021修正記録](.kiro/bugfix-leave-balance-detail-2025-12-09.md) - 休暇残高詳細ボタンエラー（props名不一致）
+- [BUG-022修正記録](.kiro/bugfix-leave-balance-permission-2025-12-09.md) - 休暇残高パーミッションエラー（demoSignIn viewer→editor）
 - [ポストモーテム](.kiro/postmortem-gemini-bugs-2025-12-05.md) - 全体分析
 - Serenaメモリ: `gemini_region_critical_rule`, `gemini_max_output_tokens_critical_rule`, `gemini_thinking_budget_critical_rule`, `cloud_function_custom_token_iam`, `bug012_sdk_migration_2025-12-08`, `firestore_indexes_cache`, `bug019_firestore_index_cicd_2025-12-09`
 
