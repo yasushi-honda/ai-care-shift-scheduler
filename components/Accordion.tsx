@@ -30,9 +30,16 @@ const Accordion: React.FC<AccordionProps> = ({ title, children, icon, defaultOpe
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path>
         </svg>
       </button>
-      <div className={`transition-all duration-300 ease-in-out ${isOpen ? 'max-h-screen' : 'max-h-0 overflow-hidden'}`}>
-        <div className="p-4 bg-slate-50 border-t border-slate-200">
-          {children}
+      {/* BUG-020修正: grid-rows-[0fr]/[1fr]でアニメーション。max-h-screenは内部コンテンツ量に対応できず重複が発生していた */}
+      <div
+        className={`grid transition-[grid-template-rows] duration-300 ease-in-out ${
+          isOpen ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'
+        }`}
+      >
+        <div className="overflow-hidden">
+          <div className="p-4 bg-slate-50 border-t border-slate-200">
+            {children}
+          </div>
         </div>
       </div>
     </div>
