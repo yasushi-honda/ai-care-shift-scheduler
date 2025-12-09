@@ -81,7 +81,7 @@ export const demoSignIn = onRequest({
       provider: 'demo',
       facilities: [{
         facilityId: DEMO_FACILITY_ID,
-        role: 'viewer',
+        role: 'editor', // Phase 43.2.1対応: シフト保存・休暇残高アクセスにはeditor権限が必要
         grantedAt: now,
       }],
       lastLoginAt: now,
@@ -100,7 +100,7 @@ export const demoSignIn = onRequest({
       if (!existingMember) {
         members.push({
           userId: DEMO_USER_UID,
-          role: 'viewer',
+          role: 'editor', // Phase 43.2.1対応: シフト保存・休暇残高アクセスにはeditor権限が必要
           grantedAt: now,
         });
         await facilityRef.update({ members });
