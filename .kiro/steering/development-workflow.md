@@ -1,5 +1,43 @@
 # Development Workflow - 開発ワークフロー
 
+## プロジェクト別アカウント設定
+
+このプロジェクトでは、direnvによりGitHubとGCPのアカウントが自動的に切り替わります。
+
+### 設定済みアカウント
+
+| サービス | アカウント |
+|----------|-----------|
+| GitHub CLI | `yasushi-honda` |
+| GCP | `admin@fuku-no-tane.com` |
+| GCPプロジェクト | `ai-care-shift-scheduler` |
+| Git Local | `yasushi-honda` / `admin@fuku-no-tane.com` |
+
+### 自動切り替え（direnv）
+
+このディレクトリに入ると`.envrc`により自動的にアカウントが切り替わります。
+
+**確認コマンド**:
+```bash
+gh auth status          # GitHubアカウント確認
+gcloud config list      # GCPアカウント確認
+git config --local user.name   # Git設定確認
+```
+
+**トラブルシューティング**:
+```bash
+# GCP設定がリセットされた場合
+gcloud config configurations activate ai-care-shift-scheduler
+
+# GitHub設定がリセットされた場合
+gh auth switch -u yasushi-honda
+
+# ADC再認証が必要な場合
+gcloud auth application-default login
+```
+
+---
+
 ## 標準開発フロー
 
 このプロジェクトでは、コード品質とセキュリティを保証するために、以下のワークフローを遵守します。

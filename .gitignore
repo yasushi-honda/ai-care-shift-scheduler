@@ -40,3 +40,4 @@ coverage/
 
 # Functions test results
 functions/test-results/
+.envrc
