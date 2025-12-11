@@ -115,11 +115,12 @@ jobs:
           cache: 'npm'
 
       # 3. Javaのセットアップ（Firebase Emulator用）
+      # Note: firebase-tools requires Java 21+ (2024年以降)
       - name: Javaをセットアップ
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
-          java-version: '17'
+          java-version: '21'
 
       # 4. 依存関係のインストール
       - name: 依存関係をインストール
