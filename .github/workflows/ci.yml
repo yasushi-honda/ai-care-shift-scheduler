@@ -213,9 +213,10 @@ jobs:
             exit 1
           fi
 
-          # E2Eテスト実行（CI環境では基本テストのみ、タイムアウト10分）
+          # E2Eテスト実行（CI用設定、タイムアウト5分）
+          # Phase 4: 主要テストを実行（20件以上、5分以内目標）
           echo "🧪 E2Eテスト実行開始..."
-          timeout 600 bash -c 'PLAYWRIGHT_BASE_URL=http://localhost:5173 npx playwright test e2e/app.spec.ts --reporter=github,html' || TEST_EXIT_CODE=$?
+          timeout 300 bash -c 'PLAYWRIGHT_BASE_URL=http://localhost:5173 npx playwright test --config=playwright.ci.config.ts' || TEST_EXIT_CODE=$?
           echo "📊 テスト終了コード: ${TEST_EXIT_CODE:-0}"
 
           # クリーンアップ
@@ -246,6 +247,8 @@ jobs:
         if: always()
         run: |
           echo "## E2Eテスト結果 🧪" >> $GITHUB_STEP_SUMMARY
+          echo "📋 実行設定: playwright.ci.config.ts" >> $GITHUB_STEP_SUMMARY
+          echo "⏱️ タイムアウト: 5分" >> $GITHUB_STEP_SUMMARY
           if [ -f playwright-report/index.html ]; then
             echo "✅ テストレポート生成完了" >> $GITHUB_STEP_SUMMARY
             echo "📊 レポートはArtifactsからダウンロード可能" >> $GITHUB_STEP_SUMMARY

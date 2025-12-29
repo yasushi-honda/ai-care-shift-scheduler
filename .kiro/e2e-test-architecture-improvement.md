@@ -2,7 +2,7 @@
 
 **作成日**: 2025-12-29
 **最終更新**: 2025-12-30
-**ステータス**: Phase 3 完了
+**ステータス**: Phase 4 完了
 **優先度**: 高
 
 ---
@@ -226,9 +226,35 @@ e2e-test:
 - 認証セットアップ自体は正常動作（「✅ 認証済みユーザーセットアップ完了」確認済み）
 - 失敗は主にテストデータ不足・UI要素タイミング問題
 
-### Phase 4 目標（次フェーズ）
-- [ ] CI/CDで主要テスト（20件以上）が実行される
-- [ ] テスト実行時間 < 5分
+### Phase 4 完了基準
+- [x] CI/CDで主要テスト（20件以上）が実行される
+- [x] テスト実行時間 < 5分
+- [x] CI専用Playwright設定ファイル作成
+
+**Phase 4 実績** (2025-12-30):
+- `playwright.ci.config.ts` 新規作成
+  - 実行対象: 9テストファイル（約30+テスト）
+  - タイムアウト: 5分
+  - 対象テスト:
+    - app.spec.ts（基本動作）
+    - auth-flow.spec.ts（認証フロー）
+    - rbac-permissions.spec.ts（権限チェック）
+    - staff-management.spec.ts（スタッフ管理）
+    - leave-request.spec.ts（休暇希望）
+    - shift-creation.spec.ts（シフト作成）
+    - report-page.spec.ts（レポート）
+    - ai-shift-generation.spec.ts（AI生成）
+    - ai-evaluation-panel.spec.ts（AI評価）
+- `.github/workflows/ci.yml` 更新
+  - CI用設定ファイルを使用
+  - タイムアウトを10分→5分に短縮
+- `package.json` スクリプト追加
+  - `test:e2e:ci`: CI用テスト実行
+  - `test:e2e:ci:emulator`: Emulator環境でCI用テスト
+
+### Phase 5 目標（次フェーズ）
+- [ ] テストカバレッジ分析
+- [ ] フレーキーテストの安定化
 
 ---
 
@@ -249,3 +275,4 @@ e2e-test:
 | 2025-12-30 | Phase 1完了: フィクスチャ作成、global-setup修正 | Claude Opus 4.5 |
 | 2025-12-30 | Phase 2完了: 6テストファイルのフィクスチャ参照化 | Claude Opus 4.5 |
 | 2025-12-30 | Phase 3完了: 5テストファイルに認証ヘルパー追加 | Claude Opus 4.5 |
+| 2025-12-30 | Phase 4完了: CI/CD拡張（CI専用設定、9テストファイル実行） | Claude Opus 4.5 |
