@@ -1,4 +1,6 @@
 import { test, expect } from '@playwright/test';
+import { setupAuthenticatedUser, clearEmulatorAuth } from './helpers/auth-helper';
+import { TEST_FACILITY_ID } from './fixtures';
 
 /**
  * 月次レポート E2E テスト
@@ -8,12 +10,23 @@ import { test, expect } from '@playwright/test';
  * - タブ切り替え
  * - レスポンシブ表示
  * - PDFダウンロード機能
+ *
+ * Phase 3: 認証ヘルパーを追加
  */
 
 test.describe('月次レポート E2E テスト', () => {
   test.beforeEach(async ({ page }) => {
-    // アプリケーションに移動
-    await page.goto('/');
+    // Emulator環境をクリーンアップ
+    await clearEmulatorAuth();
+
+    // 管理者としてログイン（フィクスチャの施設IDを使用）
+    await setupAuthenticatedUser(page, {
+      email: 'admin@test.com',
+      password: 'password123',
+      displayName: 'Test Admin',
+      role: 'admin',
+      facilities: [{ facilityId: TEST_FACILITY_ID, role: 'admin' }],
+    });
   });
 
   /**
@@ -287,6 +300,20 @@ test.describe('月次レポート E2E テスト', () => {
  * 管理者向けレポートテスト
  */
 test.describe('管理者向けレポート E2E テスト', () => {
+  test.beforeEach(async ({ page }) => {
+    // Emulator環境をクリーンアップ
+    await clearEmulatorAuth();
+
+    // 管理者としてログイン
+    await setupAuthenticatedUser(page, {
+      email: 'admin@test.com',
+      password: 'password123',
+      displayName: 'Test Admin',
+      role: 'admin',
+      facilities: [{ facilityId: TEST_FACILITY_ID, role: 'admin' }],
+    });
+  });
+
   test('経営分析タブの表示（管理者ロール）', async ({ page }) => {
     await page.goto('/reports');
 
@@ -312,6 +339,20 @@ test.describe('管理者向けレポート E2E テスト', () => {
  * スタッフ向けレポートテスト
  */
 test.describe('スタッフ向けレポート E2E テスト', () => {
+  test.beforeEach(async ({ page }) => {
+    // Emulator環境をクリーンアップ
+    await clearEmulatorAuth();
+
+    // スタッフ（viewer）としてログイン
+    await setupAuthenticatedUser(page, {
+      email: 'staff@test.com',
+      password: 'password123',
+      displayName: 'Test Staff',
+      role: 'viewer',
+      facilities: [{ facilityId: TEST_FACILITY_ID, role: 'viewer' }],
+    });
+  });
+
   test('個人レポートタブの表示（スタッフロール）', async ({ page }) => {
     await page.goto('/reports');
 

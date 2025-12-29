@@ -1,4 +1,6 @@
 import { test, expect } from '@playwright/test';
+import { setupAuthenticatedUser, clearEmulatorAuth } from './helpers/auth-helper';
+import { TEST_FACILITY_ID } from './fixtures';
 
 /**
  * AI シフト生成 E2E テスト
@@ -12,6 +14,8 @@ import { test, expect } from '@playwright/test';
  * - Task 5.1: AI生成の正常系UIフロー
  * - Task 5.2: エラーケースのUI表示
  * - Task 5.3: タイムアウト処理
+ *
+ * Phase 3: 認証ヘルパーを追加
  */
 
 // CI環境ではこのテストスイート全体をスキップ（コスト削減）
@@ -19,9 +23,17 @@ const shouldSkipAITests = process.env.CI === 'true';
 
 test.describe('AI シフト生成 E2E テスト', () => {
   test.beforeEach(async ({ page }) => {
-    // 本番環境へのナビゲーション
-    // ローカル実行時は PLAYWRIGHT_BASE_URL=https://ai-care-shift-scheduler.web.app を設定
-    await page.goto('/');
+    // Emulator環境をクリーンアップ
+    await clearEmulatorAuth();
+
+    // 管理者としてログイン（フィクスチャの施設IDを使用）
+    await setupAuthenticatedUser(page, {
+      email: 'admin@test.com',
+      password: 'password123',
+      displayName: 'Test Admin',
+      role: 'admin',
+      facilities: [{ facilityId: TEST_FACILITY_ID, role: 'admin' }],
+    });
   });
 
   /**

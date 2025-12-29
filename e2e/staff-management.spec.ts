@@ -1,20 +1,35 @@
 import { test, expect } from '@playwright/test';
-import { TEST_STAFF } from './fixtures';
+import { setupAuthenticatedUser, clearEmulatorAuth } from './helpers/auth-helper';
+import { TEST_STAFF, TEST_FACILITY_ID } from './fixtures';
 
 /**
  * スタッフ管理機能テスト
  *
  * Phase 2: テストフィクスチャを使用するよう修正
+ * Phase 3: 認証ヘルパーを追加
  */
 
 // テスト用スタッフ参照（フィクスチャからインデックスで取得）
 const NURSE_STAFF = TEST_STAFF.find(s => s.position === '看護職員')!; // 佐藤花子
 const CARE_STAFF = TEST_STAFF.find(s => s.position === '介護職員')!;  // 高橋健太
+
 test.describe('スタッフ管理機能', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto('/');
+    // Emulator環境をクリーンアップ
+    await clearEmulatorAuth();
+
+    // 管理者としてログイン（フィクスチャの施設IDを使用）
+    await setupAuthenticatedUser(page, {
+      email: 'admin@test.com',
+      password: 'password123',
+      displayName: 'Test Admin',
+      role: 'admin',
+      facilities: [{ facilityId: TEST_FACILITY_ID, role: 'admin' }],
+    });
+
     // スタッフ情報設定を開く
     await page.getByText('スタッフ情報設定').click();
+    await page.waitForTimeout(500);
   });
 
   test('新規スタッフを追加できる', async ({ page }) => {

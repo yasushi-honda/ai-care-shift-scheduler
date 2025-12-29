@@ -1,17 +1,31 @@
 import { test, expect } from '@playwright/test';
-import { TEST_STAFF } from './fixtures';
+import { setupAuthenticatedUser, clearEmulatorAuth } from './helpers/auth-helper';
+import { TEST_STAFF, TEST_FACILITY_ID } from './fixtures';
 
 /**
  * 休暇希望入力機能テスト
  *
  * Phase 2: テストフィクスチャを使用するよう修正
+ * Phase 3: 認証ヘルパーを追加
  */
 
 // テスト用スタッフ参照
 const FIRST_STAFF = TEST_STAFF[0];
+
 test.describe('休暇希望入力機能', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto('/');
+    // Emulator環境をクリーンアップ
+    await clearEmulatorAuth();
+
+    // 管理者としてログイン（フィクスチャの施設IDを使用）
+    await setupAuthenticatedUser(page, {
+      email: 'admin@test.com',
+      password: 'password123',
+      displayName: 'Test Admin',
+      role: 'admin',
+      facilities: [{ facilityId: TEST_FACILITY_ID, role: 'admin' }],
+    });
+
     // 休暇希望入力タブに切り替え
     await page.getByRole('button', { name: '休暇希望入力' }).click();
     // タブ切り替え後の待機

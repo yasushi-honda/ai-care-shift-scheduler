@@ -1,4 +1,6 @@
 import { test, expect } from '@playwright/test';
+import { setupAuthenticatedUser, clearEmulatorAuth } from './helpers/auth-helper';
+import { TEST_FACILITY_ID } from './fixtures';
 
 /**
  * AI評価パネル E2E テスト
@@ -12,6 +14,8 @@ import { test, expect } from '@playwright/test';
  * - 低スコア時の警告メッセージ表示
  * - スコアに応じた自動展開
  * - AIコメントの表示とコピー機能
+ *
+ * Phase 3: 認証ヘルパーを追加
  */
 
 // CI環境ではAI関連テストをスキップ（コスト削減）
@@ -19,7 +23,17 @@ const shouldSkipAITests = process.env.CI === 'true';
 
 test.describe('AI評価パネル E2E テスト', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto('/');
+    // Emulator環境をクリーンアップ
+    await clearEmulatorAuth();
+
+    // 管理者としてログイン（フィクスチャの施設IDを使用）
+    await setupAuthenticatedUser(page, {
+      email: 'admin@test.com',
+      password: 'password123',
+      displayName: 'Test Admin',
+      role: 'admin',
+      facilities: [{ facilityId: TEST_FACILITY_ID, role: 'admin' }],
+    });
   });
 
   /**
