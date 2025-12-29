@@ -458,6 +458,10 @@
                 <div class="stat-number">10+</div>
                 <div class="stat-label">主要機能</div>
             </div>
+            <div class="stat-card" style="background: linear-gradient(135deg, #28a745 0%, #20c997 100%);">
+                <div class="stat-number">4.0/5.0</div>
+                <div class="stat-label">AI品質評価</div>
+            </div>
         </div>
 
         <hr>
@@ -524,8 +528,11 @@ timeline
         Phase 42.2 : デモログイン機能
         Phase 43 : デモ環境改善
         Phase 44 : AIシフト生成パイプライン改善
+        Phase 53 : 制約レベル別評価
+        Phase 54 : AI評価履歴・再評価
+    section 作業中
         Phase 45 : AI生成進行状況表示
-    section 計画中（12月以降）
+    section 計画中（2025年1月以降）
         Phase 46+ : 通知機能
                   : 追加機能
         </div>
@@ -608,10 +615,14 @@ gantt
     デモログイン（Phase 42.2）: done, phase9b, 2025-12-07, 1d
     デモ環境改善（Phase 43）: done, phase10, 2025-12-07, 1d
     AIシフト生成改善（Phase 44）: done, phase11, 2025-12-07, 1d
-    AI生成進行状況表示（Phase 45）: done, phase12, 2025-12-08, 1d
+    制約レベル別評価（Phase 53）: done, phase12, 2025-12-09, 1d
+    AI評価履歴・再評価（Phase 54）: done, phase13, 2025-12-09, 1d
 
-    section 計画中（12月以降）
-    通知機能追加: phase13, 2025-12-15, 7d
+    section 作業中
+    AI生成進行状況表示（Phase 45）: active, phase14, 2025-12-08, 21d
+
+    section 計画中（2025年1月以降）
+    通知機能追加: phase15, 2025-01-15, 7d
         </div>
 
         <h3>将来の機能拡張候補（提案レベル）</h3>
@@ -1034,6 +1045,8 @@ graph TB
         <p><strong>Phase 45詳細</strong>: <a href="phase45-ai-generation-progress.html">AI生成進行状況表示機能（コンポーネント・状態遷移）</a></p>
         <p><strong>Phase 48詳細</strong>: <a href="phase48-consecutive-constraints.html">連続勤務制約の動的生成（連勤超過防止）</a></p>
         <p><strong>Phase 49詳細</strong>: <a href="phase49-staffing-constraints.html">日別人員配置制約（人員不足防止）</a></p>
+        <p><strong>Phase 53詳細</strong>: <a href="phase53-constraint-level-evaluation.html">制約レベル別評価システム（4段階評価）</a></p>
+        <p><strong>Phase 54詳細</strong>: <a href="phase54-evaluation-history-reevaluate.html">AI評価履歴・再評価機能</a></p>
         <p><strong>AI品質改善</strong>:</p>
         <ul style="margin-left: 2rem;">
             <li><a href="ai-shift-algorithm.html" style="color: #e74c3c; font-weight: bold;">AIシフト生成アルゴリズム</a> - 段階的生成・動的制約・Mermaid図解</li>
@@ -1054,7 +1067,7 @@ graph TB
         <hr>
 
         <footer class="site-footer">
-            <p><strong>最終更新</strong>: 2025年12月9日（BUG-021/022修正、バグ修正専用ページ追加）</p>
+            <p><strong>最終更新</strong>: 2025年12月29日（Phase 53/54完了、AI評価スコア4.0/5.0達成）</p>
         </footer>
     </main>
 </body>
