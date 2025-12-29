@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { TEST_STAFF } from './fixtures';
 
 /**
  * Phase 25.2: 予実2段書き編集機能テスト
@@ -6,10 +7,16 @@ import { test, expect } from '@playwright/test';
  * このテストスイートは、予定シフトと実績シフトの2段書き表示、
  * シングルクリック編集、差異ハイライトをテストします。
  *
+ * Phase 2: テストフィクスチャを使用するよう修正
+ *
  * 注意: Phase 43でデモシフト作成機能が削除されたため、
  *       このテストファイルは現在スキップされています。
  *       AIシフト生成を使用したテストに書き換える必要があります。
  */
+
+// テスト用スタッフ参照
+const FIRST_STAFF = TEST_STAFF[0];
+
 // Phase 43でデモシフト作成機能が削除されたため、このテストスイート全体をスキップ
 test.describe.skip('予実2段書き編集機能（デモシフト削除済み）', () => {
   test.beforeEach(async ({ page }) => {
@@ -17,11 +24,11 @@ test.describe.skip('予実2段書き編集機能（デモシフト削除済み�
 
     // デモシフト作成
     await page.getByRole('button', { name: 'デモシフト作成' }).click();
-    await expect(page.getByRole('cell', { name: '田中 愛' })).toBeVisible({ timeout: 5000 });
+    await expect(page.getByRole('cell', { name: FIRST_STAFF.name })).toBeVisible({ timeout: 5000 });
   });
 
   test('予定シフトセルをクリックすると編集モーダルが開く', async ({ page }) => {
-    // シフト表の最初の予定セル（田中 愛の1日目の予定行）をクリック
+    // シフト表の最初の予定セル（最初のスタッフの1日目の予定行）をクリック
     // 予定行は各スタッフの最初の行
     const firstPlannedCell = page.locator('tbody tr:nth-child(1) td:nth-child(2)');
     await firstPlannedCell.click();
@@ -37,7 +44,7 @@ test.describe.skip('予実2段書き編集機能（デモシフト削除済み�
   });
 
   test('実績シフトセルをクリックすると編集モーダルが開く', async ({ page }) => {
-    // シフト表の最初の実績セル（田中 愛の1日目の実績行）をクリック
+    // シフト表の最初の実績セル（最初のスタッフの1日目の実績行）をクリック
     // 実績行は各スタッフの2番目の行
     const firstActualCell = page.locator('tbody tr:nth-child(2) td:nth-child(1)');
     await firstActualCell.click();

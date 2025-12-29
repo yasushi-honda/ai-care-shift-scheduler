@@ -1,8 +1,15 @@
 import { test, expect } from '@playwright/test';
+import { TEST_STAFF } from './fixtures';
 
 /**
  * スタッフ管理機能テスト
+ *
+ * Phase 2: テストフィクスチャを使用するよう修正
  */
+
+// テスト用スタッフ参照（フィクスチャからインデックスで取得）
+const NURSE_STAFF = TEST_STAFF.find(s => s.position === '看護職員')!; // 佐藤花子
+const CARE_STAFF = TEST_STAFF.find(s => s.position === '介護職員')!;  // 高橋健太
 test.describe('スタッフ管理機能', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/');
@@ -48,13 +55,13 @@ test.describe('スタッフ管理機能', () => {
   });
 
   test('スタッフの役職情報が表示される', async ({ page }) => {
-    // 田中 愛（看護職員）を確認
-    const tanakaCard = page.locator('.bg-white.rounded-lg.border').filter({ hasText: '田中 愛' });
-    await expect(tanakaCard.getByText('看護職員')).toBeVisible();
+    // 看護職員を確認（フィクスチャから取得）
+    const nurseCard = page.locator('.bg-white.rounded-lg.border').filter({ hasText: NURSE_STAFF.name });
+    await expect(nurseCard.getByText(NURSE_STAFF.position)).toBeVisible();
 
-    // 鈴木 太郎（介護職員）を確認
-    const suzukiCard = page.locator('.bg-white.rounded-lg.border').filter({ hasText: '鈴木 太郎' });
-    await expect(suzukiCard.getByText('介護職員')).toBeVisible();
+    // 介護職員を確認（フィクスチャから取得）
+    const careCard = page.locator('.bg-white.rounded-lg.border').filter({ hasText: CARE_STAFF.name });
+    await expect(careCard.getByText(CARE_STAFF.position)).toBeVisible();
   });
 
   test('スタッフの資格情報が表示される', async ({ page }) => {
@@ -93,11 +100,11 @@ test.describe('スタッフ管理機能', () => {
   });
 
   test('全スタッフが一覧表示される', async ({ page }) => {
-    // 初期スタッフ5人がスタッフカード内に表示されることを確認
-    await expect(page.locator('.bg-white.rounded-lg.border').filter({ hasText: '田中 愛' })).toBeVisible();
-    await expect(page.locator('.bg-white.rounded-lg.border').filter({ hasText: '鈴木 太郎' })).toBeVisible();
-    await expect(page.locator('.bg-white.rounded-lg.border').filter({ hasText: '佐藤 花子' })).toBeVisible();
-    await expect(page.locator('.bg-white.rounded-lg.border').filter({ hasText: '高橋 健太' })).toBeVisible();
-    await expect(page.locator('.bg-white.rounded-lg.border').filter({ hasText: '渡辺 久美子' })).toBeVisible();
+    // フィクスチャの全スタッフがスタッフカード内に表示されることを確認
+    for (const staff of TEST_STAFF) {
+      await expect(
+        page.locator('.bg-white.rounded-lg.border').filter({ hasText: staff.name })
+      ).toBeVisible();
+    }
   });
 });

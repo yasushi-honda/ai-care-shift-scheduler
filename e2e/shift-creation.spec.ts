@@ -1,8 +1,15 @@
 import { test, expect } from '@playwright/test';
+import { TEST_STAFF } from './fixtures';
 
 /**
  * シフト作成機能テスト
+ *
+ * Phase 2: テストフィクスチャを使用するよう修正
+ * NOTE: Phase 43でデモシフト作成機能が削除されたため、多くのテストはスキップ状態
  */
+
+// 最初のスタッフ（シフト表確認用）
+const FIRST_STAFF = TEST_STAFF[0];
 test.describe('シフト作成機能', () => {
   // Phase 43でデモシフト作成機能が削除されたため、以下のテストはスキップ
   test.skip('デモシフトが正しく生成される（機能削除済み）', async ({ page }) => {
@@ -12,7 +19,7 @@ test.describe('シフト作成機能', () => {
     await page.getByRole('button', { name: 'デモシフト作成' }).click();
 
     // シフト表が表示されるまで待機（テーブルセル内のスタッフ名で確認）
-    await expect(page.getByRole('cell', { name: '田中 愛' })).toBeVisible({ timeout: 5000 });
+    await expect(page.getByRole('cell', { name: FIRST_STAFF.name })).toBeVisible({ timeout: 5000 });
 
     // シフト表の内容確認（少なくとも1つのシフトが表示される）
     const shiftCells = page.locator('td').filter({ hasText: /早番|日勤|遅番|夜勤|休/ });
@@ -29,7 +36,7 @@ test.describe('シフト作成機能', () => {
 
     // デモシフト作成
     await page.getByRole('button', { name: 'デモシフト作成' }).click();
-    await expect(page.getByRole('cell', { name: '田中 愛' })).toBeVisible({ timeout: 5000 });
+    await expect(page.getByRole('cell', { name: FIRST_STAFF.name })).toBeVisible({ timeout: 5000 });
 
     // 休暇希望入力タブに切り替え
     await page.getByRole('button', { name: '休暇希望入力' }).click();
@@ -40,7 +47,7 @@ test.describe('シフト作成機能', () => {
     // シフト表タブに戻る
     await page.getByRole('button', { name: 'シフト表' }).click();
     await page.waitForTimeout(500);
-    await expect(page.getByRole('cell', { name: '田中 愛' })).toBeVisible();
+    await expect(page.getByRole('cell', { name: FIRST_STAFF.name })).toBeVisible();
   });
 
   test.skip('CSVエクスポートボタンが機能する（デモシフト削除済み）', async ({ page }) => {
@@ -48,7 +55,7 @@ test.describe('シフト作成機能', () => {
 
     // デモシフト作成
     await page.getByRole('button', { name: 'デモシフト作成' }).click();
-    await expect(page.getByRole('cell', { name: '田中 愛' })).toBeVisible({ timeout: 5000 });
+    await expect(page.getByRole('cell', { name: FIRST_STAFF.name })).toBeVisible({ timeout: 5000 });
 
     // ダウンロード待機
     const downloadPromise = page.waitForEvent('download');

@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { setupAuthenticatedUser, clearEmulatorAuth } from './helpers/auth-helper';
+import { TEST_STAFF, TEST_FACILITY_ID } from './fixtures';
 
 /**
  * Phase 26.1: E2Eテスト追加
@@ -7,6 +8,8 @@ import { setupAuthenticatedUser, clearEmulatorAuth } from './helpers/auth-helper
  *
  * テスト対象: ShiftEditConfirmModal.tsx内の「予定と同じ内容を入力」ボタン
  * 実装コミット: f551c3e (Phase 25.2.5)
+ *
+ * Phase 2: テストフィクスチャを使用するよう修正
  *
  * 注意: Phase 43でデモシフト作成機能が削除されたため、
  *       このテストファイルは現在スキップされています。
@@ -20,19 +23,22 @@ import { setupAuthenticatedUser, clearEmulatorAuth } from './helpers/auth-helper
  * PLAYWRIGHT_BASE_URL=http://localhost:5173 npm run test:e2e
  */
 
+// テスト用スタッフ参照
+const FIRST_STAFF = TEST_STAFF[0];
+
 // Phase 43でデモシフト作成機能が削除されたため、このテストスイート全体をスキップ
 test.describe.skip('Phase 26.1: 改善1「予定と同じ」ボタン（デモシフト削除済み）', () => {
   test.beforeEach(async ({ page }) => {
     // Emulator環境をクリーンアップ
     await clearEmulatorAuth();
 
-    // Managerロールでログイン
+    // Managerロールでログイン（フィクスチャの施設IDを使用）
     await setupAuthenticatedUser(page, {
       email: 'manager@test.com',
       password: 'password123',
       displayName: 'Test Manager',
       role: 'admin',
-      facilities: [{ facilityId: 'test-facility-001', role: 'admin' }],
+      facilities: [{ facilityId: TEST_FACILITY_ID, role: 'admin' }],
     });
 
     // デモシフト作成
@@ -41,7 +47,7 @@ test.describe.skip('Phase 26.1: 改善1「予定と同じ」ボタン（デモ�
     await page.getByRole('button', { name: 'デモシフト作成' }).click();
 
     // シフト表が表示されるまで待機
-    await expect(page.getByRole('cell', { name: '田中 愛' })).toBeVisible({ timeout: 10000 });
+    await expect(page.getByRole('cell', { name: FIRST_STAFF.name })).toBeVisible({ timeout: 10000 });
   });
 
   /**
@@ -49,7 +55,7 @@ test.describe.skip('Phase 26.1: 改善1「予定と同じ」ボタン（デモ�
    * 期待結果: 実績シフトが予定シフトと同じ内容で作成される
    */
   test('TC1-1: 予定シフトが存在する場合、実績に同じ内容がコピーされる', async ({ page }) => {
-    // Step 1: 予定シフトの内容を確認（田中 愛の1日目）
+    // Step 1: 予定シフトの内容を確認（最初のスタッフの1日目）
     const plannedCell = page.locator('tbody tr:nth-child(1) td:nth-child(2)');
     await plannedCell.click();
 
