@@ -13,21 +13,60 @@
 | GCPプロジェクト | `ai-care-shift-scheduler` |
 | Git Local | `yasushi-honda` / `admin@fuku-no-tane.com` |
 
+### 環境ファイル構成
+
+| ファイル | 用途 | Git管理 |
+|----------|------|---------|
+| `.envrc` | GCP/GitHub CLI自動切替（direnv） | ❌ gitignore |
+| `.env` | Firebase設定（共通） | ✅ tracked |
+| `.env.local` | Firebase/GCP設定（ローカル専用） | ❌ gitignore |
+| `.firebaserc` | Firebaseプロジェクト設定 | ✅ tracked |
+| `.git/config` | Git user設定 | - |
+
+### .envrc の設定内容
+
+```bash
+# GCP Configuration名（廃止予定、下記の直接指定を優先）
+export CLOUDSDK_ACTIVE_CONFIG_NAME=ai-care-shift-scheduler
+
+# GCP Account/Project（Configuration上書き対策）
+export CLOUDSDK_CORE_ACCOUNT=admin@fuku-no-tane.com
+export CLOUDSDK_CORE_PROJECT=ai-care-shift-scheduler
+
+# GitHub account
+export GH_ACCOUNT=yasushi-honda
+```
+
+**重要**: `CLOUDSDK_CORE_*` 環境変数はGCP Configurationより優先されるため、Configurationの中身が書き換わっても正しいアカウント/プロジェクトが使われます。
+
 ### 自動切り替え（direnv）
 
 このディレクトリに入ると`.envrc`により自動的にアカウントが切り替わります。
 
-**確認コマンド**:
+### セッション開始時の確認（必須）
+
+**新しいセッション開始時は必ず以下を確認すること**：
+
 ```bash
-gh auth status          # GitHubアカウント確認
-gcloud config list      # GCPアカウント確認
-git config --local user.name   # Git設定確認
+# 1. GitHub アカウント確認
+gh auth status
+# 期待値: yasushi-honda (Active)
+
+# 2. GCP アカウント/プロジェクト確認
+gcloud config list --format="table(core.account,core.project)"
+# 期待値:
+# ACCOUNT                 PROJECT
+# admin@fuku-no-tane.com  ai-care-shift-scheduler
 ```
 
-**トラブルシューティング**:
+### トラブルシューティング
+
 ```bash
-# GCP設定がリセットされた場合
-gcloud config configurations activate ai-care-shift-scheduler
+# GCP認証が必要な場合
+gcloud auth login admin@fuku-no-tane.com
+
+# direnv再読み込み
+direnv allow
 
 # GitHub設定がリセットされた場合
 gh auth switch -u yasushi-honda
@@ -35,6 +74,16 @@ gh auth switch -u yasushi-honda
 # ADC再認証が必要な場合
 gcloud auth application-default login
 ```
+
+### CI/CD との関係
+
+| 項目 | ローカル | GitHub Actions |
+|------|---------|----------------|
+| 認証方式 | ユーザーアカウント | サービスアカウント |
+| 設定場所 | `.envrc`, gcloud config | GitHub Secrets |
+| 依存関係 | **独立** | **独立** |
+
+**重要**: CI/CDはサービスアカウント認証のため、ローカル設定が壊れていてもCI/CDには影響しません。
 
 ---
 

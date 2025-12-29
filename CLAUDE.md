@@ -45,6 +45,48 @@ Use `/kiro:spec-status [feature-name]` to check progress.
 
 ---
 
+## セッション開始時の環境確認
+
+**新しいセッション開始時は必ず環境変数とアカウント設定を確認すること**
+
+### 確認コマンド
+
+```bash
+# 1. GitHub アカウント確認
+gh auth status
+
+# 2. GCP アカウント/プロジェクト確認
+gcloud config list --format="table(core.account,core.project)"
+
+# 3. 期待値との照合
+# - GitHub: yasushi-honda (Active)
+# - GCP Account: admin@fuku-no-tane.com
+# - GCP Project: ai-care-shift-scheduler
+```
+
+### 不一致時の対処
+
+```bash
+# GCP認証が必要な場合
+gcloud auth login admin@fuku-no-tane.com
+
+# direnv再読み込み
+direnv allow
+```
+
+### 環境ファイル構成
+
+| ファイル | 用途 |
+|----------|------|
+| `.envrc` | GCP/GitHub CLI自動切替（direnv） |
+| `.env` / `.env.local` | Firebase/GCP環境変数 |
+| `.firebaserc` | Firebaseプロジェクト設定 |
+| `.git/config` | Git user設定 |
+
+**詳細**: [development-workflow.md](.kiro/steering/development-workflow.md)
+
+---
+
 ## Git Workflow - GitHub Flow
 
 1. **mainブランチ**: 常に安定・デプロイ可能
