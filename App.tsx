@@ -136,6 +136,21 @@ const App: React.FC = () => {
     showError('AI生成がキャンセルされました');
   }, [aiProgress, showError]);
 
+  // Phase 45: ブラウザ離脱時の警告（タスク3.4）
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (aiProgress.state.status === 'generating') {
+        e.preventDefault();
+        e.returnValue = ''; // クロスブラウザ互換性のため必須
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, [aiProgress.state.status]);
+
   // Phase 31: アンドゥ履歴スタック（最大10件）
   const [undoStack, setUndoStack] = useState<ShiftHistoryEntry[]>([]);
 
