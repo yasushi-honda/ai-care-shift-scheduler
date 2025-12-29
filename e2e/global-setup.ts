@@ -2,6 +2,7 @@
  * Playwright Global Setup
  *
  * Phase 18.2: Firebase Auth Emulator環境の準備
+ * Phase E2E-Improvement: テストデータ投入追加
  *
  * このファイルは、全E2Eテスト実行前に一度だけ実行されます。
  * Emulator環境でのテスト準備を行います。
@@ -9,6 +10,7 @@
 
 import { chromium, FullConfig } from '@playwright/test';
 import admin from 'firebase-admin';
+import { resetTestData } from './helpers/data-helper';
 
 // Firebase Admin SDKインスタンス（プライベート変数）
 let _adminAuth: admin.auth.Auth | null = null;
@@ -61,6 +63,11 @@ async function globalSetup(config: FullConfig) {
       _adminAuth = admin.auth();
 
       console.log('  ✅ Firebase Admin SDK初期化完了');
+
+      // テストデータ投入
+      console.log('  🌱 テストデータ投入開始...');
+      await resetTestData();
+      console.log('  ✅ テストデータ投入完了');
     } catch (error) {
       console.error('  ❌ Firebase Admin SDK初期化失敗:', error);
       throw error;

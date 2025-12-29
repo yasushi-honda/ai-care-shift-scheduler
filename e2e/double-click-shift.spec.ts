@@ -108,10 +108,11 @@ test.describe('ダブルクリックシフト編集', () => {
 
 /**
  * Phase 29: モバイルタッチ対応テスト
+ * NOTE: test.use()はdescribe内で使用不可のため、別ファイル(mobile-separate-page.spec.ts)に移動済み
  */
-test.describe('モバイルタッチ対応', () => {
-  // モバイルデバイスをエミュレート
-  test.use({ ...devices['iPhone 13'] });
+test.describe.skip('モバイルタッチ対応', () => {
+  // モバイルデバイスをエミュレート - 別ファイルで実行
+  // test.use({ ...devices['iPhone 13'] });
 
   test.beforeEach(async ({ page }) => {
     await setupAuthenticatedUser(page, {
