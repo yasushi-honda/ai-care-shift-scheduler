@@ -231,6 +231,7 @@ config: {
 | [dynamic-constraints.md](.kiro/steering/dynamic-constraints.md) | 動的制約パターン |
 | [phased-generation-contract.md](.kiro/steering/phased-generation-contract.md) | Phase間データ契約 |
 | [documentation-standards.md](.kiro/steering/documentation-standards.md) | ドキュメント基準 |
+| [ai-shift-optimization-strategy.md](.kiro/steering/ai-shift-optimization-strategy.md) | AI最適化戦略 |
 
 ---
 
@@ -245,6 +246,7 @@ config: {
 - **BUG-022**: マルチモデル戦略 → [gemini-rules.md](.kiro/steering/gemini-rules.md)
 - **BUG-023**: Phase間データ欠落 → [phased-generation-contract.md](.kiro/steering/phased-generation-contract.md)
 - **BUG-024**: staffId→idマッピング不整合 → [bugfix-024-staffid-mapping.md](.kiro/bugfix-024-staffid-mapping.md)
+- **BUG-025**: AI生成スコア不安定 → [ai-shift-optimization-strategy.md](.kiro/steering/ai-shift-optimization-strategy.md)
 
 ポストモーテム: [postmortem-gemini-bugs-2025-12-05.md](.kiro/postmortem-gemini-bugs-2025-12-05.md)
 
