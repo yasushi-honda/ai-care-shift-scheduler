@@ -45,13 +45,13 @@ export interface UseAIGenerationProgressReturn {
  * AI生成の5段階ステップ定義
  * 各ステップは経過時間に基づいて自動的に進行する
  *
- * バックエンド処理との対応:
- * - Phase 1（骨子生成）: ステップ2-3（約60秒）
- * - Phase 2（詳細生成）: ステップ3-4（約90秒、バッチ処理）
- * - 評価: ステップ4（約10秒）
+ * BUG-022対応 (2025-12-30):
+ * gemini-2.5-pro（thinking常時ON）は処理時間が大幅に増加
+ * - Phase 1（骨子生成）: ~180秒（ステップ2）
+ * - Phase 2（詳細生成）: ~120秒（ステップ3）
+ * - 評価: ~10秒（ステップ4）
  *
- * 将来の段階的プロンプト分割対応時に更新予定
- * @see .kiro/progress-display-improvement.md
+ * @see .kiro/steering/gemini-rules.md
  */
 export const GENERATION_STEPS: StepDefinition[] = [
   {
@@ -63,37 +63,42 @@ export const GENERATION_STEPS: StepDefinition[] = [
   {
     id: 2,
     label: '骨子を生成中',
-    description: '休日パターンと基本構造を決定しています...',
+    description: 'AIが休日パターンと基本構造を決定しています...',
     startTimeSeconds: 5,
   },
   {
     id: 3,
     label: 'シフト詳細を生成中',
     description: 'AIが各スタッフのシフトを割り当てています...',
-    startTimeSeconds: 60,
+    startTimeSeconds: 180,
   },
   {
     id: 4,
     label: '評価・最適化中',
     description: '制約違反をチェックし、品質を評価しています...',
-    startTimeSeconds: 150,
+    startTimeSeconds: 300,
   },
   {
     id: 5,
     label: '完了処理中',
     description: '結果を準備しています...',
-    startTimeSeconds: 180,
+    startTimeSeconds: 320,
   },
 ];
 
 /**
  * デフォルトの予測処理時間（秒）
- * BUG-010でタイムアウトを240秒に延長したため、それに合わせて更新
+ *
+ * BUG-022対応 (2025-12-30):
+ * gemini-2.5-pro（thinking常時ON）は処理時間が大幅に増加
  *
  * スタッフ数による目安:
- * - 5名以下: 90秒（一括生成）
- * - 6-10名: 150秒（2段階生成、2バッチ）
- * - 11-15名: 210秒（2段階生成、3バッチ）
- * - 16名以上: 240秒（最大）
+ * - 5名以下: 180秒
+ * - 6-10名: 300秒
+ * - 11-15名: 360秒
+ * - 16名以上: 420秒
+ *
+ * クライアントタイムアウト: 360秒
+ * サーバータイムアウト: 540秒
  */
-export const DEFAULT_ESTIMATED_SECONDS = 210;
+export const DEFAULT_ESTIMATED_SECONDS = 360;
