@@ -42,6 +42,7 @@ Use `/kiro:spec-status [feature-name]` to check progress.
 ## Development Guidelines
 
 - Think in English, generate responses in Japanese（思考は英語、回答は日本語）
+- ドキュメントは簡潔に、詳細はsteeringファイルへリンク（冗長な記述を避ける）
 
 ---
 
