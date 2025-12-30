@@ -25,7 +25,7 @@ Google Cloud Platform
 ├── Cloud Functions (バックエンドAPI) - asia-northeast1
 ├── Firestore (データベース) - asia-northeast1
 ├── Cloud Storage for Firebase (ファイル保存)
-└── Vertex AI (Gemini 2.5 Flash) - asia-northeast1
+└── Vertex AI (Gemini 2.5 Pro) - asia-northeast1
 ```
 
 ### 開発・CI/CD
@@ -173,19 +173,19 @@ setGlobalOptions({
 - CORS: すべてのオリジンを許可（開発段階）
 - 認証: なし（将来実装予定）
 
-#### Vertex AI - Gemini 2.5 Flash (GA版)
+#### Vertex AI - Gemini 2.5 Pro
 
 **選定理由**:
 
-- **高性能**: Gemini 2.5シリーズの高速モデル
-- **安定版**: GA（Generally Available）で本番環境に適合
-- **文脈理解**: 100万トークンのコンテキストウィンドウ
+- **高精度**: Gemini 2.5シリーズの高精度モデル
+- **思考モード常時ON**: 複雑な制約条件の推論に最適
+- **日本リージョン対応**: asia-northeast1で利用可能
 - **日本語対応**: 日本語プロンプト・出力に最適化
 
-**モデル情報**（2025年11月時点）:
+**モデル情報**（2025年12月時点）:
 
-- **モデル名**: `gemini-2.5-flash` （自動更新安定版エイリアス）
-- **バージョン管理**: バージョン番号や日付を省略したモデル名は、Googleの「自動更新安定版エイリアス」として機能し、常に最新の安定版を指します
+- **モデル名**: `gemini-2.5-pro`
+- **選定理由**: gemini-2.5-flashはthinkingBudgetバグがあるため、gemini-2.5-proを採用
 
 **本プロジェクトでのリージョン構成**:
 
@@ -197,17 +197,16 @@ setGlobalOptions({
 
 **使用方針**:
 
-- モデル名: `gemini-2.5-flash` （GA版）
+- モデル名: `gemini-2.5-pro`
 - Vertex AI location: `asia-northeast1` （東京）
-- 本番環境対応: GA版のため、本番環境での使用に適している
-- バージョン管理: バージョン番号や日付を省略したモデル名は、自動的に最新の安定版を使用
-- フォールバック: なし（失敗時はエラーを返す）
+- SDK: `@google/genai`（必須）
+- thinkingConfig: 使用しない（gemini-2.5-proは常時thinking ON）
 
 **参考ドキュメント**:
 
-- [Gemini 2.5 Flash 公式ドキュメント](https://cloud.google.com/vertex-ai/generative-ai/docs/models/gemini/2-5-flash)
+- [Gemini 2.5 Pro 公式ドキュメント](https://cloud.google.com/vertex-ai/generative-ai/docs/models/gemini/2-5-pro)
 - [Model versions and lifecycle](https://cloud.google.com/vertex-ai/generative-ai/docs/learn/model-versions)
-- [Vertex AI リージョン](https://cloud.google.com/vertex-ai/docs/general/locations)
+- `.kiro/steering/gemini-rules.md`（プロジェクト固有ルール）
 
 **プロンプト設計**:
 ```
@@ -373,26 +372,23 @@ jobs:
 
 ---
 
-### ADR-003: 認証なしでMVPをリリースする
-**日付**: 2025-10-22
-**状態**: 承認
+### ADR-003: Firebase Authenticationで認証を実装
+**日付**: 2025-10-22（初版）→ 2025-11-05（更新）
+**状態**: 完了
 
 **背景**:
-- 開発速度を優先
-- 機能検証が先決
+- 当初はMVPとして認証なしでリリース
+- Phase 1-12で認証・マルチテナント実装完了
 
 **決定**:
-- MVP（現バージョン）は認証機能なし
-- Firestoreは開発モード（全アクセス許可）
-- Phase 2でFirebase Authentication導入
+- Firebase Authenticationを導入
+- Google OAuth + デモログイン（匿名認証）
+- Firestore Security Rulesで権限制御
+- Admin/Manager/Staffの3段階RBAC
 
-**リスク**:
-- データの漏洩・改ざん可能
-- 本番環境での使用は非推奨
-
-**緩和策**:
-- 公開URLは関係者のみに共有
-- Phase 2への早期移行
+**結果**:
+- 本番環境で認証が稼働中
+- デモ環境でも安全にAI生成が体験可能
 
 ---
 
@@ -463,7 +459,7 @@ VITE_GCP_PROJECT_NUMBER=737067812481
 
 ### バックエンド
 - **API応答時間**: < 500ms (p95)
-- **AIシフト生成**: < 10秒
+- **AIシフト生成**: 90-400秒（スタッフ数による、gemini-2.5-pro使用）
 - **コールドスタート**: < 2秒
 
 ### 最適化手法

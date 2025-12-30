@@ -443,7 +443,7 @@
 
         <div class="stats-grid">
             <div class="stat-card">
-                <div class="stat-number">49</div>
+                <div class="stat-number">55</div>
                 <div class="stat-label">完了フェーズ</div>
             </div>
             <div class="stat-card">
@@ -530,10 +530,10 @@ timeline
         Phase 44 : AIシフト生成パイプライン改善
         Phase 53 : 制約レベル別評価
         Phase 54 : AI評価履歴・再評価
-    section 作業中
         Phase 45 : AI生成進行状況表示
+        Phase 55 : データ設定診断機能
     section 計画中（2025年1月以降）
-        Phase 46+ : 通知機能
+        Phase 56+ : 通知機能
                   : 追加機能
         </div>
 
@@ -618,11 +618,12 @@ gantt
     制約レベル別評価（Phase 53）: done, phase12, 2025-12-09, 1d
     AI評価履歴・再評価（Phase 54）: done, phase13, 2025-12-09, 1d
 
-    section 作業中
-    AI生成進行状況表示（Phase 45）: active, phase14, 2025-12-08, 21d
+    section 完了（12月）
+    AI生成進行状況表示（Phase 45）: done, phase14, 2025-12-08, 1d
+    データ設定診断（Phase 55）: done, phase15, 2025-12-30, 1d
 
     section 計画中（2025年1月以降）
-    通知機能追加: phase15, 2025-01-15, 7d
+    通知機能追加: phase16, 2025-01-15, 7d
         </div>
 
         <h3>将来の機能拡張候補（提案レベル）</h3>
@@ -931,7 +932,7 @@ graph TB
             </div>
             <div class="feature-card" style="border-left: 4px solid #28a745;">
                 <h3>🔒 Vertex AI セキュアAPI</h3>
-                <p>Gemini 2.5 FlashをVertex AI経由で使用。APIキーがクライアントに露出しないサーバーサイド実装。</p>
+                <p>Gemini 2.5 ProをVertex AI経由で使用。APIキーがクライアントに露出しないサーバーサイド実装。</p>
             </div>
             <div class="feature-card" style="border-left: 4px solid #28a745;">
                 <h3>🛡️ Firebase認証・RBAC</h3>
@@ -949,7 +950,7 @@ graph LR
         direction TB
         A[ユーザー<br/>日本国内] -->|HTTPS| B[Firebase Hosting<br/>CDN]
         B -->|API Call| C[Cloud Functions<br/>asia-northeast1]
-        C -->|AI推論| D[Vertex AI<br/>Gemini 2.5 Flash<br/>asia-northeast1]
+        C -->|AI推論| D[Vertex AI<br/>Gemini 2.5 Pro<br/>asia-northeast1]
         C -->|データ保存| E[Cloud Firestore<br/>asia-northeast1]
     end
 
@@ -986,7 +987,7 @@ graph TB
 
     subgraph "AI"
         AI1[Vertex AI]
-        AI2[Gemini 2.5 Flash]
+        AI2[Gemini 2.5 Pro]
         AI3[asia-northeast1]
     end
 
@@ -1047,6 +1048,7 @@ graph TB
         <p><strong>Phase 49詳細</strong>: <a href="phase49-staffing-constraints.html">日別人員配置制約（人員不足防止）</a></p>
         <p><strong>Phase 53詳細</strong>: <a href="phase53-constraint-level-evaluation.html">制約レベル別評価システム（4段階評価）</a></p>
         <p><strong>Phase 54詳細</strong>: <a href="phase54-evaluation-history-reevaluate.html">AI評価履歴・再評価機能</a></p>
+        <p><strong>Phase 55詳細</strong>: データ設定診断機能（需給バランス分析・根本原因分析）</p>
         <p><strong>AI品質改善</strong>:</p>
         <ul style="margin-left: 2rem;">
             <li><a href="ai-shift-algorithm.html" style="color: #e74c3c; font-weight: bold;">AIシフト生成アルゴリズム</a> - 段階的生成・動的制約・Mermaid図解</li>
@@ -1067,7 +1069,7 @@ graph TB
         <hr>
 
         <footer class="site-footer">
-            <p><strong>最終更新</strong>: 2025年12月29日（Phase 53/54完了、AI評価スコア4.0/5.0達成）</p>
+            <p><strong>最終更新</strong>: 2025年12月30日（Phase 55完了、AI評価スコア4.0/5.0達成）</p>
         </footer>
     </main>
 </body>

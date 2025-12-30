@@ -408,7 +408,7 @@
     <main class="main-content" role="main">
         <h1>技術ドキュメント（開発者向け）</h1>
 
-        <p>Phase 39まで完了したAIシフト自動作成システムの技術詳細です。WBS、ER図、システム構成図、フロー図を含みます。</p>
+        <p>Phase 55まで完了したAIシフト自動作成システムの技術詳細です。WBS、ER図、システム構成図、フロー図を含みます。</p>
 
         <div class="toc">
             <h3>目次</h3>
@@ -432,7 +432,7 @@
 
         <div class="mermaid mermaid-large">
 graph TB
-    A[AIシフト自動作成システム<br/>Phase 0-39]
+    A[AIシフト自動作成システム<br/>Phase 0-55]
 
     A --> B[Phase 0-12<br/>基盤構築]
     A --> C[Phase 13-17<br/>AI統合]
@@ -555,7 +555,7 @@ graph TB
     end
 
     subgraph "外部サービス"
-        G[Vertex AI<br/>Gemini 2.5 Flash<br/>asia-northeast1]
+        G[Vertex AI<br/>Gemini 2.5 Pro<br/>asia-northeast1]
     end
 
     subgraph "CI/CD"
@@ -765,7 +765,7 @@ sequenceDiagram
     CF->>CF: プロンプト構築
 
     CF->>Gemini: generateContent()
-    Note over Gemini: gemini-2.5-flash<br/>asia-northeast1（東京）
+    Note over Gemini: gemini-2.5-pro<br/>asia-northeast1（東京）
 
     Gemini-->>CF: JSON形式シフト
 
@@ -946,7 +946,7 @@ flowchart TD
         <p><a href="index.html">トップページに戻る</a></p>
 
         <footer class="site-footer">
-            <p><strong>最終更新</strong>: 2025年11月26日（Phase 39完了時点）</p>
+            <p><strong>最終更新</strong>: 2025年12月30日（Phase 55完了時点）</p>
         </footer>
     </main>
 </body>
