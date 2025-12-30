@@ -46,6 +46,9 @@ import { useAIGenerationProgress } from './src/hooks/useAIGenerationProgress';
 // Phase 54: 評価履歴サービス
 import { getLatestEvaluationForMonth } from './src/services/evaluationHistoryService';
 import { reevaluateShift } from './src/services/reevaluateService';
+// Phase 55: データ設定診断機能
+import { DiagnosisPanel } from './src/components/DiagnosisPanel';
+import { useDiagnosis } from './src/hooks/useDiagnosis';
 
 type ViewMode = 'shift' | 'leaveRequest';
 
@@ -127,6 +130,15 @@ const App: React.FC = () => {
 
   // Phase 45: AI生成プログレス表示
   const aiProgress = useAIGenerationProgress();
+
+  // Phase 55: データ設定診断機能（自動診断トリガー付き）
+  const diagnosis = useDiagnosis({
+    staffList,
+    requirements,
+    leaveRequests,
+    enabled: !loadingStaff && staffList.length > 0, // スタッフ読み込み完了後に有効化
+    debounceMs: 500, // データ変更後500msで再診断
+  });
 
   // Phase 45: AI生成キャンセルハンドラー
   const handleCancelGeneration = useCallback(() => {
@@ -1611,7 +1623,15 @@ const App: React.FC = () => {
             </div>
           </Accordion>
         </div>
-        <footer className="p-4 border-t bg-white shadow-inner">
+        <footer className="p-4 border-t bg-white shadow-inner space-y-3">
+          {/* Phase 55: データ設定診断パネル */}
+          <DiagnosisPanel
+            result={diagnosis.result}
+            isLoading={diagnosis.isLoading}
+            onRefresh={() =>
+              diagnosis.runDiagnosis(staffList, requirements, leaveRequests)
+            }
+          />
           <button
             onClick={handleGenerateClick}
             disabled={isLoading}

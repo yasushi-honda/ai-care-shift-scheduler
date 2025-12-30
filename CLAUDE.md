@@ -34,6 +34,7 @@ Kiro-style Spec Driven Development implementation using claude code slash comman
 | ai-generation-progress | 45 | ✅ 完了 |
 | constraint-level-evaluation | 53 | ✅ 完了 |
 | evaluation-history-reevaluate | 54 | ✅ 完了 |
+| data-configuration-diagnosis | 55 | ✅ 完了 |
 
 Use `/kiro:spec-status [feature-name]` to check progress.
 

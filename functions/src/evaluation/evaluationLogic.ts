@@ -18,6 +18,7 @@ import {
   SimulationResult,
   TimeSlotPreference,
 } from '../types';
+import { analyzeRootCauses } from './rootCauseAnalysis';
 import {
   LEVEL_DEDUCTIONS,
   getViolationLevel,
@@ -151,13 +152,27 @@ export class EvaluationService {
     // シミュレーション結果生成
     const simulation = this.generateSimulation(input, violations);
 
-    // AI総合コメント生成
-    const aiComment = this.generateAIComment(
+    // Phase 55: 根本原因分析を実行
+    const rootCauseResult = analyzeRootCauses({
+      violations,
+      staffList: input.staffList,
+      requirements: input.requirements,
+      leaveRequests: input.leaveRequests,
+      schedule: input.schedule,
+    });
+
+    // AI総合コメント生成（根本原因分析を統合）
+    const baseAiComment = this.generateAIComment(
       overallScore,
       fulfillmentRate,
       violations,
       recommendations
     );
+
+    // 根本原因がある場合は、AIコメントに追加
+    const aiComment = violations.length > 0 && rootCauseResult.primaryCause
+      ? `${baseAiComment}\n\n${rootCauseResult.aiComment}`
+      : baseAiComment;
 
     // Phase 53: ポジティブサマリー生成
     const positiveSummary = generatePositiveSummary(violations, overallScore, fulfillmentRate);
@@ -179,6 +194,13 @@ export class EvaluationService {
         isFeasible: constraintAnalysisResult.isFeasible,
         infeasibilityReasons: constraintAnalysisResult.infeasibilityReasons,
         suggestions: constraintAnalysisResult.suggestions,
+      },
+      // Phase 55: 根本原因分析結果を追加
+      rootCauseAnalysis: {
+        primaryCause: rootCauseResult.primaryCause,
+        secondaryCauses: rootCauseResult.secondaryCauses,
+        aiComment: rootCauseResult.aiComment,
+        analyzedAt: rootCauseResult.analyzedAt,
       },
     };
   }

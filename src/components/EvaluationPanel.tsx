@@ -184,7 +184,7 @@ export function EvaluationPanel({
     return null;
   }
 
-  const { overallScore, fulfillmentRate, constraintViolations, recommendations, simulation, aiComment } = evaluation;
+  const { overallScore, fulfillmentRate, constraintViolations, recommendations, simulation, aiComment, rootCauseAnalysis } = evaluation;
 
   // スコアが-1の場合は評価失敗
   const isEvaluationFailed = overallScore < 0;
@@ -285,6 +285,11 @@ export function EvaluationPanel({
               {/* 制約違反リスト */}
               {constraintViolations && constraintViolations.length > 0 && (
                 <ViolationsSection violations={constraintViolations} />
+              )}
+
+              {/* Phase 55: 根本原因分析 */}
+              {rootCauseAnalysis && rootCauseAnalysis.primaryCause && (
+                <RootCauseSection rootCauseAnalysis={rootCauseAnalysis} />
               )}
 
               {/* 改善提案 */}
@@ -684,6 +689,143 @@ function AICommentSection({ comment }: { comment: string }) {
           <p className="text-sm text-gray-700 leading-relaxed">{comment}</p>
         </div>
       </div>
+    </div>
+  );
+}
+
+/**
+ * Phase 55: 根本原因分析セクション
+ */
+interface RootCause {
+  category: string;
+  description: string;
+  impact: number;
+  affectedStaff?: string[];
+  affectedDates?: string[];
+  metrics?: {
+    required?: number;
+    available?: number;
+    shortage?: number;
+  };
+}
+
+interface RootCauseAnalysis {
+  primaryCause: RootCause | null;
+  secondaryCauses: RootCause[];
+  aiComment: string;
+  analyzedAt: string;
+}
+
+const CATEGORY_LABELS: Record<string, { label: string; icon: string; color: string }> = {
+  staffShortage: { label: 'スタッフ不足', icon: '👥', color: 'text-red-600' },
+  timeSlotConstraint: { label: '時間帯制約', icon: '⏰', color: 'text-orange-600' },
+  leaveConcentration: { label: '休暇集中', icon: '📅', color: 'text-yellow-600' },
+  qualificationMismatch: { label: '資格不足', icon: '📋', color: 'text-purple-600' },
+  consecutiveWork: { label: '連勤制限', icon: '🔄', color: 'text-blue-600' },
+};
+
+function RootCauseSection({ rootCauseAnalysis }: { rootCauseAnalysis: RootCauseAnalysis }) {
+  const { primaryCause, secondaryCauses } = rootCauseAnalysis;
+
+  if (!primaryCause) return null;
+
+  const primaryConfig = CATEGORY_LABELS[primaryCause.category] || {
+    label: '不明',
+    icon: '❓',
+    color: 'text-gray-600',
+  };
+
+  return (
+    <div className="mt-4" data-testid="root-cause-section">
+      <h4 className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
+        <svg
+          className="w-4 h-4 text-indigo-500"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"
+          />
+        </svg>
+        根本原因分析
+      </h4>
+
+      {/* 主要原因 */}
+      <div className="bg-indigo-50 rounded-lg p-4 border border-indigo-100">
+        <div className="flex items-start gap-3">
+          <span className="text-2xl">{primaryConfig.icon}</span>
+          <div className="flex-1">
+            <div className={`font-medium ${primaryConfig.color}`}>
+              {primaryConfig.label}
+            </div>
+            <p className="text-sm text-gray-700 mt-1">{primaryCause.description}</p>
+
+            {/* 数値的根拠 */}
+            {primaryCause.metrics && (
+              <div className="mt-2 flex flex-wrap gap-2">
+                {primaryCause.metrics.required !== undefined && (
+                  <span className="text-xs bg-white px-2 py-1 rounded border">
+                    必要: {primaryCause.metrics.required}人日
+                  </span>
+                )}
+                {primaryCause.metrics.available !== undefined && (
+                  <span className="text-xs bg-white px-2 py-1 rounded border">
+                    利用可能: {primaryCause.metrics.available}人日
+                  </span>
+                )}
+                {primaryCause.metrics.shortage !== undefined &&
+                  primaryCause.metrics.shortage > 0 && (
+                    <span className="text-xs bg-red-100 text-red-700 px-2 py-1 rounded border border-red-200">
+                      不足: {primaryCause.metrics.shortage}人日
+                    </span>
+                  )}
+              </div>
+            )}
+
+            {/* 影響スタッフ */}
+            {primaryCause.affectedStaff && primaryCause.affectedStaff.length > 0 && (
+              <div className="mt-2 text-xs text-gray-600">
+                関連スタッフ:{' '}
+                {primaryCause.affectedStaff.length <= 3
+                  ? primaryCause.affectedStaff.join('、')
+                  : `${primaryCause.affectedStaff.slice(0, 3).join('、')}他${primaryCause.affectedStaff.length - 3}名`}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* 副次的原因 */}
+      {secondaryCauses.length > 0 && (
+        <div className="mt-3 space-y-2">
+          <div className="text-xs font-medium text-gray-500">その他の要因</div>
+          {secondaryCauses.slice(0, 2).map((cause, index) => {
+            const config = CATEGORY_LABELS[cause.category] || {
+              label: '不明',
+              icon: '❓',
+              color: 'text-gray-600',
+            };
+            return (
+              <div
+                key={index}
+                className="bg-gray-50 rounded-lg p-3 border border-gray-100 flex items-start gap-2"
+              >
+                <span>{config.icon}</span>
+                <div>
+                  <span className={`text-sm font-medium ${config.color}`}>
+                    {config.label}
+                  </span>
+                  <p className="text-xs text-gray-600 mt-0.5">{cause.description}</p>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }

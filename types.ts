@@ -515,6 +515,29 @@ export interface AIEvaluationResult {
   generatedAt: Timestamp;
   aiComment?: string;             // AI総合コメント（200文字以内）
   positiveSummary?: string;       // Phase 53: ポジティブサマリー
+  rootCauseAnalysis?: {           // Phase 55: 根本原因分析結果
+    primaryCause: {
+      category: string;
+      description: string;
+      impact: number;
+      affectedStaff?: string[];
+      affectedDates?: string[];
+      metrics?: {
+        required?: number;
+        available?: number;
+        shortage?: number;
+      };
+    } | null;
+    secondaryCauses: Array<{
+      category: string;
+      description: string;
+      impact: number;
+      affectedStaff?: string[];
+      affectedDates?: string[];
+    }>;
+    aiComment: string;
+    analyzedAt: string;
+  };
 }
 
 /**
