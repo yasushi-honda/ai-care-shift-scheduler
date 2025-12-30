@@ -83,11 +83,14 @@ export const generateShift = onRequest(
         throw new Error('staffList is required and must be a non-empty array');
       }
 
-      // Firestoreのフィールド名(staffId)をCloud Functions内部で使用するフィールド名(id)にマッピング
-      // 互換性のため、idが既に存在する場合はそのまま使用
+      // Firestoreのフィールド名をCloud Functions内部で使用するフィールド名にマッピング
+      // - staffId → id
+      // - certifications → qualifications
+      // 互換性のため、既に正しいフィールドが存在する場合はそのまま使用
       const staffList = rawStaffList.map((staff: Record<string, unknown>) => ({
         ...staff,
         id: staff.id || staff.staffId,
+        qualifications: staff.qualifications || staff.certifications || [],
       })) as Staff[];
 
       // 入力サイズ制限（リソース枯渇対策）
