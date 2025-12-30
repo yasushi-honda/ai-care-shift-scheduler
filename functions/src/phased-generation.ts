@@ -24,6 +24,13 @@ import {
   AI_CONFIG_VERSION,
   type ModelConfig,
 } from './ai-model-config';
+import {
+  validateSkeletonOutput,
+  validatePhase2Input,
+  logValidationResult,
+  autoFixSkeleton,
+} from './phase-validation';
+import { checkResponseHealth } from './ai-response-monitor';
 
 // BUG-022: シングルモデル戦略 (2025-12-30更新)
 // 問題: gemini-2.5-flash thinkingBudgetバグ, gemini-2.0-flash/gemini-3-flash等 asia-northeast1未対応
@@ -137,6 +144,9 @@ async function generateWithFallback(
       usageMetadata: result.usageMetadata || {},
     });
 
+    // AIレスポンス健全性チェック（BUG-022パターン検出）
+    checkResponseHealth(result, `${operationName} (${primaryConfig.model})`);
+
     // レスポンス検証
     if (isValidResponse(result)) {
       console.log(`✅ ${operationName}: ${primaryConfig.model} で成功`);
@@ -167,6 +177,9 @@ async function generateWithFallback(
     finishReason: fallbackResult.candidates?.[0]?.finishReason || 'N/A',
     usageMetadata: fallbackResult.usageMetadata || {},
   });
+
+  // AIレスポンス健全性チェック（BUG-022パターン検出）
+  checkResponseHealth(fallbackResult, `${operationName} (${fallbackConfig.model} fallback)`);
 
   if (!fallbackResult.text || fallbackResult.text.length === 0) {
     throw new Error(`${operationName}: 両モデルとも空レスポンス`);
@@ -1102,8 +1115,22 @@ export async function generateSkeleton(
   );
 
   console.log(`🦴 Phase 1: ${usedModel} で生成完了`);
-  const skeleton = parseGeminiJsonResponse(responseText) as ScheduleSkeleton;
+  let skeleton = parseGeminiJsonResponse(responseText) as ScheduleSkeleton;
   console.log(`✅ Phase 1完了: ${skeleton.staffSchedules.length}名分の骨子生成`);
+
+  // Phase 改善: バリデーション実行（BUG-023防止）
+  const validationResult = validateSkeletonOutput(skeleton, staffList, hasNightShift);
+  logValidationResult('Phase1', validationResult);
+
+  // バリデーションエラーがある場合、自動修正を試行
+  if (!validationResult.isValid && hasNightShift) {
+    console.log('🔧 Phase 1: 骨子データの自動修正を実行...');
+    skeleton = autoFixSkeleton(skeleton, daysInMonth);
+
+    // 再バリデーション
+    const revalidationResult = validateSkeletonOutput(skeleton, staffList, hasNightShift);
+    logValidationResult('Phase1(修正後)', revalidationResult);
+  }
 
   // Phase 52: トレーサビリティログ - Phase 1完了
   logPhase1Complete(skeleton, analysis);
@@ -1395,6 +1422,14 @@ export async function generateDetailedShifts(
 
   const allSchedules: StaffSchedule[] = [];
   const batches = Math.ceil(staffList.length / BATCH_SIZE);
+
+  // Phase 改善: Phase 2入力バリデーション（BUG-023防止）
+  const phase2Validation = validatePhase2Input(skeleton, staffList, hasNightShift);
+  logValidationResult('Phase2', phase2Validation);
+
+  if (!phase2Validation.isValid) {
+    console.error('❌ Phase 2: 入力データに問題があります。処理を続行しますが、品質に影響する可能性があります。');
+  }
 
   console.log(`📝 Phase 2: 詳細生成開始（${batches}バッチ）...`);
 

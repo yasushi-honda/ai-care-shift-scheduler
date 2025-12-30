@@ -228,6 +228,7 @@ config: {
 | [permission-rules.md](.kiro/steering/permission-rules.md) | 権限管理ルール |
 | [demo-environment.md](.kiro/steering/demo-environment.md) | デモ環境設計 |
 | [dynamic-constraints.md](.kiro/steering/dynamic-constraints.md) | 動的制約パターン |
+| [phased-generation-contract.md](.kiro/steering/phased-generation-contract.md) | Phase間データ契約 |
 | [documentation-standards.md](.kiro/steering/documentation-standards.md) | ドキュメント基準 |
 
 ---
@@ -240,6 +241,8 @@ config: {
 - **BUG-002/003/008/012/013/014**: Gemini API設定 → [gemini-rules.md](.kiro/steering/gemini-rules.md)
 - **BUG-009**: 権限同期 → [permission-rules.md](.kiro/steering/permission-rules.md)
 - **BUG-019**: Firestoreインデックス → `COLLECTION_GROUP`必須
+- **BUG-022**: マルチモデル戦略 → [gemini-rules.md](.kiro/steering/gemini-rules.md)
+- **BUG-023**: Phase間データ欠落 → [phased-generation-contract.md](.kiro/steering/phased-generation-contract.md)
 
 ポストモーテム: [postmortem-gemini-bugs-2025-12-05.md](.kiro/postmortem-gemini-bugs-2025-12-05.md)
 
