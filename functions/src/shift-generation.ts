@@ -1,17 +1,19 @@
 import { onRequest } from 'firebase-functions/v2/https';
 import { GoogleGenAI } from '@google/genai';
 import { TimeSlotPreference } from './types';
-import type { Staff, ShiftRequirement, ShiftTime, LeaveRequest, StaffSchedule, AIEvaluationResult } from './types';
+import type { Staff, ShiftRequirement, LeaveRequest, StaffSchedule, AIEvaluationResult } from './types';
 import { generateSkeleton, generateDetailedShifts, parseGeminiJsonResponse } from './phased-generation';
 import { EvaluationService, createDefaultEvaluation } from './evaluation/evaluationLogic';
+import {
+  GENERATION_CONFIGS,
+  buildGeminiConfig,
+  isValidResponse,
+} from './ai-model-config';
 
 // Firebase Admin初期化は index.ts で実施済み
 
-/**
- * Vertex AI モデル名（GA版、安定版）
- * 注: -latestサフィックスは不安定なプレビュー版を指すため使用しない
- */
-const VERTEX_AI_MODEL = 'gemini-2.5-flash';
+// BUG-022: マルチモデル戦略
+// 小規模生成: Gemini 3 Flash (thinkingLevel: medium) をプライマリに使用
 
 /**
  * 入力サイズ制限
@@ -125,6 +127,7 @@ export const generateShift = onRequest(
       // スタッフ数に応じて生成方法を選択
       let scheduleData: { schedule: any[] };
       let tokensUsed = 0;
+      let usedModel = 'multi-model';  // BUG-022: マルチモデル戦略
 
       if (staffList.length <= 5) {
         // 5名以下：従来の一括生成（高速）
@@ -137,33 +140,90 @@ export const generateShift = onRequest(
           location: 'asia-northeast1',
         });
 
-        const prompt = buildShiftPrompt(staffList, requirements, leaveRequests);
+        const basePrompt = buildShiftPrompt(staffList, requirements, leaveRequests);
+
+        // BUG-014/022: responseMimeType削除、プロンプトでJSON出力を強制
+        const jsonPrompt = `${basePrompt}
+
+# 🔴 絶対厳守: JSON出力形式
+以下の形式で**純粋なJSONのみ**を出力してください。説明文は不要です。
+
+\`\`\`json
+{
+  "schedule": [
+    {
+      "staffId": "スタッフID",
+      "staffName": "スタッフ名",
+      "monthlyShifts": [
+        { "date": "YYYY-MM-DD", "shiftType": "シフト種別" }
+      ]
+    }
+  ]
+}
+\`\`\``;
+
         console.log('📝 プロンプト生成完了');
-
-        // シフト種類名をtimeSlotsから抽出（BUG-013によりスキーマ未使用のため保留）
-        const _shiftTypeNames = (requirements.timeSlots || []).map((slot: ShiftTime) => slot.name);
-        void _shiftTypeNames;  // BUG-013: responseSchemaとthinkingBudgetの非互換性で一時的に未使用
-
         console.log('🤖 Vertex AI 呼び出し開始...');
-        // BUG-013: responseSchemaとthinkingBudgetは非互換（Gemini APIの既知問題）
-        const result = await client.models.generateContent({
-          model: VERTEX_AI_MODEL,
-          contents: prompt,
-          config: {
-            responseMimeType: 'application/json',
-            // responseSchema を削除（thinkingBudgetと非互換）
-            temperature: 0.5,
-            maxOutputTokens: 65536,
-            thinkingConfig: {
-              thinkingBudget: 16384,  // 5名以下なので16Kで十分
-            },
-          },
-        });
 
-        const responseText = result.text || '';
+        // BUG-022: マルチモデル戦略 - フォールバック付き
+        const primaryConfig = GENERATION_CONFIGS.smallScale.primary;
+        const fallbackConfig = GENERATION_CONFIGS.smallScale.fallback;
+
+        let responseText = '';
+
+        // プライマリモデルで試行
+        try {
+          console.log(`🚀 小規模生成: ${primaryConfig.model} で開始...`);
+          const result = await client.models.generateContent({
+            model: primaryConfig.model,
+            contents: jsonPrompt,
+            config: buildGeminiConfig(primaryConfig),
+          });
+
+          console.log('📊 Response:', {
+            model: primaryConfig.model,
+            finishReason: result.candidates?.[0]?.finishReason || 'N/A',
+            usageMetadata: result.usageMetadata || {},
+          });
+
+          if (isValidResponse(result)) {
+            responseText = result.text || '';
+            usedModel = primaryConfig.model;
+            tokensUsed = result.usageMetadata?.totalTokenCount || 0;
+            console.log(`✅ ${primaryConfig.model} で成功`);
+          } else {
+            throw new Error('Invalid response from primary model');
+          }
+        } catch (primaryError) {
+          console.warn(`⚠️ ${primaryConfig.model} 失敗、フォールバックへ...`, primaryError);
+
+          // フォールバックモデルで試行
+          console.log(`🔄 ${fallbackConfig.model} で再試行...`);
+          const fallbackResult = await client.models.generateContent({
+            model: fallbackConfig.model,
+            contents: jsonPrompt,
+            config: buildGeminiConfig(fallbackConfig),
+          });
+
+          console.log('📊 Fallback Response:', {
+            model: fallbackConfig.model,
+            finishReason: fallbackResult.candidates?.[0]?.finishReason || 'N/A',
+            usageMetadata: fallbackResult.usageMetadata || {},
+          });
+
+          // CodeRabbit指摘: フォールバックレスポンスも検証
+          if (!isValidResponse(fallbackResult)) {
+            throw new Error('Invalid response from fallback model');
+          }
+
+          responseText = fallbackResult.text || '';
+          usedModel = fallbackConfig.model;
+          tokensUsed = fallbackResult.usageMetadata?.totalTokenCount || 0;
+          console.log(`✅ ${fallbackConfig.model} (fallback) で成功`);
+        }
+
         scheduleData = parseGeminiJsonResponse(responseText);
-        tokensUsed = result.usageMetadata?.totalTokenCount || 0;
-        console.log('✅ 一括生成完了');
+        console.log(`✅ 一括生成完了 (使用モデル: ${usedModel})`);
 
       } else {
         // 6名以上：段階的生成（骨子→詳細バッチ処理）
@@ -221,7 +281,7 @@ export const generateShift = onRequest(
         evaluation: evaluation,
         metadata: {
           generatedAt: new Date().toISOString(),
-          model: VERTEX_AI_MODEL,
+          model: usedModel,  // BUG-022: マルチモデル戦略で使用されたモデル
           tokensUsed: tokensUsed,
         },
       });

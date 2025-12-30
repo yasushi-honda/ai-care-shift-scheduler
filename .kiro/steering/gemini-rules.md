@@ -1,44 +1,58 @@
-# Gemini 2.5 Flash 設定ルール
+# Gemini マルチモデル設定ルール
 
-**最終更新**: 2025-12-29
+**最終更新**: 2025-12-30
 **対象**: Cloud Functions での Gemini API 利用
 
 ---
 
-## クイックリファレンス
+## BUG-022: マルチモデル戦略（2025-12-30）
+
+Gemini 2.5 FlashのthinkingBudgetが無視されるバグ対応として、セクション別にモデルを使い分け。
+
+### モデル割り当て
+
+| セクション | プライマリ | フォールバック |
+|-----------|-----------|---------------|
+| Phase 1 骨子生成 | `gemini-3-flash-preview` (thinkingLevel: high) | `gemini-2.5-pro` |
+| Phase 2 詳細バッチ | `gemini-2.5-flash-lite` (thinkingBudget: 0) | `gemini-3-flash-preview` |
+| 小規模生成 (≤5名) | `gemini-3-flash-preview` (thinkingLevel: medium) | `gemini-2.5-flash-lite` |
+
+### Gemini 3 vs 2.5 の違い
+
+| パラメータ | Gemini 3 | Gemini 2.5 |
+|-----------|----------|------------|
+| 思考制御 | `thinkingLevel` (low/medium/high) | `thinkingBudget` (数値) |
+| 安定性 | ✅ 動作確認済 | ⚠️ バグあり (BUG-022) |
+| 無効化 | `thinkingLevel: 'minimal'` | `thinkingBudget: 0` |
+
+### 設定例
 
 ```typescript
-import { GoogleGenAI } from '@google/genai';  // ❗ 必須SDK
+import { GENERATION_CONFIGS, buildGeminiConfig } from './ai-model-config';
 
-const client = new GoogleGenAI({
-  vertexai: true,
-  project: projectId,
-  location: 'asia-northeast1',
+// Gemini 3 Flash (thinkingLevel)
+const result = await client.models.generateContent({
+  model: 'gemini-3-flash-preview',
+  contents: prompt,
+  config: buildGeminiConfig(GENERATION_CONFIGS.skeleton.primary),
 });
 
+// Gemini 2.5 Flash-Lite (thinkingBudget: 0)
 const result = await client.models.generateContent({
-  model: 'gemini-2.5-flash',
+  model: 'gemini-2.5-flash-lite',
   contents: prompt,
-  config: {
-    maxOutputTokens: 65536,      // ❗ 必須
-    thinkingConfig: {
-      thinkingBudget: 16384,     // ❗ 必須
-    },
-    // responseSchema: 使用禁止（thinkingBudgetと非互換）
-    // responseMimeType: 使用禁止（thinkingBudgetと非互換）
-  },
+  config: buildGeminiConfig(GENERATION_CONFIGS.detailBatch.primary),
 });
 ```
 
 ---
 
-## 必須ルール一覧
+## 共通ルール
 
 | ルール | 設定値 | 理由 |
 |--------|--------|------|
 | SDK | `@google/genai` | `@google-cloud/vertexai`はthinkingConfig非対応 |
-| maxOutputTokens | `65536` | 思考+出力で12,000-24,000消費 |
-| thinkingBudget | `16384` | 思考トークンの上限制御 |
+| maxOutputTokens | `65536` | 思考+出力の合計上限 |
 | responseSchema | **使用禁止** | thinkingBudgetを無視する |
 | responseMimeType | **使用禁止** | thinkingBudgetを無視する |
 | サーバータイムアウト | `300秒` | Cloud Functions設定 |
@@ -159,4 +173,5 @@ console.log('📊 AI Response Details:', {
 - BUG-012: SDK移行 → `.kiro/bugfix-sdk-migration-2025-12-08.md`
 - BUG-013: responseSchema → `.kiro/bugfix-json-schema-thinking-2025-12-08.md`
 - BUG-014: responseMimeType → `.kiro/bugfix-responsemimetype-thinking-2025-12-08.md`
+- **BUG-022: マルチモデル戦略** → `functions/src/ai-model-config.ts`
 - ポストモーテム → `.kiro/postmortem-gemini-bugs-2025-12-05.md`

@@ -16,8 +16,16 @@ import type {
   StaffSchedule,
   ScheduleSkeleton
 } from './types';
+import {
+  GENERATION_CONFIGS,
+  buildGeminiConfig,
+  isValidResponse,
+  type ModelConfig,
+} from './ai-model-config';
 
-const VERTEX_AI_MODEL = 'gemini-2.5-flash';
+// BUG-022: マルチモデル戦略
+// Phase 1 (骨子): Gemini 3 Flash (thinkingLevel対応)
+// Phase 2 (詳細): Gemini 2.5 Flash-Lite (thinkingBudget: 0)
 const BATCH_SIZE = 10; // 詳細生成時のバッチサイズ（10名 × 30日 = 300セル）
 
 // Phase 51: 429エラー対策 - 指数バックオフリトライ設定
@@ -85,6 +93,85 @@ async function withExponentialBackoff<T>(
 
   // ここに到達することはないが、TypeScript用
   throw lastError || new Error(`${operationName}: 不明なエラー`);
+}
+
+/**
+ * BUG-022: マルチモデルフォールバック機構
+ *
+ * プライマリモデルで失敗した場合、フォールバックモデルに自動切替
+ * - 空レスポンス検出
+ * - MAX_TOKENS終了検出
+ *
+ * @param client - GoogleGenAI クライアント
+ * @param prompt - プロンプト
+ * @param primaryConfig - プライマリモデル設定
+ * @param fallbackConfig - フォールバックモデル設定
+ * @param operationName - ログ出力用の操作名
+ */
+async function generateWithFallback(
+  client: GoogleGenAI,
+  prompt: string,
+  primaryConfig: ModelConfig,
+  fallbackConfig: ModelConfig,
+  operationName: string
+): Promise<{ text: string; model: string }> {
+  // プライマリモデルで試行
+  try {
+    console.log(`🚀 ${operationName}: ${primaryConfig.model} で生成開始...`);
+
+    const result = await withExponentialBackoff(
+      () => client.models.generateContent({
+        model: primaryConfig.model,
+        contents: prompt,
+        config: buildGeminiConfig(primaryConfig),
+      }),
+      `${operationName} (${primaryConfig.model})`
+    );
+
+    // レスポンス詳細ログ
+    console.log(`📊 ${operationName} Response:`, {
+      model: primaryConfig.model,
+      finishReason: result.candidates?.[0]?.finishReason || 'N/A',
+      usageMetadata: result.usageMetadata || {},
+    });
+
+    // レスポンス検証
+    if (isValidResponse(result)) {
+      console.log(`✅ ${operationName}: ${primaryConfig.model} で成功`);
+      return { text: result.text || '', model: primaryConfig.model };
+    }
+
+    // 空レスポンスまたはMAX_TOKENS
+    console.warn(`⚠️ ${operationName}: ${primaryConfig.model} で無効なレスポンス、フォールバックへ...`);
+  } catch (error) {
+    console.error(`❌ ${operationName}: ${primaryConfig.model} でエラー:`, error);
+    console.warn(`⚠️ フォールバックモデル ${fallbackConfig.model} へ切替...`);
+  }
+
+  // フォールバックモデルで試行
+  console.log(`🔄 ${operationName}: ${fallbackConfig.model} で再試行...`);
+
+  const fallbackResult = await withExponentialBackoff(
+    () => client.models.generateContent({
+      model: fallbackConfig.model,
+      contents: prompt,
+      config: buildGeminiConfig(fallbackConfig),
+    }),
+    `${operationName} (${fallbackConfig.model} fallback)`
+  );
+
+  console.log(`📊 ${operationName} Fallback Response:`, {
+    model: fallbackConfig.model,
+    finishReason: fallbackResult.candidates?.[0]?.finishReason || 'N/A',
+    usageMetadata: fallbackResult.usageMetadata || {},
+  });
+
+  if (!fallbackResult.text || fallbackResult.text.length === 0) {
+    throw new Error(`${operationName}: 両モデルとも空レスポンス`);
+  }
+
+  console.log(`✅ ${operationName}: ${fallbackConfig.model} (fallback) で成功`);
+  return { text: fallbackResult.text, model: fallbackConfig.model };
 }
 
 /**
@@ -991,30 +1078,18 @@ export async function generateSkeleton(
 
 **重要**: JSONコードブロック以外のテキストを出力しないでください。`;
 
-  // Phase 51: 429エラー対策 - 指数バックオフリトライでラップ
-  const result = await withExponentialBackoff(
-    () => client.models.generateContent({
-      model: VERTEX_AI_MODEL,
-      contents: jsonPrompt,
-      config: {
-        // BUG-014: responseMimeType削除（thinkingBudgetと非互換）
-        temperature: 0.3,
-        maxOutputTokens: 65536,
-        thinkingConfig: {
-          thinkingBudget: 16384,  // 思考に16K、残りを出力に使用
-        },
-      },
-    }),
+  // BUG-022: マルチモデル戦略 - フォールバック付きで生成
+  // プライマリ: Gemini 3 Flash (thinkingLevel: high)
+  // フォールバック: Gemini 2.5 Pro (常に安定)
+  const { text: responseText, model: usedModel } = await generateWithFallback(
+    client,
+    jsonPrompt,
+    GENERATION_CONFIGS.skeleton.primary,
+    GENERATION_CONFIGS.skeleton.fallback,
     'Phase 1 骨子生成'
   );
 
-  // Vertex AI レスポンス詳細ログ（デバッグ用）
-  console.log('📊 Vertex AI Response Details:', {
-    finishReason: result.candidates?.[0]?.finishReason || 'N/A',
-    usageMetadata: result.usageMetadata || {},
-  });
-
-  const responseText = result.text || '';
+  console.log(`🦴 Phase 1: ${usedModel} で生成完了`);
   const skeleton = parseGeminiJsonResponse(responseText) as ScheduleSkeleton;
   console.log(`✅ Phase 1完了: ${skeleton.staffSchedules.length}名分の骨子生成`);
 
@@ -1323,30 +1398,18 @@ export async function generateDetailedShifts(
 }
 \`\`\``;
 
-    // Phase 51: 429エラー対策 - 指数バックオフリトライでラップ
-    const result = await withExponentialBackoff(
-      () => client.models.generateContent({
-        model: VERTEX_AI_MODEL,
-        contents: jsonPrompt,
-        config: {
-          // BUG-014: responseMimeType削除（thinkingBudgetと非互換）
-          temperature: 0.5,
-          maxOutputTokens: 65536,
-          thinkingConfig: {
-            thinkingBudget: 8192,  // バッチなので8Kで十分
-          },
-        },
-      }),
+    // BUG-022: マルチモデル戦略 - フォールバック付きで生成
+    // プライマリ: Gemini 2.5 Flash-Lite (thinkingBudget: 0, 最安)
+    // フォールバック: Gemini 3 Flash (thinkingLevel: low)
+    const { text: batchResponseText, model: usedModel } = await generateWithFallback(
+      client,
+      jsonPrompt,
+      GENERATION_CONFIGS.detailBatch.primary,
+      GENERATION_CONFIGS.detailBatch.fallback,
       `Phase 2 バッチ${batchNum}`
     );
 
-    // Vertex AI レスポンス詳細ログ（デバッグ用）
-    console.log(`  📊 Batch ${batchNum} Response:`, {
-      finishReason: result.candidates?.[0]?.finishReason || 'N/A',
-      outputTokens: result.usageMetadata?.candidatesTokenCount || 0,
-    });
-
-    const batchResponseText = result.text || '';
+    console.log(`  ✅ Batch ${batchNum}: ${usedModel} で生成完了`);
     const batchResult = parseGeminiJsonResponse(batchResponseText);
 
     // Phase 52: トレーサビリティログ - バッチ完了
