@@ -209,11 +209,11 @@
 
         <div class="stats-grid">
             <div class="stat-card resolved">
-                <div class="stat-number">22</div>
+                <div class="stat-number">25</div>
                 <div class="stat-label">総バグ数</div>
             </div>
             <div class="stat-card resolved">
-                <div class="stat-number">22</div>
+                <div class="stat-number">25</div>
                 <div class="stat-label">解決済み</div>
             </div>
             <div class="stat-card info">
@@ -243,6 +243,33 @@
                 </tr>
             </thead>
             <tbody>
+                <tr>
+                    <td>BUG-025</td>
+                    <td>2025-12-30</td>
+                    <td><span class="badge badge-resolved">解決済み</span></td>
+                    <td>AI生成</td>
+                    <td>AI生成スコア不安定（後処理リバランスで解決、MoE分析）</td>
+                    <td><span class="badge badge-high">高</span></td>
+                    <td><a href="https://github.com/yasushi-honda/ai-care-shift-scheduler/blob/main/.kiro/bugfix-025-shift-rebalance.md">詳細</a></td>
+                </tr>
+                <tr>
+                    <td>BUG-024</td>
+                    <td>2025-12-30</td>
+                    <td><span class="badge badge-resolved">解決済み</span></td>
+                    <td>データ</td>
+                    <td>Firestore↔Cloud Functionsフィールドマッピング不整合（staffId→id）</td>
+                    <td><span class="badge badge-high">高</span></td>
+                    <td><a href="https://github.com/yasushi-honda/ai-care-shift-scheduler/blob/main/.kiro/bugfix-024-staffid-mapping.md">詳細</a></td>
+                </tr>
+                <tr>
+                    <td>BUG-023</td>
+                    <td>2025-12-30</td>
+                    <td><span class="badge badge-resolved">解決済み</span></td>
+                    <td>AI生成</td>
+                    <td>夜勤後休息違反（Phase 2にnightShiftFollowupDays未送信）</td>
+                    <td><span class="badge badge-high">高</span></td>
+                    <td><a href="https://github.com/yasushi-honda/ai-care-shift-scheduler/blob/main/.kiro/steering/phased-generation-contract.md">詳細</a></td>
+                </tr>
                 <tr>
                     <td>BUG-022</td>
                     <td>2025-12-09</td>
@@ -525,7 +552,7 @@
         <hr>
 
         <footer class="site-footer">
-            <p><strong>最終更新</strong>: 2025年12月9日（BUG-021/022追加）</p>
+            <p><strong>最終更新</strong>: 2025年12月30日（BUG-023/024/025追加）</p>
             <p><a href="index.html">&larr; トップページに戻る</a></p>
         </footer>
     </main>

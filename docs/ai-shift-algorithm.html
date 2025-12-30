@@ -234,6 +234,10 @@ sequenceDiagram
         AI-->>CF: StaffSchedule[]
     end
 
+    Note over CF: Phase 3: リバランス（BUG-025）
+    CF->>CF: rebalanceShifts()
+    Note right of CF: 日別配分最適化<br/>violations: 19→2
+
     Note over CF: Phase 53: レベル別評価
     CF->>CF: EvaluationService.evaluateSchedule()
     CF->>CF: constraintLevelMapping
@@ -255,6 +259,7 @@ graph TB
     subgraph "Cloud Functions"
         C[shift-generation.ts]
         D[phased-generation.ts]
+        RBL[shift-rebalance.ts]
         E[EvaluationService]
         CLM[constraintLevelMapping]
         RB[withExponentialBackoff]
@@ -276,7 +281,8 @@ graph TB
     D --> RB
     RB --> F
     G --> F
-    D --> E
+    D --> RBL
+    RBL --> E
     E --> CLM
     C --> H
     EP --> CLM
@@ -289,7 +295,7 @@ graph TB
         <div class="card card-warning">
             <h3>なぜ段階的生成が必要か</h3>
             <p>12名×31日 = 372セルのシフトを一括生成すると、トークン制限や品質低下が発生します。</p>
-            <p>そこで、<strong>骨子生成（Phase 1）→ 詳細生成（Phase 2）</strong>の2段階に分割しています。</p>
+            <p>そこで、<strong>骨子生成（Phase 1）→ 詳細生成（Phase 2）→ リバランス（Phase 3）</strong>の3段階に分割しています。</p>
         </div>
 
         <h3>Phase 1: 骨子生成（Skeleton Generation）</h3>
@@ -351,8 +357,34 @@ flowchart TD
     I --> J[Gemini API呼び出し]
     J --> K[shifts形式出力]
     K --> L[monthlyShifts形式に変換]
-    L --> M[EvaluationService]
+    L --> M[Phase 3: Rebalance]
+    M --> N[EvaluationService]
         </div>
+
+        <h3>Phase 3: リバランス（BUG-025で追加）</h3>
+        <div class="info-box">
+            <h4>目的</h4>
+            <p>Phase 2のバッチ処理独立性により発生するシフト配分の偏り（日勤過剰、早番不足）を後処理で修正する。</p>
+        </div>
+        <div class="mermaid">
+flowchart TD
+    A[Phase 2出力: StaffSchedule配列] --> B[日別シフトカウント集計]
+    B --> C{過不足あり?}
+    C -->|Yes| D[過剰シフト特定]
+    C -->|No| G[完了]
+    D --> E[スタッフ希望考慮でスコアリング]
+    E --> F[スワップ実行]
+    F --> B
+    G --> H[EvaluationService]
+        </div>
+        <table class="spec-table">
+            <tr><th>項目</th><th>内容</th></tr>
+            <tr><td>入力</td><td>StaffSchedule[], ShiftRequirement, Staff[]</td></tr>
+            <tr><td>出力</td><td>RebalanceResult（リバランス後スケジュール、スワップログ）</td></tr>
+            <tr><td>スワップ優先順</td><td>日勤 → 遅番 → 早番（過剰側から不足側へ）</td></tr>
+            <tr><td>希望考慮</td><td>timeSlotPreference（早番希望、日勤のみ等）</td></tr>
+            <tr><td>実績</td><td>overallScore: 0-28 → 76、violations: 19 → 2</td></tr>
+        </table>
     </section>
 
     <section id="dynamic-constraints">
