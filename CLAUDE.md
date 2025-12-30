@@ -31,7 +31,7 @@ Kiro-style Spec Driven Development implementation using claude code slash comman
 | demo-login | 42.2 | ✅ 完了 |
 | demo-environment-improvements | 43 | ✅ 完了 |
 | ai-evaluation-feedback | 44 | ✅ 完了 |
-| ai-generation-progress | 45 | 🚧 作業中 |
+| ai-generation-progress | 45 | ✅ 完了 |
 | constraint-level-evaluation | 53 | ✅ 完了 |
 | evaluation-history-reevaluate | 54 | ✅ 完了 |
 
