@@ -41,10 +41,17 @@ export interface ValidationResult {
 export function validateSkeletonOutput(
   skeleton: ScheduleSkeleton,
   staffList: Staff[],
-  hasNightShift: boolean
+  hasNightShift: boolean,
+  daysInMonth: number = 31
 ): ValidationResult {
   const errors: ValidationError[] = [];
   const warnings: ValidationError[] = [];
+
+  // 0. daysInMonth の妥当性チェック
+  if (daysInMonth < 28 || daysInMonth > 31 || !Number.isInteger(daysInMonth)) {
+    console.warn(`⚠️ daysInMonth の値が不正です: ${daysInMonth}（28-31の整数を期待）。31を使用します。`);
+    daysInMonth = 31;
+  }
 
   // 1. 全スタッフが含まれているかチェック
   const skeletonStaffIds = new Set(skeleton.staffSchedules.map(s => s.staffId));
@@ -99,7 +106,7 @@ export function validateSkeletonOutput(
 
       // 3. 夜勤後休息の整合性チェック（BUG-023防止）
       if (Array.isArray(staffSkel.nightShiftDays) && Array.isArray(staffSkel.nightShiftFollowupDays)) {
-        validateNightShiftFollowup(staffSkel, errors, warnings);
+        validateNightShiftFollowup(staffSkel, daysInMonth, errors, warnings);
       }
     }
   }
@@ -116,9 +123,15 @@ export function validateSkeletonOutput(
  *
  * 夜勤日Xに対して、X+1（明け休み）とX+2（公休）が
  * nightShiftFollowupDaysに含まれているかチェック
+ *
+ * @param staffSkel スタッフの骨子データ
+ * @param daysInMonth 対象月の日数（28-31）
+ * @param errors エラー配列（参照渡し）
+ * @param warnings 警告配列（参照渡し）
  */
 function validateNightShiftFollowup(
   staffSkel: StaffScheduleSkeleton,
+  daysInMonth: number,
   errors: ValidationError[],
   warnings: ValidationError[]
 ): void {
@@ -128,8 +141,8 @@ function validateNightShiftFollowup(
     const nextDay = nightDay + 1;
     const dayAfterNext = nightDay + 2;
 
-    // X+1（明け休み）チェック
-    if (!followupSet.has(nextDay)) {
+    // X+1（明け休み）チェック - 月末を超える場合はスキップ
+    if (nextDay <= daysInMonth && !followupSet.has(nextDay)) {
       errors.push({
         type: 'constraint_violation',
         staffId: staffSkel.staffId,
@@ -140,7 +153,7 @@ function validateNightShiftFollowup(
     }
 
     // X+2（公休）チェック - 月末を超える場合はスキップ
-    if (dayAfterNext <= 31 && !followupSet.has(dayAfterNext)) {
+    if (dayAfterNext <= daysInMonth && !followupSet.has(dayAfterNext)) {
       warnings.push({
         type: 'constraint_violation',
         staffId: staffSkel.staffId,
@@ -239,6 +252,12 @@ export function autoFixSkeleton(
   skeleton: ScheduleSkeleton,
   daysInMonth: number
 ): ScheduleSkeleton {
+  // daysInMonth の妥当性チェック
+  if (daysInMonth < 28 || daysInMonth > 31 || !Number.isInteger(daysInMonth)) {
+    console.warn(`⚠️ autoFixSkeleton: daysInMonth の値が不正です: ${daysInMonth}。31を使用します。`);
+    daysInMonth = 31;
+  }
+
   const fixedSchedules = skeleton.staffSchedules.map(staff => {
     // nightShiftFollowupDaysが空で、nightShiftDaysがある場合
     if (

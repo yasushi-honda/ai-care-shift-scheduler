@@ -1,7 +1,7 @@
 # 段階的シフト生成 データ契約
 
 **最終更新**: 2025-12-30
-**バージョン**: 1.0.0
+**バージョン**: 1.1.0
 
 ---
 
@@ -94,11 +94,20 @@ interface DailyShift {
 
 ### Phase 1完了時
 
-`validateSkeletonOutput()` で以下を検証:
+`validateSkeletonOutput(skeleton, staffList, hasNightShift, daysInMonth)` で以下を検証:
 
+| パラメータ | 型 | 必須 | 説明 |
+|-----------|----|----|------|
+| skeleton | ScheduleSkeleton | ✅ | Phase 1出力 |
+| staffList | Staff[] | ✅ | 全スタッフリスト |
+| hasNightShift | boolean | ✅ | 夜勤施設か否か |
+| daysInMonth | number | ✅ | 対象月の日数（28-31） |
+
+検証項目:
 1. ✅ 全スタッフが含まれているか
 2. ✅ 必須フィールド（restDays等）が存在するか
 3. ✅ 夜勤施設の場合、nightShiftFollowupDaysが正しく設定されているか
+4. ✅ 月末境界を考慮（例: 2月28日夜勤なら29日チェックはスキップ）
 
 ### Phase 2開始時
 
@@ -106,6 +115,17 @@ interface DailyShift {
 
 1. ✅ 各スタッフのskeleton データが存在するか
 2. ✅ 夜勤があるスタッフに nightShiftFollowupDays が存在するか
+
+### 🔴 重要: daysInMonth
+
+月末境界で誤検出を防ぐため、`daysInMonth`は必ず正しい値を渡すこと:
+
+| 月 | daysInMonth |
+|----|-------------|
+| 1月, 3月, 5月, 7月, 8月, 10月, 12月 | 31 |
+| 4月, 6月, 9月, 11月 | 30 |
+| 2月（通常年） | 28 |
+| 2月（閏年） | 29 |
 
 ---
 

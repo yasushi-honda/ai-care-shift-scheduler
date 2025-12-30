@@ -1119,7 +1119,7 @@ export async function generateSkeleton(
   console.log(`✅ Phase 1完了: ${skeleton.staffSchedules.length}名分の骨子生成`);
 
   // Phase 改善: バリデーション実行（BUG-023防止）
-  const validationResult = validateSkeletonOutput(skeleton, staffList, hasNightShift);
+  const validationResult = validateSkeletonOutput(skeleton, staffList, hasNightShift, daysInMonth);
   logValidationResult('Phase1', validationResult);
 
   // バリデーションエラーがある場合、自動修正を試行
@@ -1128,7 +1128,7 @@ export async function generateSkeleton(
     skeleton = autoFixSkeleton(skeleton, daysInMonth);
 
     // 再バリデーション
-    const revalidationResult = validateSkeletonOutput(skeleton, staffList, hasNightShift);
+    const revalidationResult = validateSkeletonOutput(skeleton, staffList, hasNightShift, daysInMonth);
     logValidationResult('Phase1(修正後)', revalidationResult);
   }
 
