@@ -30,8 +30,8 @@ AIシフト自動作成は、Google Cloud Platform（GCP）上に構築された
 │                                                              │
 │  ┌────────────────────────────────────────────────┐         │
 │  │  generateShift                                 │         │
-│  │  - AIシフト生成（Gemini 2.5 Flash-Lite）        │         │
-│  │  - 1GB メモリ、120秒タイムアウト                │         │
+│  │  - AIシフト生成（Gemini 2.5 Pro）               │         │
+│  │  - 1GB メモリ、540秒タイムアウト                │         │
 │  └──────────────────────┬─────────────────────────┘         │
 └──────────────────────────────────┼──────────────────────────┘
                                    │
@@ -40,8 +40,8 @@ AIシフト自動作成は、Google Cloud Platform（GCP）上に構築された
         ▼                          ▼                          ▼
 ┌───────────────┐      ┌──────────────────────┐   ┌──────────────────┐
 │   Firestore   │      │    Vertex AI         │   │ Cloud Storage    │
-│  (Database)   │      │  Gemini 2.5          │   │  (File Storage)  │
-│               │      │  Flash-Lite (GA)     │   │                  │
+│  (Database)   │      │  Gemini 2.5 Pro      │   │  (File Storage)  │
+│               │      │  asia-northeast1     │   │                  │
 │ - スタッフ情報 │      │                      │   │ - エクスポート   │
 │ - シフトデータ │      │ - シフト最適化AI     │   │ - バックアップ   │
 │ - 休暇申請    │      │ - 制約条件考慮       │   │                  │
@@ -175,7 +175,7 @@ setGlobalOptions({
 #### エンドポイント
 
 ##### generateShift
-**用途**: AIによるシフト自動生成（Gemini 2.5 Flash-Lite使用）
+**用途**: AIによるシフト自動生成（Gemini 2.5 Pro使用、asia-northeast1）
 
 **リクエスト**:
 ```
@@ -394,40 +394,31 @@ service cloud.firestore {
 
 ---
 
-### 4. Vertex AI (Gemini 2.5 Flash-Lite)
+### 4. Vertex AI (Gemini 2.5 Pro)
 
 #### 概要
-Google の最新生成AIモデル（GA版）。シフト最適化に使用。
+Google の最新生成AIモデル。シフト最適化と評価に使用。
 
-#### モデル仕様（2025年10月時点）
-- **モデル名**: `gemini-2.5-flash-lite` （自動更新安定版エイリアス）
-- **リリース日**: 2025年7月22日
-- **サポート期限**: 2026年7月22日
+#### モデル仕様（2025年12月時点）
+- **モデル名**: `gemini-2.5-pro`
+- **リージョン**: `asia-northeast1` （東京）
 - **コンテキストウィンドウ**: 100万トークン
-- **特徴**: 最もコスト効率的、高スループット対応（出力トークン50%削減）
-- **価格**:
-  - 入力: $0.10 / 1M トークン
-  - 出力: $0.40 / 1M トークン
+- **特徴**: 思考モード常時ON、複雑な制約条件の推論に最適
 
-#### 利用可能リージョン（GA版）
-**出典**: [Gemini 2.5 Flash-Lite 公式ドキュメント](https://cloud.google.com/vertex-ai/generative-ai/docs/models/gemini/2-5-flash-lite)
+**本プロジェクトでの使用リージョン**: `asia-northeast1` （東京）
 
-- **米国**: us-central1, us-east1, us-east4, us-east5, us-south1, us-west1, us-west4
-- **ヨーロッパ**: europe-central2, europe-north1, europe-southwest1, europe-west1, europe-west4, europe-west8, europe-west9
-- **グローバル**: global
-- ⚠️ **重要**: アジアリージョン（asia-northeast1など）では利用不可
+#### 詳細なAI生成フロー
+**→ [ai-generation-flow.md](./ai-generation-flow.md)** を参照
 
-**本プロジェクトでの使用リージョン**: `us-central1` （米国中部）
+主要な処理:
+- 小規模（≤5名）: 一括生成
+- 大規模（>5名）: Phase 1（骨子）→ Phase 2（詳細バッチ）
+- 処理時間: 90-400秒
 
-#### バージョン戦略
-- **使用モデル**: `gemini-2.5-flash-lite` （GA版）
-- **理由**: 本番環境での安定性を確保
-- **バージョン管理**: バージョン番号や日付を省略したモデル名は、自動的に最新の安定版を使用
-- **リスク**: 出力フォーマットの変更可能性（パース処理で対応）
-
-#### 参考ドキュメント
-- [Model versions and lifecycle](https://cloud.google.com/vertex-ai/generative-ai/docs/learn/model-versions)
-- [Gemini 2.5 Updates](https://developers.googleblog.com/en/continuing-to-bring-you-our-latest-models-with-an-improved-gemini-2-5-flash-and-flash-lite-release/)
+#### 既知の問題と対策
+- **JSONパース不安定**: parseGeminiJsonResponse で複数のワークアラウンド実装
+- **処理時間のばらつき**: 90-400秒（Cloud Functionsタイムアウト540秒に近い）
+- **詳細**: [ai-generation-flow.md](./ai-generation-flow.md) のセクション6を参照
 
 #### プロンプトエンジニアリング
 
@@ -604,7 +595,7 @@ service firebase.storage {
 - **目標レイテンシ**:
   - ページロード: < 2秒
   - API応答: < 500ms (p95)
-  - AIシフト生成: < 10秒
+  - AIシフト生成: 90-400秒（スタッフ数による）
 
 - **スループット**:
   - 同時ユーザー数: 100人
@@ -625,8 +616,8 @@ service firebase.storage {
 
 ### セキュリティ
 - **通信**: HTTPS/TLS 1.3
-- **認証**: なし（MVP）→ Firebase Authentication（Phase 2）
-- **認可**: Firestore Security Rules
+- **認証**: Firebase Authentication（実装済み）
+- **認可**: Firestore Security Rules + RBAC
 - **監査ログ**: Cloud Logging
 
 ---
