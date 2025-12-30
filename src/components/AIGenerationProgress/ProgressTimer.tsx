@@ -18,6 +18,17 @@ function formatTime(seconds: number): string {
 }
 
 /**
+ * 予測時間を「約X〜Y分」形式でフォーマット
+ * BUG-022対応: 動的に予測時間を表示
+ */
+function formatEstimatedRange(seconds: number): string {
+  const mins = Math.ceil(seconds / 60);
+  const minRange = Math.max(1, mins - 1);
+  const maxRange = mins + 1;
+  return `約${minRange}〜${maxRange}分かかります`;
+}
+
+/**
  * 時間表示コンポーネント
  * 経過時間と予測時間を表示する
  */
@@ -52,7 +63,7 @@ export function ProgressTimer({ elapsedSeconds, estimatedTotalSeconds }: Progres
         </p>
       ) : (
         <p className="text-sm text-gray-500">
-          約2〜3分かかります
+          {formatEstimatedRange(estimatedTotalSeconds)}
         </p>
       )}
     </div>
