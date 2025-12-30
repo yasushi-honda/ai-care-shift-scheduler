@@ -244,6 +244,7 @@ config: {
 - **BUG-019**: Firestoreインデックス → `COLLECTION_GROUP`必須
 - **BUG-022**: マルチモデル戦略 → [gemini-rules.md](.kiro/steering/gemini-rules.md)
 - **BUG-023**: Phase間データ欠落 → [phased-generation-contract.md](.kiro/steering/phased-generation-contract.md)
+- **BUG-024**: staffId→idマッピング不整合 → [bugfix-024-staffid-mapping.md](.kiro/bugfix-024-staffid-mapping.md)
 
 ポストモーテム: [postmortem-gemini-bugs-2025-12-05.md](.kiro/postmortem-gemini-bugs-2025-12-05.md)
 
