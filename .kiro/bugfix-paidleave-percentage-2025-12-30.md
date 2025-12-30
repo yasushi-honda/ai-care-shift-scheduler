@@ -64,10 +64,15 @@ paidLeaveUsageRate =
 
 ## 検証チェックリスト
 
-- [ ] TypeScript型チェック: `npm run type-check`
-- [ ] CodeRabbitレビュー
-- [ ] CI/CD Pipeline成功
-- [ ] 本番環境での手動テスト
+- [x] TypeScript型チェック: `npx tsc --noEmit` ✅ パス
+- [x] CodeRabbitレビュー ✅ パス
+- [x] CI/CD Pipeline成功 ✅ (Run ID: 20589643463)
+- [ ] 本番環境での手動テスト（ユーザー確認待ち）
+
+## コミット
+
+- Hash: `dd97648`
+- Message: `fix(evaluation): remove duplicate percentage conversion for paidLeaveUsageRate`
 
 ## 関連情報
 
