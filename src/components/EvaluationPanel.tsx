@@ -607,7 +607,7 @@ function SimulationSection({ simulation }: { simulation: SimulationResult }) {
         <div className="bg-gray-50 rounded-lg p-3">
           <div className="text-xs text-gray-500">有休消化率</div>
           <div className="text-lg font-semibold text-gray-800">
-            {(simulation.paidLeaveUsageRate * 100).toFixed(0)}<span className="text-sm font-normal">%</span>
+            {simulation.paidLeaveUsageRate.toFixed(0)}<span className="text-sm font-normal">%</span>
           </div>
         </div>
       </div>
