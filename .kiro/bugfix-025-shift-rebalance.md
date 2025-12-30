@@ -49,6 +49,26 @@ export function rebalanceShifts(
 | fulfillmentRate | 88-95% | 99% |
 | スワップ実行 | - | 17回 |
 
+## 検証方法
+
+```bash
+# 1. 型チェック
+cd functions && npx tsc --noEmit
+
+# 2. Cloud Functionsログでリバランス確認
+gcloud functions logs read generateShift --region asia-northeast1 --limit 20 \
+  | grep -E "リバランス|Rebalance|スワップ"
+
+# 3. 期待される出力
+# 📊 リバランス処理開始...
+# 📊 [Rebalance] スワップ実行: 17回
+# 📊 [Rebalance] 違反改善: 19 → 2
+# ✅ リバランス完了
+
+# 4. UIからテスト
+# デモ環境でAI生成を実行し、評価スコアが70+であることを確認
+```
+
 ## 教訓
 1. AI生成の不安定性は後処理で補完可能
 2. MoE分析で根本原因を多角的に特定
