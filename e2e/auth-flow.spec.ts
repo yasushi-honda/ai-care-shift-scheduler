@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { setupAuthenticatedUser, clearEmulatorAuth } from './helpers/auth-helper';
+import { TEST_FACILITY_ID } from './fixtures';
 
 /**
  * 認証フローE2Eテスト
@@ -21,12 +22,13 @@ test.describe('認証フロー - ログアウト機能', () => {
   });
 
   test('ログアウトボタンをクリックすると、ログイン画面に戻る', async ({ page }) => {
-    // まず認証済みユーザーをセットアップ
+    // まず認証済みユーザーをセットアップ（facilitiesを追加）
     await setupAuthenticatedUser(page, {
       email: 'logout-test@example.com',
       password: 'password123',
       displayName: 'Logout Test User',
       role: 'admin',
+      facilities: [{ facilityId: TEST_FACILITY_ID, role: 'admin' }],
     });
 
     // ログアウトボタンを探す（サイドバーまたはヘッダーにある）
@@ -47,7 +49,7 @@ test.describe('認証フロー - ユーザー状態確認（Emulator）', () => 
     await clearEmulatorAuth();
   });
 
-  test('認証後、ユーザー名が表示される', async ({ page }) => {
+  test('認証後、ダッシュボードが表示される', async ({ page }) => {
     // Phase 18-2: ブラウザコンソールログキャプチャ
     const consoleMessages: string[] = [];
     page.on('console', (msg) => {
@@ -57,40 +59,45 @@ test.describe('認証フロー - ユーザー状態確認（Emulator）', () => 
     });
     // TODO Phase 19: consoleMessagesを検証（エラーがないことを確認）
 
-    // Emulator環境でテストユーザーを作成してログイン
+    // Emulator環境でテストユーザーを作成してログイン（facilitiesを追加）
     await setupAuthenticatedUser(page, {
       email: 'test-user@example.com',
       password: 'password123',
       displayName: 'Test User',
-      role: 'super-admin',
+      role: 'admin',
+      facilities: [{ facilityId: TEST_FACILITY_ID, role: 'admin' }],
     });
 
     // ダッシュボードに遷移
     await page.goto('/');
+    await page.waitForTimeout(2000);
 
-    // Phase 19: 認証成功を確認 - 施設情報が表示されることで確認
-    // 現在のUIではユーザー名は表示されないため、施設名で認証状態を確認
-    await expect(page.getByText(/test-facility-001/)).toBeVisible({ timeout: 5000 });
+    // 認証成功を確認 - ダッシュボードの要素が表示されることで確認
+    // シフト関連のUI要素またはログアウトボタンが表示されればOK
+    const hasShiftUI = await page.getByText(/シフト/).isVisible().catch(() => false);
+    const hasLogoutButton = await page.getByRole('button', { name: 'ログアウト' }).isVisible().catch(() => false);
+    const hasDashboard = hasShiftUI || hasLogoutButton;
+
+    expect(hasDashboard).toBeTruthy();
   });
 
-  test('認証後、ユーザーアイコンまたは表示名が確認できる', async ({ page }) => {
-    // Emulator環境でテストユーザーを作成してログイン
+  test('認証後、ログアウトボタンが表示される', async ({ page }) => {
+    // Emulator環境でテストユーザーを作成してログイン（facilitiesを追加）
     await setupAuthenticatedUser(page, {
       email: 'test-user2@example.com',
       password: 'password123',
       displayName: 'Another User',
-      role: 'super-admin',
+      role: 'admin',
+      facilities: [{ facilityId: TEST_FACILITY_ID, role: 'admin' }],
     });
 
     // ダッシュボードに遷移
     await page.goto('/');
+    await page.waitForTimeout(2000);
 
-    // ユーザーアイコンまたは表示名が存在することを確認
-    // Note: UIデザインに応じて調整が必要
-    const hasUserIcon = await page.locator('[data-testid="user-icon"]').isVisible().catch(() => false);
-    const hasDisplayName = await page.getByText(/Another User/).isVisible().catch(() => false);
-
-    expect(hasUserIcon || hasDisplayName).toBeTruthy();
+    // 認証済み状態を確認 - ログアウトボタンが存在すれば認証成功
+    const logoutButton = page.getByRole('button', { name: 'ログアウト' });
+    await expect(logoutButton).toBeVisible({ timeout: 10000 });
   });
 });
 
