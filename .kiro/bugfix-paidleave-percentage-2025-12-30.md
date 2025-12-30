@@ -90,29 +90,8 @@ Phase 45手動テスト中に以下の問題も発見：
 
 ## 教訓
 
-### パーセンテージ値の扱い
+**パーセンテージ値の扱い**: バックエンドが0-100で返す場合、フロントエンドは変換不要。型定義のコメント（`// 0-100`）を確認すること。
 
-バックエンドとフロントエンドでパーセンテージ変換の責任を明確にする：
+## 関連ドキュメント
 
-- **ルール**: バックエンドが0-100の範囲で返す場合、フロントエンドは変換不要
-- **確認方法**: 型定義のコメントを参照（`// 0-100` など）
-
-### 型定義の重要性
-
-`functions/src/types.ts:152`:
-
-```typescript
-paidLeaveUsageRate: number;       // 有給消化率予測 (0-100)
-```
-
-コメントで値の範囲を明記することで、このようなバグを防げる。
-
-## コミット予定
-
-```
-fix(evaluation): remove duplicate percentage conversion for paidLeaveUsageRate
-
-- Fixed BUG-021: 有休消化率が10000%と表示されるバグ
-- Root cause: Frontend multiplied by 100 when backend already returns 0-100
-- Location: EvaluationPanel.tsx:610
-```
+- [BUG-005: Firestoreリスナー修正](.kiro/bugfix-evaluation-panel-display-2025-12-06.md) - 同じEvaluationPanel関連
