@@ -228,24 +228,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setSelectedFacilityId(null);
         }
 
-        // Phase 21: デバッグログ - loading状態変更
-        // BUG-009対策: 権限情報を明示的にログ出力
-        const facilityRoles = userProfile?.facilities?.map((f: { facilityId: string; role: string }) => ({
-          facilityId: f.facilityId,
-          role: f.role,
-        })) || [];
-        console.log('[Phase 21 Debug] AuthContext: setLoading(false) - Authentication state loaded', {
-          currentUser: user?.uid || null,
-          userProfileExists: !!userProfile,
-          selectedFacilityId,
-          facilityRoles, // 権限情報を追加
-        });
         setLoading(false);
       });
     }).catch((error) => {
       console.error('Failed to initialize auth:', error);
-      // Phase 21: デバッグログ - loading状態変更（エラー時）
-      console.log('[Phase 21 Debug] AuthContext: setLoading(false) - Error during auth initialization');
       setLoading(false);
     });
 
@@ -455,26 +441,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // super-admin判定
   const isSuperAdmin = (): boolean => {
     if (!userProfile || !userProfile.facilities) {
-      // Phase 21: デバッグログ - isSuperAdmin判定（userProfileなし）
-      console.log('[Phase 21 Debug] AuthContext.isSuperAdmin(): false (no userProfile or facilities)', {
-        hasUserProfile: !!userProfile,
-        hasFacilities: !!userProfile?.facilities,
-        facilitiesLength: userProfile?.facilities?.length || 0,
-      });
       return false;
     }
-
-    const result = userProfile.facilities.some(
+    return userProfile.facilities.some(
       (f) => f.role === FacilityRole.SuperAdmin
     );
-
-    // Phase 21: デバッグログ - isSuperAdmin判定結果
-    console.log('[Phase 21 Debug] AuthContext.isSuperAdmin():', result, {
-      userId: userProfile.userId,
-      facilities: userProfile.facilities.map(f => ({ facilityId: f.facilityId, role: f.role })),
-    });
-
-    return result;
   };
 
   // Phase 43: デモ環境判定

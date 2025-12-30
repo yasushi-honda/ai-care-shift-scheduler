@@ -8,12 +8,14 @@ import {
   GENERATION_CONFIGS,
   buildGeminiConfig,
   isValidResponse,
+  AI_LOCATION,
+  AI_CONFIG_VERSION,
 } from './ai-model-config';
 
 // Firebase Admin初期化は index.ts で実施済み
 
-// BUG-022: マルチモデル戦略
-// 小規模生成: Gemini 3 Flash (thinkingLevel: medium) をプライマリに使用
+// BUG-022: シングルモデル戦略 (2025-12-30更新)
+// asia-northeast1 + gemini-2.5-proのみ使用（日本国内データ処理要件）
 
 /**
  * 入力サイズ制限
@@ -132,12 +134,13 @@ export const generateShift = onRequest(
       if (staffList.length <= 5) {
         // 5名以下：従来の一括生成（高速）
         console.log(`📊 小規模シフト生成（${staffList.length}名）: 一括生成モード`);
+        console.log(`🇯🇵 AI Config Version: ${AI_CONFIG_VERSION}, Location: ${AI_LOCATION}`);
 
-        // @google/genai SDK を使用（thinkingConfig をサポート）
+        // BUG-022: 日本リージョン + gemini-2.5-proのみ使用
         const client = new GoogleGenAI({
           vertexai: true,
           project: projectId,
-          location: 'asia-northeast1',
+          location: AI_LOCATION,
         });
 
         const basePrompt = buildShiftPrompt(staffList, requirements, leaveRequests);

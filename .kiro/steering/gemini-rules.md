@@ -2,48 +2,62 @@
 
 **最終更新**: 2025-12-30
 **対象**: Cloud Functions での Gemini API 利用
+**バージョン**: AI_CONFIG_VERSION 2.1.0-japan
 
 ---
 
-## BUG-022: マルチモデル戦略（2025-12-30）
+## BUG-022: シングルモデル戦略（2025-12-30 更新）
 
-Gemini 2.5 FlashのthinkingBudgetが無視されるバグ対応として、セクション別にモデルを使い分け。
+### 背景
 
-### モデル割り当て
+Gemini 2.5 Flashの`thinkingBudget`が無視されるバグが発生。さらに調査の結果、以下の制限が判明:
 
-| セクション | プライマリ | フォールバック |
-|-----------|-----------|---------------|
-| Phase 1 骨子生成 | `gemini-3-flash-preview` (thinkingLevel: high) | `gemini-2.5-pro` |
-| Phase 2 詳細バッチ | `gemini-2.5-flash-lite` (thinkingBudget: 0) | `gemini-3-flash-preview` |
-| 小規模生成 (≤5名) | `gemini-3-flash-preview` (thinkingLevel: medium) | `gemini-2.5-flash-lite` |
+| Model | asia-northeast1 | 問題 |
+|-------|-----------------|------|
+| gemini-2.5-pro | ✅ | thinking常時ON（**採用**） |
+| gemini-2.5-flash | ✅ | thinkingBudgetバグ（使用不可） |
+| gemini-2.5-flash-lite | ❌ | 未対応 |
+| gemini-3-flash | ❌ | 未対応（globalのみ） |
+| gemini-2.0-flash | ❌ | 未対応 |
 
-### Gemini 3 vs 2.5 の違い
+### 対策: asia-northeast1 + gemini-2.5-proのみ
 
-| パラメータ | Gemini 3 | Gemini 2.5 |
-|-----------|----------|------------|
-| 思考制御 | `thinkingLevel` (low/medium/high) | `thinkingBudget` (数値) |
-| 安定性 | ✅ 動作確認済 | ⚠️ バグあり (BUG-022) |
-| 無効化 | `thinkingLevel: 'minimal'` | `thinkingBudget: 0` |
+**日本国内データ処理要件**のため、global endpointは使用せず、asia-northeast1で利用可能なモデルのみ使用。
+
+結果: **全タスクでgemini-2.5-proを使用**（コスト高いが安定・データ居住地保証）
+
+### モデル割り当て（現行）
+
+| セクション | プライマリ | フォールバック | 理由 |
+|-----------|-----------|---------------|------|
+| Phase 1 骨子生成 | `gemini-2.5-pro` | `gemini-2.5-pro` | 深い推論が必要 |
+| Phase 2 詳細バッチ | `gemini-2.5-pro` | `gemini-2.5-pro` | 日本リージョンで他選択肢なし |
+| 小規模生成 (≤5名) | `gemini-2.5-pro` | `gemini-2.5-pro` | 正確性重視 |
 
 ### 設定例
 
 ```typescript
-import { GENERATION_CONFIGS, buildGeminiConfig } from './ai-model-config';
+import { GENERATION_CONFIGS, buildGeminiConfig, AI_LOCATION } from './ai-model-config';
 
-// Gemini 3 Flash (thinkingLevel)
+// asia-northeast1（日本リージョン）でクライアント作成
+const client = new GoogleGenAI({
+  vertexai: true,
+  project: projectId,
+  location: AI_LOCATION, // 'asia-northeast1'
+});
+
+// gemini-2.5-pro（thinking常時ON、thinkingConfig不要）
 const result = await client.models.generateContent({
-  model: 'gemini-3-flash-preview',
+  model: 'gemini-2.5-pro',
   contents: prompt,
   config: buildGeminiConfig(GENERATION_CONFIGS.skeleton.primary),
 });
-
-// Gemini 2.5 Flash-Lite (thinkingBudget: 0)
-const result = await client.models.generateContent({
-  model: 'gemini-2.5-flash-lite',
-  contents: prompt,
-  config: buildGeminiConfig(GENERATION_CONFIGS.detailBatch.primary),
-});
 ```
+
+### 重要: thinkingConfigは使用しない
+
+- **gemini-2.5-pro**: thinking常時有効（無効化できない）
+- thinkingConfig設定は不要（バグ回避）
 
 ---
 

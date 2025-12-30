@@ -20,12 +20,14 @@ import {
   GENERATION_CONFIGS,
   buildGeminiConfig,
   isValidResponse,
+  AI_LOCATION,
+  AI_CONFIG_VERSION,
   type ModelConfig,
 } from './ai-model-config';
 
-// BUG-022: マルチモデル戦略
-// Phase 1 (骨子): Gemini 3 Flash (thinkingLevel対応)
-// Phase 2 (詳細): Gemini 2.5 Flash-Lite (thinkingBudget: 0)
+// BUG-022: シングルモデル戦略 (2025-12-30更新)
+// 問題: gemini-2.5-flash thinkingBudgetバグ, gemini-2.0-flash/gemini-3-flash等 asia-northeast1未対応
+// 対策: asia-northeast1 + gemini-2.5-proのみ使用（日本国内データ処理要件）
 const BATCH_SIZE = 10; // 詳細生成時のバッチサイズ（10名 × 30日 = 300セル）
 
 // Phase 51: 429エラー対策 - 指数バックオフリトライ設定
@@ -1044,11 +1046,12 @@ export async function generateSkeleton(
   // Phase 52: トレーサビリティログ - Phase 1開始
   logPhase1Start(staffList, requirements, analysis);
 
-  // @google/genai SDK を使用（thinkingConfig をサポート）
+  // BUG-022: 日本リージョン + gemini-2.5-proのみ使用
+  console.log(`🇯🇵 AI Config Version: ${AI_CONFIG_VERSION}, Location: ${AI_LOCATION}`);
   const client = new GoogleGenAI({
     vertexai: true,
     project: projectId,
-    location: 'asia-northeast1',
+    location: AI_LOCATION,
   });
 
   const prompt = buildSkeletonPrompt(staffList, requirements, leaveRequests, daysInMonth, hasNightShift);
@@ -1360,11 +1363,11 @@ export async function generateDetailedShifts(
   const shiftTypeNames = (requirements.timeSlots || []).map(t => t.name);
   const hasNightShift = shiftTypeNames.some(name => name.includes('夜'));
 
-  // @google/genai SDK を使用（thinkingConfig をサポート）
+  // BUG-022: 日本リージョン + gemini-2.5-proのみ使用
   const client = new GoogleGenAI({
     vertexai: true,
     project: projectId,
-    location: 'asia-northeast1',
+    location: AI_LOCATION,
   });
 
   const allSchedules: StaffSchedule[] = [];

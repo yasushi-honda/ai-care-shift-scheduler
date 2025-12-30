@@ -6,26 +6,39 @@
  * - セクション別に最適なモデルを割り当て
  * - フォールバック機構で安定性確保
  *
+ * 重要: asia-northeast1では利用可能モデルが限定的
+ * - gemini-2.5-flash-lite: ❌ 未対応
+ * - gemini-3-flash: ❌ 未対応 (globalのみ)
+ * - gemini-2.5-flash: thinkingBudgetバグあり
+ *
+ * 対策: Global endpointを使用
  * @see .kiro/steering/gemini-rules.md
  * @see https://github.com/googleapis/python-genai/issues/782
  */
 
+// バージョン情報（デバッグ用）
+export const AI_CONFIG_VERSION = '2.1.0-japan';
+
 // Gemini 3用のthinkingLevel (2.5のthinkingBudgetとは別)
 export type ThinkingLevel = 'minimal' | 'low' | 'medium' | 'high';
 
-// モデル定義
-export const MODELS = {
-  // Gemini 3 Flash - thinkingLevelで安定動作
-  GEMINI_3_FLASH: 'gemini-3-flash-preview',
+// リージョン設定
+// 日本国内データ処理要件のためasia-northeast1を使用
+// CodeRabbit指摘: global endpointはデータ居住地要件に違反
+export const AI_LOCATION = 'asia-northeast1';
 
-  // Gemini 2.5 Pro - 常にthinking有効、最も安定
+// モデル定義
+// asia-northeast1で利用可能 + 安定動作するモデルのみ
+export const MODELS = {
+  // Gemini 2.5 Pro - 常にthinking有効、最も安定（GA）
+  // asia-northeast1で利用可能、日本国内処理保証
   GEMINI_25_PRO: 'gemini-2.5-pro',
 
-  // Gemini 2.5 Flash - thinkingBudgetバグあり (使用非推奨)
-  GEMINI_25_FLASH: 'gemini-2.5-flash',
-
-  // Gemini 2.5 Flash-Lite - thinkingBudget:0で安定、最安
-  GEMINI_25_FLASH_LITE: 'gemini-2.5-flash-lite',
+  // 以下は使用非推奨（バグ or リージョン制限）
+  // GEMINI_25_FLASH: 'gemini-2.5-flash',  // thinkingBudgetバグ
+  // GEMINI_20_FLASH: 'gemini-2.0-flash',  // asia-northeast1未対応
+  // GEMINI_25_FLASH_LITE: 'gemini-2.5-flash-lite', // asia-northeast1未対応
+  // GEMINI_3_FLASH: 'gemini-3-flash', // asia-northeast1未対応
 } as const;
 
 export type ModelName = (typeof MODELS)[keyof typeof MODELS];
@@ -42,17 +55,19 @@ export interface ModelConfig {
   maxOutputTokens?: number;
 }
 
-// コスト情報 ($/1M tokens)
+// コスト情報 ($/1M tokens) - 2025年12月時点
 export const MODEL_COSTS = {
-  [MODELS.GEMINI_3_FLASH]: { input: 0.5, output: 3.0 },
-  [MODELS.GEMINI_25_PRO]: { input: 1.25, output: 10.0 },
-  [MODELS.GEMINI_25_FLASH]: { input: 0.3, output: 2.5 },
-  [MODELS.GEMINI_25_FLASH_LITE]: { input: 0.1, output: 0.4 },
+  [MODELS.GEMINI_25_PRO]: { input: 1.25, output: 10.0, thinking: 3.5 },
 } as const;
 
 /**
  * 生成タスク別の設定
- * 各セクションにプライマリとフォールバックモデルを定義
+ *
+ * BUG-022対応 (2025-12-30):
+ * - gemini-2.5-flash: thinkingBudgetバグで使用不可
+ * - gemini-2.0-flash/gemini-3-flash等: asia-northeast1未対応
+ * - 日本国内データ処理要件のためasia-northeast1を使用
+ * - 結果: gemini-2.5-proのみ使用（thinking常時ON、コスト高いが安定）
  */
 export const GENERATION_CONFIGS = {
   /**
@@ -62,34 +77,32 @@ export const GENERATION_CONFIGS = {
    */
   skeleton: {
     primary: {
-      model: MODELS.GEMINI_3_FLASH,
-      thinkingLevel: 'high' as ThinkingLevel,
+      model: MODELS.GEMINI_25_PRO,
+      // thinking常時ON、深い推論に最適
       temperature: 0.3,
       maxOutputTokens: 65536,
     },
     fallback: {
       model: MODELS.GEMINI_25_PRO,
-      // 2.5 Proはthinking無効化不可、デフォルトで動作
       temperature: 0.3,
       maxOutputTokens: 65536,
     },
   },
 
   /**
-   * Phase 2: 詳細バッチ生成 (骨子に従う、シンプル)
+   * Phase 2: 詳細バッチ生成 (骨子に従う)
    * - 骨子で決まった休日以外にシフト種別を割り当て
-   * - 深い推論は不要、コスト重視
+   * - gemini-2.5-proを使用（他モデルはasia-northeast1未対応）
    */
   detailBatch: {
     primary: {
-      model: MODELS.GEMINI_25_FLASH_LITE,
-      thinkingBudget: 0, // 思考完全無効化
+      model: MODELS.GEMINI_25_PRO,
+      // thinkingはONだが、シンプルタスクなので影響少ない
       temperature: 0.5,
       maxOutputTokens: 65536,
     },
     fallback: {
-      model: MODELS.GEMINI_3_FLASH,
-      thinkingLevel: 'low' as ThinkingLevel,
+      model: MODELS.GEMINI_25_PRO,
       temperature: 0.5,
       maxOutputTokens: 65536,
     },
@@ -97,18 +110,15 @@ export const GENERATION_CONFIGS = {
 
   /**
    * 小規模直接生成 (5名以下、1回で完了)
-   * - シンプルなケース、バランス重視
    */
   smallScale: {
     primary: {
-      model: MODELS.GEMINI_3_FLASH,
-      thinkingLevel: 'medium' as ThinkingLevel,
+      model: MODELS.GEMINI_25_PRO,
       temperature: 0.5,
       maxOutputTokens: 65536,
     },
     fallback: {
-      model: MODELS.GEMINI_25_FLASH_LITE,
-      thinkingBudget: 0,
+      model: MODELS.GEMINI_25_PRO,
       temperature: 0.5,
       maxOutputTokens: 65536,
     },
@@ -117,40 +127,33 @@ export const GENERATION_CONFIGS = {
 
 /**
  * モデル設定からGemini API用のconfig objectを生成
- * CodeRabbit指摘: パラメータ検証を追加
+ *
+ * BUG-022対応 (2025-12-30):
+ * - gemini-2.5-pro: thinkingConfig不要（常時有効）
+ * - gemini-2.0-flash: thinkingConfig不要（機能なし）
+ * - thinkingBudget/thinkingLevelは使用しない（バグ回避）
  */
 export function buildGeminiConfig(config: ModelConfig): object {
-  // Gemini 3はthinkingLevel、Gemini 2.5はthinkingBudgetを使用
-  const isGemini3 = config.model.includes('gemini-3');
-
-  if (isGemini3 && config.thinkingBudget !== undefined && config.thinkingLevel === undefined) {
-    console.warn(`⚠️ Model ${config.model} uses thinkingLevel, not thinkingBudget. Ignoring thinkingBudget.`);
-  }
-  if (!isGemini3 && config.thinkingLevel !== undefined && config.thinkingBudget === undefined) {
-    console.warn(`⚠️ Model ${config.model} uses thinkingBudget, not thinkingLevel. Ignoring thinkingLevel.`);
-  }
-
   // パラメータ範囲検証
   const temperature = config.temperature ?? 0.5;
   if (temperature < 0 || temperature > 2) {
     throw new Error(`Invalid temperature: ${temperature}. Must be between 0 and 2.`);
   }
 
+  // BUG-022: thinkingConfigは使用しない
+  // - gemini-2.5-pro: thinking常時有効（設定不可）
+  // - gemini-2.0-flash: thinking機能なし
   const baseConfig: Record<string, unknown> = {
     temperature,
     maxOutputTokens: config.maxOutputTokens ?? 65536,
   };
 
-  // thinkingLevel (Gemini 3) と thinkingBudget (Gemini 2.5) を適切に設定
-  if (config.thinkingLevel !== undefined) {
-    baseConfig.thinkingConfig = {
-      thinkingLevel: config.thinkingLevel,
-    };
-  } else if (config.thinkingBudget !== undefined) {
-    baseConfig.thinkingConfig = {
-      thinkingBudget: config.thinkingBudget,
-    };
-  }
+  // 設定ログ
+  console.log(`🔧 AI Config [v${AI_CONFIG_VERSION}]:`, {
+    model: config.model,
+    temperature,
+    maxOutputTokens: baseConfig.maxOutputTokens,
+  });
 
   return baseConfig;
 }
