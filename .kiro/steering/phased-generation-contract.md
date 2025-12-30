@@ -1,13 +1,17 @@
 # 段階的シフト生成 データ契約
 
-**最終更新**: 2025-12-30
-**バージョン**: 1.1.0
+**最終更新**: 2025-12-31
+**バージョン**: 1.2.0
 
 ---
 
 ## 概要
 
-シフト生成は2段階（Phase 1: 骨子生成、Phase 2: 詳細生成）で行われる。
+シフト生成は3段階で行われる:
+1. **Phase 1**: 骨子生成（休日・夜勤パターン決定）
+2. **Phase 2**: 詳細生成（日勤シフト配分）
+3. **Phase 3**: リバランス（日別人員配置最適化）← BUG-025で追加
+
 このドキュメントはPhase間のデータ受け渡し契約を定義し、BUG-023のようなデータ欠落を防止する。
 
 ---
@@ -90,6 +94,48 @@ interface DailyShift {
 
 ---
 
+## Phase 3: リバランス（BUG-025で追加）
+
+### 目的
+
+Phase 2のバッチ処理独立性により発生するシフト配分の偏りを後処理で修正する。
+
+### 入力
+
+| フィールド | 型 | 必須 | 説明 |
+|-----------|----|----|------|
+| schedules | StaffSchedule[] | ✅ | Phase 2の出力 |
+| requirements | ShiftRequirement | ✅ | シフト要件 |
+| staffList | Staff[] | ✅ | 全スタッフリスト |
+
+### 処理内容
+
+1. 日別シフトカウントを集計
+2. 各シフトタイプの過不足を特定
+3. 過剰シフト → 不足シフトへスワップ
+4. スタッフ希望（timeSlotPreference）を考慮
+
+### 出力: RebalanceResult
+
+```typescript
+interface RebalanceResult {
+  schedules: StaffSchedule[];  // リバランス後のスケジュール
+  swapsPerformed: number;       // スワップ実行回数
+  improvements: {
+    before: { violations: number; score: number };
+    after: { violations: number; score: number };
+  };
+  swapLog: SwapLogEntry[];      // 詳細ログ
+}
+```
+
+### 実装ファイル
+
+- `functions/src/shift-rebalance.ts`: リバランスモジュール
+- `functions/src/shift-generation.ts` (line 266-281): 統合箇所
+
+---
+
 ## バリデーション
 
 ### Phase 1完了時
@@ -157,6 +203,7 @@ interface DailyShift {
 | ファイル | 説明 |
 |----------|------|
 | `functions/src/phased-generation.ts` | 段階的生成メインロジック |
+| `functions/src/shift-rebalance.ts` | Phase 3: リバランスモジュール |
 | `functions/src/phase-validation.ts` | バリデーションモジュール |
 | `functions/src/ai-response-monitor.ts` | AIレスポンス監視 |
 | `functions/src/types.ts` | 型定義 |
@@ -169,3 +216,4 @@ interface DailyShift {
 |--------|------|------|--------|
 | BUG-022 | thinkingBudget無視 | Gemini 2.5 Flashのバグ | 2025-12-30 |
 | BUG-023 | 夜勤後休息違反 | Phase 2にnightShiftFollowupDays未送信 | 2025-12-30 |
+| BUG-025 | AI生成スコア不安定 | バッチ処理の協調問題 → Phase 3リバランスで解決 | 2025-12-30 |
