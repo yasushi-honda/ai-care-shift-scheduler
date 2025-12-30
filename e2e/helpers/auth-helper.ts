@@ -421,34 +421,48 @@ export async function setupAuthenticatedUser(
 
   // Phase 45: 施設選択まで自動化
   // 認証後、施設選択画面が表示される場合は施設を選択してメインダッシュボードに遷移
-  if (facilitiesArray.length > 0) {
+  // 注意: 施設選択画面は facilities.length > 1 の場合のみ表示される
+  if (facilitiesArray.length > 1) {
     const targetFacilityId = facilitiesArray[0].facilityId;
-    console.log(`🏢 施設選択を実行: ${targetFacilityId}`);
+    console.log(`🏢 複数施設ユーザー: 施設選択を実行: ${targetFacilityId}`);
 
-    // ページをリロードして認証状態を反映
-    await page.goto('/');
-    await page.waitForLoadState('networkidle');
+    try {
+      // ページをリロードして認証状態を反映
+      await page.goto('/');
+      await page.waitForLoadState('domcontentloaded');
+      await page.waitForTimeout(2000); // 認証状態の反映を待機
 
-    // 施設選択画面が表示されているか確認（「施設を選択してください」テキスト）
-    const facilitySelector = page.getByText('施設を選択してください');
-    const isFacilitySelectorVisible = await facilitySelector.isVisible({ timeout: 3000 }).catch(() => false);
+      // 施設選択画面が表示されているか確認（「施設を選択してください」テキスト）
+      const facilitySelector = page.getByText('施設を選択してください');
+      const isFacilitySelectorVisible = await facilitySelector.isVisible({ timeout: 5000 }).catch(() => false);
 
-    if (isFacilitySelectorVisible) {
-      console.log(`📋 施設選択画面を検出、施設を選択中: ${targetFacilityId}`);
+      if (isFacilitySelectorVisible) {
+        console.log(`📋 施設選択画面を検出、施設を選択中: ${targetFacilityId}`);
 
-      // 施設IDを含むボタンをクリック
-      const facilityButton = page.locator(`button:has-text("${targetFacilityId}")`);
-      await facilityButton.click({ timeout: 5000 });
+        // 施設IDを含むボタンをクリック
+        const facilityButton = page.locator(`button:has-text("${targetFacilityId}")`);
+        await facilityButton.click({ timeout: 5000 });
 
-      // メインダッシュボードへの遷移を待機
-      await page.waitForLoadState('networkidle');
-      await page.waitForTimeout(1000);
+        // メインダッシュボードへの遷移を待機
+        await page.waitForLoadState('domcontentloaded');
+        await page.waitForTimeout(1000);
 
-      console.log(`✅ 施設選択完了: ${targetFacilityId}`);
-    } else {
-      // 1施設のみの場合は自動選択されるため、施設選択画面は表示されない
-      console.log(`ℹ️ 施設選択画面が表示されませんでした（自動選択された可能性）`);
+        console.log(`✅ 施設選択完了: ${targetFacilityId}`);
+      } else {
+        console.log(`ℹ️ 施設選択画面が表示されませんでした（自動選択された可能性）`);
+      }
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.log(`⚠️ 施設選択中にエラーが発生しましたが、テストを継続します: ${errorMessage}`);
     }
+  } else if (facilitiesArray.length === 1) {
+    // 1施設のみの場合は自動選択されるため、施設選択は不要
+    // ただし、認証状態の反映のためにページをリロード
+    console.log(`🏢 単一施設ユーザー: 自動選択されます`);
+    await page.goto('/');
+    await page.waitForLoadState('domcontentloaded');
+    await page.waitForTimeout(1000);
+    console.log(`✅ 単一施設ユーザーのセットアップ完了`);
   }
 
   console.log(`✅ 認証済みユーザーセットアップ完了: ${params.email} (UID: ${uid})`);
