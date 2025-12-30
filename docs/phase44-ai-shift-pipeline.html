@@ -271,7 +271,7 @@
   <div class="container">
     <header>
       <h1>Phase 44: AIシフト生成パイプライン改善</h1>
-      <p>Gemini 2.5 Flash による段階的シフト生成の最適化</p>
+      <p>Gemini 2.5 Pro による段階的シフト生成の最適化</p>
       <span class="status-badge status-in-progress" style="background: #22c55e;">95%完了 ✅</span>
     </header>
 
@@ -618,7 +618,7 @@ graph TB
     end
 
     subgraph "外部サービス"
-        I[Vertex AI<br/>Gemini 2.5 Flash]
+        I[Vertex AI<br/>Gemini 2.5 Pro]
     end
 
     subgraph "データ層"
@@ -680,7 +680,7 @@ graph TB
           <tr>
             <td>Vertex AI</td>
             <td>AIシフト生成</td>
-            <td>Gemini 2.5 Flash</td>
+            <td>Gemini 2.5 Pro</td>
           </tr>
           <tr>
             <td>Firestore</td>
@@ -704,7 +704,7 @@ sequenceDiagram
     participant P2 as Phase 2: 骨子
     participant P3 as Phase 3: 週別
     participant P4 as Phase 4: 検証
-    participant AI as Gemini 2.5 Flash
+    participant AI as Gemini 2.5 Pro
     participant FS as Firestore
 
     U->>FE: シフト生成ボタン押下

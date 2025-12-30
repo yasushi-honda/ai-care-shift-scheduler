@@ -194,14 +194,14 @@ flowchart LR
     <section id="overview">
         <h2>概要</h2>
         <div class="card card-info">
-            <p>本システムは<strong>Gemini 2.5 Flash</strong>を使用したLLMベースのシフト自動生成システムです。</p>
+            <p>本システムは<strong>Gemini 2.5 Pro</strong>を使用したLLMベースのシフト自動生成システムです。</p>
             <p>大規模なスタッフ数（12名以上）に対応するため、<strong>段階的生成（Phased Generation）</strong>アルゴリズムを採用しています。</p>
         </div>
 
         <h3>技術スタック</h3>
         <table>
             <tr><th>コンポーネント</th><th>技術</th><th>備考</th></tr>
-            <tr><td>AI Model</td><td>Gemini 2.5 Flash</td><td>思考モード（thinkingConfig）対応</td></tr>
+            <tr><td>AI Model</td><td>Gemini 2.5 Pro</td><td>思考モード（thinkingConfig）対応</td></tr>
             <tr><td>SDK</td><td>@google/genai</td><td>thinkingBudget: 16384</td></tr>
             <tr><td>Region</td><td>asia-northeast1</td><td>東京リージョン</td></tr>
             <tr><td>Runtime</td><td>Cloud Functions</td><td>Node.js 20, タイムアウト300秒</td></tr>
@@ -218,7 +218,7 @@ sequenceDiagram
     participant U as ユーザー
     participant F as Frontend
     participant CF as Cloud Function
-    participant AI as Gemini 2.5 Flash
+    participant AI as Gemini 2.5 Pro
     participant FS as Firestore
 
     U->>F: AI生成ボタン押下
@@ -261,7 +261,7 @@ graph TB
     end
 
     subgraph "AI Layer"
-        F[Gemini 2.5 Flash]
+        F[Gemini 2.5 Pro]
         G[動的制約生成]
     end
 
