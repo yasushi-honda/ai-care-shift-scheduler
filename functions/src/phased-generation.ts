@@ -941,9 +941,14 @@ ${staffInfo}
 ${requirementsTable}
 
 # 制約条件
+## 🔴 絶対厳守（労基法違反回避）
+**夜勤後の休息ルール**:
+- 夜勤日がX日の場合 → X+1日は「明け休み」、X+2日は「公休」
+- 例: 夜勤が3日なら → 4日は明け休み、5日は公休
+- **nightShiftFollowupDaysには X+1 と X+2 の両方を含めること**
+
 ## 必須条件
 - 各日、合計${totalStaffPerDay}名の勤務者を確保すること
-- 夜勤の翌日は「夜勤明け休み」、翌々日は「公休」を割り当てること（連続2日休み）
 - スタッフの休暇希望（${JSON.stringify(leaveRequests)}）を必ず反映すること
 - 夜勤専従スタッフ（isNightShiftOnly=true）は夜勤と休日のみ
 
@@ -955,9 +960,13 @@ ${requirementsTable}
 各スタッフの骨子をJSONで出力してください：
 - staffId: スタッフID（文字列）
 - staffName: スタッフ名（文字列）
-- restDays: 休日の日付リスト（例: [1,5,9,13,17,21,25,29]）
+- restDays: 通常の公休日リスト（例: [1,9,17,25]）※夜勤明け休みは含めない
 - nightShiftDays: 夜勤の日付リスト（例: [3,10,17,24]）
-- nightShiftFollowupDays: 夜勤明け休み・公休の日付リスト（例: [4,5,11,12,18,19,25,26]）
+- nightShiftFollowupDays: **夜勤翌日（明け休み）+ 翌々日（公休）の両方**（例: 夜勤が3,10日なら [4,5,11,12]）
+
+# 出力前チェック
+□ nightShiftDaysの各日付X に対して、X+1とX+2がnightShiftFollowupDaysに含まれているか
+□ 全${staffList.length}名分の骨子があるか
 
 重要：全${staffList.length}名分の骨子を必ず出力してください。
 `;
@@ -1190,7 +1199,8 @@ function buildDetailedPrompt(
       const skel = skeleton.staffSchedules.find(sk => sk.staffId === s.id);
       const qualifications = (s.qualifications || []).join('、') || 'なし';
       if (hasNightShift) {
-        return `- ${s.name}(ID:${s.id}): 資格=${qualifications}, 休日=${skel?.restDays?.join(',') || 'なし'}, 夜勤=${skel?.nightShiftDays?.join(',') || 'なし'}`;
+        // BUG-023: nightShiftFollowupDays（明け休み日）を追加
+        return `- ${s.name}(ID:${s.id}): 資格=${qualifications}, 休日=${skel?.restDays?.join(',') || 'なし'}, 夜勤=${skel?.nightShiftDays?.join(',') || 'なし'}, 明け休み=${skel?.nightShiftFollowupDays?.join(',') || 'なし'}`;
       } else {
         return `- ${s.name}(ID:${s.id}): 資格=${qualifications}, 休日=${skel?.restDays?.join(',') || 'なし'}`;
       }
@@ -1254,9 +1264,22 @@ ${requirementsTable}
 1日の合計勤務者数: ${totalStaffPerDay}名
 
 # 制約
-- 骨子で指定された休日・夜勤日は変更しないこと
-- 夜勤以外の日は、${shiftTypeNames.filter(n => !n.includes('夜')).join('・')}のいずれかを割り当てる
+## 🔴 絶対厳守（労基法違反回避）
+1. **夜勤の翌日は必ず「明け休み」を割り当てること**（上記の「明け休み=」の日付）
+2. **夜勤明け休みの翌日は必ず「休」を割り当てること**
+3. 骨子で指定された休日・夜勤日は変更しないこと
+
+## 必須条件
+- 夜勤以外・休日以外の日は、${shiftTypeNames.filter(n => !n.includes('夜')).join('・')}のいずれかを割り当てる
 - 各シフトの必要人数を**必ず**満たすこと
+
+# シフト割り当てルール
+| 骨子の指定 | 割り当てるシフト |
+|-----------|----------------|
+| 夜勤日 | 「夜勤」 |
+| 明け休み日 | 「明け休み」 |
+| 休日 | 「休」 |
+| 上記以外 | 早番・日勤・遅番のいずれか |
 
 # 出力
 各スタッフの${requirements.targetMonth}の全${daysInMonth}日分の詳細シフトをJSON形式で出力してください。
