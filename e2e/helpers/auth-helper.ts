@@ -419,6 +419,38 @@ export async function setupAuthenticatedUser(
   // ページ遷移前にFirestoreの書き込みが確実にコミットされることを保証
   await page.waitForTimeout(1500);
 
+  // Phase 45: 施設選択まで自動化
+  // 認証後、施設選択画面が表示される場合は施設を選択してメインダッシュボードに遷移
+  if (facilitiesArray.length > 0) {
+    const targetFacilityId = facilitiesArray[0].facilityId;
+    console.log(`🏢 施設選択を実行: ${targetFacilityId}`);
+
+    // ページをリロードして認証状態を反映
+    await page.goto('/');
+    await page.waitForLoadState('networkidle');
+
+    // 施設選択画面が表示されているか確認（「施設を選択してください」テキスト）
+    const facilitySelector = page.getByText('施設を選択してください');
+    const isFacilitySelectorVisible = await facilitySelector.isVisible({ timeout: 3000 }).catch(() => false);
+
+    if (isFacilitySelectorVisible) {
+      console.log(`📋 施設選択画面を検出、施設を選択中: ${targetFacilityId}`);
+
+      // 施設IDを含むボタンをクリック
+      const facilityButton = page.locator(`button:has-text("${targetFacilityId}")`);
+      await facilityButton.click({ timeout: 5000 });
+
+      // メインダッシュボードへの遷移を待機
+      await page.waitForLoadState('networkidle');
+      await page.waitForTimeout(1000);
+
+      console.log(`✅ 施設選択完了: ${targetFacilityId}`);
+    } else {
+      // 1施設のみの場合は自動選択されるため、施設選択画面は表示されない
+      console.log(`ℹ️ 施設選択画面が表示されませんでした（自動選択された可能性）`);
+    }
+  }
+
   console.log(`✅ 認証済みユーザーセットアップ完了: ${params.email} (UID: ${uid})`);
   return uid;
 }

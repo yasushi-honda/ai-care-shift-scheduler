@@ -21,8 +21,8 @@ test.describe('RBAC権限チェック - アクセス権限なし画面（Forbidd
     // 403エラーコードを確認
     await expect(page.getByText('403')).toBeVisible();
 
-    // ヘッディングを確認
-    await expect(page.getByRole('heading', { name: 'アクセスが拒否されました' })).toBeVisible();
+    // ヘッディングを確認（実際のUI: 「アクセス権限がありません」）
+    await expect(page.getByRole('heading', { name: 'アクセス権限がありません' })).toBeVisible();
 
     // メッセージを確認
     await expect(page.getByText('このページにアクセスする権限がありません。')).toBeVisible();

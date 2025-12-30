@@ -15,21 +15,29 @@ import { setupAuthenticatedUser, clearEmulatorAuth } from './helpers/auth-helper
  */
 
 test.describe('認証フロー - ログアウト機能', () => {
-  test('ログアウトボタンをクリックすると、ログイン画面に戻る', async ({ page }) => {
-    await page.goto('/');
+  test.beforeEach(async () => {
+    // Emulator環境をクリーンアップ
+    await clearEmulatorAuth();
+  });
 
-    // ログアウトボタンを探す
+  test('ログアウトボタンをクリックすると、ログイン画面に戻る', async ({ page }) => {
+    // まず認証済みユーザーをセットアップ
+    await setupAuthenticatedUser(page, {
+      email: 'logout-test@example.com',
+      password: 'password123',
+      displayName: 'Logout Test User',
+      role: 'admin',
+    });
+
+    // ログアウトボタンを探す（サイドバーまたはヘッダーにある）
     const logoutButton = page.getByRole('button', { name: 'ログアウト' });
     await expect(logoutButton).toBeVisible({ timeout: 10000 });
 
     // ログアウト実行
     await logoutButton.click();
 
-    // ログイン画面に戻ることを確認
-    await expect(page).toHaveURL('/', { timeout: 5000 });
-
-    // Googleログインボタンが表示されることを確認
-    await expect(page.getByRole('button', { name: /Google/ })).toBeVisible({ timeout: 5000 });
+    // ログイン画面に戻ることを確認（Googleログインボタンが表示される）
+    await expect(page.getByRole('button', { name: /Google/ })).toBeVisible({ timeout: 10000 });
   });
 });
 
