@@ -3,6 +3,7 @@ import { GoogleGenAI } from '@google/genai';
 import { TimeSlotPreference } from './types';
 import type { Staff, ShiftRequirement, LeaveRequest, StaffSchedule, AIEvaluationResult } from './types';
 import { generateSkeleton, generateDetailedShifts, parseGeminiJsonResponse } from './phased-generation';
+import { rebalanceShifts } from './shift-rebalance';
 import { EvaluationService, createDefaultEvaluation } from './evaluation/evaluationLogic';
 import {
   GENERATION_CONFIGS,
@@ -261,6 +262,23 @@ export const generateShift = onRequest(
         scheduleData = { schedule: detailedSchedules };
         tokensUsed = 0; // 複数回呼び出しのため集計は省略
         console.log('✅ 段階的生成完了');
+
+        // 戦略A: 後処理リバランス（ai-shift-optimization-strategy.md参照）
+        // バッチ処理の独立性によるシフト配分の偏りを修正
+        console.log('📊 リバランス処理開始...');
+        const rebalanceResult = rebalanceShifts(
+          scheduleData.schedule as StaffSchedule[],
+          requirements as ShiftRequirement,
+          staffList
+        );
+        scheduleData = { schedule: rebalanceResult.schedules };
+        console.log('✅ リバランス完了:', {
+          swaps: rebalanceResult.swapsPerformed,
+          violationsBefore: rebalanceResult.improvements.before.violations,
+          violationsAfter: rebalanceResult.improvements.after.violations,
+          scoreBefore: rebalanceResult.improvements.before.score,
+          scoreAfter: rebalanceResult.improvements.after.score,
+        });
       }
 
       // Firestore保存はフロントエンド側で実施（バージョン履歴管理のため）
