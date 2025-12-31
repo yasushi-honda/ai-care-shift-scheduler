@@ -533,11 +533,20 @@ function ViolationsSection({ violations }: { violations: ConstraintViolation[] }
                           </span>
                         </div>
 
-                        {/* 該当日付 */}
+                        {/* 該当日付（チップスタイル） */}
                         {dates.length > 0 && (
-                          <div className="mt-2 text-sm text-gray-700">
+                          <div className="mt-2">
                             <span className="text-xs text-gray-500 mr-2">該当日:</span>
-                            {dates.map(d => formatDateShort(d)).join(', ')}
+                            <div className="inline-flex flex-wrap gap-1 mt-1">
+                              {dates.map((d, i) => (
+                                <span
+                                  key={i}
+                                  className="text-xs px-2 py-0.5 bg-gray-100 text-gray-700 rounded"
+                                >
+                                  {formatDateShort(d)}
+                                </span>
+                              ))}
+                            </div>
                           </div>
                         )}
 
