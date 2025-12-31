@@ -782,81 +782,44 @@ function parseAIComment(comment: string): ParsedComment {
   return { summary, sections };
 }
 
-const SECTION_CONFIG: Record<string, { icon: string; bgColor: string; borderColor: string; textColor: string }> = {
-  '根本原因': { icon: '📍', bgColor: 'bg-red-50', borderColor: 'border-red-200', textColor: 'text-red-800' },
+/**
+ * セクション設定: 「判断」と「アクション」に焦点を当てた配色
+ * - 問題系（根本原因、その他の要因）: 赤〜オレンジ系で注意喚起
+ * - アクション系（改善提案）: 緑系で次のステップを明確に
+ */
+const SECTION_CONFIG: Record<string, { icon: string; bgColor: string; borderColor: string; textColor: string; isAction?: boolean }> = {
+  '根本原因': { icon: '⚠️', bgColor: 'bg-red-50', borderColor: 'border-red-200', textColor: 'text-red-800' },
   'その他の要因': { icon: '📋', bgColor: 'bg-orange-50', borderColor: 'border-orange-200', textColor: 'text-orange-800' },
-  '改善提案': { icon: '💡', bgColor: 'bg-green-50', borderColor: 'border-green-200', textColor: 'text-green-800' },
+  '改善提案': { icon: '✅', bgColor: 'bg-emerald-50', borderColor: 'border-emerald-300', textColor: 'text-emerald-800', isAction: true },
 };
 
 /**
  * AIコメントセクション
- * 展開状態に関わらず常に表示される総合コメント
- * 構造化された表示でユーザビリティを向上
+ * 「判断」と「アクション」に焦点を当てた表示
+ * - サマリー: このシフトが使えるかどうかの判断
+ * - 問題: 何が問題か
+ * - アクション: 次に何をすべきか（強調表示）
  */
 function AICommentSection({ comment }: { comment: string }) {
-  const [copied, setCopied] = useState(false);
   const parsed = parseAIComment(comment);
 
-  const handleCopy = async () => {
-    try {
-      await navigator.clipboard.writeText(comment);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch {
-      // フォールバック: 古いブラウザ対応
-      const textArea = document.createElement('textarea');
-      textArea.value = comment;
-      document.body.appendChild(textArea);
-      textArea.select();
-      document.execCommand('copy');
-      document.body.removeChild(textArea);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    }
-  };
+  // 改善提案セクションを分離（アクションとして強調表示するため）
+  const problemSections = parsed.sections.filter(s => s.title !== '改善提案');
+  const actionSection = parsed.sections.find(s => s.title === '改善提案');
 
   return (
-    <div className="px-4 py-3 bg-blue-50 border-t border-blue-100">
-      {/* ヘッダー */}
-      <div className="flex items-center justify-between gap-2 mb-3">
-        <div className="flex items-center gap-2">
-          <span className="text-lg">💬</span>
-          <span className="text-xs font-medium text-blue-700">AIコメント</span>
-        </div>
-        <button
-          onClick={handleCopy}
-          className="text-xs text-blue-600 hover:text-blue-800 flex items-center gap-1 transition-colors"
-          title="コメントをコピー"
-        >
-          {copied ? (
-            <>
-              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-              </svg>
-              コピー済み
-            </>
-          ) : (
-            <>
-              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-              </svg>
-              コピー
-            </>
-          )}
-        </button>
-      </div>
-
-      {/* サマリー */}
+    <div className="px-4 py-3 bg-slate-50 border-t border-slate-200">
+      {/* サマリー: 判断 */}
       {parsed.summary && (
-        <div className="mb-3 p-2 bg-white rounded border border-blue-200">
-          <p className="text-sm text-gray-700 leading-relaxed">{parsed.summary}</p>
+        <div className="mb-3 p-3 bg-white rounded-lg border border-slate-200 shadow-sm">
+          <p className="text-sm text-gray-800 leading-relaxed font-medium">{parsed.summary}</p>
         </div>
       )}
 
-      {/* 構造化セクション */}
-      {parsed.sections.length > 0 ? (
-        <div className="space-y-2">
-          {parsed.sections.map((section, index) => {
+      {/* 問題セクション */}
+      {problemSections.length > 0 && (
+        <div className="space-y-2 mb-3">
+          {problemSections.map((section, index) => {
             const config = SECTION_CONFIG[section.title] || {
               icon: '📌',
               bgColor: 'bg-gray-50',
@@ -867,9 +830,9 @@ function AICommentSection({ comment }: { comment: string }) {
             return (
               <div
                 key={index}
-                className={`p-2 rounded border ${config.bgColor} ${config.borderColor}`}
+                className={`p-2.5 rounded-lg border ${config.bgColor} ${config.borderColor}`}
               >
-                <div className={`text-xs font-semibold ${config.textColor} flex items-center gap-1 mb-1`}>
+                <div className={`text-xs font-bold ${config.textColor} flex items-center gap-1.5 mb-1.5`}>
                   <span>{config.icon}</span>
                   <span>{section.title}</span>
                 </div>
@@ -877,10 +840,10 @@ function AICommentSection({ comment }: { comment: string }) {
                   <p className="text-sm text-gray-700 leading-relaxed">{section.content}</p>
                 )}
                 {section.items.length > 0 && (
-                  <ul className="mt-1 space-y-0.5">
+                  <ul className="mt-1.5 space-y-1">
                     {section.items.map((item, itemIndex) => (
-                      <li key={itemIndex} className="text-sm text-gray-700 flex items-start gap-1.5">
-                        <span className="text-gray-400 flex-shrink-0">•</span>
+                      <li key={itemIndex} className="text-sm text-gray-700 flex items-start gap-2">
+                        <span className="text-gray-400 flex-shrink-0 mt-0.5">•</span>
                         <span>{item}</span>
                       </li>
                     ))}
@@ -890,8 +853,33 @@ function AICommentSection({ comment }: { comment: string }) {
             );
           })}
         </div>
-      ) : (
-        // 構造化できない場合はそのまま表示
+      )}
+
+      {/* アクションセクション: 強調表示 */}
+      {actionSection && (
+        <div className="p-3 rounded-lg border-2 border-emerald-400 bg-emerald-50 shadow-sm">
+          <div className="text-sm font-bold text-emerald-800 flex items-center gap-1.5 mb-2">
+            <span>✅</span>
+            <span>次のアクション</span>
+          </div>
+          {actionSection.content && (
+            <p className="text-sm text-gray-700 leading-relaxed mb-2">{actionSection.content}</p>
+          )}
+          {actionSection.items.length > 0 && (
+            <ul className="space-y-1.5">
+              {actionSection.items.map((item, itemIndex) => (
+                <li key={itemIndex} className="text-sm text-gray-800 flex items-start gap-2 bg-white rounded px-2 py-1.5 border border-emerald-200">
+                  <span className="text-emerald-600 flex-shrink-0 font-bold">{itemIndex + 1}.</span>
+                  <span>{item}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
+
+      {/* 構造化できない場合はシンプルに表示 */}
+      {parsed.sections.length === 0 && !parsed.summary && (
         <p className="text-sm text-gray-700 leading-relaxed">{comment}</p>
       )}
     </div>
