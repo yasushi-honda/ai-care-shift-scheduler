@@ -263,9 +263,10 @@ export function EvaluationPanel({
       )}
 
       {/* 展開コンテンツ */}
+      {isExpanded && (
       <div
         id="evaluation-content"
-        className={`overflow-hidden transition-all duration-300 ${isExpanded ? 'max-h-[2000px] opacity-100' : 'max-h-0 opacity-0'}`}
+        className="transition-opacity duration-300 opacity-100"
       >
         <div className="px-4 pb-4 border-t border-gray-100">
           {isEvaluationFailed ? (
@@ -305,6 +306,7 @@ export function EvaluationPanel({
           )}
         </div>
       </div>
+      )}
       </div>
     </div>
   );
