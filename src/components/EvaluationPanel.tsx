@@ -407,6 +407,7 @@ function ScoreBar({ score }: { score: number }) {
 /**
  * 制約違反セクション
  * 3階層グループ化: レベル → タイプ → シフト種別
+ * 視認性重視のUI/UX設計
  */
 function ViolationsSection({ violations }: { violations: ConstraintViolation[] }) {
   // 違反タイプの日本語ラベル
@@ -418,6 +419,15 @@ function ViolationsSection({ violations }: { violations: ConstraintViolation[] }
     leaveRequestIgnored: '休暇申請無視',
   };
 
+  // シフト種別の設定（アイコン・色）
+  const shiftTypeConfig: Record<string, { icon: string; bgColor: string; textColor: string }> = {
+    '日勤': { icon: '☀️', bgColor: 'bg-amber-100', textColor: 'text-amber-800' },
+    '早番': { icon: '🌅', bgColor: 'bg-orange-100', textColor: 'text-orange-800' },
+    '遅番': { icon: '🌆', bgColor: 'bg-purple-100', textColor: 'text-purple-800' },
+    '夜勤': { icon: '🌙', bgColor: 'bg-indigo-100', textColor: 'text-indigo-800' },
+    'その他': { icon: '📋', bgColor: 'bg-gray-100', textColor: 'text-gray-700' },
+  };
+
   // シフト種別を抽出
   const extractShiftType = (description: string): string => {
     if (description.includes('早番')) return '早番';
@@ -427,7 +437,7 @@ function ViolationsSection({ violations }: { violations: ConstraintViolation[] }
     return 'その他';
   };
 
-  // 日付を抽出してDate対象に変換
+  // 日付を抽出
   const extractDate = (v: ConstraintViolation): string | null => {
     if (v.affectedDates?.length) return v.affectedDates[0];
     const match = v.description?.match(/(\d{4}-\d{2}-\d{2})/);
@@ -435,12 +445,17 @@ function ViolationsSection({ violations }: { violations: ConstraintViolation[] }
   };
 
   // 日付をM/D（曜）形式で表示
-  const formatDateWithDay = (dateStr: string): string => {
+  const formatDateWithDay = (dateStr: string): { short: string; day: string; isWeekend: boolean } => {
     const match = dateStr.match(/(\d{4})-(\d{2})-(\d{2})/);
-    if (!match) return dateStr;
+    if (!match) return { short: dateStr, day: '', isWeekend: false };
     const date = new Date(parseInt(match[1]), parseInt(match[2]) - 1, parseInt(match[3]));
+    const dayIndex = date.getDay();
     const days = ['日', '月', '火', '水', '木', '金', '土'];
-    return `${parseInt(match[2])}/${parseInt(match[3])}(${days[date.getDay()]})`;
+    return {
+      short: `${parseInt(match[2])}/${parseInt(match[3])}`,
+      day: days[dayIndex],
+      isWeekend: dayIndex === 0 || dayIndex === 6,
+    };
   };
 
   // 3階層グループ化: レベル → タイプ → シフト種別
@@ -473,13 +488,14 @@ function ViolationsSection({ violations }: { violations: ConstraintViolation[] }
 
       {/* レベル1がない場合のポジティブメッセージ */}
       {!groupedData[1] && (
-        <div className="mb-3 text-xs px-3 py-2 rounded bg-green-50 text-green-700 border border-green-200">
-          ✅ 労基法違反（絶対必須）はありません
+        <div className="mb-4 flex items-center gap-2 text-sm px-4 py-3 rounded-lg bg-green-50 text-green-700 border border-green-200 shadow-sm">
+          <span className="text-lg">✅</span>
+          <span className="font-medium">労基法違反（絶対必須）はありません</span>
         </div>
       )}
 
       {/* レベル別グループ表示 */}
-      <div className="space-y-4">
+      <div className="space-y-5">
         {levels.map((level) => {
           const config = LEVEL_UI_CONFIG[level as ConstraintLevel];
           const typeGroups = groupedData[level];
@@ -489,31 +505,40 @@ function ViolationsSection({ violations }: { violations: ConstraintViolation[] }
           );
 
           return (
-            <div key={level}>
+            <div key={level} className="rounded-lg overflow-hidden shadow-sm border border-gray-200">
               {/* レベルヘッダー */}
-              <div className={`text-xs font-medium px-3 py-1.5 rounded-t ${config.bgColor} ${config.color}`}>
-                {config.icon} {config.label}（{totalCount}件）
+              <div className={`flex items-center justify-between px-4 py-2.5 ${config.bgColor}`}>
+                <div className="flex items-center gap-2">
+                  <span className="text-base">{config.icon}</span>
+                  <span className={`font-semibold ${config.color}`}>{config.label}</span>
+                </div>
+                <span className={`text-sm font-bold ${config.color} bg-white/50 px-2.5 py-0.5 rounded-full`}>
+                  {totalCount}件
+                </span>
               </div>
 
               {/* タイプ別グループ */}
-              <div className={`border-l-4 ${config.borderColor} bg-white rounded-b`}>
-                {Object.entries(typeGroups).map(([type, shiftGroups], typeIndex) => {
+              <div className="bg-white divide-y divide-gray-100">
+                {Object.entries(typeGroups).map(([type, shiftGroups]) => {
                   const typeCount = Object.values(shiftGroups).reduce((s, arr) => s + arr.length, 0);
-                  const isLastType = typeIndex === Object.keys(typeGroups).length - 1;
 
                   return (
-                    <div key={type} className={`${!isLastType ? 'border-b border-gray-100' : ''}`}>
+                    <div key={type}>
                       {/* タイプヘッダー */}
-                      <div className="px-3 py-2 bg-gray-50 flex items-center gap-2">
-                        <span className={`text-xs font-medium px-1.5 py-0.5 rounded ${config.bgColor} ${config.color}`}>
+                      <div className={`px-4 py-2.5 ${config.bgColor} bg-opacity-30 flex items-center justify-between`}>
+                        <span className={`text-sm font-semibold ${config.color}`}>
                           {violationTypeLabels[type] || type}
                         </span>
-                        <span className="text-xs text-gray-500">{typeCount}件</span>
+                        <span className="text-xs text-gray-500 bg-white px-2 py-0.5 rounded-full">
+                          {typeCount}件
+                        </span>
                       </div>
 
                       {/* シフト種別サブグループ */}
-                      <div className="px-3 pb-2">
-                        {Object.entries(shiftGroups).map(([shiftType, shiftViolations], shiftIndex) => {
+                      <div className="divide-y divide-gray-50">
+                        {Object.entries(shiftGroups).map(([shiftType, shiftViolations]) => {
+                          const shiftConfig = shiftTypeConfig[shiftType] || shiftTypeConfig['その他'];
+
                           // 日付を抽出してソート
                           const dates = shiftViolations
                             .map(v => extractDate(v))
@@ -529,43 +554,60 @@ function ViolationsSection({ violations }: { violations: ConstraintViolation[] }
                           // 提案（最初のものを使用）
                           const suggestion = shiftViolations[0]?.suggestion;
 
-                          const isLastShift = shiftIndex === Object.keys(shiftGroups).length - 1;
-
                           return (
-                            <div
-                              key={shiftType}
-                              className={`py-2 ${!isLastShift ? 'border-b border-gray-50' : ''}`}
-                            >
-                              {/* シフト種別 + 日付チップ */}
-                              <div className="flex items-start gap-2">
-                                <span className="text-xs font-medium text-gray-600 w-10 flex-shrink-0 pt-0.5">
-                                  {shiftType}:
+                            <div key={shiftType} className="px-4 py-3">
+                              {/* シフト種別ラベル */}
+                              <div className="flex items-center gap-2 mb-2">
+                                <span className={`inline-flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-full ${shiftConfig.bgColor} ${shiftConfig.textColor}`}>
+                                  <span>{shiftConfig.icon}</span>
+                                  <span>{shiftType}</span>
                                 </span>
-                                <div className="flex flex-wrap gap-1">
-                                  {uniqueDates.map((d, i) => (
-                                    <span
-                                      key={i}
-                                      className="text-xs px-2 py-0.5 bg-gray-100 text-gray-700 rounded"
-                                    >
-                                      {formatDateWithDay(d)}
-                                    </span>
-                                  ))}
-                                </div>
+                                <span className="text-xs text-gray-400">
+                                  {uniqueDates.length}日
+                                </span>
                               </div>
 
-                              {/* スタッフ（連勤超過など、人が関係する場合） */}
+                              {/* 日付チップ（レベル色で表示） */}
+                              <div className="flex flex-wrap gap-1.5 ml-1">
+                                {uniqueDates.map((d, i) => {
+                                  const dateInfo = formatDateWithDay(d);
+                                  return (
+                                    <span
+                                      key={i}
+                                      className={`inline-flex items-center text-xs px-2 py-1 rounded-md border ${
+                                        dateInfo.isWeekend
+                                          ? 'bg-red-50 border-red-200 text-red-700'
+                                          : `${config.bgColor} ${config.borderColor} ${config.color}`
+                                      }`}
+                                    >
+                                      <span className="font-medium">{dateInfo.short}</span>
+                                      <span className={`ml-1 text-[10px] ${dateInfo.isWeekend ? 'text-red-500' : 'opacity-70'}`}>
+                                        {dateInfo.day}
+                                      </span>
+                                    </span>
+                                  );
+                                })}
+                              </div>
+
+                              {/* スタッフ（連勤超過など） */}
                               {staff.length > 0 && (
-                                <div className="mt-1 ml-12 text-xs text-gray-500">
-                                  対象: {staff.join(', ')}
+                                <div className="mt-2 ml-1 flex items-center gap-1.5">
+                                  <span className="text-xs text-gray-400">対象:</span>
+                                  <div className="flex flex-wrap gap-1">
+                                    {staff.map((s, i) => (
+                                      <span key={i} className="text-xs bg-gray-100 text-gray-700 px-2 py-0.5 rounded">
+                                        {s}
+                                      </span>
+                                    ))}
+                                  </div>
                                 </div>
                               )}
 
                               {/* 提案 */}
                               {suggestion && (
-                                <div className="mt-1.5 ml-12">
-                                  <span className="text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded inline-block">
-                                    💡 {suggestion}
-                                  </span>
+                                <div className="mt-2.5 ml-1 flex items-start gap-2 bg-blue-50 border border-blue-100 rounded-lg px-3 py-2">
+                                  <span className="text-sm flex-shrink-0">💡</span>
+                                  <span className="text-xs text-blue-700 leading-relaxed">{suggestion}</span>
                                 </div>
                               )}
                             </div>
