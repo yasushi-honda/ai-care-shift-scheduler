@@ -5,7 +5,6 @@
  * TDD: RED -> GREEN -> REFACTOR
  */
 
-import { describe, it, expect, beforeEach } from 'vitest';
 import { DiagnosisService } from '../../src/diagnosis/diagnosisService';
 import {
   Staff,

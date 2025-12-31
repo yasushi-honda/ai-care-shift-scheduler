@@ -266,7 +266,7 @@ export function DiagnosisPanel({
 
       {/* 詳細コンテンツ（展開時のみ表示） */}
       {isExpanded && (
-        <div className="border-t border-gray-200 bg-white p-4 space-y-4">
+        <div className="border-t border-gray-200 bg-white p-4 space-y-4 max-h-96 overflow-y-auto">
           {/* 警告あっても実行可能メッセージ */}
           {status === 'warning' && (
             <div className="text-sm text-gray-600 bg-gray-50 p-2 rounded">

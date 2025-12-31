@@ -5,11 +5,9 @@
  * TDD RED: 型定義が正しく動作することを検証
  */
 
-import { describe, it, expect } from 'vitest';
 import {
   DiagnosisStatus,
   DiagnosisResult,
-  SupplyDemandBalance,
   TimeSlotBalance,
   DiagnosisIssue,
   DiagnosisSuggestion,

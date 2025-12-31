@@ -5,7 +5,6 @@
  * TDD: RED -> GREEN -> REFACTOR
  */
 
-import { describe, it, expect } from 'vitest';
 import {
   analyzeRootCauses,
   RootCauseAnalysisInput,
@@ -14,7 +13,6 @@ import {
   Staff,
   ShiftRequirement,
   ConstraintViolation,
-  StaffSchedule,
   LeaveRequest,
   TimeSlotPreference,
   Role,
