@@ -406,7 +406,7 @@ function ScoreBar({ score }: { score: number }) {
 
 /**
  * 制約違反セクション
- * フラット構造: 親パネル展開時に全件表示、レベル別→タイプ別グループ化
+ * 3階層グループ化: レベル → タイプ → シフト種別
  */
 function ViolationsSection({ violations }: { violations: ConstraintViolation[] }) {
   // 違反タイプの日本語ラベル
@@ -418,69 +418,49 @@ function ViolationsSection({ violations }: { violations: ConstraintViolation[] }
     leaveRequestIgnored: '休暇申請無視',
   };
 
-  // レベル別 → タイプ別にグループ化
-  const groupedByLevelAndType = violations.reduce(
+  // シフト種別を抽出
+  const extractShiftType = (description: string): string => {
+    if (description.includes('早番')) return '早番';
+    if (description.includes('遅番')) return '遅番';
+    if (description.includes('夜勤')) return '夜勤';
+    if (description.includes('日勤')) return '日勤';
+    return 'その他';
+  };
+
+  // 日付を抽出してDate対象に変換
+  const extractDate = (v: ConstraintViolation): string | null => {
+    if (v.affectedDates?.length) return v.affectedDates[0];
+    const match = v.description?.match(/(\d{4}-\d{2}-\d{2})/);
+    return match ? match[1] : null;
+  };
+
+  // 日付をM/D（曜）形式で表示
+  const formatDateWithDay = (dateStr: string): string => {
+    const match = dateStr.match(/(\d{4})-(\d{2})-(\d{2})/);
+    if (!match) return dateStr;
+    const date = new Date(parseInt(match[1]), parseInt(match[2]) - 1, parseInt(match[3]));
+    const days = ['日', '月', '火', '水', '木', '金', '土'];
+    return `${parseInt(match[2])}/${parseInt(match[3])}(${days[date.getDay()]})`;
+  };
+
+  // 3階層グループ化: レベル → タイプ → シフト種別
+  const groupedData = violations.reduce(
     (acc, v) => {
       const level = getViolationLevel(v);
       const type = v.type || 'other';
+      const shiftType = extractShiftType(v.description || '');
+
       if (!acc[level]) acc[level] = {};
-      if (!acc[level][type]) acc[level][type] = [];
-      acc[level][type].push(v);
+      if (!acc[level][type]) acc[level][type] = {};
+      if (!acc[level][type][shiftType]) acc[level][type][shiftType] = [];
+      acc[level][type][shiftType].push(v);
       return acc;
     },
-    {} as Record<number, Record<string, ConstraintViolation[]>>
+    {} as Record<number, Record<string, Record<string, ConstraintViolation[]>>>
   );
 
   // 存在するレベルのみ（重要度順）
-  const levels = [1, 2, 3, 4].filter(level => groupedByLevelAndType[level]);
-
-  // 日付を短縮形式で表示（MM/DD）
-  const formatDateShort = (dateStr: string) => {
-    const match = dateStr.match(/(\d{4})-(\d{2})-(\d{2})/);
-    if (match) {
-      return `${parseInt(match[2])}/${parseInt(match[3])}`;
-    }
-    return dateStr;
-  };
-
-  // 違反から日付を抽出
-  const extractDates = (violationList: ConstraintViolation[]): string[] => {
-    const dates: string[] = [];
-    violationList.forEach(v => {
-      // affectedDatesから
-      if (v.affectedDates?.length) {
-        dates.push(...v.affectedDates);
-      }
-      // descriptionから日付を抽出
-      const match = v.description?.match(/(\d{4}-\d{2}-\d{2})/);
-      if (match && !dates.includes(match[1])) {
-        dates.push(match[1]);
-      }
-    });
-    // 重複除去してソート
-    return [...new Set(dates)].sort();
-  };
-
-  // 違反からスタッフを抽出
-  const extractStaff = (violationList: ConstraintViolation[]): string[] => {
-    const staff: string[] = [];
-    violationList.forEach(v => {
-      if (v.affectedStaff?.length) {
-        staff.push(...v.affectedStaff);
-      }
-    });
-    return [...new Set(staff)];
-  };
-
-  // 共通の提案を取得
-  const getCommonSuggestion = (violationList: ConstraintViolation[]): string | null => {
-    const suggestions = violationList.map(v => v.suggestion).filter(Boolean);
-    if (suggestions.length === 0) return null;
-    // 全て同じ提案なら1つだけ表示
-    const uniqueSuggestions = [...new Set(suggestions)];
-    if (uniqueSuggestions.length === 1) return uniqueSuggestions[0] || null;
-    return null;
-  };
+  const levels = [1, 2, 3, 4].filter(level => groupedData[level]);
 
   return (
     <div className="mt-4">
@@ -492,7 +472,7 @@ function ViolationsSection({ violations }: { violations: ConstraintViolation[] }
       </h4>
 
       {/* レベル1がない場合のポジティブメッセージ */}
-      {!groupedByLevelAndType[1] && (
+      {!groupedData[1] && (
         <div className="mb-3 text-xs px-3 py-2 rounded bg-green-50 text-green-700 border border-green-200">
           ✅ 労基法違反（絶対必須）はありません
         </div>
@@ -502,99 +482,96 @@ function ViolationsSection({ violations }: { violations: ConstraintViolation[] }
       <div className="space-y-4">
         {levels.map((level) => {
           const config = LEVEL_UI_CONFIG[level as ConstraintLevel];
-          const typeGroups = groupedByLevelAndType[level];
-          const totalCount = Object.values(typeGroups).reduce((sum, arr) => sum + arr.length, 0);
+          const typeGroups = groupedData[level];
+          const totalCount = Object.values(typeGroups).reduce(
+            (sum, shiftGroups) => sum + Object.values(shiftGroups).reduce((s, arr) => s + arr.length, 0),
+            0
+          );
 
           return (
             <div key={level}>
               {/* レベルヘッダー */}
-              <div className={`text-xs font-medium px-2 py-1 rounded-t ${config.bgColor} ${config.color} border-b ${config.borderColor}`}>
+              <div className={`text-xs font-medium px-3 py-1.5 rounded-t ${config.bgColor} ${config.color}`}>
                 {config.icon} {config.label}（{totalCount}件）
               </div>
 
               {/* タイプ別グループ */}
-              <div className={`border-l-4 ${config.borderColor} bg-white`}>
-                {Object.entries(typeGroups).map(([type, typeViolations], typeIndex) => {
-                  const dates = extractDates(typeViolations);
-                  const staff = extractStaff(typeViolations);
-                  const commonSuggestion = getCommonSuggestion(typeViolations);
+              <div className={`border-l-4 ${config.borderColor} bg-white rounded-b`}>
+                {Object.entries(typeGroups).map(([type, shiftGroups], typeIndex) => {
+                  const typeCount = Object.values(shiftGroups).reduce((s, arr) => s + arr.length, 0);
                   const isLastType = typeIndex === Object.keys(typeGroups).length - 1;
 
-                  // 同種違反が複数ある場合はグループ化表示
-                  if (typeViolations.length > 1 && commonSuggestion) {
-                    return (
-                      <div key={type} className={`p-3 ${!isLastType ? 'border-b border-gray-100' : ''}`}>
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className={`text-xs font-medium px-1.5 py-0.5 rounded ${config.bgColor} ${config.color}`}>
-                            {violationTypeLabels[type] || type}
-                          </span>
-                          <span className="text-xs text-gray-500">
-                            {typeViolations.length}件
-                          </span>
-                        </div>
-
-                        {/* 該当日付（チップスタイル） */}
-                        {dates.length > 0 && (
-                          <div className="mt-2">
-                            <span className="text-xs text-gray-500 mr-2">該当日:</span>
-                            <div className="inline-flex flex-wrap gap-1 mt-1">
-                              {dates.map((d, i) => (
-                                <span
-                                  key={i}
-                                  className="text-xs px-2 py-0.5 bg-gray-100 text-gray-700 rounded"
-                                >
-                                  {formatDateShort(d)}
-                                </span>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-
-                        {/* 該当スタッフ */}
-                        {staff.length > 0 && (
-                          <div className="mt-1 text-xs text-gray-500">
-                            対象: {staff.join(', ')}
-                          </div>
-                        )}
-
-                        {/* 共通の提案 */}
-                        <p className="mt-2 text-xs text-blue-600 bg-blue-50 p-2 rounded">
-                          💡 {commonSuggestion}
-                        </p>
-                      </div>
-                    );
-                  }
-
-                  // 個別表示（異なる提案がある場合や1件のみの場合）
                   return (
-                    <div key={type}>
-                      {typeViolations.map((violation, index) => (
-                        <div
-                          key={index}
-                          className={`p-3 ${!(isLastType && index === typeViolations.length - 1) ? 'border-b border-gray-100' : ''}`}
-                        >
-                          <div className="flex items-start gap-2">
-                            <span className={`text-xs font-medium px-1.5 py-0.5 rounded ${config.bgColor} ${config.color} flex-shrink-0`}>
-                              {violationTypeLabels[violation.type] || violation.type}
-                            </span>
-                          </div>
-                          <p className="mt-1 text-sm text-gray-700">{violation.description}</p>
+                    <div key={type} className={`${!isLastType ? 'border-b border-gray-100' : ''}`}>
+                      {/* タイプヘッダー */}
+                      <div className="px-3 py-2 bg-gray-50 flex items-center gap-2">
+                        <span className={`text-xs font-medium px-1.5 py-0.5 rounded ${config.bgColor} ${config.color}`}>
+                          {violationTypeLabels[type] || type}
+                        </span>
+                        <span className="text-xs text-gray-500">{typeCount}件</span>
+                      </div>
 
-                          {/* 影響スタッフ */}
-                          {violation.affectedStaff?.length ? (
-                            <div className="mt-1.5 text-xs text-gray-500">
-                              対象: {violation.affectedStaff.join(', ')}
+                      {/* シフト種別サブグループ */}
+                      <div className="px-3 pb-2">
+                        {Object.entries(shiftGroups).map(([shiftType, shiftViolations], shiftIndex) => {
+                          // 日付を抽出してソート
+                          const dates = shiftViolations
+                            .map(v => extractDate(v))
+                            .filter((d): d is string => d !== null)
+                            .sort();
+                          const uniqueDates = [...new Set(dates)];
+
+                          // スタッフを抽出
+                          const staff = [...new Set(
+                            shiftViolations.flatMap(v => v.affectedStaff || [])
+                          )];
+
+                          // 提案（最初のものを使用）
+                          const suggestion = shiftViolations[0]?.suggestion;
+
+                          const isLastShift = shiftIndex === Object.keys(shiftGroups).length - 1;
+
+                          return (
+                            <div
+                              key={shiftType}
+                              className={`py-2 ${!isLastShift ? 'border-b border-gray-50' : ''}`}
+                            >
+                              {/* シフト種別 + 日付チップ */}
+                              <div className="flex items-start gap-2">
+                                <span className="text-xs font-medium text-gray-600 w-10 flex-shrink-0 pt-0.5">
+                                  {shiftType}:
+                                </span>
+                                <div className="flex flex-wrap gap-1">
+                                  {uniqueDates.map((d, i) => (
+                                    <span
+                                      key={i}
+                                      className="text-xs px-2 py-0.5 bg-gray-100 text-gray-700 rounded"
+                                    >
+                                      {formatDateWithDay(d)}
+                                    </span>
+                                  ))}
+                                </div>
+                              </div>
+
+                              {/* スタッフ（連勤超過など、人が関係する場合） */}
+                              {staff.length > 0 && (
+                                <div className="mt-1 ml-12 text-xs text-gray-500">
+                                  対象: {staff.join(', ')}
+                                </div>
+                              )}
+
+                              {/* 提案 */}
+                              {suggestion && (
+                                <div className="mt-1.5 ml-12">
+                                  <span className="text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded inline-block">
+                                    💡 {suggestion}
+                                  </span>
+                                </div>
+                              )}
                             </div>
-                          ) : null}
-
-                          {/* 提案 */}
-                          {violation.suggestion && (
-                            <p className="mt-2 text-xs text-blue-600 bg-blue-50 p-2 rounded">
-                              💡 {violation.suggestion}
-                            </p>
-                          )}
-                        </div>
-                      ))}
+                          );
+                        })}
+                      </div>
                     </div>
                   );
                 })}
