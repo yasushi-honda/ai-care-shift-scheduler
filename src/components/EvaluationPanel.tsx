@@ -406,17 +406,9 @@ function ScoreBar({ score }: { score: number }) {
 
 /**
  * 制約違反セクション
- * Phase 53: レベル別色分け表示を追加
+ * フラット構造: 親パネル展開時に全件表示、レベル別グループ化
  */
 function ViolationsSection({ violations }: { violations: ConstraintViolation[] }) {
-  const [showAll, setShowAll] = useState(false);
-
-  // Phase 53: レベル順（重要度高い順）にソート
-  const sortedViolations = [...violations].sort((a, b) => {
-    return getViolationLevel(a) - getViolationLevel(b);
-  });
-  const displayViolations = showAll ? sortedViolations : sortedViolations.slice(0, 3);
-
   // 違反タイプの日本語ラベル
   const violationTypeLabels: Record<string, string> = {
     staffShortage: '人員不足',
@@ -426,120 +418,88 @@ function ViolationsSection({ violations }: { violations: ConstraintViolation[] }
     leaveRequestIgnored: '休暇申請無視',
   };
 
-  // Phase 53: レベル別カウント
-  const levelCounts = sortedViolations.reduce(
+  // レベル別にグループ化
+  const groupedByLevel = violations.reduce(
     (acc, v) => {
       const level = getViolationLevel(v);
-      acc[level] = (acc[level] || 0) + 1;
+      if (!acc[level]) acc[level] = [];
+      acc[level].push(v);
       return acc;
     },
-    {} as Record<number, number>
+    {} as Record<number, ConstraintViolation[]>
   );
+
+  // 存在するレベルのみ（重要度順）
+  const levels = [1, 2, 3, 4].filter(level => groupedByLevel[level]?.length > 0);
 
   return (
     <div className="mt-4">
-      <h4 className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
+      <h4 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
         <svg className="w-4 h-4 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
         </svg>
         制約違反 ({violations.length}件)
       </h4>
 
-      {/* Phase 53: レベル別サマリー */}
-      <div className="mb-2 flex flex-wrap gap-2">
-        {[1, 2, 3, 4].map((level) => {
-          const count = levelCounts[level] || 0;
-          if (count === 0) return null;
-          const config = LEVEL_UI_CONFIG[level as ConstraintLevel];
-          return (
-            <span
-              key={level}
-              className={`text-xs px-2 py-0.5 rounded ${config.bgColor} ${config.color}`}
-            >
-              {config.icon} {config.label}: {count}件
-            </span>
-          );
-        })}
-        {!levelCounts[1] && (
-          <span className="text-xs px-2 py-0.5 rounded bg-green-50 text-green-700">
-            ✅ 必須条件をすべて満たしています
-          </span>
-        )}
-      </div>
+      {/* レベル1がない場合のポジティブメッセージ */}
+      {!groupedByLevel[1] && (
+        <div className="mb-3 text-xs px-3 py-2 rounded bg-green-50 text-green-700 border border-green-200">
+          ✅ 労基法違反（絶対必須）はありません
+        </div>
+      )}
 
-      {/* 違反リスト */}
-      <ul className="space-y-2">
-        {displayViolations.map((violation, index) => {
-          const level = getViolationLevel(violation);
-          const config = LEVEL_UI_CONFIG[level];
+      {/* レベル別グループ表示 */}
+      <div className="space-y-4">
+        {levels.map((level) => {
+          const config = LEVEL_UI_CONFIG[level as ConstraintLevel];
+          const levelViolations = groupedByLevel[level];
+
           return (
-            <li
-              key={index}
-              className={`p-3 rounded-lg border-l-4 ${config.bgColor} ${config.borderColor}`}
-            >
-              <div className="flex items-start justify-between">
-                <div>
-                  {/* Phase 53: レベルバッジ */}
-                  <span className={`text-xs font-medium px-1.5 py-0.5 rounded mr-1 ${config.bgColor} ${config.color}`}>
-                    {config.labelShort}
-                  </span>
-                  <span className={`text-xs font-medium px-1.5 py-0.5 rounded ${config.bgColor} ${config.color}`}>
-                    {violationTypeLabels[violation.type] || violation.type}
-                  </span>
-                  <p className="mt-1 text-sm text-gray-700">{violation.description}</p>
-                </div>
+            <div key={level}>
+              {/* レベルヘッダー */}
+              <div className={`text-xs font-medium px-2 py-1 rounded-t ${config.bgColor} ${config.color} border-b ${config.borderColor}`}>
+                {config.icon} {config.label}（{levelViolations.length}件）
               </div>
 
-              {/* 影響スタッフ・日付 */}
-              {(violation.affectedStaff?.length || violation.affectedDates?.length) && (
-                <div className="mt-2 text-xs text-gray-500">
-                  {violation.affectedStaff?.length ? (
-                    <span className="mr-3">対象: {violation.affectedStaff.join(', ')}</span>
-                  ) : null}
-                  {violation.affectedDates?.length ? (
-                    <span>日付: {violation.affectedDates.slice(0, 3).join(', ')}{violation.affectedDates.length > 3 ? `他${violation.affectedDates.length - 3}日` : ''}</span>
-                  ) : null}
-                </div>
-              )}
+              {/* 違反リスト */}
+              <ul className={`border-l-4 ${config.borderColor} bg-white`}>
+                {levelViolations.map((violation, index) => (
+                  <li
+                    key={index}
+                    className={`p-3 ${index < levelViolations.length - 1 ? 'border-b border-gray-100' : ''}`}
+                  >
+                    <div className="flex items-start gap-2">
+                      <span className={`text-xs font-medium px-1.5 py-0.5 rounded ${config.bgColor} ${config.color} flex-shrink-0`}>
+                        {violationTypeLabels[violation.type] || violation.type}
+                      </span>
+                    </div>
+                    <p className="mt-1 text-sm text-gray-700">{violation.description}</p>
 
-              {/* 提案 */}
-              {violation.suggestion && (
-                <p className="mt-2 text-xs text-blue-600 bg-blue-50 p-2 rounded">
-                  💡 {violation.suggestion}
-                </p>
-              )}
-            </li>
+                    {/* 影響スタッフ・日付 */}
+                    {(violation.affectedStaff?.length || violation.affectedDates?.length) && (
+                      <div className="mt-1.5 text-xs text-gray-500">
+                        {violation.affectedStaff?.length ? (
+                          <span className="mr-3">対象: {violation.affectedStaff.join(', ')}</span>
+                        ) : null}
+                        {violation.affectedDates?.length ? (
+                          <span>日付: {violation.affectedDates.slice(0, 3).join(', ')}{violation.affectedDates.length > 3 ? ` 他${violation.affectedDates.length - 3}日` : ''}</span>
+                        ) : null}
+                      </div>
+                    )}
+
+                    {/* 提案 */}
+                    {violation.suggestion && (
+                      <p className="mt-2 text-xs text-blue-600 bg-blue-50 p-2 rounded">
+                        💡 {violation.suggestion}
+                      </p>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </div>
           );
         })}
-      </ul>
-
-      {/* 展開/閉じるボタン（下部） */}
-      {violations.length > 3 && (
-        <button
-          onClick={() => setShowAll(!showAll)}
-          className={`mt-3 w-full py-2.5 px-4 rounded-lg text-sm font-medium flex items-center justify-center gap-2 transition-all duration-200 ${
-            showAll
-              ? 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              : 'bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200'
-          }`}
-        >
-          {showAll ? (
-            <>
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
-              </svg>
-              閉じる
-            </>
-          ) : (
-            <>
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-              </svg>
-              他 {violations.length - 3} 件を表示
-            </>
-          )}
-        </button>
-      )}
+      </div>
     </div>
   );
 }
