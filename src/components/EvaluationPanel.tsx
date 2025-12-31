@@ -515,7 +515,11 @@ function ViolationsSection({ violations }: { violations: ConstraintViolation[] }
       {violations.length > 3 && (
         <button
           onClick={() => setShowAll(!showAll)}
-          className="mt-2 text-sm text-blue-600 hover:text-blue-700 flex items-center gap-1"
+          className={`mt-3 w-full py-2.5 px-4 rounded-lg text-sm font-medium flex items-center justify-center gap-2 transition-all duration-200 ${
+            showAll
+              ? 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              : 'bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200'
+          }`}
         >
           {showAll ? (
             <>
