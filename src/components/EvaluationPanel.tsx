@@ -465,8 +465,8 @@ function ViolationsSection({ violations }: { violations: ConstraintViolation[] }
         )}
       </div>
 
-      {/* 違反リスト（展開時はスクロール可能） */}
-      <ul className={`space-y-2 ${showAll ? 'max-h-96 overflow-y-auto pr-2' : ''}`}>
+      {/* 違反リスト */}
+      <ul className="space-y-2">
         {displayViolations.map((violation, index) => {
           const level = getViolationLevel(violation);
           const config = LEVEL_UI_CONFIG[level];
