@@ -300,7 +300,7 @@
           <div class="metric-label">目標充足率</div>
         </div>
         <div class="metric-card">
-          <div class="metric-value">Flash</div>
+          <div class="metric-value">2.5 Pro</div>
           <div class="metric-label">使用モデル</div>
         </div>
         <div class="metric-card">
@@ -356,7 +356,7 @@
           <div class="metric-label">制約違反</div>
         </div>
         <div class="metric-card">
-          <div class="metric-value">180秒</div>
+          <div class="metric-value">5-7分</div>
           <div class="metric-label">処理時間</div>
         </div>
         <div class="metric-card">
@@ -680,7 +680,7 @@ graph TB
           <tr>
             <td>Vertex AI</td>
             <td>AIシフト生成</td>
-            <td>Gemini 2.5 Pro</td>
+            <td>Gemini 2.5 Pro（thinking常時ON）</td>
           </tr>
           <tr>
             <td>Firestore</td>
@@ -802,8 +802,8 @@ sequenceDiagram
           </tr>
           <tr style="font-weight: bold;">
             <td colspan="2">合計</td>
-            <td>~3分</td>
-            <td>5-9回</td>
+            <td>5-7分</td>
+            <td>2-4回（BUG-022: gemini-2.5-pro）</td>
           </tr>
         </tbody>
       </table>
@@ -991,8 +991,8 @@ interface WeeklyShifts {
           <div class="metric-label">制約違反</div>
         </div>
         <div class="metric-card">
-          <div class="metric-value">5分</div>
-          <div class="metric-label">処理時間上限</div>
+          <div class="metric-value">9分</div>
+          <div class="metric-label">処理時間上限（540秒）</div>
         </div>
         <div class="metric-card">
           <div class="metric-value">150%</div>

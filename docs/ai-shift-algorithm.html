@@ -134,7 +134,7 @@
     </nav>
 
     <h1>AIシフト生成アルゴリズム</h1>
-    <p><span class="badge badge-info">最終更新: 2025-12-09</span> <span class="badge badge-success">Phase 53</span></p>
+    <p><span class="badge badge-info">最終更新: 2025-12-31</span> <span class="badge badge-success">Phase 53</span></p>
 
     <div class="toc">
         <strong>目次</strong>
@@ -201,10 +201,10 @@ flowchart LR
         <h3>技術スタック</h3>
         <table>
             <tr><th>コンポーネント</th><th>技術</th><th>備考</th></tr>
-            <tr><td>AI Model</td><td>Gemini 2.5 Pro</td><td>思考モード（thinkingConfig）対応</td></tr>
-            <tr><td>SDK</td><td>@google/genai</td><td>thinkingBudget: 16384</td></tr>
-            <tr><td>Region</td><td>asia-northeast1</td><td>東京リージョン</td></tr>
-            <tr><td>Runtime</td><td>Cloud Functions</td><td>Node.js 20, タイムアウト300秒</td></tr>
+            <tr><td>AI Model</td><td>Gemini 2.5 Pro</td><td>thinking常時ON（BUG-022対応）</td></tr>
+            <tr><td>SDK</td><td>@google/genai</td><td>maxOutputTokens: 65536</td></tr>
+            <tr><td>Region</td><td>asia-northeast1</td><td>東京リージョン（日本国内データ処理）</td></tr>
+            <tr><td>Runtime</td><td>Cloud Functions</td><td>Node.js 20, タイムアウト540秒</td></tr>
             <tr><td>リトライ</td><td>指数バックオフ</td><td>Phase 51で追加</td></tr>
         </table>
     </section>
@@ -685,9 +685,9 @@ timeline
             </tr>
             <tr>
                 <td>生成時間</td>
-                <td>3分以内</td>
                 <td>5分以内</td>
-                <td>Cloud Functionsログ</td>
+                <td>7分以内</td>
+                <td>gemini-2.5-pro thinking常時ON（BUG-022）</td>
             </tr>
         </table>
 
