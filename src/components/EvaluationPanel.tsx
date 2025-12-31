@@ -465,19 +465,6 @@ function ViolationsSection({ violations }: { violations: ConstraintViolation[] }
         )}
       </div>
 
-      {/* 展開時の閉じるボタン（上部） */}
-      {showAll && violations.length > 3 && (
-        <button
-          onClick={() => setShowAll(false)}
-          className="mb-2 text-sm text-blue-600 hover:text-blue-700 flex items-center gap-1"
-        >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
-          </svg>
-          閉じる
-        </button>
-      )}
-
       {/* 違反リスト（展開時はスクロール可能） */}
       <ul className={`space-y-2 ${showAll ? 'max-h-96 overflow-y-auto pr-2' : ''}`}>
         {displayViolations.map((violation, index) => {
