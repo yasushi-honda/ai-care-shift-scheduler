@@ -350,11 +350,17 @@ function SummarySection({
 }) {
   return (
     <div className="mt-4 grid grid-cols-2 md:grid-cols-4 gap-4">
-      {/* 総合スコア */}
+      {/* 総合スコア - 低スコア時は「要調整」表示でパニック防止 */}
       <div className="bg-gray-50 rounded-lg p-3 text-center">
         <div className="text-xs text-gray-500 mb-1">総合スコア</div>
-        <div className="text-2xl font-bold text-gray-800">{overallScore}<span className="text-sm font-normal">/100</span></div>
-        <ScoreBar score={overallScore} />
+        {overallScore === 0 ? (
+          <div className="text-lg font-bold text-orange-600">要調整</div>
+        ) : (
+          <div className={`text-2xl font-bold ${overallScore < 60 ? 'text-orange-600' : 'text-gray-800'}`}>
+            {overallScore}<span className="text-sm font-normal">/100</span>
+          </div>
+        )}
+        {overallScore > 0 && <ScoreBar score={overallScore} />}
       </div>
 
       {/* 充足率 */}
@@ -636,10 +642,10 @@ function RecommendationsSection({ recommendations }: { recommendations: Recommen
     return priority[a.priority] - priority[b.priority];
   });
 
-  const priorityStyles: Record<string, { bg: string; text: string; icon: string }> = {
-    high: { bg: 'bg-red-50', text: 'text-red-700', icon: '🔴' },
-    medium: { bg: 'bg-yellow-50', text: 'text-yellow-700', icon: '🟡' },
-    low: { bg: 'bg-blue-50', text: 'text-blue-700', icon: '🔵' },
+  const priorityStyles: Record<string, { bg: string; text: string; icon: string; label: string }> = {
+    high: { bg: 'bg-red-50', text: 'text-red-700', icon: '🔴', label: 'まず対応' },
+    medium: { bg: 'bg-yellow-50', text: 'text-yellow-700', icon: '🟡', label: '次に検討' },
+    low: { bg: 'bg-blue-50', text: 'text-blue-700', icon: '🔵', label: '参考' },
   };
 
   return (
@@ -654,16 +660,26 @@ function RecommendationsSection({ recommendations }: { recommendations: Recommen
       <ul className="space-y-2">
         {sortedRecommendations.map((rec, index) => {
           const style = priorityStyles[rec.priority] || priorityStyles.low;
+          // "general" を "全体" に変換
+          const displayCategory = rec.category === 'general' ? '全体' : rec.category;
           return (
             <li key={index} className={`p-3 rounded-lg ${style.bg}`}>
               <div className="flex items-start gap-2">
                 <span>{style.icon}</span>
                 <div className="flex-1">
-                  <span className={`text-xs font-medium ${style.text}`}>{rec.category}</span>
-                  <p className="text-sm text-gray-700 mt-1">{rec.description}</p>
-                  <p className="text-xs text-gray-600 mt-1">
-                    <span className="font-medium">アクション:</span> {rec.action}
-                  </p>
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className={`text-xs font-bold ${style.text} px-1.5 py-0.5 rounded ${style.bg} border ${style.text.replace('text-', 'border-')}`}>
+                      {style.label}
+                    </span>
+                    <span className={`text-xs font-medium ${style.text}`}>{displayCategory}</span>
+                  </div>
+                  <p className="text-sm text-gray-700">{rec.description}</p>
+                  {/* アクションが空の場合は非表示 */}
+                  {rec.action && rec.action.trim() !== '' && (
+                    <p className="text-xs text-gray-600 mt-1">
+                      <span className="font-medium">アクション:</span> {rec.action}
+                    </p>
+                  )}
                 </div>
               </div>
             </li>
