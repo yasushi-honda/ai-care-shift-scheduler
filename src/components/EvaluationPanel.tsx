@@ -327,9 +327,12 @@ function ScoreBadge({ score }: { score: number }) {
     textColor = 'text-yellow-700';
   }
 
+  // 0点の場合は「要調整」と表示してパニック防止
+  const displayText = score === 0 ? '要調整' : `${score}点`;
+
   return (
     <span className={`px-2 py-1 text-sm font-bold ${bgColor} ${textColor} rounded`}>
-      {score}点
+      {displayText}
     </span>
   );
 }
