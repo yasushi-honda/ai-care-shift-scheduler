@@ -100,9 +100,9 @@ direnv allow
 git checkout -b feature/new-feature
 # ... 開発 ...
 git commit -m "feat: 新機能実装"
-coderabbit review --plain --base-commit HEAD~1 --config CLAUDE.md  # 必須
 git push origin feature/new-feature
 gh pr create --title "..." --body "..."
+# → CodeRabbitがPR作成時に自動レビュー（GitHub連携）
 ```
 
 詳細: [development-workflow.md](.kiro/steering/development-workflow.md)
@@ -115,11 +115,11 @@ gh pr create --title "..." --body "..."
 
 ### 必須チェック
 
-| # | 項目 | コマンド |
+| # | 項目 | 実行方法 |
 |---|------|---------|
 | 1 | 型チェック | `cd functions && npx tsc --noEmit` |
 | 2 | AIプロンプト変更時 | [ai-prompt-design-checklist.md](.kiro/ai-prompt-design-checklist.md) |
-| 3 | CodeRabbitレビュー | `coderabbit review --plain --base-commit HEAD~1` |
+| 3 | CodeRabbitレビュー | PR作成時に自動実行（GitHub連携） |
 
 詳細: [pre-implementation-test-checklist.md](.kiro/pre-implementation-test-checklist.md)
 
@@ -128,16 +128,22 @@ gh pr create --title "..." --body "..."
 ## CI/CD Workflow
 
 ```bash
-# 1. コード変更 → コミット
+# 1. featureブランチ作成
+git checkout -b feature/xxx
+
+# 2. コード変更 → コミット
 git add . && git commit -m "..."
 
-# 2. CodeRabbitレビュー（必須・スキップ禁止）
-coderabbit review --plain --base-commit HEAD~1 --config CLAUDE.md
+# 3. push → PR作成
+git push -u origin feature/xxx
+gh pr create --title "..." --body "..."
+# → CodeRabbit自動レビュー + GitHub Actions CI実行
 
-# 3. push → GitHub Actions自動実行
-git push
+# 4. CI確認 → マージ
+gh run list --limit 1
+gh pr merge --squash  # CI通過後
 
-# 4. 実行状況確認
+# 5. デプロイ確認
 gh run list --limit 1
 ```
 
