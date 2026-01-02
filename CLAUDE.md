@@ -139,12 +139,21 @@ git push -u origin feature/xxx
 gh pr create --title "..." --body "..."
 # → CodeRabbit自動レビュー + GitHub Actions CI実行
 
-# 4. CI確認 → マージ
+# 4. CI確認 + Claudeレビュー
 gh run list --limit 1
-gh pr merge --squash  # CI通過後
+gh pr diff <PR番号>  # 差分確認してレビュー
 
-# 5. デプロイ確認
-gh run list --limit 1
+# 5. マージ → デプロイ
+gh pr merge --squash  # CI通過 + レビューOK後
+gh run list --limit 1  # デプロイ確認
+```
+
+### Claudeレビュー（マージ前）
+
+大規模変更時はClaudeでレビューを実施：
+
+```bash
+gh pr diff <PR番号>  # 差分を確認してレビュー依頼
 ```
 
 **Firebase CLI認証エラー時**: GitHub Actions CI/CDに即座に切り替える
