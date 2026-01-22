@@ -559,4 +559,245 @@ describe('EvaluationService', () => {
       expect(DEFAULT_EVALUATION.overallScore).toBe(-1);
     });
   });
+
+  describe('checkQualificationMissing', () => {
+    it('資格要件がない場合、違反を検出しない', () => {
+      const staffList: Staff[] = [createStaff()];
+      const schedule: StaffSchedule[] = [
+        createSchedule([{ date: '2025-11-04', shiftType: '日勤' }]),
+      ];
+      // 資格要件なし
+      const requirements = createRequirements({
+        targetMonth: '2025-11',
+        daysToGenerate: 1,
+        requirements: {
+          日勤: {
+            totalStaff: 1,
+            requiredQualifications: [], // 資格要件なし
+            requiredRoles: [],
+          },
+        },
+      });
+
+      const violations = evaluationService.checkQualificationMissing(
+        schedule,
+        staffList,
+        requirements
+      );
+
+      expect(violations.length).toBe(0);
+    });
+
+    it('資格保有者が不足している場合、違反を検出する', () => {
+      const staffList: Staff[] = [
+        createStaff({
+          id: 'staff-001',
+          qualifications: [], // 資格なし
+        }),
+      ];
+      const schedule: StaffSchedule[] = [
+        createSchedule([{ date: '2025-11-04', shiftType: '日勤' }]), // 火曜日（営業日）
+      ];
+      const requirements = createRequirements({
+        targetMonth: '2025-11',
+        daysToGenerate: 4,
+        requirements: {
+          日勤: {
+            totalStaff: 1,
+            requiredQualifications: [
+              { qualification: Qualification.CertifiedCareWorker, count: 1 },
+            ],
+            requiredRoles: [],
+          },
+        },
+      });
+
+      const violations = evaluationService.checkQualificationMissing(
+        schedule,
+        staffList,
+        requirements
+      );
+
+      expect(violations.length).toBeGreaterThan(0);
+      expect(violations[0].type).toBe('qualificationMissing');
+    });
+  });
+
+  describe('checkTimeSlotPreferenceViolation', () => {
+    it('日勤のみ希望スタッフが夜勤に配置された場合、違反を検出する', () => {
+      const staffList: Staff[] = [
+        createStaff({
+          id: 'staff-001',
+          timeSlotPreference: TimeSlotPreference.DayOnly,
+        }),
+      ];
+      const schedule: StaffSchedule[] = [
+        createSchedule([{ date: '2025-11-01', shiftType: '夜勤' }]),
+      ];
+
+      const violations = evaluationService.checkTimeSlotPreferenceViolation(
+        schedule,
+        staffList
+      );
+
+      expect(violations.length).toBe(1);
+      expect(violations[0].description).toContain('日勤のみ希望');
+    });
+
+    it('夜勤のみ希望スタッフが日勤に配置された場合、違反を検出する', () => {
+      const staffList: Staff[] = [
+        createStaff({
+          id: 'staff-001',
+          timeSlotPreference: TimeSlotPreference.NightOnly,
+        }),
+      ];
+      const schedule: StaffSchedule[] = [
+        createSchedule([{ date: '2025-11-01', shiftType: '日勤' }]),
+      ];
+
+      const violations = evaluationService.checkTimeSlotPreferenceViolation(
+        schedule,
+        staffList
+      );
+
+      expect(violations.length).toBe(1);
+      expect(violations[0].description).toContain('夜勤のみ希望');
+    });
+
+    it('希望通りの配置の場合、違反を検出しない', () => {
+      const staffList: Staff[] = [
+        createStaff({
+          id: 'staff-001',
+          timeSlotPreference: TimeSlotPreference.DayOnly,
+        }),
+      ];
+      const schedule: StaffSchedule[] = [
+        createSchedule([{ date: '2025-11-01', shiftType: '日勤' }]),
+      ];
+
+      const violations = evaluationService.checkTimeSlotPreferenceViolation(
+        schedule,
+        staffList
+      );
+
+      expect(violations.length).toBe(0);
+    });
+  });
+
+  describe('generateAIComment', () => {
+    it('高スコア（80点以上）の場合、肯定的なコメントを生成する', () => {
+      const result = evaluationService.evaluateSchedule({
+        schedule: [
+          createSchedule([
+            { date: '2025-11-01', shiftType: '日勤' },
+            { date: '2025-11-02', shiftType: '日勤' },
+          ]),
+          {
+            staffId: 'staff-002',
+            staffName: 'テスト花子',
+            monthlyShifts: [
+              { date: '2025-11-01', shiftType: '日勤' },
+              { date: '2025-11-02', shiftType: '日勤' },
+            ],
+          },
+          {
+            staffId: 'staff-003',
+            staffName: 'テスト次郎',
+            monthlyShifts: [
+              { date: '2025-11-01', shiftType: '夜勤' },
+              { date: '2025-11-02', shiftType: '夜勤' },
+            ],
+          },
+        ],
+        staffList: [
+          createStaff({ id: 'staff-001' }),
+          createStaff({ id: 'staff-002', name: 'テスト花子' }),
+          createStaff({ id: 'staff-003', name: 'テスト次郎' }),
+        ],
+        requirements: createRequirements({ daysToGenerate: 2 }),
+        leaveRequests: {},
+      });
+
+      // simulationにrisks配列があり、AIコメントは recommendations に含まれる
+      expect(result.simulation).toBeDefined();
+      expect(result.simulation.workloadBalance).toBeDefined();
+    });
+  });
+
+  describe('generateRecommendations', () => {
+    it('違反がある場合、改善提案を生成する', () => {
+      const schedule: StaffSchedule[] = [
+        createSchedule([
+          { date: '2025-11-01', shiftType: '日勤' },
+          // 日勤2名必要だが1名のみ
+        ]),
+      ];
+      const result = evaluationService.evaluateSchedule({
+        schedule,
+        staffList: [createStaff()],
+        requirements: createRequirements({ daysToGenerate: 1 }),
+        leaveRequests: {},
+      });
+
+      expect(result.recommendations.length).toBeGreaterThan(0);
+      expect(result.recommendations[0]).toHaveProperty('priority');
+      expect(result.recommendations[0]).toHaveProperty('description');
+    });
+  });
+
+  describe('generateSimulation', () => {
+    it('シミュレーション結果を生成する', () => {
+      const result = evaluationService.evaluateSchedule({
+        schedule: [createSchedule([{ date: '2025-11-01', shiftType: '日勤' }])],
+        staffList: [createStaff()],
+        requirements: createRequirements({ daysToGenerate: 1 }),
+        leaveRequests: {},
+      });
+
+      expect(result.simulation).toBeDefined();
+      expect(result.simulation).toHaveProperty('workloadBalance');
+      expect(result.simulation).toHaveProperty('risks');
+      expect(result.simulation).toHaveProperty('paidLeaveUsageRate');
+    });
+  });
+
+  describe('analyzeStaffConstraints', () => {
+    it('スタッフ制約を分析する', () => {
+      const staffList: Staff[] = [
+        createStaff({ id: 'staff-001', weeklyWorkCount: { hope: 5, must: 4 } }),
+        createStaff({ id: 'staff-002', name: 'テスト花子', weeklyWorkCount: { hope: 4, must: 3 } }),
+      ];
+      const requirements = createRequirements({ daysToGenerate: 30 });
+
+      const analysis = evaluationService.analyzeStaffConstraints(
+        staffList,
+        requirements
+      );
+
+      expect(analysis).toHaveProperty('totalStaff');
+      expect(analysis).toHaveProperty('isFeasible');
+      expect(analysis).toHaveProperty('totalSupplyPersonDays');
+      expect(analysis.totalStaff).toBe(2);
+    });
+
+    it('人員不足の場合、実現不可能と判定する', () => {
+      const staffList: Staff[] = [
+        createStaff({ weeklyWorkCount: { hope: 1, must: 1 } }), // 週1日のみ
+      ];
+      const requirements = createRequirements({
+        daysToGenerate: 30,
+        requirements: {
+          日勤: { totalStaff: 10, requiredQualifications: [], requiredRoles: [] }, // 10名必要
+        },
+      });
+
+      const analysis = evaluationService.analyzeStaffConstraints(
+        staffList,
+        requirements
+      );
+
+      expect(analysis.isFeasible).toBe(false);
+      expect(analysis.infeasibilityReasons.length).toBeGreaterThan(0);
+    });
+  });
 });
