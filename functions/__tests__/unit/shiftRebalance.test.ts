@@ -4,7 +4,6 @@
  * テスト対象:
  * - getDailyShiftCount: 日別シフト集計
  * - countViolations: 違反カウント
- * - findBestStaffToSwap: スワップ候補選定
  * - formatRebalanceLog: ログフォーマット
  */
 
