@@ -10,6 +10,7 @@
 | 開発環境を構築したい | [`README.md`](../README.md) - セットアップセクション |
 | テストを実行したい | [`README.md`](../README.md) - テストセクション |
 | デプロイしたい | [`.github/workflows/ci.yml`](../.github/workflows/ci.yml) |
+| 設計決定を確認したい | [`docs/adr/`](../docs/adr/README.md) |
 
 ---
 
@@ -22,6 +23,21 @@
 | [`steering/product.md`](steering/product.md) | プロダクトビジョン、ビジネス要件 |
 | [`steering/tech.md`](steering/tech.md) | 技術スタック、アーキテクチャ決定 |
 | [`steering/structure.md`](steering/structure.md) | ファイル構造、コーディング規約 |
+| [`steering/gemini-rules.md`](steering/gemini-rules.md) | Gemini API設定ルール（最重要） |
+| [`steering/permission-rules.md`](steering/permission-rules.md) | 権限管理ルール |
+| [`steering/implementation-log-index.md`](steering/implementation-log-index.md) | 実装ログ目次 |
+
+---
+
+## 📐 Architecture Decision Records (ADR)
+
+重要な設計判断の記録
+
+| ADR | タイトル | ステータス |
+|-----|---------|----------|
+| [0001](../docs/adr/0001-gemini-sdk-and-config.md) | Gemini SDK選択と設定ルール | 採用 |
+| [0002](../docs/adr/0002-permission-dual-sync.md) | 権限データの双方向同期構造 | 採用 |
+| [0003](../docs/adr/0003-constraint-checkers-extraction.md) | 制約チェッカーの責務分離 | 採用 |
 
 ---
 
@@ -127,7 +143,7 @@ Infrastructure
 |---------|------|
 | **フロントエンド** | React 19, TypeScript 5.8, Vite 6 |
 | **バックエンド** | Node.js 20, Cloud Functions Gen 2 |
-| **AI** | Vertex AI Gemini 2.5 Flash-Lite（us-central1） |
+| **AI** | Vertex AI Gemini 2.5 Pro（asia-northeast1） |
 | **データベース** | Firestore |
 | **テスト** | Jest, Playwright, Supertest |
 | **CI/CD** | GitHub Actions, Firebase CLI |
@@ -142,10 +158,12 @@ Infrastructure
 
 ⚠️ **CRITICAL**: 以下の設定は変更しないこと
 
-- **モデル名**: `gemini-2.5-flash-lite` （`-latest` サフィックスなし、GA安定版）
-- **リージョン**: `us-central1` （このモデルが動作する唯一のリージョン）
+- **SDK**: `@google/genai` （`@google-cloud/vertexai`は使用禁止）
+- **モデル名**: `gemini-2.5-pro` （thinking常時ON、安定動作）
+- **リージョン**: `asia-northeast1` （日本国内データ処理要件）
+- **maxOutputTokens**: `65536` （思考+出力の合計上限）
 
-**詳細**: [`specs/ai-shift-integration-test/IMPLEMENTATION_COMPLETE.md`](specs/ai-shift-integration-test/IMPLEMENTATION_COMPLETE.md) - 課題1
+**詳細**: [`steering/gemini-rules.md`](steering/gemini-rules.md)、[ADR-0001](../docs/adr/0001-gemini-sdk-and-config.md)
 
 ### 段階的生成アプローチ
 
@@ -198,6 +216,6 @@ Infrastructure
 
 ---
 
-**最終更新**: 2025-11-01
-**バージョン**: 1.1
+**最終更新**: 2025-01-23
+**バージョン**: 1.2
 **メンテナ**: 開発チーム
