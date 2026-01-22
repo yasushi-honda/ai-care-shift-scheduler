@@ -48,7 +48,7 @@ export function calculateOverallScore(violations: ConstraintViolation[]): number
     level2: violationsByLevel[2].length,
     level3: violationsByLevel[3].length,
     level4: violationsByLevel[4].length,
-    level1Violations: violationsByLevel[1].map(v => ({ type: v.type, desc: v.description.substring(0, 50) })),
+    level1Types: violationsByLevel[1].map(v => v.type),
   });
 
   // レベル1（絶対必須）違反がある場合は即座に0点
