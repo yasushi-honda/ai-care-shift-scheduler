@@ -128,8 +128,11 @@ export function rebalanceShifts(
 
 /**
  * 特定日のシフトカウントを取得
+ * @param schedules スタッフスケジュール配列
+ * @param date 対象日付（YYYY-MM-DD形式）
+ * @returns 日別シフトカウント
  */
-function getDailyShiftCount(schedules: StaffSchedule[], date: string): DailyShiftCount {
+export function getDailyShiftCount(schedules: StaffSchedule[], date: string): DailyShiftCount {
   const counts: Record<string, number> = {};
   const staffByShift: Record<string, string[]> = {};
 
@@ -275,8 +278,13 @@ function findBestStaffToSwap(
 
 /**
  * 違反数をカウント
+ * @param schedules スタッフスケジュール配列
+ * @param requirements シフト要件
+ * @param sundays 日曜日の日付配列
+ * @param hasNightShift 夜勤有無
+ * @returns 違反数
  */
-function countViolations(
+export function countViolations(
   schedules: StaffSchedule[],
   requirements: ShiftRequirement,
   sundays: number[],
