@@ -145,10 +145,17 @@ ai-care-shift-scheduler/
 │   │   ├── architecture.md
 │   │   ├── structure.md
 │   │   └── implementation-log.md
-│   └── specs/            # 機能仕様（将来使用）
-├── components/           # Reactコンポーネント
+│   └── specs/            # 機能仕様
+├── src/                  # フロントエンドソース
+│   ├── components/       # 追加UIコンポーネント
+│   ├── services/         # フロントエンドサービス
+│   ├── contexts/         # React Context
+│   ├── hooks/            # カスタムフック
+│   └── pages/            # ページコンポーネント
+├── components/           # Reactコンポーネント（共通）
 ├── services/             # ビジネスロジック
 ├── functions/            # Cloud Functions
+├── e2e/                  # Playwrightテスト
 ├── public/               # 静的ファイル
 ├── App.tsx               # ルートコンポーネント
 ├── types.ts              # TypeScript型定義
@@ -209,9 +216,9 @@ ai-care-shift-scheduler/
 
 詳細は [.kiro/steering/tech.md](.kiro/steering/tech.md) を参照してください。
 
-## 📖 ドキュメント
+## 📖 Steeringファイル詳細
 
-### Steering（プロジェクト方針）
+### プロジェクト方針
 - [product.md](.kiro/steering/product.md) - プロダクトコンテキストとビジネス目標
 - [tech.md](.kiro/steering/tech.md) - 技術スタックと技術的決定
 - [architecture.md](.kiro/steering/architecture.md) - システムアーキテクチャ
@@ -448,7 +455,7 @@ gcloud services enable aiplatform.googleapis.com --project=ai-care-shift-schedul
 
 **対応**: ブラウザのキャッシュをクリアするか、次回デプロイ時に自然に更新されます。
 
-詳細は [Phase 1-3 デプロイ完了サマリー](.kiro/specs/auth-data-persistence/deployment-summary.md#既知の問題非クリティカル) を参照してください。
+詳細は [Phase 1-3 デプロイ完了サマリー](.kiro/specs/auth-data-persistence/archive/deployment-summary.md#既知の問題非クリティカル) を参照してください。
 
 ## 🗓️ ロードマップ
 
@@ -466,7 +473,7 @@ gcloud services enable aiplatform.googleapis.com --project=ai-care-shift-schedul
 - ✅ Firestore Security Rulesによるアクセス制御
 - ✅ CI/CD（GitHub Actions → Firebase）の自動デプロイ
 
-**詳細**: [Phase 1-3 デプロイ完了サマリー](.kiro/specs/auth-data-persistence/deployment-summary.md)
+**詳細**: [Phase 1-3 デプロイ完了サマリー](.kiro/specs/auth-data-persistence/archive/deployment-summary.md)
 
 ### Phase 4: データ永続化 - 2026年Q1（進行中）
 - スタッフ情報のFirestore永続化
