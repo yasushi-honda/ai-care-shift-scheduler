@@ -205,7 +205,7 @@ export const reevaluateShift = onRequest(
 /**
  * デフォルトの要件設定を生成
  */
-function createDefaultRequirements(targetMonth: string): ShiftRequirement {
+export function createDefaultRequirements(targetMonth: string): ShiftRequirement {
   return {
     targetMonth,
     timeSlots: [
