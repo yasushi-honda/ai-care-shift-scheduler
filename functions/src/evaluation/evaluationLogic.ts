@@ -12,7 +12,6 @@ import {
   ShiftRequirement,
   LeaveRequest,
   ConstraintViolation,
-  ConstraintLevel,
   AIEvaluationResult,
   Recommendation,
   SimulationResult,
@@ -20,11 +19,7 @@ import {
 } from '../types';
 import { analyzeRootCauses } from './rootCauseAnalysis';
 import {
-  LEVEL_DEDUCTIONS,
-  getViolationLevel,
-  generateLevelBasedComment,
   generatePositiveSummary,
-  groupViolationsByLevel,
 } from './constraintLevelMapping';
 import {
   isBusinessDay as isBusinessDayFn,
@@ -35,6 +30,14 @@ import {
   checkLeaveRequestIgnored as checkLeaveRequestIgnoredFn,
   checkTimeSlotPreferenceViolation as checkTimeSlotPreferenceViolationFn,
 } from './constraintCheckers';
+import {
+  calculateOverallScore as calculateOverallScoreFn,
+  calculateFulfillmentRate as calculateFulfillmentRateFn,
+} from './scoreCalculators';
+import {
+  generateAIComment as generateAICommentFn,
+  generateRecommendations as generateRecommendationsFn,
+} from './commentGenerators';
 
 /**
  * 評価入力データ
@@ -215,9 +218,7 @@ export class EvaluationService {
   }
 
   /**
-   * AI総合コメントを生成
-   *
-   * スコアと違反内容に基づいて、200文字以内の自然言語コメントを生成
+   * AI総合コメントを生成（委譲）
    */
   private generateAIComment(
     overallScore: number,
@@ -225,155 +226,7 @@ export class EvaluationService {
     violations: ConstraintViolation[],
     recommendations: Recommendation[]
   ): string {
-    // 違反をタイプ別にカウント
-    const violationCounts: Record<string, number> = {};
-    for (const v of violations) {
-      violationCounts[v.type] = (violationCounts[v.type] || 0) + 1;
-    }
-
-    const errorCount = violations.filter(v => v.severity === 'error').length;
-    const warningCount = violations.filter(v => v.severity === 'warning').length;
-
-    // スコア別のコメント生成
-    if (overallScore === 0) {
-      return this.generateCriticalComment(violationCounts, fulfillmentRate, violations);
-    } else if (overallScore <= 30) {
-      return this.generateSevereComment(violationCounts, errorCount, warningCount);
-    } else if (overallScore < 60) {
-      return this.generateWarningComment(violationCounts, errorCount, warningCount);
-    } else if (overallScore < 80) {
-      return this.generateFairComment(violationCounts, warningCount, fulfillmentRate);
-    } else {
-      return this.generateGoodComment(fulfillmentRate, recommendations);
-    }
-  }
-
-  private generateCriticalComment(
-    violationCounts: Record<string, number>,
-    fulfillmentRate: number,
-    violations?: ConstraintViolation[]
-  ): string {
-    const mainIssues: string[] = [];
-
-    if (violationCounts['staffShortage'] > 10) {
-      mainIssues.push(`${violationCounts['staffShortage']}件の人員不足`);
-    }
-    if (violationCounts['qualificationMissing'] > 5) {
-      mainIssues.push(`資格要件の未充足`);
-    }
-
-    const issueText = mainIssues.length > 0
-      ? `主な問題: ${mainIssues.join('、')}。`
-      : '';
-
-    // Phase 44: シフト種別ごとの不足日数を分析
-    let shiftDetailText = '';
-    if (violations && violations.length > 0) {
-      const shortageByShift: Record<string, number> = {};
-      for (const v of violations) {
-        if (v.type === 'staffShortage' && v.description) {
-          // "2026-01-06の早番で1名の人員不足" のようなパターンを解析
-          const match = v.description.match(/の(.+)で/);
-          if (match) {
-            const shiftName = match[1];
-            shortageByShift[shiftName] = (shortageByShift[shiftName] || 0) + 1;
-          }
-        }
-      }
-
-      const shiftDetails = Object.entries(shortageByShift)
-        .filter(([_, count]) => count > 0)
-        .map(([shiftName, count]) => `${shiftName}${count}日`)
-        .join('、');
-
-      if (shiftDetails) {
-        shiftDetailText = `【不足日数】${shiftDetails}。`;
-      }
-    }
-
-    // Phase 53: レベル1違反（労基法違反）がある場合のメッセージ
-    // レベル1違反がない場合でも呼ばれる可能性があるため、両方のケースに対応
-    const hasLevel1 = violations?.some(v => {
-      const level = getViolationLevel(v);
-      return level === 1;
-    }) ?? false;
-
-    if (hasLevel1) {
-      return `労基法違反（夜勤後休息不足など）があるため、このシフトは使用できません。${issueText}${shiftDetailText}人員充足率${fulfillmentRate}%です。該当箇所を修正してください。`;
-    }
-
-    // レベル1なしの場合：建設的なメッセージ
-    return `運営上の制約違反があります。${issueText}${shiftDetailText}人員充足率${fulfillmentRate}%です。詳細を確認し、必要に応じて調整してください。`;
-  }
-
-  private generateSevereComment(
-    violationCounts: Record<string, number>,
-    errorCount: number,
-    warningCount: number
-  ): string {
-    const issues: string[] = [];
-
-    if (violationCounts['staffShortage'] > 0) {
-      issues.push(`人員不足が${violationCounts['staffShortage']}件`);
-    }
-    if (violationCounts['consecutiveWork'] > 0) {
-      issues.push(`連勤超過が${violationCounts['consecutiveWork']}件`);
-    }
-    if (violationCounts['nightRestViolation'] > 0) {
-      issues.push(`夜勤後休息不足が${violationCounts['nightRestViolation']}件`);
-    }
-
-    const issueText = issues.slice(0, 2).join('、');
-    const issueClause = issueText ? `${issueText}あります。` : '';
-    return `重大な問題が${errorCount + warningCount}件検出されました。${issueClause}このままでは運用に支障が出る可能性があります。手動での大幅な調整が必要です。`;
-  }
-
-  private generateWarningComment(
-    violationCounts: Record<string, number>,
-    errorCount: number,
-    warningCount: number
-  ): string {
-    const sortedIssues = Object.entries(violationCounts)
-      .sort((a, b) => b[1] - a[1]);
-    const mainIssue = sortedIssues[0];
-
-    if (!mainIssue) {
-      return `いくつかの問題が検出されました（エラー${errorCount}件、警告${warningCount}件）。詳細を確認し、必要に応じて調整してください。`;
-    }
-
-    const issueLabels: Record<string, string> = {
-      staffShortage: '人員不足',
-      consecutiveWork: '連勤',
-      nightRestViolation: '夜勤後休息',
-      qualificationMissing: '資格要件',
-      leaveRequestIgnored: '休暇希望',
-    };
-
-    const mainIssueName = issueLabels[mainIssue[0]] || mainIssue[0];
-
-    return `いくつかの問題が検出されました（エラー${errorCount}件、警告${warningCount}件）。特に${mainIssueName}に関する問題が多く見られます。詳細を確認し、必要に応じて調整してください。`;
-  }
-
-  private generateFairComment(
-    _violationCounts: Record<string, number>,
-    warningCount: number,
-    fulfillmentRate: number
-  ): string {
-    if (warningCount > 0) {
-      return `概ね良好ですが、${warningCount}件の警告があります。人員充足率は${fulfillmentRate}%です。確定前に警告内容を確認することを推奨します。`;
-    }
-    return `シフト配置は概ね適切です。人員充足率${fulfillmentRate}%で、大きな問題はありません。微調整を行えばさらに改善できます。`;
-  }
-
-  private generateGoodComment(
-    fulfillmentRate: number,
-    recommendations: Recommendation[]
-  ): string {
-    const hasLowPriorityRec = recommendations.some(r => r.priority === 'low');
-    if (hasLowPriorityRec && fulfillmentRate >= 95) {
-      return `すべての制約を満たした良好なシフト案です。人員充足率${fulfillmentRate}%で、このまま確定しても問題ありません。`;
-    }
-    return `良好なシフト案が生成されました。人員充足率は${fulfillmentRate}%です。制約違反なく、バランスの取れた配置になっています。`;
+    return generateAICommentFn(overallScore, fulfillmentRate, violations, recommendations);
   }
 
   /**
@@ -614,194 +467,31 @@ export class EvaluationService {
   }
 
   /**
-   * 総合スコアを計算
-   *
-   * 100点から違反に応じて減点
-   * - error: -10点
-   * - warning: -5点
+   * 総合スコアを計算（委譲）
    */
   calculateOverallScore(violations: ConstraintViolation[]): number {
-    // 違反をレベル別にグループ化
-    const violationsByLevel: Record<ConstraintLevel, ConstraintViolation[]> = {
-      1: [],
-      2: [],
-      3: [],
-      4: [],
-    };
-
-    for (const violation of violations) {
-      const level = getViolationLevel(violation);
-      violationsByLevel[level].push(violation);
-    }
-
-    // Phase 53: デバッグログ
-    console.log('📊 [Phase 53] レベル別違反件数:', {
-      level1: violationsByLevel[1].length,
-      level2: violationsByLevel[2].length,
-      level3: violationsByLevel[3].length,
-      level4: violationsByLevel[4].length,
-      level1Violations: violationsByLevel[1].map(v => ({ type: v.type, desc: v.description.substring(0, 50) })),
-    });
-
-    // レベル1（絶対必須）違反がある場合は即座に0点
-    if (violationsByLevel[1].length > 0) {
-      console.log('⚠️ [Phase 53] レベル1違反があるため0点:', violationsByLevel[1].map(v => v.type));
-      return 0;
-    }
-
-    // レベル2-4の減点を計算
-    let score = 100;
-
-    // レベル2（運営必須）: 1件あたり12点減点
-    score -= violationsByLevel[2].length * LEVEL_DEDUCTIONS[2];
-
-    // レベル3（努力目標）: 1件あたり4点減点
-    score -= violationsByLevel[3].length * LEVEL_DEDUCTIONS[3];
-
-    // レベル4（推奨）: 減点なし（情報のみ）
-
-    // スコアを0〜100の範囲に正規化
-    return Math.max(0, Math.min(100, score));
+    return calculateOverallScoreFn(violations);
   }
 
   /**
-   * 充足率を計算
-   *
-   * (実際の配置人数 / 必要人数) * 100
-   * 注: デイサービス（夜勤なし）の場合、日曜日は営業外としてスキップ
+   * 充足率を計算（委譲）
    */
   calculateFulfillmentRate(
     schedule: StaffSchedule[],
     requirements: ShiftRequirement
   ): number {
-    const targetMonth = requirements.targetMonth;
-    const [year, month] = targetMonth.split('-').map(Number);
-    const daysInMonth = new Date(year, month, 0).getDate();
-
-    // 夜勤があるかどうかを判定
-    const shiftTypeNames = (requirements.timeSlots || []).map(t => t.name);
-    const hasNightShift = shiftTypeNames.some(name => name.includes('夜'));
-
-    let totalRequired = 0;
-    let totalAssigned = 0;
-
-    for (let day = 1; day <= daysInMonth; day++) {
-      const date = `${targetMonth}-${String(day).padStart(2, '0')}`;
-
-      // 営業外の日はスキップ
-      if (!this.isBusinessDay(date, hasNightShift)) {
-        continue;
-      }
-
-      for (const [shiftName, requirement] of Object.entries(
-        requirements.requirements
-      )) {
-        totalRequired += requirement.totalStaff;
-
-        // 実際の配置人数をカウント
-        let assigned = 0;
-        for (const staffSchedule of schedule) {
-          const shift = staffSchedule.monthlyShifts.find(
-            (s) => s.date === date
-          );
-          if (shift && shift.shiftType === shiftName) {
-            assigned++;
-          }
-        }
-        totalAssigned += Math.min(assigned, requirement.totalStaff);
-      }
-    }
-
-    if (totalRequired === 0) return 100;
-    return Math.round((totalAssigned / totalRequired) * 100);
+    return calculateFulfillmentRateFn(schedule, requirements);
   }
 
   /**
-   * 改善提案を生成
+   * 改善提案を生成（委譲）
    */
   private generateRecommendations(
     violations: ConstraintViolation[],
-    input: EvaluationInput,
+    _input: EvaluationInput,
     score?: number
   ): Recommendation[] {
-    const recommendations: Recommendation[] = [];
-    const grouped = groupViolationsByLevel(violations);
-
-    // Phase 53: レベル別コメント生成を使用
-    const currentScore = score ?? this.calculateOverallScore(violations);
-    const { mainComment, details } = generateLevelBasedComment(violations, currentScore);
-
-    // メインコメントを最優先で追加
-    recommendations.push({
-      priority: grouped[1].length > 0 ? 'high' : grouped[2].length > 5 ? 'high' : 'medium',
-      category: 'general',
-      description: mainComment,
-      action: details.length > 0 ? details[0] : '詳細を確認してください',
-    });
-
-    // 詳細コメントを追加
-    for (let i = 1; i < details.length; i++) {
-      recommendations.push({
-        priority: 'low',
-        category: 'general',
-        description: details[i],
-        action: '',
-      });
-    }
-
-    // 人員不足が多い場合（レベル2）
-    const shortageCount = grouped[2].filter(
-      (v) => v.type === 'staffShortage'
-    ).length;
-    if (shortageCount >= 5) {
-      recommendations.push({
-        priority: 'high',
-        category: 'staffing',
-        description: '複数日で人員不足が発生しています',
-        action: 'スタッフの追加採用または配置調整を検討してください',
-      });
-    }
-
-    // 連勤超過が多い場合（レベル3）
-    const consecutiveCount = grouped[3].filter(
-      (v) => v.type === 'consecutiveWork'
-    ).length;
-    if (consecutiveCount >= 2) {
-      recommendations.push({
-        priority: 'medium',
-        category: 'workload',
-        description: '複数スタッフで連勤超過が発生しています',
-        action: 'シフトパターンの見直しを検討してください',
-      });
-    }
-
-    // 夜勤後休息不足がある場合（レベル1）
-    const nightRestCount = grouped[1].filter(
-      (v) => v.type === 'nightRestViolation'
-    ).length;
-    if (nightRestCount > 0) {
-      recommendations.push({
-        priority: 'high',
-        category: 'workload',
-        description: '夜勤後の休息が確保されていないケースがあります（法令違反）',
-        action: '夜勤翌日に明け休みを設定してください',
-      });
-    }
-
-    // 休暇希望未反映がある場合（レベル3）
-    const leaveIgnoredCount = grouped[3].filter(
-      (v) => v.type === 'leaveRequestIgnored'
-    ).length;
-    if (leaveIgnoredCount > 0) {
-      recommendations.push({
-        priority: 'low',
-        category: 'fairness',
-        description: '一部の休暇希望が反映されていません',
-        action: '可能な範囲で休暇希望を調整してください',
-      });
-    }
-
-    return recommendations;
+    return generateRecommendationsFn(violations, score);
   }
 
   /**
