@@ -247,6 +247,8 @@ config: {
 | [phased-generation-contract.md](.kiro/steering/phased-generation-contract.md) | Phase間データ契約 |
 | [documentation-standards.md](.kiro/steering/documentation-standards.md) | ドキュメント基準 |
 | [ai-shift-optimization-strategy.md](.kiro/steering/ai-shift-optimization-strategy.md) | AI最適化戦略 |
+| [ai-generation-flow.md](.kiro/steering/ai-generation-flow.md) | AI生成フロー図 |
+| [care-compliance.md](.kiro/steering/care-compliance.md) | 介護報酬算定ガイドライン |
 
 ---
 
