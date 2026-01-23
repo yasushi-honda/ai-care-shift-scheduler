@@ -1,6 +1,9 @@
 /**
  * Cloud Functions統合テスト: AIシフト生成API
  * TDD: Red → Green → Refactor
+ *
+ * NOTE: CI環境では実行をスキップ（SKIP_INTEGRATION_TESTS=true）
+ * ローカルで実行する場合: npm test -- __tests__/integration/shift-generation.test.ts
  */
 
 import request from 'supertest';
@@ -14,7 +17,12 @@ import {
   INVALID_TEST_DATA,
 } from '../fixtures/test-data';
 
-describe('AI Shift Generation API - Integration Tests', () => {
+// CI環境ではスキップ（実際のCloud Functions呼び出しは不安定なため）
+const SKIP_INTEGRATION_TESTS = process.env.SKIP_INTEGRATION_TESTS === 'true' || process.env.CI === 'true';
+
+const describeOrSkip = SKIP_INTEGRATION_TESTS ? describe.skip : describe;
+
+describeOrSkip('AI Shift Generation API - Integration Tests', () => {
   const CLOUD_FUNCTION_URL =
     process.env.CLOUD_FUNCTION_URL ||
     'https://asia-northeast1-ai-care-shift-scheduler.cloudfunctions.net/generateShift';
