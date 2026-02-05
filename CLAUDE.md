@@ -1,6 +1,6 @@
 # Claude Code Spec-Driven Development
 
-**最終更新**: 2025-12-31
+**最終更新**: 2026-02-05
 
 Kiro-style Spec Driven Development implementation using claude code slash commands, hooks and agents.
 
@@ -249,6 +249,8 @@ config: {
 | [ai-shift-optimization-strategy.md](.kiro/steering/ai-shift-optimization-strategy.md) | AI最適化戦略 |
 | [ai-generation-flow.md](.kiro/steering/ai-generation-flow.md) | AI生成フロー図 |
 | [care-compliance.md](.kiro/steering/care-compliance.md) | 介護報酬算定ガイドライン |
+| [deployment-troubleshooting.md](.kiro/steering/deployment-troubleshooting.md) | デプロイトラブルシューティング |
+| [implementation-log-index.md](.kiro/steering/implementation-log-index.md) | 実装ログインデックス |
 
 ---
 
