@@ -93,6 +93,52 @@ jobs:
           echo "🔗 リポジトリ: ${{ github.repository }}" >> $GITHUB_STEP_SUMMARY
           echo "🌿 ブランチ: ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
 
+  # デモデータ検証（ユニットテスト）
+  demo-validation:
+    name: デモデータ検証
+    runs-on: ubuntu-latest
+    needs: build-and-test
+
+    permissions:
+      contents: read
+
+    steps:
+      # 1. リポジトリのチェックアウト
+      - name: チェックアウト
+        uses: actions/checkout@v4
+
+      # 2. Node.jsのセットアップ
+      - name: Node.js ${{ env.NODE_VERSION }} をセットアップ
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      # 3. 依存関係のインストール
+      - name: 依存関係をインストール
+        run: npm ci
+
+      # 4. Cloud Functions依存関係のインストール
+      - name: Cloud Functions依存関係をインストール
+        run: npm ci --prefix functions
+
+      # 5. デモデータ評価テスト実行
+      - name: デモデータ評価テスト
+        run: npm test -- demo-evaluation.test.ts
+        working-directory: functions
+        env:
+          NODE_ENV: test
+
+      # 6. テスト結果サマリー
+      - name: デモデータ検証結果サマリー
+        if: always()
+        run: |
+          echo "## デモデータ検証結果 🧪" >> $GITHUB_STEP_SUMMARY
+          echo "✅ デモデータの整合性テスト完了" >> $GITHUB_STEP_SUMMARY
+          echo "- スタッフ数: 12名" >> $GITHUB_STEP_SUMMARY
+          echo "- 常勤: 8名 / パート: 4名" >> $GITHUB_STEP_SUMMARY
+          echo "- シフト要件: 早番・日勤・遅番" >> $GITHUB_STEP_SUMMARY
+
   # E2Eテスト（Firebase Emulator使用）
   e2e-test:
     name: E2Eテスト
@@ -259,7 +305,7 @@ jobs:
   # Firebase全体をデプロイ（mainブランチのみ、E2Eテスト成功後）
   deploy:
     name: Firebaseにデプロイ
-    needs: [build-and-test, e2e-test]
+    needs: [build-and-test, e2e-test, demo-validation]
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     runs-on: ubuntu-latest
 

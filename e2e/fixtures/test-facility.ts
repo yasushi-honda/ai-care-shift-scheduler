@@ -1,10 +1,11 @@
 /**
  * E2Eテスト用施設フィクスチャ
  *
- * テスト用施設データを定義
+ * Single Source of Truth: scripts/demoData.ts
+ * テスト用施設データを提供
  */
 
-import { TEST_FACILITY_ID } from './test-staff';
+import { DEMO_FACILITY_ID, DEMO_FACILITY_NAME } from '../../scripts/demoData';
 
 export interface TestFacility {
   facilityId: string;
@@ -19,19 +20,22 @@ export interface TestFacility {
 }
 
 /**
- * テスト用施設データ
+ * テスト用施設ID
  */
-export const TEST_FACILITY: TestFacility = {
-  facilityId: TEST_FACILITY_ID,
-  name: 'テスト介護施設',
-  members: [],
-  createdAt: new Date(),
-  updatedAt: new Date(),
-};
+export const TEST_FACILITY_ID = DEMO_FACILITY_ID;
 
 /**
  * テスト用施設名
  */
-export const TEST_FACILITY_NAME = 'テスト介護施設';
+export const TEST_FACILITY_NAME = DEMO_FACILITY_NAME;
 
-export { TEST_FACILITY_ID };
+/**
+ * テスト用施設データ
+ */
+export const TEST_FACILITY: TestFacility = {
+  facilityId: TEST_FACILITY_ID,
+  name: TEST_FACILITY_NAME,
+  members: [],
+  createdAt: new Date(),
+  updatedAt: new Date(),
+};

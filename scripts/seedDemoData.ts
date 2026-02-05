@@ -32,7 +32,7 @@ import readline from 'readline';
  * - StaffServiceのフィールド名変換に合わせた形式
  * - position, certifications, maxConsecutiveDays, nightShiftOnlyはFirestoreスキーマ名
  */
-interface Staff {
+export interface DemoStaff {
   staffId: string;
   name: string;
   position: string;  // Firestore: position → App: role
@@ -52,7 +52,7 @@ interface Staff {
 /**
  * ShiftTime型（時間帯定義）
  */
-interface ShiftTime {
+export interface DemoShiftTime {
   name: string;
   start: string;  // HH:mm
   end: string;    // HH:mm
@@ -62,7 +62,7 @@ interface ShiftTime {
 /**
  * DailyRequirement型（各シフトの要件）
  */
-interface DailyRequirement {
+export interface DemoDailyRequirement {
   totalStaff: number;
   requiredQualifications: { qualification: string; count: number }[];
   requiredRoles: { role: string; count: number }[];
@@ -73,14 +73,14 @@ interface DailyRequirement {
  * - RequirementServiceが期待する形式
  * - Firestoreパス: /facilities/{facilityId}/requirements/default
  */
-interface ShiftRequirement {
+export interface DemoShiftRequirement {
   targetMonth: string;  // YYYY-MM
-  timeSlots: ShiftTime[];
-  requirements: Record<string, DailyRequirement>;
+  timeSlots: DemoShiftTime[];
+  requirements: Record<string, DemoDailyRequirement>;
   updatedAt: admin.firestore.Timestamp;
 }
 
-interface LeaveRequest {
+export interface DemoLeaveRequest {
   requestId: string;
   staffId: string;
   date: string;
@@ -105,11 +105,11 @@ interface FacilityMember {
 
 // ==================== 設定 ====================
 
-const DEMO_FACILITY_ID = 'demo-facility-001';
-const DEMO_FACILITY_NAME = 'サンプル介護施設';
+export const DEMO_FACILITY_ID = 'demo-facility-001';
+export const DEMO_FACILITY_NAME = 'サンプル介護施設';
 
 // 対象月を動的に設定（現在月の翌月）
-function getTargetMonth(): string {
+export function getTargetMonth(): string {
   const now = new Date();
   const nextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1);
   const year = nextMonth.getFullYear();
@@ -209,7 +209,7 @@ const db = admin.firestore();
  *
  * 注意: デイサービスは日中のみ営業のため夜勤なし
  */
-const demoStaffs: Omit<Staff, 'createdAt' | 'updatedAt'>[] = [
+export const demoStaffs: Omit<DemoStaff, 'createdAt' | 'updatedAt'>[] = [
   {
     staffId: 'staff-tanaka',
     name: '田中太郎',
@@ -400,7 +400,7 @@ const demoStaffs: Omit<Staff, 'createdAt' | 'updatedAt'>[] = [
  * - https://shiftlife.jp/ds-kijun/
  * - https://ads.kaipoke.biz/day-service/opening/post-93.html
  */
-const demoShiftRequirement: Omit<ShiftRequirement, 'updatedAt'> = {
+export const demoShiftRequirement: Omit<DemoShiftRequirement, 'updatedAt'> = {
   targetMonth: TARGET_MONTH,
   timeSlots: [
     { name: '早番', start: '08:00', end: '17:00', restHours: 1 },  // 送迎開始に対応
@@ -432,7 +432,7 @@ const demoShiftRequirement: Omit<ShiftRequirement, 'updatedAt'> = {
  * 休暇申請データを動的に生成
  * 対象月の日付に合わせて休暇申請を作成
  */
-function generateLeaveRequests(): Omit<LeaveRequest, 'createdAt'>[] {
+export function generateLeaveRequests(): Omit<DemoLeaveRequest, 'createdAt'>[] {
   const [year, month] = TARGET_MONTH.split('-').map(Number);
 
   // 対象月の10日、15日、22日、23日を使用
@@ -471,7 +471,7 @@ function generateLeaveRequests(): Omit<LeaveRequest, 'createdAt'>[] {
   ];
 }
 
-const demoLeaveRequests = generateLeaveRequests();
+export const demoLeaveRequests = generateLeaveRequests();
 
 // ==================== ヘルパー関数 ====================
 
@@ -688,7 +688,7 @@ async function main() {
   // デモスタッフの投入
   for (const staff of demoStaffs) {
     const staffRef = db.collection('facilities').doc(DEMO_FACILITY_ID).collection('staff').doc(staff.staffId);
-    const staffData: Staff = {
+    const staffData: DemoStaff = {
       ...staff,
       createdAt: now,
       updatedAt: now,
@@ -699,7 +699,7 @@ async function main() {
 
   // デモシフト要件の投入（RequirementService形式: /requirements/default）
   const reqRef = db.collection('facilities').doc(DEMO_FACILITY_ID).collection('requirements').doc('default');
-  const reqData: ShiftRequirement = {
+  const reqData: DemoShiftRequirement = {
     ...demoShiftRequirement,
     updatedAt: now,
   };
@@ -709,7 +709,7 @@ async function main() {
   // デモ休暇申請の投入
   for (const leave of demoLeaveRequests) {
     const leaveRef = db.collection('facilities').doc(DEMO_FACILITY_ID).collection('leaveRequests').doc(leave.requestId);
-    const leaveData: LeaveRequest = {
+    const leaveData: DemoLeaveRequest = {
       ...leave,
       createdAt: now,
     };
