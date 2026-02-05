@@ -4,7 +4,7 @@
  * Firestoreに投入されたデモデータが正しいかを検証します。
  *
  * 期待値:
- * - スタッフ: 8名（夜勤専従なし）
+ * - スタッフ: 12名（夜勤専従なし）
  * - シフト種類: 3種類（早番・日勤・遅番）
  * - 夜勤シフト: 存在しない
  */
@@ -50,10 +50,10 @@ async function verifyDemoData() {
   const staffCount = staffSnapshot.size;
   console.log(`   スタッフ数: ${staffCount}名`);
 
-  if (staffCount !== 8) {
-    console.error(`   ❌ 期待値: 8名, 実際: ${staffCount}名`);
+  if (staffCount !== 12) {
+    console.error(`   ❌ 期待値: 12名, 実際: ${staffCount}名`);
   } else {
-    console.log(`   ✓ 期待通り8名`);
+    console.log(`   ✓ 期待通り12名`);
   }
 
   let nightShiftOnlyCount = 0;
@@ -145,7 +145,7 @@ async function verifyDemoData() {
 
   const errors: string[] = [];
 
-  if (staffCount !== 8) errors.push(`スタッフ数: ${staffCount}名 (期待: 8名)`);
+  if (staffCount !== 12) errors.push(`スタッフ数: ${staffCount}名 (期待: 12名)`);
   if (nightShiftOnlyCount > 0) errors.push(`夜勤専従: ${nightShiftOnlyCount}名 (期待: 0名)`);
   if (timeSlots.length !== 3) errors.push(`シフト種類: ${timeSlots.length}種類 (期待: 3種類)`);
   if (hasNightShift) errors.push('夜勤シフトが存在 (期待: なし)');
