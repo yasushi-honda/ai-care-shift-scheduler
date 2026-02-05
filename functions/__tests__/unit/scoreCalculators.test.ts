@@ -53,7 +53,7 @@ describe('scoreCalculators', () => {
         },
       ];
       const score = calculateOverallScore(violations);
-      expect(score).toBe(100 - 12 * 2); // 76点
+      expect(score).toBe(100 - 5 * 2); // 90点
     });
 
     it('レベル3（consecutiveWork）違反は1件あたり-4点', () => {
@@ -97,7 +97,7 @@ describe('scoreCalculators', () => {
 
     it('レベル2とレベル3の複合ケース', () => {
       const violations: ConstraintViolation[] = [
-        // レベル2: 2件 × -12 = -24
+        // レベル2: 2件 × -5 = -10
         { type: 'staffShortage', severity: 'error', description: '人員不足' },
         { type: 'qualificationMissing', severity: 'error', description: '資格不足' },
         // レベル3: 3件 × -4 = -12
@@ -106,17 +106,17 @@ describe('scoreCalculators', () => {
         { type: 'consecutiveWork', severity: 'warning', description: '連勤' },
       ];
       const score = calculateOverallScore(violations);
-      expect(score).toBe(100 - 24 - 12); // 64点
+      expect(score).toBe(100 - 10 - 12); // 78点
     });
 
     it('大量のレベル2違反でも0未満にはならない（クランプ）', () => {
-      const violations: ConstraintViolation[] = Array(10).fill(null).map(() => ({
+      const violations: ConstraintViolation[] = Array(25).fill(null).map(() => ({
         type: 'staffShortage' as const,
         severity: 'error' as const,
         description: '人員不足',
       }));
       const score = calculateOverallScore(violations);
-      // 100 - 10*12 = -20 → 0にクランプ
+      // 100 - 25*5 = -25 → 0にクランプ
       expect(score).toBe(0);
     });
 

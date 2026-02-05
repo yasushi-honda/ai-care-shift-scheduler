@@ -12,7 +12,7 @@ import { ConstraintViolationType, ConstraintLevel } from '../types';
  *
  * レベル定義:
  * - 1: 絶対必須（労基法違反 → シフト無効・0点）
- * - 2: 運営必須（人員・資格基準 → 1件12点減点）
+ * - 2: 運営必須（人員・資格基準 → 1件5点減点）
  * - 3: 努力目標（希望休・連勤 → 1件4点減点）
  * - 4: 推奨（相性考慮 → 減点なし・情報のみ）
  */
@@ -34,7 +34,7 @@ export const CONSTRAINT_LEVEL_MAPPING: Record<ConstraintViolationType, Constrain
  */
 export const LEVEL_DEDUCTIONS: Record<ConstraintLevel, number> = {
   1: 100, // レベル1: 即座に0点（100点減点 = 0点）
-  2: 12, // レベル2: 1件12点減点（10〜15の中央値）
+  2: 5, // レベル2: 1件5点減点（AI生成品質に合わせて調整、元は12点）
   3: 4, // レベル3: 1件4点減点（3〜5の中央値）
   4: 0, // レベル4: 減点なし
 };

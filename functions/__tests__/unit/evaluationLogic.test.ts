@@ -308,7 +308,7 @@ describe('EvaluationService', () => {
       ];
 
       const score = evaluationService.calculateOverallScore(violations);
-      expect(score).toBe(76); // 100 - 12*2 = 76
+      expect(score).toBe(90); // 100 - 5*2 = 90
     });
 
     it('レベル3（努力目標）は1件あたり4点減点', () => {
@@ -366,8 +366,8 @@ describe('EvaluationService', () => {
       }));
 
       const score = evaluationService.calculateOverallScore([...level2Violations, ...level3Violations]);
-      // 100 - 3*12 - 15*4 = 100 - 36 - 60 = 4
-      expect(score).toBe(4);
+      // 100 - 3*5 - 15*4 = 100 - 15 - 60 = 25
+      expect(score).toBe(25);
     });
 
     it('11件以上の軽微な違反（レベル3）でも0点にならない', () => {
@@ -401,12 +401,12 @@ describe('EvaluationService', () => {
       ];
 
       const score = evaluationService.calculateOverallScore(violations);
-      // 100 - 12 - 4 = 84
-      expect(score).toBe(84);
+      // 100 - 5 - 4 = 91
+      expect(score).toBe(91);
     });
 
     it('スコアは0を下回らない', () => {
-      const violations: ConstraintViolation[] = Array(10).fill(null).map((_, i) => ({
+      const violations: ConstraintViolation[] = Array(25).fill(null).map((_, i) => ({
         type: 'staffShortage' as const,
         severity: 'error' as const,
         level: 2 as ConstraintLevel,
@@ -414,7 +414,7 @@ describe('EvaluationService', () => {
       }));
 
       const score = evaluationService.calculateOverallScore(violations);
-      // 100 - 10*12 = -20 → 0
+      // 100 - 25*5 = -25 → 0
       expect(score).toBe(0);
     });
 
