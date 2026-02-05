@@ -47,6 +47,17 @@ jobs:
         run: npx tsc --noEmit
         continue-on-error: true # 型エラーがあっても続行
 
+      # 4.5. Cloud Functions依存関係のインストール
+      - name: Cloud Functions依存関係をインストール
+        run: npm ci --prefix functions
+
+      # 4.6. ユニットテスト実行（評価ロジック・制約チェッカー）
+      - name: ユニットテスト実行
+        run: npm test -- --ci
+        working-directory: functions
+        env:
+          NODE_ENV: test
+
       # 5. ビルド（環境変数付き）
       - name: プロダクションビルド
         run: npm run build
