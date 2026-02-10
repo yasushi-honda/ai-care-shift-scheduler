@@ -11,6 +11,7 @@ import {
   buildDynamicLeaveConstraints,
   buildDynamicConsecutiveConstraints,
   buildDynamicStaffingConstraints,
+  buildPhase2StaffInfo,
 } from '../../src/phased-generation';
 import {
   Staff,
@@ -20,6 +21,7 @@ import {
   TimeSlotPreference,
   Role,
   Qualification,
+  ScheduleSkeleton,
 } from '../../src/types';
 
 // テスト用スタッフデータ
@@ -216,5 +218,95 @@ describe('buildDynamicStaffingConstraints', () => {
     const result = buildDynamicStaffingConstraints(staffList, requirements, 28, leaveRequests);
     // 田中太郎の行にうち希望休2日が含まれるか
     expect(result).toContain('| 田中太郎 | 5回 | 20日 | 8日 | 2日 |');
+  });
+});
+
+// ======================================================================
+// buildPhase2StaffInfo
+// ======================================================================
+describe('buildPhase2StaffInfo', () => {
+  function createSkeleton(schedules: ScheduleSkeleton['staffSchedules']): ScheduleSkeleton {
+    return { staffSchedules: schedules };
+  }
+
+  test('夜勤なし施設で構造化テキストが出力される', () => {
+    const staff = [createStaff({ id: 's1', name: '田中太郎', qualifications: [Qualification.CertifiedCareWorker] })];
+    const skeleton = createSkeleton([{
+      staffId: 's1', staffName: '田中太郎',
+      restDays: [1, 5, 8, 12, 15], nightShiftDays: [], nightShiftFollowupDays: [],
+    }]);
+
+    const result = buildPhase2StaffInfo(staff, skeleton, 31, false);
+
+    expect(result).toContain('田中太郎(ID:s1)');
+    expect(result).toContain('資格=介護福祉士');
+    expect(result).toContain('1日, 5日, 8日, 12日, 15日');
+    expect(result).toContain('（計5日）');
+    expect(result).toContain('勤務26日');
+    // CSV形式でないこと
+    expect(result).not.toContain('休日=1,5,8,12,15');
+  });
+
+  test('夜勤あり施設で夜勤・明け休み情報が含まれる', () => {
+    const staff = [createStaff({ id: 's1', name: '田中太郎' })];
+    const skeleton = createSkeleton([{
+      staffId: 's1', staffName: '田中太郎',
+      restDays: [1, 8], nightShiftDays: [3, 10], nightShiftFollowupDays: [4, 5, 11, 12],
+    }]);
+
+    const result = buildPhase2StaffInfo(staff, skeleton, 31, true);
+
+    expect(result).toContain('休日: 1日, 8日（計2日）');
+    expect(result).toContain('夜勤: 3日, 10日（計2日）');
+    expect(result).toContain('明け休み: 4日, 5日, 11日, 12日（計4日）');
+    // 勤務日 = 31 - 2 - 2 - 4 = 23
+    expect(result).toContain('勤務23日');
+  });
+
+  test('休日なしスタッフで「なし」表記', () => {
+    const staff = [createStaff({ id: 's1', name: '佐藤花子' })];
+    const skeleton = createSkeleton([{
+      staffId: 's1', staffName: '佐藤花子',
+      restDays: [], nightShiftDays: [], nightShiftFollowupDays: [],
+    }]);
+
+    const result = buildPhase2StaffInfo(staff, skeleton, 28, false);
+
+    expect(result).toContain('休日: なし');
+    expect(result).toContain('勤務28日');
+  });
+
+  test('複数スタッフで全員分出力される', () => {
+    const staff = [
+      createStaff({ id: 's1', name: '田中太郎' }),
+      createStaff({ id: 's2', name: '佐藤花子' }),
+      createStaff({ id: 's3', name: '山田次郎' }),
+    ];
+    const skeleton = createSkeleton([
+      { staffId: 's1', staffName: '田中太郎', restDays: [1, 8], nightShiftDays: [], nightShiftFollowupDays: [] },
+      { staffId: 's2', staffName: '佐藤花子', restDays: [2, 9], nightShiftDays: [], nightShiftFollowupDays: [] },
+      { staffId: 's3', staffName: '山田次郎', restDays: [3, 10], nightShiftDays: [], nightShiftFollowupDays: [] },
+    ]);
+
+    const result = buildPhase2StaffInfo(staff, skeleton, 30, false);
+
+    expect(result).toContain('田中太郎(ID:s1)');
+    expect(result).toContain('佐藤花子(ID:s2)');
+    expect(result).toContain('山田次郎(ID:s3)');
+    // 各スタッフが改行で区切られている
+    const lines = result.split('\n').filter(l => l.startsWith('- '));
+    expect(lines).toHaveLength(3);
+  });
+
+  test('骨子にスタッフが見つからない場合のフォールバック', () => {
+    const staff = [createStaff({ id: 's1', name: '田中太郎', qualifications: [] })];
+    const skeleton = createSkeleton([]); // 骨子にスタッフなし
+
+    const result = buildPhase2StaffInfo(staff, skeleton, 28, false);
+
+    expect(result).toContain('田中太郎(ID:s1)');
+    expect(result).toContain('資格=なし');
+    expect(result).toContain('休日: なし');
+    expect(result).toContain('勤務28日');
   });
 });
