@@ -8,6 +8,7 @@
 import { GoogleGenAI } from '@google/genai';
 import {
   TimeSlotPreference,
+  Qualification,
 } from './types';
 import type {
   Staff,
@@ -1339,22 +1340,23 @@ function buildDetailedDynamicConstraints(
     );
   }
 
-  // 看護師配置制約を動的に生成
+  // 看護師配置制約を動的に生成（完全一致で判定）
+  const nurseQualifications = [Qualification.RegisteredNurse, Qualification.LicensedPracticalNurse];
   const nurses = staffBatch.filter(staff =>
     (staff.qualifications || []).some(q =>
-      String(q).includes('看護師') || String(q).includes('看護')
+      nurseQualifications.some(nq => String(q) === String(nq))
     )
   );
 
   const dayShiftReq = requirements.requirements?.['日勤'];
   const nurseRequired = dayShiftReq?.requiredQualifications?.some(q =>
-    String(q.qualification).includes('看護')
+    nurseQualifications.some(nq => String(q.qualification) === String(nq))
   );
 
   if (nurses.length > 0 && nurseRequired) {
     const nurseNames = nurses.map(s => s.name).join('、');
     const requiredCount = dayShiftReq?.requiredQualifications?.find(q =>
-      String(q.qualification).includes('看護')
+      nurseQualifications.some(nq => String(q.qualification) === String(nq))
     )?.count || 1;
 
     constraints.push(
