@@ -1360,24 +1360,20 @@ function buildDetailedDynamicConstraints(
     )?.count || 1;
 
     const rules: string[] = [];
-    rules.push(`1. 看護師は出勤日に**原則「日勤」**を割り当ててください`);
 
     if (nurses.length > requiredCount) {
-      const canRedeploy = nurses.length - requiredCount;
-      rules.push(`2. ${nurses.length}名の看護師が同日に出勤する場合のみ、${canRedeploy}名まで早番・遅番に配置可`);
-      rules.push(`3. 出勤する看護師が${requiredCount}名の日は、その看護師は**必ず「日勤」**`);
+      rules.push(`- ${nurses.length}名の看護師が同日に出勤する日: ${requiredCount}名を日勤、残り${nurses.length - requiredCount}名は早番・日勤・遅番のいずれかに自由に配置`);
+      rules.push(`- 出勤する看護師が${requiredCount}名の日: その看護師を**必ず日勤**に配置`);
     } else {
-      rules.push(`2. 看護師は全員、出勤日は**必ず「日勤」**（早番・遅番への配置は禁止）`);
+      rules.push(`- 看護師は全員、出勤日は**必ず「日勤」**に配置`);
     }
 
     constraints.push(
-      `## 🔴 【看護師日勤配置 - 最優先制約】\n` +
-      `日勤の資格要件: 毎営業日、看護師**${requiredCount}名以上**が必須（法定基準）\n` +
+      `## 🔴 【看護師日勤配置】\n` +
+      `毎営業日の日勤に看護師**${requiredCount}名以上**が必要です（法定基準）。\n` +
       `対象看護師: ${nurseNames}（計${nurses.length}名）\n\n` +
-      `**配置ルール（必ず遵守）:**\n` +
       rules.join('\n') +
-      `\n\n⚠️ この制約はシフトバランス配分より優先されます。\n` +
-      `看護師が日勤に${requiredCount}名もいない営業日がある場合、そのシフトは無効です。`
+      `\n\n看護師が日勤に${requiredCount}名もいない営業日がある場合、資格要件違反です。`
     );
   }
 
