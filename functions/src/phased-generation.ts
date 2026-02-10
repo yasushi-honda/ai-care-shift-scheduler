@@ -635,9 +635,9 @@ export function buildDynamicQualificationDistributionConstraints(
   if (qualReqMap.size === 0) return '';
 
   for (const [qualName, requiredCount] of qualReqMap) {
-    // 該当資格を持つスタッフを検索
+    // 該当資格を持つスタッフを検索（完全一致で判定）
     const qualifiedStaff = staffList.filter(s =>
-      (s.qualifications || []).some(q => String(q).includes(qualName))
+      (s.qualifications || []).some(q => String(q) === qualName)
     );
 
     if (qualifiedStaff.length === 0) continue;
