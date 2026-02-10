@@ -11,6 +11,7 @@ import {
   buildDynamicLeaveConstraints,
   buildDynamicConsecutiveConstraints,
   buildDynamicStaffingConstraints,
+  buildDynamicQualificationDistributionConstraints,
   buildPhase2StaffInfo,
 } from '../../src/phased-generation';
 import {
@@ -308,5 +309,125 @@ describe('buildPhase2StaffInfo', () => {
     expect(result).toContain('資格=なし');
     expect(result).toContain('休日: なし');
     expect(result).toContain('勤務28日');
+  });
+});
+
+// ======================================================================
+// buildDynamicQualificationDistributionConstraints
+// ======================================================================
+describe('buildDynamicQualificationDistributionConstraints', () => {
+  test('看護師2名＋要件あり → 休日分散テキスト生成', () => {
+    const staffList = [
+      createStaff({ id: 's1', name: '佐藤花子', qualifications: [Qualification.RegisteredNurse] }),
+      createStaff({ id: 's2', name: '鈴木美咲', qualifications: [Qualification.RegisteredNurse] }),
+      createStaff({ id: 's3', name: '田中太郎', qualifications: [Qualification.CertifiedCareWorker] }),
+    ];
+    const requirements = createRequirements({
+      requirements: {
+        '日勤': {
+          totalStaff: 4,
+          requiredQualifications: [{ qualification: Qualification.RegisteredNurse, count: 1 }],
+          requiredRoles: [],
+        },
+      },
+    });
+
+    const result = buildDynamicQualificationDistributionConstraints(staffList, requirements);
+
+    expect(result).toContain('資格保有者の休日分散');
+    expect(result).toContain('看護師');
+    expect(result).toContain('佐藤花子');
+    expect(result).toContain('鈴木美咲');
+    expect(result).toContain('計2名');
+    expect(result).toContain('同時に休めるのは最大1名');
+    expect(result).toContain('交互に配置');
+  });
+
+  test('資格要件なし → 空文字列', () => {
+    const staffList = [
+      createStaff({ id: 's1', name: '田中太郎', qualifications: [Qualification.CertifiedCareWorker] }),
+    ];
+    const requirements = createRequirements({
+      requirements: {
+        '日勤': {
+          totalStaff: 4,
+          requiredQualifications: [],
+          requiredRoles: [],
+        },
+      },
+    });
+
+    const result = buildDynamicQualificationDistributionConstraints(staffList, requirements);
+    expect(result).toBe('');
+  });
+
+  test('看護師1名＋要件あり → 全員毎日出勤の警告', () => {
+    const staffList = [
+      createStaff({ id: 's1', name: '佐藤花子', qualifications: [Qualification.RegisteredNurse] }),
+      createStaff({ id: 's2', name: '田中太郎', qualifications: [Qualification.CertifiedCareWorker] }),
+    ];
+    const requirements = createRequirements({
+      requirements: {
+        '日勤': {
+          totalStaff: 4,
+          requiredQualifications: [{ qualification: Qualification.RegisteredNurse, count: 1 }],
+          requiredRoles: [],
+        },
+      },
+    });
+
+    const result = buildDynamicQualificationDistributionConstraints(staffList, requirements);
+
+    expect(result).toContain('資格保有者の休日分散');
+    expect(result).toContain('佐藤花子');
+    expect(result).toContain('計1名');
+    expect(result).toContain('全員が毎営業日出勤する必要があります');
+  });
+
+  test('複数資格要件 → 両方の制約テキスト生成', () => {
+    const staffList = [
+      createStaff({ id: 's1', name: '佐藤花子', qualifications: [Qualification.RegisteredNurse] }),
+      createStaff({ id: 's2', name: '鈴木美咲', qualifications: [Qualification.RegisteredNurse] }),
+      createStaff({ id: 's3', name: '山田一郎', qualifications: [Qualification.PhysicalTherapist] }),
+      createStaff({ id: 's4', name: '田中太郎', qualifications: [Qualification.CertifiedCareWorker] }),
+    ];
+    const requirements = createRequirements({
+      requirements: {
+        '日勤': {
+          totalStaff: 4,
+          requiredQualifications: [
+            { qualification: Qualification.RegisteredNurse, count: 1 },
+            { qualification: Qualification.PhysicalTherapist, count: 1 },
+          ],
+          requiredRoles: [],
+        },
+      },
+    });
+
+    const result = buildDynamicQualificationDistributionConstraints(staffList, requirements);
+
+    expect(result).toContain('看護師');
+    expect(result).toContain('理学療法士');
+    expect(result).toContain('佐藤花子');
+    expect(result).toContain('山田一郎');
+  });
+
+  test('該当資格のスタッフがいない場合 → 空文字列', () => {
+    const staffList = [
+      createStaff({ id: 's1', name: '田中太郎', qualifications: [Qualification.CertifiedCareWorker] }),
+    ];
+    const requirements = createRequirements({
+      requirements: {
+        '日勤': {
+          totalStaff: 4,
+          requiredQualifications: [{ qualification: Qualification.RegisteredNurse, count: 1 }],
+          requiredRoles: [],
+        },
+      },
+    });
+
+    const result = buildDynamicQualificationDistributionConstraints(staffList, requirements);
+    // 看護師要件はあるがスタッフにいない → スキップ
+    expect(result).toBe('');
   });
 });
