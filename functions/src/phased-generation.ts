@@ -608,6 +608,68 @@ interface DailyAvailabilityAnalysis {
 }
 
 /**
+ * Phase 56: 資格保有者の休日分散制約を生成
+ *
+ * requirements.requiredQualificationsからデータ駆動で制約を生成。
+ * 看護師に限定せず、全資格要件に汎用的に対応する。
+ *
+ * @param staffList スタッフ一覧
+ * @param requirements シフト要件
+ * @returns 資格保有者の休日分散制約テキスト
+ */
+export function buildDynamicQualificationDistributionConstraints(
+  staffList: Staff[],
+  requirements: ShiftRequirement
+): string {
+  const constraints: string[] = [];
+
+  // 全シフトの資格要件を収集（重複排除）
+  const qualReqMap = new Map<string, number>();
+  for (const [, dailyReq] of Object.entries(requirements.requirements || {})) {
+    for (const qr of dailyReq.requiredQualifications || []) {
+      const existing = qualReqMap.get(String(qr.qualification)) || 0;
+      qualReqMap.set(String(qr.qualification), Math.max(existing, qr.count));
+    }
+  }
+
+  if (qualReqMap.size === 0) return '';
+
+  for (const [qualName, requiredCount] of qualReqMap) {
+    // 該当資格を持つスタッフを検索
+    const qualifiedStaff = staffList.filter(s =>
+      (s.qualifications || []).some(q => String(q).includes(qualName))
+    );
+
+    if (qualifiedStaff.length === 0) continue;
+
+    const staffNames = qualifiedStaff.map(s => s.name).join('、');
+
+    if (qualifiedStaff.length <= requiredCount) {
+      // 対象者数 ≤ 必要数 → 全員毎日出勤が必要
+      constraints.push(
+        `## ⚠️ 【資格保有者の休日分散】\n` +
+        `### ${qualName}（毎営業日${requiredCount}名以上必要）\n` +
+        `対象: ${staffNames}（計${qualifiedStaff.length}名）\n` +
+        `→ 対象者全員で${requiredCount}名ちょうどのため、全員が毎営業日出勤する必要があります\n` +
+        `→ **休日は日曜日のみとし、営業日には必ず全員出勤させてください**`
+      );
+    } else {
+      // 対象者数 > 必要数 → 休日分散が重要
+      const maxSimultaneousOff = qualifiedStaff.length - requiredCount;
+      constraints.push(
+        `## ⚠️ 【資格保有者の休日分散】\n` +
+        `### ${qualName}（毎営業日${requiredCount}名以上必要）\n` +
+        `対象: ${staffNames}（計${qualifiedStaff.length}名）\n` +
+        `→ ${qualifiedStaff.length}名中${requiredCount}名が毎営業日必要なので、同時に休めるのは最大${maxSimultaneousOff}名です\n` +
+        `→ **休日が重ならないよう交互に配置してください**`
+      );
+    }
+  }
+
+  return constraints.length > 0 ? '\n' + constraints.join('\n\n') + '\n' : '';
+}
+
+/**
  * Phase 52: 日別勤務可能人数を分析
  *
  * パート職員の曜日制限を考慮し、各営業日に何人勤務可能かを計算する。
@@ -989,9 +1051,14 @@ function buildSkeletonPrompt(
       const isPartTime = s.weeklyWorkCount.hope <= 3;
       const partTimeLabel = isPartTime ? ' [パート]' : '';
 
+      // 資格情報
+      const qualLabel = (s.qualifications || []).length > 0
+        ? ` 資格=[${(s.qualifications || []).join(',')}]`
+        : '';
+
       return hasNightShift
-        ? `${baseInfo}${partTimeLabel}${weekdayRestriction}, 夜勤専従=${s.isNightShiftOnly}`
-        : `${baseInfo}${partTimeLabel}${weekdayRestriction}`;
+        ? `${baseInfo}${partTimeLabel}${qualLabel}${weekdayRestriction}, 夜勤専従=${s.isNightShiftOnly}`
+        : `${baseInfo}${partTimeLabel}${qualLabel}${weekdayRestriction}`;
     })
     .join('\n');
 
@@ -1049,6 +1116,7 @@ ${requirementsTable}
 - 休暇希望を必ず反映すること（詳細は下記参照）
 - 夜勤専従スタッフ（isNightShiftOnly=true）は夜勤と休日のみ
 ${buildDynamicLeaveConstraints(staffList, leaveRequests, requirements.targetMonth)}
+${buildDynamicQualificationDistributionConstraints(staffList, requirements)}
 ## 努力目標
 - スタッフの希望週勤務回数に近づける
 - 休日を公平に分散させる
@@ -1064,6 +1132,7 @@ ${buildDynamicLeaveConstraints(staffList, leaveRequests, requirements.targetMont
 # 出力前チェック
 □ nightShiftDaysの各日付X に対して、X+1とX+2がnightShiftFollowupDaysに含まれているか
 □ 全${staffList.length}名分の骨子があるか
+□ 同じ資格の全員が同日に休んでいないか（資格要件がある場合）
 
 重要：全${staffList.length}名分の骨子を必ず出力してください。
 `;
@@ -1101,6 +1170,7 @@ ${buildDynamicLeaveConstraints(staffList, leaveRequests, requirements.targetMont
 ${buildDynamicConsecutiveConstraints(staffList)}
 ${buildDynamicPartTimeConstraints(staffList)}
 ${buildDynamicStaffingConstraints(staffList, requirements, daysInMonth, leaveRequests)}
+${buildDynamicQualificationDistributionConstraints(staffList, requirements)}
 ## 努力目標
 - スタッフの希望週勤務回数に近づける
 - 休日を公平に分散させる（週1〜2日の休み）
@@ -1128,6 +1198,7 @@ ${buildDynamicStaffingConstraints(staffList, requirements, daysInMonth, leaveReq
 □ パート職員が制限外の曜日に勤務していないか（例: 月・水・金のみの人が火曜に勤務していないか）
 □ 休暇希望日が全員のrestDaysに含まれているか
 □ 各スタッフの休日数が予算テーブルの範囲内か（±1日）
+□ 同じ資格の全員が同日に休んでいないか（資格要件がある場合）
 
 重要：全${staffList.length}名分の骨子を必ず出力してください。
 `;
@@ -1376,13 +1447,6 @@ function buildDetailedPrompt(
   const totalStaffPerDay = Object.values(requirements.requirements || {})
     .reduce((sum, req) => sum + req.totalStaff, 0);
 
-  // 看護師名のリスト（資格要件がある場合）
-  const nurses = staffBatch.filter(s =>
-    (s.qualifications || []).some(q => q.includes('看護'))
-  ).map(s => s.name);
-  // 看護師情報（将来使用予定）
-  void nurses;
-
   // 各シフトの必要人数を取得
   const earlyCount = requirements.requirements?.['早番']?.totalStaff || 2;
   const dayCount = requirements.requirements?.['日勤']?.totalStaff || 2;
@@ -1415,7 +1479,7 @@ ${requirementsTable}
 1. **夜勤の翌日は必ず「明け休み」を割り当てること**（上記の「明け休み=」の日付）
 2. **夜勤明け休みの翌日は必ず「休」を割り当てること**
 3. 骨子で指定された休日・夜勤日は変更しないこと
-
+${dynamicConstraints}
 ## 必須条件
 - 夜勤以外・休日以外の日は、${shiftTypeNames.filter(n => !n.includes('夜')).join('・')}のいずれかを割り当てる
 - 各シフトの必要人数を**必ず**満たすこと
@@ -1433,6 +1497,7 @@ ${requirementsTable}
 □ 骨子の休日・夜勤日が正しく反映されているか
 □ 夜勤翌日が「明け休み」になっているか
 □ 早番・日勤・遅番がバランスよく配分されているか
+□ 毎営業日の日勤に必要な資格保有者（看護師等）が配置されているか
 □ 連続勤務が5日以内に収まっているか
 
 # 出力
@@ -1488,8 +1553,9 @@ ${shiftDescription}
 | 遅番 | ${lateCount}名 | ${Math.max(1, Math.round(lateCount * staffBatch.length / totalStaffCount))}名程度 |
 
 **配分ルール**: 早番・日勤・遅番を ${earlyCount}:${dayCount}:${lateCount} の比率でバランスよく配分してください。
-${dynamicConstraints}
+
 # 制約
+${dynamicConstraints}
 - 骨子で指定された休日の日だけ「休」を出力すること
 - **休日以外の日は、必ず早番・日勤・遅番のいずれかを割り当てること**
 - 日曜日（${sundays.join(', ')}日）は全員「休」とすること
@@ -1501,6 +1567,7 @@ ${dynamicConstraints}
 □ 日曜日（${sundays.join(', ')}日）は全員「休」になっているか
 □ 休日のスタッフだけ「休」になっているか（休日以外に「休」がないか確認！）
 □ 早番・日勤・遅番が ${earlyCount}:${dayCount}:${lateCount} の比率でバランスよく配分されているか
+□ 毎営業日の日勤に必要な資格保有者（看護師等）が配置されているか
 □ 連続勤務が5日以内に収まっているか
 
 # 🔴 出力形式（必須）
