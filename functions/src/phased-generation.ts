@@ -356,7 +356,7 @@ ${constraints}
  * @param staffList スタッフ一覧
  * @returns 連続勤務制約のプロンプト文字列
  */
-function buildDynamicConsecutiveConstraints(staffList: Staff[]): string {
+export function buildDynamicConsecutiveConstraints(staffList: Staff[]): string {
   const DEFAULT_MAX_CONSECUTIVE = 5;
 
   // 連続勤務制限があるスタッフを抽出（デフォルト5日と異なる場合）
@@ -370,7 +370,8 @@ function buildDynamicConsecutiveConstraints(staffList: Staff[]): string {
 **基本ルール**: すべてのスタッフは連続勤務**最大${DEFAULT_MAX_CONSECUTIVE}日**までです。
 6日以上連続で勤務させると、シフトが無効になります。
 
-**推奨**: 休日を適切に分散させ、連続勤務は3〜4日に抑えることを推奨します。
+**推奨**: 休日を適切に分散させ、連続勤務は4〜5日に抑えることを推奨します。
+**休日間隔**: 休日は5日以上間を空けないよう配置してください。
 `;
 
   // 個別制限があるスタッフがいる場合
@@ -394,6 +395,56 @@ ${individualConstraints}
 
 
 /**
+ * 休暇希望を構造化テキストに変換する
+ *
+ * 生JSONではなく、AIが理解しやすい構造化テキスト形式で休暇希望を表示する。
+ *
+ * @param staffList スタッフ一覧
+ * @param leaveRequests 休暇申請
+ * @param targetMonth 対象月（YYYY-MM形式）
+ * @returns 構造化された休暇希望テキスト（希望がない場合は空文字列）
+ */
+export function buildDynamicLeaveConstraints(
+  staffList: Staff[],
+  leaveRequests: LeaveRequest,
+  targetMonth: string
+): string {
+  if (!leaveRequests || Object.keys(leaveRequests).length === 0) {
+    return '';
+  }
+
+  const staffMap = new Map(staffList.map(s => [s.id, s.name]));
+  const lines: string[] = [];
+
+  for (const [staffId, dateMap] of Object.entries(leaveRequests)) {
+    if (!dateMap || Object.keys(dateMap).length === 0) continue;
+    const staffName = staffMap.get(staffId) || staffId;
+    const dates = Object.entries(dateMap)
+      .filter(([date]) => date.startsWith(targetMonth))
+      .map(([date, type]) => {
+        const day = parseInt(date.split('-')[2], 10);
+        return `${day}日(${type})`;
+      });
+    if (dates.length > 0) {
+      lines.push(`- ${staffName}: ${dates.join(', ')}`);
+    }
+  }
+
+  if (lines.length === 0) {
+    return '';
+  }
+
+  return `
+## ⚠️ 【休暇希望】（厳守）
+以下のスタッフの休暇希望を必ず反映してください：
+${lines.join('\n')}
+
+**重要**: 上記の日は必ずrestDaysに含めてください。
+`;
+}
+
+
+/**
  * Phase 49/52: 日別必要勤務人数の動的制約生成（強化版）
  *
  * 各営業日に必要な勤務人数を計算し、AIに明示的に伝えるプロンプトを生成する。
@@ -411,7 +462,7 @@ ${individualConstraints}
  * @param leaveRequests 休暇申請（オプション）
  * @returns 日別人員制約のプロンプト文字列
  */
-function buildDynamicStaffingConstraints(
+export function buildDynamicStaffingConstraints(
   staffList: Staff[],
   requirements: ShiftRequirement,
   daysInMonth: number,
@@ -450,11 +501,20 @@ function buildDynamicStaffingConstraints(
     const availableBusinessDays = analysis.dailyStats.filter(stat =>
       availableWeekdays.includes(stat.weekdayNum)
     ).length;
+    // 休暇希望数を計算
+    const leaveCount = leaveRequests && leaveRequests[s.id]
+      ? Object.keys(leaveRequests[s.id]).filter(date =>
+          date.startsWith(requirements.targetMonth)
+        ).length
+      : 0;
+    const totalRestDays = daysInMonth - monthlyTarget;
     return {
       name: s.name,
       weeklyHope,
       monthlyTarget,
       availableBusinessDays,
+      leaveCount,
+      totalRestDays,
       // ゼロ除算を防ぐ（勤務可能日数が0の場合は100%とする）
       mustWorkRatio: availableBusinessDays > 0
         ? Math.round(monthlyTarget / availableBusinessDays * 100)
@@ -495,6 +555,19 @@ function buildDynamicStaffingConstraints(
 ${partTimeWarning}
 `;
   }
+
+  // スタッフ別休日予算テーブル
+  const budgetRows = staffWorkTable.map(s =>
+    `| ${s.name} | ${s.weeklyHope}回 | ${s.monthlyTarget}日 | ${s.totalRestDays}日 | ${s.leaveCount}日 |`
+  ).join('\n');
+  result += `
+### スタッフ別休日予算（目安）
+| スタッフ | 週希望 | 月間勤務 | 休日合計 | うち希望休 |
+|---------|--------|---------|---------|-----------|
+${budgetRows}
+
+**重要**: 休日数が上記より多いと人員不足になります。各スタッフの休日数は±1日の範囲に収めてください。
+`;
 
   // Phase 52: リスク日の警告を追加
   if (analysis.riskDays.length > 0) {
@@ -935,6 +1008,17 @@ function buildSkeletonPrompt(
   // 営業日数（日曜除く）
   const businessDayCount = daysInMonth - sundays.length;
 
+  // 数学的検証用の計算
+  const totalLeaveCount = Object.values(leaveRequests || {}).reduce(
+    (sum, dateMap) => sum + Object.keys(dateMap || {}).filter(d => d.startsWith(requirements.targetMonth)).length,
+    0
+  );
+  const avgWeeklyWork = staffList.reduce((s, st) => s + st.weeklyWorkCount.hope, 0) / staffList.length;
+  const grossSupply = Math.round(staffList.reduce((s, st) => s + st.weeklyWorkCount.hope, 0) * 4);
+  const netSupply = grossSupply - totalLeaveCount;
+  const requiredDays = businessDayCount * totalStaffPerDay;
+  const marginDays = netSupply - requiredDays;
+
   // 夜勤がある場合とない場合で異なるプロンプト
   if (hasNightShift) {
     return `
@@ -962,9 +1046,9 @@ ${requirementsTable}
 
 ## 必須条件
 - 各日、合計${totalStaffPerDay}名の勤務者を確保すること
-- スタッフの休暇希望（${JSON.stringify(leaveRequests)}）を必ず反映すること
+- 休暇希望を必ず反映すること（詳細は下記参照）
 - 夜勤専従スタッフ（isNightShiftOnly=true）は夜勤と休日のみ
-
+${buildDynamicLeaveConstraints(staffList, leaveRequests, requirements.targetMonth)}
 ## 努力目標
 - スタッフの希望週勤務回数に近づける
 - 休日を公平に分散させる
@@ -1010,20 +1094,23 @@ ${requirementsTable}
 ## 必須条件（厳守）
 1. **日曜日（${sundays.join(', ')}日）は全員「休」とすること**
 2. 営業日（月〜土）は毎日${totalStaffPerDay}名の勤務者を確保すること
-3. スタッフの休暇希望（${JSON.stringify(leaveRequests)}）を必ず反映すること
+3. **休暇希望を必ず反映すること**（詳細は下記参照）
 4. **連続勤務制限を厳守**（詳細は下記参照）
 5. **パート職員は指定された曜日のみ勤務可能**（詳細は下記参照）
+${buildDynamicLeaveConstraints(staffList, leaveRequests, requirements.targetMonth)}
 ${buildDynamicConsecutiveConstraints(staffList)}
 ${buildDynamicPartTimeConstraints(staffList)}
-${buildDynamicStaffingConstraints(staffList, requirements, daysInMonth)}
+${buildDynamicStaffingConstraints(staffList, requirements, daysInMonth, leaveRequests)}
 ## 努力目標
 - スタッフの希望週勤務回数に近づける
 - 休日を公平に分散させる（週1〜2日の休み）
 
 # 数学的検証
-- 必要人日数: ${businessDayCount}営業日 × ${totalStaffPerDay}名 = ${businessDayCount * totalStaffPerDay}人日
-- 可能人日数: ${staffList.length}名 × 週${Math.round(staffList.reduce((s, st) => s + st.weeklyWorkCount.hope, 0) / staffList.length)}回 × 4週 ≒ ${Math.round(staffList.reduce((s, st) => s + st.weeklyWorkCount.hope, 0) * 4)}人日
-- 余裕あり: 実現可能です
+- 必要人日数: ${businessDayCount}営業日 × ${totalStaffPerDay}名 = ${requiredDays}人日
+- 可能人日数: ${staffList.length}名 × 週平均${avgWeeklyWork.toFixed(1)}回 × 4週 ≒ ${grossSupply}人日
+- 休暇希望による減算: ${totalLeaveCount}人日
+- 実質可能人日数: ${netSupply}人日
+- 余裕: ${marginDays}人日（${marginDays >= 0 ? '実現可能' : '⚠️ タイト'}）
 
 # 出力形式
 各スタッフの骨子をJSONで出力してください：
@@ -1039,6 +1126,8 @@ ${buildDynamicStaffingConstraints(staffList, requirements, daysInMonth)}
 □ 各営業日に${totalStaffPerDay}名以上が勤務可能か
 □ **連続勤務が5日を超えていないか**（休日が適切に分散されているか）
 □ パート職員が制限外の曜日に勤務していないか（例: 月・水・金のみの人が火曜に勤務していないか）
+□ 休暇希望日が全員のrestDaysに含まれているか
+□ 各スタッフの休日数が予算テーブルの範囲内か（±1日）
 
 重要：全${staffList.length}名分の骨子を必ず出力してください。
 `;
