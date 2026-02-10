@@ -8,7 +8,7 @@
  * @module shift-rebalance
  */
 
-import { StaffSchedule, ShiftRequirement, Staff } from './types';
+import { StaffSchedule, ShiftRequirement, Staff, Qualification, TimeSlotPreference } from './types';
 
 /**
  * 日別シフトカウント
@@ -35,7 +35,7 @@ interface RebalanceResult {
 /**
  * スワップログエントリ
  */
-interface SwapLogEntry {
+export interface SwapLogEntry {
   date: string;
   staffId: string;
   staffName: string;
@@ -107,6 +107,10 @@ export function rebalanceShifts(
       }
     }
   }
+
+  // 資格要件ベースのリバランス
+  const qualSwaps = rebalanceQualifications(rebalanced, requirements, staffList, sundays, hasNightShift, swapLog);
+  swapsPerformed += qualSwaps;
 
   // Before/After評価
   const beforeViolations = countViolations(schedules, requirements, sundays, hasNightShift);
@@ -309,6 +313,141 @@ export function countViolations(
   }
 
   return violations;
+}
+
+/**
+ * 資格要件ベースのリバランス
+ *
+ * 各営業日のシフトで資格要件（看護師等）が満たされていない場合、
+ * 他シフトにいる有資格者と無資格者を相互スワップして要件を満たす。
+ * シフトの人数バランスは維持される（相互スワップのため）。
+ */
+export function rebalanceQualifications(
+  schedules: StaffSchedule[],
+  requirements: ShiftRequirement,
+  staffList: Staff[],
+  sundays: number[],
+  hasNightShift: boolean,
+  swapLog: SwapLogEntry[]
+): number {
+  let swaps = 0;
+  const [year, month] = requirements.targetMonth.split('-').map(Number);
+  const daysInMonth = new Date(year, month, 0).getDate();
+
+  for (let day = 1; day <= daysInMonth; day++) {
+    if (!hasNightShift && sundays.includes(day)) continue;
+
+    const dateStr = `${requirements.targetMonth}-${String(day).padStart(2, '0')}`;
+    const dailyCount = getDailyShiftCount(schedules, dateStr);
+
+    for (const [shiftName, req] of Object.entries(requirements.requirements || {})) {
+      for (const qualReq of req.requiredQualifications || []) {
+        const staffOnShift = dailyCount.staffByShift[shiftName] || [];
+        const qualifiedOnShift = staffOnShift.filter(staffId => {
+          const staff = staffList.find(s => s.id === staffId);
+          return (staff?.qualifications || []).includes(qualReq.qualification);
+        });
+
+        const shortage = qualReq.count - qualifiedOnShift.length;
+        if (shortage <= 0) continue;
+
+        for (let i = 0; i < shortage; i++) {
+          const swapped = performQualificationSwap(
+            schedules, dateStr, shiftName, qualReq.qualification,
+            staffList, dailyCount, swapLog
+          );
+          if (swapped) swaps++;
+          else break;
+        }
+      }
+    }
+  }
+
+  return swaps;
+}
+
+/**
+ * 資格要件を満たすための相互スワップ
+ *
+ * 他シフトにいる有資格者を対象シフトに移動し、
+ * 対象シフトにいる無資格者を元のシフトに移動する（人数維持）。
+ */
+function performQualificationSwap(
+  schedules: StaffSchedule[],
+  date: string,
+  targetShift: string,
+  qualification: Qualification,
+  staffList: Staff[],
+  dailyCount: DailyShiftCount,
+  swapLog: SwapLogEntry[]
+): boolean {
+  const skipShifts = ['休', '夜勤', '明け休み'];
+
+  for (const [otherShift, staffIds] of Object.entries(dailyCount.staffByShift)) {
+    if (otherShift === targetShift) continue;
+    if (skipShifts.includes(otherShift)) continue;
+
+    for (const qualStaffId of staffIds) {
+      const qualStaff = staffList.find(s => s.id === qualStaffId);
+      if (!(qualStaff?.qualifications || []).includes(qualification)) continue;
+
+      // 有資格者がtargetShiftで働けるかチェック
+      if (qualStaff?.timeSlotPreference === TimeSlotPreference.DayOnly && targetShift !== '日勤') continue;
+      if (qualStaff?.timeSlotPreference === TimeSlotPreference.NightOnly) continue;
+
+      // 対象シフトの無資格者を探す
+      const targetStaffIds = dailyCount.staffByShift[targetShift] || [];
+
+      for (const nonQualStaffId of targetStaffIds) {
+        const nonQualStaff = staffList.find(s => s.id === nonQualStaffId);
+        if ((nonQualStaff?.qualifications || []).includes(qualification)) continue;
+
+        // 無資格者がotherShiftで働けるかチェック
+        if (nonQualStaff?.timeSlotPreference === TimeSlotPreference.DayOnly && otherShift !== '日勤') continue;
+        if (nonQualStaff?.timeSlotPreference === TimeSlotPreference.NightOnly) continue;
+
+        // 相互スワップ実行
+        const qualSchedule = schedules.find(s => s.staffId === qualStaffId);
+        const nonQualSchedule = schedules.find(s => s.staffId === nonQualStaffId);
+        if (!qualSchedule || !nonQualSchedule) continue;
+
+        const qualShiftEntry = qualSchedule.monthlyShifts.find(s => s.date === date);
+        const nonQualShiftEntry = nonQualSchedule.monthlyShifts.find(s => s.date === date);
+        if (!qualShiftEntry || !nonQualShiftEntry) continue;
+
+        qualShiftEntry.shiftType = targetShift;
+        nonQualShiftEntry.shiftType = otherShift;
+
+        // dailyCount更新
+        const otherIdx = dailyCount.staffByShift[otherShift]?.indexOf(qualStaffId);
+        if (otherIdx !== undefined && otherIdx >= 0) {
+          dailyCount.staffByShift[otherShift].splice(otherIdx, 1);
+        }
+        const targetIdx = dailyCount.staffByShift[targetShift]?.indexOf(nonQualStaffId);
+        if (targetIdx !== undefined && targetIdx >= 0) {
+          dailyCount.staffByShift[targetShift].splice(targetIdx, 1);
+        }
+
+        if (!dailyCount.staffByShift[targetShift]) dailyCount.staffByShift[targetShift] = [];
+        dailyCount.staffByShift[targetShift].push(qualStaffId);
+        if (!dailyCount.staffByShift[otherShift]) dailyCount.staffByShift[otherShift] = [];
+        dailyCount.staffByShift[otherShift].push(nonQualStaffId);
+
+        swapLog.push({
+          date,
+          staffId: qualStaffId,
+          staffName: qualSchedule.staffName || qualStaffId,
+          from: otherShift,
+          to: targetShift,
+          reason: `${String(qualification)}資格要件を満たすためのスワップ`,
+        });
+
+        return true;
+      }
+    }
+  }
+
+  return false;
 }
 
 /**
