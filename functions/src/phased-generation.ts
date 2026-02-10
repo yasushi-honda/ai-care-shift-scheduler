@@ -1298,6 +1298,48 @@ function buildDetailedDynamicConstraints(
 }
 
 /**
+ * Phase 2: スタッフ情報を構造化テキストで生成
+ * staffInfoのCSV形式(join(','))をAIが解釈しやすい形式に変換
+ */
+export function buildPhase2StaffInfo(
+  staffBatch: Staff[],
+  skeleton: ScheduleSkeleton,
+  daysInMonth: number,
+  hasNightShift: boolean
+): string {
+  return staffBatch
+    .map((s) => {
+      const skel = skeleton.staffSchedules.find(sk => sk.staffId === s.id);
+      const qualifications = (s.qualifications || []).join('、') || 'なし';
+      const restDays = skel?.restDays || [];
+
+      if (hasNightShift) {
+        const nightDays = skel?.nightShiftDays || [];
+        const followupDays = skel?.nightShiftFollowupDays || [];
+        const restDisplay = restDays.length > 0
+          ? restDays.map(d => `${d}日`).join(', ') + `（計${restDays.length}日）`
+          : 'なし';
+        const nightDisplay = nightDays.length > 0
+          ? nightDays.map(d => `${d}日`).join(', ') + `（計${nightDays.length}日）`
+          : 'なし';
+        const followupDisplay = followupDays.length > 0
+          ? followupDays.map(d => `${d}日`).join(', ') + `（計${followupDays.length}日）`
+          : 'なし';
+        const nonWorkDays = restDays.length + nightDays.length + followupDays.length;
+        const workDays = daysInMonth - nonWorkDays;
+        return `- ${s.name}(ID:${s.id}): 資格=${qualifications}\n  休日: ${restDisplay}\n  夜勤: ${nightDisplay}\n  明け休み: ${followupDisplay}\n  → 勤務${workDays}日`;
+      } else {
+        const restDisplay = restDays.length > 0
+          ? restDays.map(d => `${d}日`).join(', ') + `（計${restDays.length}日）`
+          : 'なし';
+        const workDays = daysInMonth - restDays.length;
+        return `- ${s.name}(ID:${s.id}): 資格=${qualifications}\n  休日: ${restDisplay} → 勤務${workDays}日`;
+      }
+    })
+    .join('\n');
+}
+
+/**
  * Phase 2: 詳細シフト生成用プロンプト
  */
 function buildDetailedPrompt(
@@ -1310,18 +1352,7 @@ function buildDetailedPrompt(
   // シフト種類名を取得
   const shiftTypeNames = (requirements.timeSlots || []).map(t => t.name);
 
-  const staffInfo = staffBatch
-    .map((s) => {
-      const skel = skeleton.staffSchedules.find(sk => sk.staffId === s.id);
-      const qualifications = (s.qualifications || []).join('、') || 'なし';
-      if (hasNightShift) {
-        // BUG-023: nightShiftFollowupDays（明け休み日）を追加
-        return `- ${s.name}(ID:${s.id}): 資格=${qualifications}, 休日=${skel?.restDays?.join(',') || 'なし'}, 夜勤=${skel?.nightShiftDays?.join(',') || 'なし'}, 明け休み=${skel?.nightShiftFollowupDays?.join(',') || 'なし'}`;
-      } else {
-        return `- ${s.name}(ID:${s.id}): 資格=${qualifications}, 休日=${skel?.restDays?.join(',') || 'なし'}`;
-      }
-    })
-    .join('\n');
+  const staffInfo = buildPhase2StaffInfo(staffBatch, skeleton, daysInMonth, hasNightShift);
 
   // シフト区分の説明
   const shiftDescription = requirements.timeSlots.map(t => `- ${t.name}: ${t.start}-${t.end}`).join('\n');
@@ -1388,6 +1419,7 @@ ${requirementsTable}
 ## 必須条件
 - 夜勤以外・休日以外の日は、${shiftTypeNames.filter(n => !n.includes('夜')).join('・')}のいずれかを割り当てる
 - 各シフトの必要人数を**必ず**満たすこと
+- **連続勤務は5日以内に抑えること**（骨子の休日パターンに従えば自動的に満たされます）
 
 # シフト割り当てルール
 | 骨子の指定 | 割り当てるシフト |
@@ -1396,6 +1428,12 @@ ${requirementsTable}
 | 明け休み日 | 「明け休み」 |
 | 休日 | 「休」 |
 | 上記以外 | 早番・日勤・遅番のいずれか |
+
+# 出力チェックリスト
+□ 骨子の休日・夜勤日が正しく反映されているか
+□ 夜勤翌日が「明け休み」になっているか
+□ 早番・日勤・遅番がバランスよく配分されているか
+□ 連続勤務が5日以内に収まっているか
 
 # 出力
 各スタッフの${requirements.targetMonth}の全${daysInMonth}日分の詳細シフトをJSON形式で出力してください。
@@ -1457,11 +1495,13 @@ ${dynamicConstraints}
 - 日曜日（${sundays.join(', ')}日）は全員「休」とすること
 - **夜勤や明け休みは絶対に使用しないこと**
 - 各シフト（早番・日勤・遅番）をバランスよく配分すること
+- **連続勤務は5日以内に抑えること**（骨子の休日パターンに従えば自動的に満たされます）
 
 # 出力チェックリスト
 □ 日曜日（${sundays.join(', ')}日）は全員「休」になっているか
 □ 休日のスタッフだけ「休」になっているか（休日以外に「休」がないか確認！）
 □ 早番・日勤・遅番が ${earlyCount}:${dayCount}:${lateCount} の比率でバランスよく配分されているか
+□ 連続勤務が5日以内に収まっているか
 
 # 🔴 出力形式（必須）
 **必ずJSON形式で出力してください。説明文は不要です。**
