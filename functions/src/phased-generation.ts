@@ -1359,11 +1359,25 @@ function buildDetailedDynamicConstraints(
       nurseQualifications.some(nq => String(q.qualification) === String(nq))
     )?.count || 1;
 
+    const rules: string[] = [];
+    rules.push(`1. 看護師は出勤日に**原則「日勤」**を割り当ててください`);
+
+    if (nurses.length > requiredCount) {
+      const canRedeploy = nurses.length - requiredCount;
+      rules.push(`2. ${nurses.length}名の看護師が同日に出勤する場合のみ、${canRedeploy}名まで早番・遅番に配置可`);
+      rules.push(`3. 出勤する看護師が${requiredCount}名の日は、その看護師は**必ず「日勤」**`);
+    } else {
+      rules.push(`2. 看護師は全員、出勤日は**必ず「日勤」**（早番・遅番への配置は禁止）`);
+    }
+
     constraints.push(
-      `## ⚠️ 【看護師配置制約】\n` +
-      `毎日の日勤には、以下の看護師のうち**必ず${requiredCount}名以上**を配置してください：\n` +
-      `- ${nurseNames}\n` +
-      `\n看護師が日勤に入っていない日は資格要件違反です。`
+      `## 🔴 【看護師日勤配置 - 最優先制約】\n` +
+      `日勤の資格要件: 毎営業日、看護師**${requiredCount}名以上**が必須（法定基準）\n` +
+      `対象看護師: ${nurseNames}（計${nurses.length}名）\n\n` +
+      `**配置ルール（必ず遵守）:**\n` +
+      rules.join('\n') +
+      `\n\n⚠️ この制約はシフトバランス配分より優先されます。\n` +
+      `看護師が日勤に${requiredCount}名もいない営業日がある場合、そのシフトは無効です。`
     );
   }
 
@@ -1499,7 +1513,7 @@ ${dynamicConstraints}
 □ 骨子の休日・夜勤日が正しく反映されているか
 □ 夜勤翌日が「明け休み」になっているか
 □ 早番・日勤・遅番がバランスよく配分されているか
-□ 毎営業日の日勤に必要な資格保有者（看護師等）が配置されているか
+□ 🔴 毎営業日の日勤に看護師が配置されているか（最優先チェック）
 □ 連続勤務が5日以内に収まっているか
 
 # 出力
@@ -1569,7 +1583,7 @@ ${dynamicConstraints}
 □ 日曜日（${sundays.join(', ')}日）は全員「休」になっているか
 □ 休日のスタッフだけ「休」になっているか（休日以外に「休」がないか確認！）
 □ 早番・日勤・遅番が ${earlyCount}:${dayCount}:${lateCount} の比率でバランスよく配分されているか
-□ 毎営業日の日勤に必要な資格保有者（看護師等）が配置されているか
+□ 🔴 毎営業日の日勤に看護師が配置されているか（最優先チェック）
 □ 連続勤務が5日以内に収まっているか
 
 # 🔴 出力形式（必須）
