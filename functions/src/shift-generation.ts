@@ -3,6 +3,7 @@ import { GoogleGenAI } from '@google/genai';
 import { TimeSlotPreference } from './types';
 import type { Staff, ShiftRequirement, LeaveRequest, StaffSchedule, AIEvaluationResult } from './types';
 import { generateSkeleton, generateDetailedShifts, parseGeminiJsonResponse } from './phased-generation';
+import { generateDetailedShiftsWithSolver } from './solver-client';
 import { rebalanceShifts } from './shift-rebalance';
 import { EvaluationService, createDefaultEvaluation } from './evaluation/evaluationLogic';
 import {
@@ -77,7 +78,7 @@ export const generateShift = onRequest(
     }
 
     try {
-      const { staffList: rawStaffList, requirements, leaveRequests } = req.body;
+      const { staffList: rawStaffList, requirements, leaveRequests, useSolver } = req.body;
 
       // バリデーション
       if (!rawStaffList || !Array.isArray(rawStaffList) || rawStaffList.length === 0) {
@@ -251,13 +252,25 @@ export const generateShift = onRequest(
           projectId
         );
 
-        // Phase 2: 詳細生成（5名ずつバッチ）
-        const detailedSchedules = await generateDetailedShifts(
-          staffList,
-          skeleton,
-          requirements,
-          projectId
-        );
+        // Phase 2: 詳細生成
+        // useSolver=true の場合、CP-SAT Solverを使用（ADR-0004 PoC）
+        let detailedSchedules: StaffSchedule[];
+        if (useSolver) {
+          console.log('🔧 Solver版Phase 2を使用（PoC）');
+          detailedSchedules = await generateDetailedShiftsWithSolver(
+            staffList,
+            skeleton,
+            requirements,
+            leaveRequests || {},
+          );
+        } else {
+          detailedSchedules = await generateDetailedShifts(
+            staffList,
+            skeleton,
+            requirements,
+            projectId
+          );
+        }
 
         scheduleData = { schedule: detailedSchedules };
         tokensUsed = 0; // 複数回呼び出しのため集計は省略

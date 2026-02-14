@@ -16,6 +16,21 @@
       "predeploy": [
         "npm --prefix \"$RESOURCE_DIR\" run build"
       ]
+    },
+    {
+      "source": "solver-functions",
+      "codebase": "solver",
+      "runtime": "python312",
+      "ignore": [
+        "venv",
+        "__pycache__",
+        ".git",
+        ".pytest_cache",
+        "tests"
+      ],
+      "predeploy": [
+        "python -m pip install -r requirements.txt"
+      ]
     }
   ],
   "hosting": {

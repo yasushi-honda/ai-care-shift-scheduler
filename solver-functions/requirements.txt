@@ -1,0 +1,4 @@
+ortools>=9.9
+firebase-functions>=0.4.0
+flask>=3.0
+pytest>=8.0
