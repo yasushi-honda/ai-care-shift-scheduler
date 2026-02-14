@@ -404,8 +404,8 @@ jobs:
           # Firestore Rules + Indexes deployment
           firebase deploy --only firestore:rules,firestore:indexes --project ai-care-shift-scheduler --non-interactive
 
-          # Functions deployment（失敗してもワークフロー全体は成功扱い）
-          firebase deploy --only functions --project ai-care-shift-scheduler --non-interactive || echo "⚠️ Functions deployment had warnings (non-critical)"
+          # Functions deployment（Node.js + Python Solver）
+          firebase deploy --only functions --project ai-care-shift-scheduler --non-interactive
 
           # キーファイルを削除
           rm $HOME/gcloud-key.json

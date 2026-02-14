@@ -29,7 +29,7 @@
         "tests"
       ],
       "predeploy": [
-        "python -m pip install -r requirements.txt"
+        "python -m pip install -r \"$RESOURCE_DIR/requirements.txt\""
       ]
     }
   ],
