@@ -29,7 +29,7 @@
         "tests"
       ],
       "predeploy": [
-        "python -m pip install -r \"$RESOURCE_DIR/requirements.txt\""
+        "cd \"$RESOURCE_DIR\" && python3.12 -m venv venv && venv/bin/pip install -r requirements.txt"
       ]
     }
   ],

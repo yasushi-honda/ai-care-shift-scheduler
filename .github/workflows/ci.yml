@@ -378,6 +378,12 @@ jobs:
         with:
           python-version: ${{ env.PYTHON_VERSION }}
 
+      - name: Solver用venv作成と依存関係インストール
+        run: |
+          cd solver-functions
+          python3.12 -m venv venv
+          venv/bin/pip install -r requirements.txt
+
       - name: プロダクションビルド（Firebase環境変数付き）
         run: npm run build
         env:
