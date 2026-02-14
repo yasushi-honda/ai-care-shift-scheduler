@@ -1,6 +1,6 @@
 # Claude Code Spec-Driven Development
 
-**最終更新**: 2026-02-05
+**最終更新**: 2026-02-15
 
 Kiro-style Spec Driven Development implementation using claude code slash commands, hooks and agents.
 
@@ -36,6 +36,7 @@ Kiro-style Spec Driven Development implementation using claude code slash comman
 | evaluation-history-reevaluate | 54 | ✅ 完了 |
 | data-configuration-diagnosis | 55 | ✅ 完了 |
 | hybrid-solver-poc | 57 | ✅ 完了 |
+| solver-production-deploy | 58 | ✅ 完了 |
 
 Use `/kiro:spec-status [feature-name]` to check progress.
 
