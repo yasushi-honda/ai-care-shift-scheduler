@@ -411,7 +411,8 @@ jobs:
           firebase deploy --only firestore:rules,firestore:indexes --project ai-care-shift-scheduler --non-interactive
 
           # Functions deployment（Node.js + Python Solver）
-          firebase deploy --only functions --project ai-care-shift-scheduler --non-interactive
+          # --force: artifacts cleanup policy自動設定
+          firebase deploy --only functions --project ai-care-shift-scheduler --non-interactive --force
 
           # キーファイルを削除
           rm $HOME/gcloud-key.json
