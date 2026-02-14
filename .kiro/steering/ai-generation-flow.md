@@ -222,7 +222,19 @@ throw new Error(`${operationName}: 両モデルとも空レスポンス`);
 
 ### 7.3 長期対策
 1. **ファインチューニング**: 施設固有のパターン学習
-2. **ハイブリッドアプローチ**: AI生成 + 制約ソルバー
+2. **ハイブリッドアプローチ**: AI生成 + 制約ソルバー — **提案中（[ADR-0004](../../docs/adr/0004-hybrid-architecture-adoption.md)）**
+
+#### ハイブリッドアーキテクチャ概要（提案中）
+
+```
+現在:  [LLM Phase1] → [LLM Phase2 バッチ] → [アルゴリズム Phase3 リバランス] → [評価]
+                                                    ↑ 既にハイブリッド化済み
+
+将来:  [LLM 制約解釈] → [Solver スケジュール生成] → [LLM 説明生成] → [評価]
+                          ↑ OR-Tools CP-SAT
+```
+
+Phase 3リバランスの成功を基盤に、Phase 2のスケジュール生成をSolverに置換する方針。詳細は [ADR-0004](../../docs/adr/0004-hybrid-architecture-adoption.md) を参照。
 
 ## 8. ファイル構成
 
