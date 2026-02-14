@@ -11,6 +11,7 @@ on:
 # 環境変数
 env:
   NODE_VERSION: '20'
+  PYTHON_VERSION: '3.12'
 
 # ジョブ定義
 jobs:
@@ -103,6 +104,39 @@ jobs:
           echo "📦 成果物: dist/" >> $GITHUB_STEP_SUMMARY
           echo "🔗 リポジトリ: ${{ github.repository }}" >> $GITHUB_STEP_SUMMARY
           echo "🌿 ブランチ: ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
+
+  # Solver（Python）テスト
+  solver-test:
+    name: Solverテスト（Python）
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+
+    steps:
+      - name: チェックアウト
+        uses: actions/checkout@v4
+
+      - name: Python ${{ env.PYTHON_VERSION }} をセットアップ
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+          cache-dependency-path: solver-functions/requirements.txt
+
+      - name: Solver依存関係をインストール
+        run: pip install -r solver-functions/requirements.txt
+
+      - name: Solverユニットテスト実行
+        run: python -m pytest tests/ -v --tb=short -x
+        working-directory: solver-functions
+
+      - name: Solverテスト結果サマリー
+        if: always()
+        run: |
+          echo "## Solverテスト結果" >> $GITHUB_STEP_SUMMARY
+          echo "- ランタイム: Python ${{ env.PYTHON_VERSION }}" >> $GITHUB_STEP_SUMMARY
+          echo "- ソルバー: OR-Tools CP-SAT" >> $GITHUB_STEP_SUMMARY
 
   # デモデータ検証（ユニットテスト）
   demo-validation:
@@ -316,7 +350,7 @@ jobs:
   # Firebase全体をデプロイ（mainブランチのみ、E2Eテスト成功後）
   deploy:
     name: Firebaseにデプロイ
-    needs: [build-and-test, e2e-test, demo-validation]
+    needs: [build-and-test, e2e-test, demo-validation, solver-test]
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     runs-on: ubuntu-latest
 
@@ -338,6 +372,11 @@ jobs:
 
       - name: Cloud Functions依存関係をインストール
         run: npm ci --prefix functions
+
+      - name: Python ${{ env.PYTHON_VERSION }} をセットアップ（Solver用）
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
 
       - name: プロダクションビルド（Firebase環境変数付き）
         run: npm run build
