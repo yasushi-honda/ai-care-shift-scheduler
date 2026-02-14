@@ -35,7 +35,7 @@ Kiro-style Spec Driven Development implementation using claude code slash comman
 | constraint-level-evaluation | 53 | ✅ 完了 |
 | evaluation-history-reevaluate | 54 | ✅ 完了 |
 | data-configuration-diagnosis | 55 | ✅ 完了 |
-| hybrid-solver-poc | 56 | 🔄 初期化済み |
+| hybrid-solver-poc | 57 | ✅ 完了 |
 
 Use `/kiro:spec-status [feature-name]` to check progress.
 
@@ -205,10 +205,10 @@ config: {
 
 **詳細**: [dynamic-constraints.md](.kiro/steering/dynamic-constraints.md)
 
-### ハイブリッドアーキテクチャ移行（提案中）
+### ハイブリッドアーキテクチャ移行（採用）
 
 - LLM全面依存からSolver（OR-Tools CP-SAT）併用への段階的移行
-- ステータス「提案」：PoC実施後に「採用」に変更予定
+- ステータス「採用」：PoC成功基準達成済み（A/B比較レポート参照）
 
 **詳細**: [ADR-0004](docs/adr/0004-hybrid-architecture-adoption.md)
 
