@@ -713,6 +713,16 @@ gcloud firestore import gs://ai-care-shift-scheduler-backups/2025-10-22
 + 予測分析（MLモデル）
 ```
 
+### Phase 5: ハイブリッド最適化層（提案中）
+```
++ Google OR-Tools CP-SAT Solver導入
++ Phase 2（詳細生成）をSolverに置換
++ LLMは制約解釈・説明生成に限定
++ 処理時間: 90-400秒 → 5-30秒（目標）
++ スケーラビリティ: 15名 → 100名以上
+```
+**詳細**: [ADR-0004](../../docs/adr/0004-hybrid-architecture-adoption.md)
+
 ---
 
 ## まとめ

@@ -9,6 +9,7 @@
 | [0001](./0001-gemini-sdk-and-config.md) | Gemini SDK選択と設定ルール | 2025-12-05 | 採用 |
 | [0002](./0002-permission-dual-sync.md) | 権限データの双方向同期構造 | 2025-12-08 | 採用 |
 | [0003](./0003-constraint-checkers-extraction.md) | 制約チェッカーの責務分離 | 2025-01-23 | 採用 |
+| [0004](./0004-hybrid-architecture-adoption.md) | ハイブリッドアーキテクチャ採用の決定 | 2026-02-14 | 提案 |
 
 ## ADRテンプレート
 
