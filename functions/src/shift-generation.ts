@@ -78,7 +78,7 @@ export const generateShift = onRequest(
     }
 
     try {
-      const { staffList: rawStaffList, requirements, leaveRequests, useSolver } = req.body;
+      const { staffList: rawStaffList, requirements, leaveRequests, useSolver = true } = req.body;
 
       // バリデーション
       if (!rawStaffList || !Array.isArray(rawStaffList) || rawStaffList.length === 0) {
@@ -253,10 +253,11 @@ export const generateShift = onRequest(
         );
 
         // Phase 2: 詳細生成
-        // useSolver=true の場合、CP-SAT Solverを使用（ADR-0004 PoC）
+        // デフォルト: CP-SAT Solver（ADR-0004 採用済み）
+        // useSolver=false で従来LLM版にフォールバック可能
         let detailedSchedules: StaffSchedule[];
         if (useSolver) {
-          console.log('🔧 Solver版Phase 2を使用（PoC）');
+          console.log('🔧 Solver版Phase 2を使用');
           detailedSchedules = await generateDetailedShiftsWithSolver(
             staffList,
             skeleton,
@@ -264,6 +265,7 @@ export const generateShift = onRequest(
             leaveRequests || {},
           );
         } else {
+          console.log('📝 LLM版Phase 2を使用（フォールバック）');
           detailedSchedules = await generateDetailedShifts(
             staffList,
             skeleton,

@@ -41,3 +41,9 @@ coverage/
 # Functions test results
 functions/test-results/
 .envrc
+
+# Python
+__pycache__/
+*.pyc
+solver-functions/venv/
+.pytest_cache/

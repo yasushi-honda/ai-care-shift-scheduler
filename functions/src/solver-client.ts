@@ -13,10 +13,11 @@ import type {
 } from './types';
 
 /**
- * Solver Cloud FunctionのベースURL
- * デプロイ後に実際のURLに更新する。PoC時はローカルテスト用。
+ * Solver Cloud FunctionのURL
+ * Firebase Functions 2nd gen: 関数ごとに固有URL（パス追加不要）
+ * 例: https://solvergenerateshift-xxxxx-an.a.run.app
  */
-const SOLVER_BASE_URL = process.env.SOLVER_FUNCTION_URL || '';
+const SOLVER_FUNCTION_URL = process.env.SOLVER_FUNCTION_URL || '';
 
 interface SolverResponse {
   success: boolean;
@@ -55,7 +56,7 @@ export async function generateDetailedShiftsWithSolver(
   requirements: ShiftRequirement,
   leaveRequests: Record<string, Record<string, string>> = {},
 ): Promise<StaffSchedule[]> {
-  if (!SOLVER_BASE_URL) {
+  if (!SOLVER_FUNCTION_URL) {
     throw new Error(
       'SOLVER_FUNCTION_URL が設定されていません。' +
       'Python Cloud Functionのデプロイ後にURLを設定してください。'
@@ -72,7 +73,7 @@ export async function generateDetailedShiftsWithSolver(
   console.log(`🔧 Solver呼び出し開始（${staffList.length}名）...`);
   const startTime = Date.now();
 
-  const response = await fetch(`${SOLVER_BASE_URL}/solverGenerateShift`, {
+  const response = await fetch(SOLVER_FUNCTION_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(requestBody),
