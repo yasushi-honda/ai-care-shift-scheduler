@@ -1,8 +1,8 @@
 # ハンドオフメモ - 最新状態
 
-**更新日**: 2026-02-16（本セッション完了）
+**更新日**: 2026-02-16（Solver性能改善完了）
 **フェーズ**: Phase 3 全体最適化（ロードマップフェーズ3）**完了** ✅
-**最新デプロイ**: PR #72（solver-functions predeploy修正）本番デプロイ成功 ✅
+**最新デプロイ**: PR #73（Solver relative_gap_limit緩和）本番デプロイ成功 ✅
 
 ---
 
@@ -10,9 +10,9 @@
 
 ### 最新の重要決定
 - **ADR-0004**: ハイブリッドアーキテクチャ採用決定
-  - ステータス: **採用（フェーズ3完了）**（2026-02-16確定）
+  - ステータス: **採用（フェーズ3完了・性能改善済み）**（2026-02-16確定）
   - Phase 1-3を統合した単一CP-SATモデル。LLMを生成パイプラインから完全除去
-  - 性能: 15名<5s, 50名<15s, 100名<30s, 決定性100%
+  - 性能改善: 15名×4シフト **30s→5.8s**（5.2倍高速化、OPTIMAL達成）
 
 ### Active Specifications
 
@@ -38,7 +38,14 @@
 
 ## 直近の変更（最新5件）
 
-1. **PR #72** (2026-02-16): solver-functions predeploy修正（本番デプロイ成功）
+1. **PR #73** (2026-02-16): Solver relative_gap_limit緩和で4シフト対応高速化
+   - **問題**: 本番テストで15名×4シフト→30s、FEASIBLE（タイムアウト）
+   - **修正**: `relative_gap_limit: 0.01→0.05` に緩和（最適値の5%以内で早期終了）
+   - **結果**: 15名×4シフト **5.8s, OPTIMAL**達成、50名×4シフト **8.44s**
+   - 新規スケーラビリティテスト（TestScalability4Shifts）追加、60/60テスト全通過 ✅
+   - Firebaseデプロイ成功 ✅
+
+2. **PR #72** (2026-02-16): solver-functions predeploy修正（本番デプロイ成功）
    - **問題**: CI環境（Ubuntu/dash）で `command -v python3.12 ... || echo '...()'` がシンタックスエラー
    - **修正**: POSIX互換のシンプルコマンドに変更（CIですでにvenv作成済み）
    - **結果**: solverUnifiedGenerate新規作成、solverGenerateShift更新成功
@@ -94,9 +101,10 @@
 
 ## 次のアクション候補（優先度順）
 
-### A. 本番動作検証
-- `curl -X POST https://asia-northeast1-ai-care-shift-scheduler.cloudfunctions.net/solverUnifiedGenerate` でテスト
-- 統合Solver性能が本番環境でも達成されているか検証
+### A. 本番動作検証 ✅ 完了
+- **修正前**: 15名×4シフト 30s（FEASIBLE）
+- **修正後**: 15名×4シフト 5.8s（OPTIMAL、目標<10s達成）
+- ウォームスタート: 5.7s（安定）
 
 ### B. その他改善
 - 既存バグ修正
@@ -164,22 +172,22 @@
 
 ---
 
-## 本セッション作業内容（2026-02-16）
+## 本セッション作業内容（2026-02-16：Solver性能改善）
 
-**問題**: Firebase CI/CDで solver-functions predeploy がシンタックスエラー
-- CI環境の `/bin/sh`（dash）で `command -v python3.12 ... || echo '...()'` が括弧解析エラー
-- 結果: Python Cloud Functions がデプロイされない
+### A. 本番動作検証（15名×4シフト）
+- **問題特定**: 修正前は30秒→FEASIBLE（タイムアウト）
+- **根本原因分析**: `relative_gap_limit=0.01`（最適値の1%）が厳しすぎ、4シフト化により計算量増加
 
-**解決**: PR #72で修正
-- POSIX互換のシンプルコマンドに変更
-- venv作成・pip installはCIワークフロー内で既実行のため不要チェック除去
-- CI/CD全チェック通過、mainマージ、本番デプロイ成功確認
+### B. 性能改善実装（PR #73）
+- **修正内容**: `relative_gap_limit: 0.01→0.05`（最適値の5%以内で早期終了）
+- **結果**: 15名×4シフト **30s→5.8s（5.2倍高速化）**、OPTIMAL達成
+- **テスト追加**: `TestScalability4Shifts`（15名<10s, 50名<20s）
+- **テスト結果**: 60/60全通過（回帰なし）
 
-**デプロイ成功ログ**:
-```
-✔ functions[solver:solverUnifiedGenerate(asia-northeast1)] Successful create operation.
-✔ functions[solver:solverGenerateShift(asia-northeast1)] Successful update operation.
-```
+### C. デプロイと本番検証
+- Firebaseデプロイ成功、CI/CD全チェック通過
+- 本番テスト: 15名×4シフト **5.8s（目標<10s達成）**
+- ウォームスタート: 5.7s（安定）
 
 ---
 
