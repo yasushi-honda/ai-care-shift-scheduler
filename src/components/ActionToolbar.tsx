@@ -109,7 +109,7 @@ export function ActionToolbar({
           履歴
         </Button>
         <Button
-          variant="outline"
+          variant="outline-solid"
           size="md"
           icon={<DownloadIcon />}
           onClick={onExportClick}
