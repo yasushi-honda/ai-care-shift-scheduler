@@ -35,7 +35,23 @@
 
 ## 直近の変更（最新5件）
 
-1. **PR #65** (2026-02-15): Firebase Emulator functions対応とTimestamp互換性修正
+1. **PR #70** (2026-02-15): tailwindcss v3→v4移行（CSS-first設定）
+   - @tailwindcss/upgrade公式ツールによる自動移行完了
+   - tailwind.config.js削除→index.css @theme ブロック化
+   - postcss.config.js を @tailwindcss/postcss に更新
+   - ビルド成功（14.86s）、164テスト全パス
+
+2. **PR #69** (2026-02-15): firebase-functions v6→v7, uuid→crypto.randomUUID()に置換
+   - firebase-functions 6.6.0→7.0.5 メジャー更新
+   - uuid v12+ ESM-only対応：Node.js 組み込みcrypto.randomUUID()で置換
+   - 型チェック成功、350テスト全パス
+
+3. **PR #68** (2026-02-15): jspdf v3→v4, vite v6→v7メジャー更新
+   - jspdf 3→4：セキュリティ向上（Node.js fs制限）
+   - vite 6→7：Node.js 20+ 対応、不要な型定義削除
+   - ビルド成功（8.09s）、164テスト全パス
+
+4. **PR #65** (2026-02-15): Firebase Emulator functions対応とTimestamp互換性修正
    - `firebase.json` に functions emulator（port 5001）追加
    - `package.json` emulatorスクリプトに `functions` 追加
    - solver-functions predeploy に Python 3.12 存在チェック追加
