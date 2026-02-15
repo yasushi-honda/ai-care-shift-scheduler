@@ -172,7 +172,7 @@
 
 ---
 
-## 本セッション作業内容（2026-02-16：Solver性能改善）
+## 本セッション作業内容（2026-02-16：Solver性能改善＋Phase 60 UI刷新）
 
 ### A. 本番動作検証（15名×4シフト）
 - **問題特定**: 修正前は30秒→FEASIBLE（タイムアウト）
@@ -188,6 +188,24 @@
 - Firebaseデプロイ成功、CI/CD全チェック通過
 - 本番テスト: 15名×4シフト **5.8s（目標<10s達成）**
 - ウォームスタート: 5.7s（安定）
+
+### D. Phase 60 UI刷新（PR #74～#75）
+- **PR #74**: requirements形式不一致による統合Solver 500エラーを修正
+  - 原因: FrontendがShift単位（"日勤"）で送信、Solverが日付修飾キー（"2026-03-01_日勤"）を要求
+  - 修正: `expandRequirementsToDaily()` で要件を日単位に拡張、`unified_builder.py`で防衛的バリデーション追加
+  - デプロイ成功、本番確認完了
+
+- **PR #75**: Solver時代のUI刷新 - プログレスバーから結果サマリーへ
+  - **背景**: CP-SAT Solverは数秒で完了するため、LLM時代の5段階プログレスバー（360秒想定）は不要
+  - **変更**:
+    - `types.ts`: `StepDefinition`/`GENERATION_STEPS`/`DEFAULT_ESTIMATED_SECONDS`削除、`GenerationResult`追加
+    - `useAIGenerationProgress.ts`: ステップ計算・予測時間廃止、`completeGeneration(result)`に変更
+    - `AIGenerationProgress.tsx`: スピナー表示＋結果サマリーカード（スコア/充足率/違反数/処理時間）
+    - 不要サブコンポーネント3ファイル削除（ProgressSteps/ProgressBar/ProgressTimer）
+    - `App.tsx`: 評価データを`GenerationResult`として渡す、全状態でオーバーレイ表示
+  - **コード削減**: +349 / -755行（406行削減）
+  - **テスト**: 37件全通過
+  - **CI**: 全ジョブ通過、squashマージ完了 ✅
 
 ---
 
