@@ -33,22 +33,29 @@
 
 ---
 
-## 直近の変更（最新4件）
+## 直近の変更（最新5件）
 
-1. **PR #63** (2026-02-15): Cloud Scheduler権限エラーによるCI失敗を非ブロッキング化
+1. **PR #65** (2026-02-15): Firebase Emulator functions対応とTimestamp互換性修正
+   - `firebase.json` に functions emulator（port 5001）追加
+   - `package.json` emulatorスクリプトに `functions` 追加
+   - solver-functions predeploy に Python 3.12 存在チェック追加
+   - `demoSignIn.ts`: `admin.firestore.Timestamp` → モジュラーインポートに修正（firebase-admin v13互換性）
+   - ローカルデモログイン動作確認済み
+
+2. **PR #63** (2026-02-15): Cloud Scheduler権限エラーによるCI失敗を非ブロッキング化
    - Firebase Functions デプロイ時の Cloud Scheduler 権限エラー問題を解決
    - ci.yml を修正して関数コード自体のデプロイ成功を確保
    - **Solver本番デプロイ完全完了**：asia-northeast1リージョンで稼働中
 
-2. **PR #62** (2026-02-15): SOLVER_FUNCTION_URL環境変数設定とデプロイ安定化
+3. **PR #62** (2026-02-15): SOLVER_FUNCTION_URL環境変数設定とデプロイ安定化
    - `functions/.env` に SOLVER_FUNCTION_URL を設定
    - `firebase.json` predeploy コマンドの venv 依存を修正
 
-3. **PR #61** (2026-02-15): Solver Functions デプロイ用venv環境構築を追加
+4. **PR #61** (2026-02-15): Solver Functions デプロイ用venv環境構築を追加
    - CI/CD に Python 3.12 仮想環境作成ステップを追加
    - Firebase CLI の Python Functions デプロイ要件対応
 
-4. **PR #60** (2026-02-15): Solver Functions predeployパス修正とCI/CDエラー検知改善
+5. **PR #60** (2026-02-15): Solver Functions predeployパス修正とCI/CDエラー検知改善
    - firebase.json predeploy で `$RESOURCE_DIR` 変数を使用して solver-functions/ パスを指定
 
 ---
@@ -157,7 +164,7 @@
 再開前に以下を確認:
 
 - [ ] `git status` がclean（未コミット変更なし）
-- [ ] `git log` で最新コミット確認（PR #63マージ確認）
+- [ ] `git log` で最新コミット確認（PR #65マージ確認）
 - [ ] Solver本番稼働確認: `curl https://asia-northeast1-ai-care-shift-scheduler.cloudfunctions.net/solverGenerateShift`
 - [ ] CI/CD ジョブが全て pass（デプロイ成功）
 - [ ] アプリUIからシフト生成テスト（Solver版で自動使用）
