@@ -29,7 +29,7 @@
         "tests"
       ],
       "predeploy": [
-        "cd \"$RESOURCE_DIR\" && python3.12 -m venv venv && venv/bin/pip install -r requirements.txt"
+        "command -v python3.12 >/dev/null 2>&1 && cd \"$RESOURCE_DIR\" && python3.12 -m venv venv && venv/bin/pip install -r requirements.txt || echo 'SKIP: python3.12 not found (solver-functions predeploy skipped)'"
       ]
     }
   ],
@@ -82,6 +82,9 @@
   "emulators": {
     "auth": {
       "port": 9099
+    },
+    "functions": {
+      "port": 5001
     },
     "firestore": {
       "port": 8080

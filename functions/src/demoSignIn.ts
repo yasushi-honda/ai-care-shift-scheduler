@@ -11,6 +11,7 @@
 
 import { onRequest } from 'firebase-functions/v2/https';
 import * as admin from 'firebase-admin';
+import { Timestamp } from 'firebase-admin/firestore';
 
 // デモアカウント設定（サーバーサイドでのみ保持）
 const DEMO_USER_UID = 'demo-user-fixed-uid';
@@ -72,7 +73,7 @@ export const demoSignIn = onRequest({
 
     // Firestoreにユーザードキュメントを作成/更新
     // レースコンディション対策: set with mergeを使用
-    const now = admin.firestore.Timestamp.now();
+    const now = Timestamp.now();
     const userRef = db.collection('users').doc(DEMO_USER_UID);
 
     console.log('🔄 demoSignIn: Creating/updating user document...');
