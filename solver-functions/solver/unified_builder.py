@@ -53,11 +53,15 @@ def _non_operational_days(
     requirements: ShiftRequirementDict, days_in_month: int
 ) -> set[int]:
     """要件エントリがない日 → 非稼働日"""
-    target_month = requirements["targetMonth"]
     operational = set()
     for key in requirements["requirements"]:
-        date_part = key.split("_")[0]
-        day = int(date_part.split("-")[2])
+        parts = key.split("_")
+        if len(parts) < 2:
+            continue  # 日別形式でないキーはスキップ
+        date_parts = parts[0].split("-")
+        if len(date_parts) < 3:
+            continue
+        day = int(date_parts[2])
         operational.add(day)
     return set(range(1, days_in_month + 1)) - operational
 

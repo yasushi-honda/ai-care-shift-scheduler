@@ -13,6 +13,34 @@ import type {
 } from './types';
 
 /**
+ * requirementsのキー形式を日別形式に展開
+ *
+ * フロントエンドはシフト名キー（例: "日勤"）で送信するが、
+ * Solverは日別キー（例: "2026-03-01_日勤"）を期待する。
+ * 既に日別形式の場合はそのまま返す。
+ */
+function expandRequirementsToDaily(requirements: ShiftRequirement): ShiftRequirement {
+  const keys = Object.keys(requirements.requirements);
+  if (keys.length === 0) return requirements;
+
+  // 既に日別形式（"_"含む）ならそのまま返す
+  if (keys[0].includes('_')) return requirements;
+
+  const [year, month] = requirements.targetMonth.split('-').map(Number);
+  const daysInMonth = new Date(year, month, 0).getDate();
+
+  const expanded: Record<string, typeof requirements.requirements[string]> = {};
+  for (let day = 1; day <= daysInMonth; day++) {
+    const dateStr = `${requirements.targetMonth}-${String(day).padStart(2, '0')}`;
+    for (const [shiftName, dailyReq] of Object.entries(requirements.requirements)) {
+      expanded[`${dateStr}_${shiftName}`] = dailyReq;
+    }
+  }
+
+  return { ...requirements, requirements: expanded };
+}
+
+/**
  * Solver Cloud FunctionのURL
  * Firebase Functions 2nd gen: 関数ごとに固有URL（パス追加不要）
  */
@@ -125,9 +153,11 @@ export async function generateShiftsWithUnifiedSolver(
     );
   }
 
+  const expandedRequirements = expandRequirementsToDaily(requirements);
+
   const requestBody = {
     staffList,
-    requirements,
+    requirements: expandedRequirements,
     leaveRequests,
   };
 
