@@ -25,9 +25,9 @@
     "seed:demo": "tsx scripts/seedDemoData.ts",
     "seed:demo:reset": "tsx scripts/seedDemoData.ts --reset",
     "cleanup:deleted-users": "tsx scripts/cleanupDeletedUsers.ts",
-    "emulators": "firebase emulators:start --only auth,firestore",
+    "emulators": "firebase emulators:start --only auth,firestore,functions",
     "emulators:auth": "firebase emulators:start --only auth",
-    "emulators:exec": "firebase emulators:exec --only auth,firestore"
+    "emulators:exec": "firebase emulators:exec --only auth,firestore,functions"
   },
   "dependencies": {
     "@google/genai": "^1.22.0",
