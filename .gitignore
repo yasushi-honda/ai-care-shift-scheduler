@@ -46,5 +46,6 @@ functions/test-results/
 # Python
 __pycache__/
 *.pyc
+venv/
 solver-functions/venv/
 .pytest_cache/
