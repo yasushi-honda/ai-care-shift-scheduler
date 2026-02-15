@@ -58,6 +58,38 @@ def _make_reqs(days: int = 31, total_staff: int = 2) -> ShiftRequirementDict:
     )
 
 
+def _make_reqs_4shifts(days: int = 31, total_staff: int = 2,
+                       night_staff: int = 1) -> ShiftRequirementDict:
+    """4シフト（夜勤含む）の要件生成"""
+    day_req = DailyRequirementDict(
+        totalStaff=total_staff,
+        requiredQualifications=[],
+        requiredRoles=[],
+    )
+    night_req = DailyRequirementDict(
+        totalStaff=night_staff,
+        requiredQualifications=[],
+        requiredRoles=[],
+    )
+    reqs = {}
+    for day in range(1, days + 1):
+        date = f"2026-03-{day:02d}"
+        reqs[f"{date}_早番"] = day_req
+        reqs[f"{date}_日勤"] = day_req
+        reqs[f"{date}_遅番"] = day_req
+        reqs[f"{date}_夜勤"] = night_req
+    return ShiftRequirementDict(
+        targetMonth="2026-03",
+        timeSlots=[
+            {"name": "早番", "start": "07:00", "end": "16:00", "restHours": 1.0},
+            {"name": "日勤", "start": "09:00", "end": "18:00", "restHours": 1.0},
+            {"name": "遅番", "start": "11:00", "end": "20:00", "restHours": 1.0},
+            {"name": "夜勤", "start": "22:00", "end": "07:00", "restHours": 2.0},
+        ],
+        requirements=reqs,
+    )
+
+
 class TestScalability:
 
     def test_15_staff(self):
@@ -99,3 +131,37 @@ class TestScalability:
         assert result["success"] is True, f"Error: {result.get('error')}"
         assert elapsed < 30.0, f"100名で{elapsed:.1f}秒（目標: <30秒）"
         print(f"\n100名: {elapsed:.2f}秒, status={result['solverStats']['status']}")
+
+
+class TestScalability4Shifts:
+    """4シフト（夜勤含む）のスケーラビリティテスト"""
+
+    def test_15_staff_4shifts(self):
+        """15名×4シフト×31日: < 10秒"""
+        staff = _make_staff_n(15)
+        reqs = _make_reqs_4shifts(total_staff=2, night_staff=1)
+
+        start = time.time()
+        result = UnifiedSolverService.solve(staff, reqs, {})
+        elapsed = time.time() - start
+
+        assert result["success"] is True, f"Error: {result.get('error')}"
+        assert elapsed < 10.0, f"15名×4シフトで{elapsed:.1f}秒（目標: <10秒）"
+        stats = result["solverStats"]
+        print(f"\n15名×4シフト: {elapsed:.2f}秒, status={stats['status']}, "
+              f"vars={stats['numVariables']}, constraints={stats['numConstraints']}")
+
+    def test_50_staff_4shifts(self):
+        """50名×4シフト×31日: < 20秒"""
+        staff = _make_staff_n(50)
+        reqs = _make_reqs_4shifts(total_staff=5, night_staff=2)
+
+        start = time.time()
+        result = UnifiedSolverService.solve(staff, reqs, {})
+        elapsed = time.time() - start
+
+        assert result["success"] is True, f"Error: {result.get('error')}"
+        assert elapsed < 20.0, f"50名×4シフトで{elapsed:.1f}秒（目標: <20秒）"
+        stats = result["solverStats"]
+        print(f"\n50名×4シフト: {elapsed:.2f}秒, status={stats['status']}, "
+              f"vars={stats['numVariables']}, constraints={stats['numConstraints']}")

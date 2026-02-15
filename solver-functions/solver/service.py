@@ -105,8 +105,8 @@ class UnifiedSolverService:
             solver = cp_model.CpSolver()
             solver.parameters.max_time_in_seconds = 30.0
             solver.parameters.num_workers = 1  # 決定性保証
-            # 最適値の1%以内で早期終了（大規模向け高速化）
-            solver.parameters.relative_gap_limit = 0.01
+            # 最適値の5%以内で早期終了（4シフト対応の高速化）
+            solver.parameters.relative_gap_limit = 0.05
 
             start_time = time.time()
             status = solver.Solve(model)
