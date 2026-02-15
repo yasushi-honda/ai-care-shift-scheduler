@@ -4,7 +4,6 @@
  */
 
 module.exports = {
-  preset: 'ts-jest',
   testEnvironment: 'node',
   roots: ['<rootDir>/src', '<rootDir>/__tests__'],
   testMatch: ['**/__tests__/**/*.test.ts'],
@@ -35,6 +34,17 @@ module.exports = {
 
   // タイムアウト設定（統合テストは時間がかかる）
   testTimeout: 120000, // 120秒
+
+  // ESMモジュールをトランスフォーム対象に含める（@google/genai の依存関係対応）
+  transformIgnorePatterns: [
+    'node_modules/(?!(p-retry|is-network-error)/)',
+  ],
+
+  // ts-jest: TSファイル + ESM JSファイルの両方をトランスフォーム
+  transform: {
+    '^.+\\.tsx?$': 'ts-jest',
+    '^.+\\.js$': ['ts-jest', { tsconfig: { allowJs: true } }],
+  },
 
   // セットアップファイル
   setupFilesAfterEnv: ['<rootDir>/__tests__/setup.ts'],
