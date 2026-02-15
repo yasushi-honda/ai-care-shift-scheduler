@@ -215,7 +215,7 @@ export const LeaveBalanceDashboard: React.FC<LeaveBalanceDashboardProps> = ({
           <select
             value={filter}
             onChange={(e) => setFilter(e.target.value as FilterType)}
-            className="px-2 py-1 border border-slate-300 rounded text-sm"
+            className="px-2 py-1 border border-slate-300 rounded-sm text-sm"
           >
             <option value="all">全員</option>
             <option value="low">残高少</option>
@@ -227,7 +227,7 @@ export const LeaveBalanceDashboard: React.FC<LeaveBalanceDashboardProps> = ({
           <select
             value={sort}
             onChange={(e) => setSort(e.target.value as SortType)}
-            className="px-2 py-1 border border-slate-300 rounded text-sm"
+            className="px-2 py-1 border border-slate-300 rounded-sm text-sm"
           >
             <option value="name">名前</option>
             <option value="publicHoliday">公休残高</option>
@@ -274,7 +274,7 @@ export const LeaveBalanceDashboard: React.FC<LeaveBalanceDashboardProps> = ({
                   <td className="px-4 py-3 text-center">
                     <button
                       onClick={() => handleShowDetail(staff)}
-                      className="px-2 py-1 text-xs text-care-primary hover:bg-care-primary/10 rounded"
+                      className="px-2 py-1 text-xs text-care-primary hover:bg-care-primary/10 rounded-sm"
                     >
                       詳細
                     </button>
@@ -402,7 +402,7 @@ const LeaveBalanceDetailModal: React.FC<LeaveBalanceDetailModalProps> = ({
               <h4 className="font-medium text-slate-700 mb-2">調整履歴</h4>
               <div className="space-y-1 text-xs">
                 {balance.adjustments.slice(-5).map((adj, index) => (
-                  <div key={index} className="p-2 bg-slate-50 rounded">
+                  <div key={index} className="p-2 bg-slate-50 rounded-sm">
                     {adj.adjustedAt.toDate().toLocaleDateString('ja-JP')}{' '}
                     {adj.type === 'publicHoliday' ? '公休' : '有給'}{' '}
                     <span className={adj.amount > 0 ? 'text-green-600' : 'text-red-600'}>
@@ -424,7 +424,7 @@ const LeaveBalanceDetailModal: React.FC<LeaveBalanceDetailModalProps> = ({
                 <select
                   value={adjustType}
                   onChange={(e) => setAdjustType(e.target.value as 'publicHoliday' | 'paidLeave')}
-                  className="w-full px-2 py-1 border border-slate-300 rounded text-sm"
+                  className="w-full px-2 py-1 border border-slate-300 rounded-sm text-sm"
                 >
                   <option value="publicHoliday">公休</option>
                   <option value="paidLeave">有給</option>
@@ -436,7 +436,7 @@ const LeaveBalanceDetailModal: React.FC<LeaveBalanceDetailModalProps> = ({
                   type="number"
                   value={adjustAmount}
                   onChange={(e) => setAdjustAmount(parseInt(e.target.value) || 0)}
-                  className="w-full px-2 py-1 border border-slate-300 rounded text-sm"
+                  className="w-full px-2 py-1 border border-slate-300 rounded-sm text-sm"
                 />
               </div>
               <div>
@@ -446,20 +446,20 @@ const LeaveBalanceDetailModal: React.FC<LeaveBalanceDetailModalProps> = ({
                   value={adjustReason}
                   onChange={(e) => setAdjustReason(e.target.value)}
                   placeholder="例: 管理者調整"
-                  className="w-full px-2 py-1 border border-slate-300 rounded text-sm"
+                  className="w-full px-2 py-1 border border-slate-300 rounded-sm text-sm"
                 />
               </div>
               <div className="flex justify-end gap-2">
                 <button
                   onClick={() => setShowAdjustForm(false)}
-                  className="px-3 py-1 text-sm text-slate-600 hover:bg-slate-100 rounded"
+                  className="px-3 py-1 text-sm text-slate-600 hover:bg-slate-100 rounded-sm"
                 >
                   キャンセル
                 </button>
                 <button
                   onClick={handleSubmitAdjust}
                   disabled={adjustAmount === 0 || !adjustReason.trim()}
-                  className="px-3 py-1 text-sm text-white bg-care-primary hover:bg-care-primary/90 rounded disabled:opacity-50"
+                  className="px-3 py-1 text-sm text-white bg-care-primary hover:bg-care-primary/90 rounded-sm disabled:opacity-50"
                 >
                   調整する
                 </button>

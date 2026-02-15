@@ -87,7 +87,7 @@ export function ProgressSteps({ currentStep, steps, isCompleted }: ProgressSteps
           <div key={step.id} className="relative" role="listitem">
             <div className="flex items-start">
               {/* ステップインジケーター */}
-              <div className="flex-shrink-0">
+              <div className="shrink-0">
                 <StepIndicator
                   step={step}
                   currentStep={currentStep}

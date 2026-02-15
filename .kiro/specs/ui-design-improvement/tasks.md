@@ -92,7 +92,7 @@ interface TooltipProps {
 ```typescript
 // 追加するprops
 size?: 'sm' | 'md' | 'lg';
-variant: 'primary' | 'secondary' | 'success' | 'danger' | 'ghost' | 'outline';
+variant: 'primary' | 'secondary' | 'success' | 'danger' | 'ghost' | 'outline-solid';
 ```
 
 ### 受け入れ条件

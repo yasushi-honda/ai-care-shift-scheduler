@@ -128,7 +128,7 @@ export function AdminLayout(): React.ReactElement {
   return (
     <div className="min-h-screen bg-gray-100">
       {/* Phase 19.2.1: レスポンシブヘッダー */}
-      <header className="bg-white shadow-sm border-b border-gray-200">
+      <header className="bg-white shadow-xs border-b border-gray-200">
         <div className="px-4 md:px-6 py-4 flex items-center justify-between">
           <div className="flex items-center space-x-2 md:space-x-4">
             {/* Phase 19.2.1: ハンバーガーメニューボタン（モバイルのみ） */}
@@ -178,7 +178,7 @@ export function AdminLayout(): React.ReactElement {
           <div className="flex items-center space-x-2 md:space-x-4">
             <div className="hidden sm:block text-sm text-gray-700">
               <span className="font-medium">{userProfile?.name || 'ユーザー'}</span>
-              <span className="ml-2 px-2 py-1 bg-purple-100 text-purple-800 text-xs font-semibold rounded">
+              <span className="ml-2 px-2 py-1 bg-purple-100 text-purple-800 text-xs font-semibold rounded-sm">
                 super-admin
               </span>
             </div>
@@ -186,7 +186,7 @@ export function AdminLayout(): React.ReactElement {
             <button
               onClick={handleSignOut}
               disabled={isSigningOut}
-              className="px-3 md:px-4 py-2 min-h-[44px] text-xs md:text-sm bg-gray-200 text-gray-700 rounded hover:bg-gray-300 active:bg-gray-400 active:scale-95 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-3 md:px-4 py-2 min-h-[44px] text-xs md:text-sm bg-gray-200 text-gray-700 rounded-sm hover:bg-gray-300 active:bg-gray-400 active:scale-95 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isSigningOut ? 'ログアウト中...' : 'ログアウト'}
             </button>
@@ -198,7 +198,7 @@ export function AdminLayout(): React.ReactElement {
         {/* Phase 19.2.1: デスクトップサイドバー（md以上で表示） */}
         {/* Phase 19.2.3: ランドマークロール追加 - role="navigation" */}
         <aside
-          className="hidden md:block w-64 bg-white shadow-sm"
+          className="hidden md:block w-64 bg-white shadow-xs"
           style={{ minHeight: `calc(100vh - ${HEADER_HEIGHT_PX}px)` }}
           role="navigation"
           aria-label="メインナビゲーション"

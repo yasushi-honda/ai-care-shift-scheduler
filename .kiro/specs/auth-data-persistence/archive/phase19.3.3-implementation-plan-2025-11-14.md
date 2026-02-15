@@ -367,7 +367,7 @@ export function UsageChart({ type, data, options }: UsageChartProps) {
   const ChartComponent = chartComponents[type];
 
   return (
-    <div className="bg-white p-6 rounded-lg shadow">
+    <div className="bg-white p-6 rounded-lg shadow-sm">
       <ChartComponent data={data} options={options} />
     </div>
   );

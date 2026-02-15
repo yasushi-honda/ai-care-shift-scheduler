@@ -77,7 +77,7 @@ export function IconButton({
     w-10 h-10 rounded-lg
     inline-flex items-center justify-center
     transition-colors duration-200
-    focus:outline-none focus:ring-2 focus:ring-offset-2
+    focus:outline-hidden focus:ring-2 focus:ring-offset-2
     disabled:opacity-50 disabled:cursor-not-allowed
     ${variantStyles[variant]}
     ${className}

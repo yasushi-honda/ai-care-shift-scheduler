@@ -140,7 +140,7 @@ export const ShiftTypeSettings: React.FC<ShiftTypeSettingsProps> = ({
   }, []);
 
   const getColorPreview = (color: ShiftColor) => (
-    <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${color.background} ${color.text}`}>
+    <span className={`inline-block px-2 py-0.5 rounded-sm text-xs font-medium ${color.background} ${color.text}`}>
       サンプル
     </span>
   );
@@ -157,7 +157,7 @@ export const ShiftTypeSettings: React.FC<ShiftTypeSettingsProps> = ({
             }`}
           >
             <div className="flex items-center space-x-3">
-              <span className={`inline-block w-16 px-2 py-1 rounded text-center text-sm font-medium ${shiftType.color.background} ${shiftType.color.text}`}>
+              <span className={`inline-block w-16 px-2 py-1 rounded-sm text-center text-sm font-medium ${shiftType.color.background} ${shiftType.color.text}`}>
                 {shiftType.name}
               </span>
               <span className="text-sm text-slate-600">
@@ -208,7 +208,7 @@ export const ShiftTypeSettings: React.FC<ShiftTypeSettingsProps> = ({
             return (
               <React.Fragment key={id}>
                 {index > 0 && <span className="text-slate-400">→</span>}
-                <span className={`inline-block px-2 py-1 rounded text-sm font-medium ${shiftType.color.background} ${shiftType.color.text}`}>
+                <span className={`inline-block px-2 py-1 rounded-sm text-sm font-medium ${shiftType.color.background} ${shiftType.color.text}`}>
                   {shiftType.name}
                 </span>
               </React.Fragment>
@@ -248,7 +248,7 @@ export const ShiftTypeSettings: React.FC<ShiftTypeSettingsProps> = ({
                   type="text"
                   value={editingShiftType.name}
                   onChange={(e) => updateEditingField('name', e.target.value)}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-care-primary/50"
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-care-primary/50"
                   placeholder="例: 早番"
                 />
               </div>
@@ -261,7 +261,7 @@ export const ShiftTypeSettings: React.FC<ShiftTypeSettingsProps> = ({
                     type="time"
                     value={editingShiftType.start}
                     onChange={(e) => updateEditingField('start', e.target.value)}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-care-primary/50"
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-care-primary/50"
                   />
                 </div>
                 <div>
@@ -270,7 +270,7 @@ export const ShiftTypeSettings: React.FC<ShiftTypeSettingsProps> = ({
                     type="time"
                     value={editingShiftType.end}
                     onChange={(e) => updateEditingField('end', e.target.value)}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-care-primary/50"
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-care-primary/50"
                   />
                 </div>
               </div>
@@ -284,7 +284,7 @@ export const ShiftTypeSettings: React.FC<ShiftTypeSettingsProps> = ({
                   step="0.5"
                   value={editingShiftType.restHours}
                   onChange={(e) => updateEditingField('restHours', parseFloat(e.target.value) || 0)}
-                  className="w-24 px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-care-primary/50"
+                  className="w-24 px-3 py-2 border border-slate-300 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-care-primary/50"
                 />
               </div>
 
@@ -311,7 +311,7 @@ export const ShiftTypeSettings: React.FC<ShiftTypeSettingsProps> = ({
               {/* プレビュー */}
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">プレビュー</label>
-                <span className={`inline-block px-3 py-1.5 rounded text-sm font-medium ${editingShiftType.color.background} ${editingShiftType.color.text}`}>
+                <span className={`inline-block px-3 py-1.5 rounded-sm text-sm font-medium ${editingShiftType.color.background} ${editingShiftType.color.text}`}>
                   {editingShiftType.name || 'シフト名'}
                 </span>
               </div>
@@ -323,7 +323,7 @@ export const ShiftTypeSettings: React.FC<ShiftTypeSettingsProps> = ({
                   id="isActive"
                   checked={editingShiftType.isActive}
                   onChange={(e) => updateEditingField('isActive', e.target.checked)}
-                  className="w-4 h-4 text-care-primary border-slate-300 rounded focus:ring-care-primary"
+                  className="w-4 h-4 text-care-primary border-slate-300 rounded-sm focus:ring-care-primary"
                 />
                 <label htmlFor="isActive" className="ml-2 text-sm text-slate-700">
                   有効にする

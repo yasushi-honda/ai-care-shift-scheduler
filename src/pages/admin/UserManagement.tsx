@@ -166,7 +166,7 @@ export function UserManagement(): React.ReactElement {
 
       {/* ユーザー一覧テーブル */}
       {users.length === 0 ? (
-        <div className="bg-white rounded-lg shadow-sm p-12 text-center">
+        <div className="bg-white rounded-lg shadow-xs p-12 text-center">
           <div className="text-6xl mb-4">👥</div>
           <h2 className="text-xl font-semibold text-gray-900 mb-2">
             ユーザーがまだいません
@@ -176,7 +176,7 @@ export function UserManagement(): React.ReactElement {
           </p>
         </div>
       ) : (
-        <div className="bg-white rounded-lg shadow-sm overflow-hidden">
+        <div className="bg-white rounded-lg shadow-xs overflow-hidden">
           {/* Phase 19.2.1: モバイル対応 - 横スクロール */}
           {/* Phase 19.2.1.5: 横スクロールヒント追加 */}
           <div className="relative">

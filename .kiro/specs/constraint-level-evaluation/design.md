@@ -396,22 +396,22 @@ function LevelSummary({ violations }: { violations: ConstraintViolation[] }) {
       {/* レベル別カウント */}
       <div className="grid grid-cols-2 gap-2 text-sm">
         {counts[1] > 0 && (
-          <div className="bg-red-50 border border-red-500 rounded p-2">
+          <div className="bg-red-50 border border-red-500 rounded-sm p-2">
             <span className="text-red-800">🚫 絶対必須(Lv1): {counts[1]}件</span>
           </div>
         )}
         {counts[2] > 0 && (
-          <div className="bg-orange-50 border border-orange-500 rounded p-2">
+          <div className="bg-orange-50 border border-orange-500 rounded-sm p-2">
             <span className="text-orange-800">⚠️ 運営必須(Lv2): {counts[2]}件</span>
           </div>
         )}
         {counts[3] > 0 && (
-          <div className="bg-yellow-50 border border-yellow-500 rounded p-2">
+          <div className="bg-yellow-50 border border-yellow-500 rounded-sm p-2">
             <span className="text-yellow-800">💡 努力目標(Lv3): {counts[3]}件</span>
           </div>
         )}
         {counts[4] > 0 && (
-          <div className="bg-blue-50 border border-blue-500 rounded p-2">
+          <div className="bg-blue-50 border border-blue-500 rounded-sm p-2">
             <span className="text-blue-800">ℹ️ 推奨(Lv4): {counts[4]}件</span>
           </div>
         )}
@@ -451,7 +451,7 @@ function ViolationItem({ violation }: { violation: ConstraintViolation }) {
   return (
     <li className={`p-3 rounded-lg border ${config.bgColor} ${config.borderColor}`}>
       <div className="flex items-start gap-2">
-        <span className={`text-xs font-bold px-2 py-0.5 rounded`}
+        <span className={`text-xs font-bold px-2 py-0.5 rounded-sm`}
               style={{ backgroundColor: config.color, color: 'white' }}>
           Lv{level}
         </span>

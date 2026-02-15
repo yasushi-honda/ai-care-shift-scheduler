@@ -249,7 +249,7 @@ export function ReportPage(): React.ReactElement {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* ヘッダー - Phase 42.1: 戻るボタン追加 */}
-      <header className="bg-white shadow-sm">
+      <header className="bg-white shadow-xs">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex justify-between items-center">
             <div className="flex items-center gap-2 sm:gap-4">
@@ -286,7 +286,7 @@ export function ReportPage(): React.ReactElement {
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
                   className={`
-                    py-3 px-3 sm:px-4 text-xs sm:text-sm font-medium border-b-2 whitespace-nowrap transition-colors flex-shrink-0
+                    py-3 px-3 sm:px-4 text-xs sm:text-sm font-medium border-b-2 whitespace-nowrap transition-colors shrink-0
                     ${activeTab === tab.id
                       ? 'border-blue-500 text-blue-600'
                       : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
@@ -487,7 +487,7 @@ function WorkTimeContent({ data }: WorkTimeContentProps): React.ReactElement {
   const [expandedStaff, setExpandedStaff] = useState<string | null>(null);
 
   return (
-    <div className="bg-white rounded-lg shadow overflow-hidden">
+    <div className="bg-white rounded-lg shadow-sm overflow-hidden">
       {/* モバイル: カード表示 */}
       <div className="block md:hidden">
         <div className="divide-y divide-gray-200">
@@ -670,14 +670,14 @@ function ShiftTypeContent({ data }: ShiftTypeContentProps): React.ReactElement {
           height={300}
         />
 
-        <div className="bg-white p-6 rounded-lg shadow">
+        <div className="bg-white p-6 rounded-lg shadow-sm">
           <h3 className="text-lg font-semibold text-gray-900 mb-4">シフト種別サマリー</h3>
           <div className="space-y-3">
             {data.shiftTypeData.overall.map(shift => (
               <div key={shift.shiftType} className="flex items-center justify-between">
                 <div className="flex items-center">
                   <div
-                    className="w-4 h-4 rounded mr-3"
+                    className="w-4 h-4 rounded-sm mr-3"
                     style={{ backgroundColor: shift.color }}
                   />
                   <span className="text-sm font-medium text-gray-700">{shift.shiftType}</span>
@@ -692,7 +692,7 @@ function ShiftTypeContent({ data }: ShiftTypeContentProps): React.ReactElement {
       </div>
 
       {/* スタッフ別シフト種別内訳 */}
-      <div className="bg-white rounded-lg shadow overflow-hidden">
+      <div className="bg-white rounded-lg shadow-sm overflow-hidden">
         <div className="px-6 py-4 border-b border-gray-200">
           <h3 className="text-lg font-semibold text-gray-900">スタッフ別シフト種別内訳</h3>
         </div>
@@ -757,7 +757,7 @@ function StaffActivityContent({ data }: StaffActivityContentProps): React.ReactE
   return (
     <div className="space-y-4 lg:space-y-0 lg:grid lg:grid-cols-3 lg:gap-6">
       {/* スタッフ一覧 */}
-      <div className="bg-white rounded-lg shadow overflow-hidden">
+      <div className="bg-white rounded-lg shadow-sm overflow-hidden">
         <div className="px-4 py-3 border-b border-gray-200">
           <h3 className="text-sm font-semibold text-gray-900">スタッフ一覧</h3>
         </div>
@@ -767,7 +767,7 @@ function StaffActivityContent({ data }: StaffActivityContentProps): React.ReactE
             <button
               key={staff.staffId}
               onClick={() => setSelectedStaff(staff.staffId)}
-              className={`flex-shrink-0 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+              className={`shrink-0 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                 selectedStaff === staff.staffId
                   ? 'bg-blue-500 text-white'
                   : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
@@ -804,26 +804,26 @@ function StaffActivityContent({ data }: StaffActivityContentProps): React.ReactE
           <div className="space-y-4">
             {/* 統計カード */}
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
-              <div className="bg-white p-3 sm:p-4 rounded-lg shadow">
+              <div className="bg-white p-3 sm:p-4 rounded-lg shadow-sm">
                 <div className="text-xs sm:text-sm text-gray-500">出勤日数</div>
                 <div className="text-xl sm:text-2xl font-bold text-gray-900">{selectedActivity.workDays}日</div>
               </div>
-              <div className="bg-white p-3 sm:p-4 rounded-lg shadow">
+              <div className="bg-white p-3 sm:p-4 rounded-lg shadow-sm">
                 <div className="text-xs sm:text-sm text-gray-500">休日数</div>
                 <div className="text-xl sm:text-2xl font-bold text-gray-900">{selectedActivity.restDays}日</div>
               </div>
-              <div className="bg-white p-3 sm:p-4 rounded-lg shadow">
+              <div className="bg-white p-3 sm:p-4 rounded-lg shadow-sm">
                 <div className="text-xs sm:text-sm text-gray-500">連続勤務最大</div>
                 <div className="text-xl sm:text-2xl font-bold text-gray-900">{selectedActivity.maxConsecutiveWorkDays}日</div>
               </div>
-              <div className="bg-white p-3 sm:p-4 rounded-lg shadow">
+              <div className="bg-white p-3 sm:p-4 rounded-lg shadow-sm">
                 <div className="text-xs sm:text-sm text-gray-500">週平均勤務</div>
                 <div className="text-xl sm:text-2xl font-bold text-gray-900">{selectedActivity.averageWeeklyHours.toFixed(1)}h</div>
               </div>
             </div>
 
             {/* 休日内訳 */}
-            <div className="bg-white p-3 sm:p-4 rounded-lg shadow">
+            <div className="bg-white p-3 sm:p-4 rounded-lg shadow-sm">
               <h4 className="text-sm font-semibold text-gray-900 mb-3">休日内訳</h4>
               <div className="flex flex-wrap gap-4">
                 <div>
@@ -838,7 +838,7 @@ function StaffActivityContent({ data }: StaffActivityContentProps): React.ReactE
             </div>
 
             {/* 月間カレンダー */}
-            <div className="bg-white p-3 sm:p-4 rounded-lg shadow">
+            <div className="bg-white p-3 sm:p-4 rounded-lg shadow-sm">
               <h4 className="text-sm font-semibold text-gray-900 mb-3">月間カレンダー</h4>
               <div className="grid grid-cols-7 gap-0.5 sm:gap-1 text-center text-xs">
                 {['日', '月', '火', '水', '木', '金', '土'].map(day => (
@@ -867,7 +867,7 @@ function StaffActivityContent({ data }: StaffActivityContentProps): React.ReactE
             </div>
           </div>
         ) : (
-          <div className="bg-white rounded-lg shadow p-6 sm:p-8 text-center text-gray-500">
+          <div className="bg-white rounded-lg shadow-sm p-6 sm:p-8 text-center text-gray-500">
             <p className="hidden lg:block">左のリストからスタッフを選択してください</p>
             <p className="lg:hidden">上のリストからスタッフを選択してください</p>
           </div>
@@ -909,7 +909,7 @@ function ManagementContent({ data, onDownloadPDF, isPdfGenerating }: ManagementC
       </div>
 
       {/* 時間帯別充足率 */}
-      <div className="bg-white rounded-lg shadow overflow-hidden">
+      <div className="bg-white rounded-lg shadow-sm overflow-hidden">
         <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-200">
           <h3 className="text-base sm:text-lg font-semibold text-gray-900">時間帯別充足率</h3>
         </div>
@@ -963,7 +963,7 @@ function ManagementContent({ data, onDownloadPDF, isPdfGenerating }: ManagementC
       </div>
 
       {/* コスト推計 */}
-      <div className="bg-white rounded-lg shadow p-4 sm:p-6">
+      <div className="bg-white rounded-lg shadow-sm p-4 sm:p-6">
         <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-3 sm:mb-4">コスト推計</h3>
         <div className="grid grid-cols-2 gap-3 sm:gap-4">
           <div>
@@ -987,7 +987,7 @@ function ManagementContent({ data, onDownloadPDF, isPdfGenerating }: ManagementC
 
       {/* 前月比較 */}
       {data.monthComparison && (
-        <div className="bg-white rounded-lg shadow p-4 sm:p-6">
+        <div className="bg-white rounded-lg shadow-sm p-4 sm:p-6">
           <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-3 sm:mb-4">前月比較</h3>
           <div className="grid grid-cols-3 gap-2 sm:gap-4">
             <div>
@@ -1014,12 +1014,12 @@ function ManagementContent({ data, onDownloadPDF, isPdfGenerating }: ManagementC
 
       {/* 改善提案 */}
       {data.recommendations.length > 0 && (
-        <div className="bg-white rounded-lg shadow p-4 sm:p-6">
+        <div className="bg-white rounded-lg shadow-sm p-4 sm:p-6">
           <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-3 sm:mb-4">改善提案</h3>
           <ul className="space-y-2">
             {data.recommendations.map((rec, idx) => (
               <li key={idx} className="flex items-start text-sm sm:text-base">
-                <span className="mr-2 text-blue-500 flex-shrink-0">💡</span>
+                <span className="mr-2 text-blue-500 shrink-0">💡</span>
                 <span className="text-gray-700">{rec}</span>
               </li>
             ))}
@@ -1054,7 +1054,7 @@ function PersonalContent({ data, onDownloadPDF, isPdfGenerating }: PersonalConte
       </div>
 
       {/* スタッフ名 */}
-      <div className="bg-white rounded-lg shadow p-4 sm:p-6">
+      <div className="bg-white rounded-lg shadow-sm p-4 sm:p-6">
         <h2 className="text-xl sm:text-2xl font-bold text-gray-900">{data.staffName}</h2>
         <p className="text-sm sm:text-base text-gray-500">{data.targetMonth} 勤務実績レポート</p>
       </div>
@@ -1079,7 +1079,7 @@ function PersonalContent({ data, onDownloadPDF, isPdfGenerating }: PersonalConte
           height={250}
         />
 
-        <div className="bg-white p-4 sm:p-6 rounded-lg shadow">
+        <div className="bg-white p-4 sm:p-6 rounded-lg shadow-sm">
           <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-3 sm:mb-4">シフト種別詳細</h3>
           <div className="space-y-2">
             {data.shiftBreakdown.map(shift => (
@@ -1093,7 +1093,7 @@ function PersonalContent({ data, onDownloadPDF, isPdfGenerating }: PersonalConte
       </div>
 
       {/* 休暇残高 */}
-      <div className="bg-white rounded-lg shadow p-4 sm:p-6">
+      <div className="bg-white rounded-lg shadow-sm p-4 sm:p-6">
         <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-3 sm:mb-4">休暇残高</h3>
         <div className="grid grid-cols-2 gap-3 sm:gap-4">
           <div>
@@ -1116,7 +1116,7 @@ function PersonalContent({ data, onDownloadPDF, isPdfGenerating }: PersonalConte
       </div>
 
       {/* 月間カレンダー */}
-      <div className="bg-white rounded-lg shadow p-4 sm:p-6">
+      <div className="bg-white rounded-lg shadow-sm p-4 sm:p-6">
         <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-3 sm:mb-4">月間カレンダー</h3>
         <div className="grid grid-cols-7 gap-0.5 sm:gap-1 text-center text-xs">
           {['日', '月', '火', '水', '木', '金', '土'].map(day => (
@@ -1172,7 +1172,7 @@ function SummaryCard({ title, value, icon, color }: SummaryCardProps): React.Rea
           <p className="text-xs sm:text-sm text-gray-500 truncate">{title}</p>
           <p className="text-lg sm:text-2xl font-bold text-gray-900 truncate">{value}</p>
         </div>
-        <span className="text-xl sm:text-2xl flex-shrink-0">{icon}</span>
+        <span className="text-xl sm:text-2xl shrink-0">{icon}</span>
       </div>
     </div>
   );

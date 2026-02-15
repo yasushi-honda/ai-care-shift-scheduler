@@ -270,14 +270,14 @@ export function AuditLogs(): React.ReactElement {
           <button
             onClick={exportToCSV}
             disabled={logs.length === 0}
-            className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-4 py-2 bg-green-600 text-white rounded-sm hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             📄 CSV
           </button>
           <button
             onClick={exportToJSON}
             disabled={logs.length === 0}
-            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-4 py-2 bg-blue-600 text-white rounded-sm hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             📦 JSON
           </button>
@@ -285,7 +285,7 @@ export function AuditLogs(): React.ReactElement {
       </div>
 
       {/* フィルターパネル */}
-      <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
+      <div className="bg-white p-4 rounded-lg shadow-xs border border-gray-200">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-semibold text-gray-900">フィルター</h2>
           <button
@@ -307,7 +307,7 @@ export function AuditLogs(): React.ReactElement {
               value={filterUserId}
               onChange={(e) => setFilterUserId(e.target.value)}
               placeholder="ユーザーID"
-              className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-sm focus:outline-hidden focus:ring-2 focus:ring-blue-500"
             />
           </div>
 
@@ -319,7 +319,7 @@ export function AuditLogs(): React.ReactElement {
             <select
               value={filterAction}
               onChange={(e) => setFilterAction(e.target.value as AuditLogAction | '')}
-              className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-sm focus:outline-hidden focus:ring-2 focus:ring-blue-500"
             >
               <option value="">すべて</option>
               {Object.values(AuditLogAction).map((action) => (
@@ -340,7 +340,7 @@ export function AuditLogs(): React.ReactElement {
               value={filterResourceType}
               onChange={(e) => setFilterResourceType(e.target.value)}
               placeholder="staff, schedule..."
-              className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-sm focus:outline-hidden focus:ring-2 focus:ring-blue-500"
             />
           </div>
 
@@ -354,7 +354,7 @@ export function AuditLogs(): React.ReactElement {
               value={filterFacilityId}
               onChange={(e) => setFilterFacilityId(e.target.value)}
               placeholder="施設ID（空でグローバル）"
-              className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-sm focus:outline-hidden focus:ring-2 focus:ring-blue-500"
             />
           </div>
         </div>
@@ -362,7 +362,7 @@ export function AuditLogs(): React.ReactElement {
         <div className="mt-4 flex justify-end">
           <button
             onClick={handleFilterApply}
-            className="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+            className="px-6 py-2 bg-blue-600 text-white rounded-sm hover:bg-blue-700 transition-colors"
           >
             フィルター適用
           </button>
@@ -370,7 +370,7 @@ export function AuditLogs(): React.ReactElement {
       </div>
 
       {/* ログ一覧テーブル */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+      <div className="bg-white rounded-lg shadow-xs border border-gray-200">
         {loading ? (
           <div className="p-8 text-center text-gray-500">読み込み中...</div>
         ) : error ? (
@@ -601,7 +601,7 @@ export function AuditLogs(): React.ReactElement {
                   <h3 className="text-sm font-semibold text-gray-900 mb-2">
                     エラーメッセージ
                   </h3>
-                  <div className="bg-red-50 border border-red-200 rounded p-3 text-sm text-red-800">
+                  <div className="bg-red-50 border border-red-200 rounded-sm p-3 text-sm text-red-800">
                     {selectedLog.errorMessage}
                   </div>
                 </div>
@@ -612,7 +612,7 @@ export function AuditLogs(): React.ReactElement {
                 <h3 className="text-sm font-semibold text-gray-900 mb-2">
                   詳細情報（JSON）
                 </h3>
-                <pre className="bg-gray-50 border border-gray-200 rounded p-3 text-xs overflow-x-auto">
+                <pre className="bg-gray-50 border border-gray-200 rounded-sm p-3 text-xs overflow-x-auto">
                   {JSON.stringify(selectedLog.details, null, 2)}
                 </pre>
               </div>
@@ -621,7 +621,7 @@ export function AuditLogs(): React.ReactElement {
             <div className="sticky bottom-0 bg-gray-50 border-t border-gray-200 px-6 py-4 flex justify-end">
               <button
                 onClick={closeDetailModal}
-                className="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 transition-colors"
+                className="px-4 py-2 bg-gray-200 text-gray-700 rounded-sm hover:bg-gray-300 transition-colors"
               >
                 閉じる
               </button>

@@ -44,7 +44,7 @@ const SkeletonBase: React.FC<{
 }> = ({ className = '', noAnimation = false, style }) => {
   return (
     <div
-      className={`bg-gray-200 rounded ${noAnimation ? '' : 'animate-pulse'} ${className}`}
+      className={`bg-gray-200 rounded-sm ${noAnimation ? '' : 'animate-pulse'} ${className}`}
       style={style}
       role="status"
       aria-label="読み込み中"
@@ -343,7 +343,7 @@ if (loading) {
       </div>
 
       {/* テーブル（スケルトン） */}
-      <div className="bg-white rounded-lg shadow-sm overflow-hidden p-6">
+      <div className="bg-white rounded-lg shadow-xs overflow-hidden p-6">
         <SkeletonLoader variant="table" count={5} columns={6} />
       </div>
 
@@ -604,7 +604,7 @@ $ npm run type-check
 
 #### 4. キーボードナビゲーション
 - ✅ すべてのボタンはキーボードでフォーカス可能
-- ✅ `focus:outline-none focus:ring-2`: フォーカス時の視覚的フィードバック
+- ✅ `focus:outline-hidden focus:ring-2`: フォーカス時の視覚的フィードバック
 
 #### 5. 色のコントラスト
 - ✅ WCAG AA基準を満たすコントラスト比

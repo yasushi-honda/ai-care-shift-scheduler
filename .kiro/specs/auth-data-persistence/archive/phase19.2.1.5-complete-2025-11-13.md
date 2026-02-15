@@ -47,7 +47,7 @@ const HEADER_HEIGHT_PX = 73; // ヘッダーの高さ（px）
 2. デスクトップサイドバー（行188-191）:
    ```typescript
    <aside
-     className="hidden md:block w-64 bg-white shadow-sm"
+     className="hidden md:block w-64 bg-white shadow-xs"
      style={{ minHeight: `calc(100vh - ${HEADER_HEIGHT_PX}px)` }}
    >
    ```

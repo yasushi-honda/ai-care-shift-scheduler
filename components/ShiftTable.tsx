@@ -527,7 +527,7 @@ const ShiftTable: React.FC<ShiftTableProps> = ({ schedule, targetMonth, onShiftC
                           tabIndex={0}
                           role="button"
                           aria-label={`${staffSchedule.staffName}の${shift.date}の予定: ${plannedShiftType}`}
-                          className={`px-2 py-1 text-center text-xs cursor-pointer hover:bg-blue-50 active:scale-95 active:opacity-80 border-b border-gray-300 select-none transition-transform duration-75 focus:outline-none focus:ring-2 focus:ring-blue-500 ${hasDiff ? 'ring-2 ring-orange-400 bg-orange-50' : 'bg-white'}`}
+                          className={`px-2 py-1 text-center text-xs cursor-pointer hover:bg-blue-50 active:scale-95 active:opacity-80 border-b border-gray-300 select-none transition-transform duration-75 focus:outline-hidden focus:ring-2 focus:ring-blue-500 ${hasDiff ? 'ring-2 ring-orange-400 bg-orange-50' : 'bg-white'}`}
                           style={{ touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent' }}
                           onClick={() => handleCellClick(shift.date, staffSchedule.staffId, staffSchedule.staffName, 'planned', shift)}
                           onKeyDown={(e) => handleKeyDown(e, shift.date, staffSchedule.staffId, staffSchedule.staffName, 'planned', shift, staffIndex, dateIndex, totalStaff, totalDates)}
@@ -560,7 +560,7 @@ const ShiftTable: React.FC<ShiftTableProps> = ({ schedule, targetMonth, onShiftC
                           tabIndex={0}
                           role="button"
                           aria-label={`${staffSchedule.staffName}の${shift.date}の実績: ${actualShiftType || '未入力'}`}
-                          className={`px-2 py-1 text-center text-xs cursor-pointer hover:bg-blue-100 active:scale-95 active:opacity-80 border-b border-gray-400 select-none transition-transform duration-75 focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                          className={`px-2 py-1 text-center text-xs cursor-pointer hover:bg-blue-100 active:scale-95 active:opacity-80 border-b border-gray-400 select-none transition-transform duration-75 focus:outline-hidden focus:ring-2 focus:ring-blue-500 ${
                             hasDiff ? 'ring-2 ring-orange-400 bg-orange-50' :
                             isEmpty ? 'bg-gray-100' : 'bg-gray-50'
                           }`}

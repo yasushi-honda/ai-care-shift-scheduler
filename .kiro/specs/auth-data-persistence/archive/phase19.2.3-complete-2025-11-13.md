@@ -29,7 +29,7 @@ Phase 19.2.3では、WCAG 2.1 AAレベルに準拠したアクセシビリティ
 **デスクトップサイドバー**（行189-196）:
 ```tsx
 <aside
-  className="hidden md:block w-64 bg-white shadow-sm"
+  className="hidden md:block w-64 bg-white shadow-xs"
   style={{ minHeight: `calc(100vh - ${HEADER_HEIGHT_PX}px)` }}
   role="navigation"
   aria-label="メインナビゲーション"
@@ -94,7 +94,7 @@ Phase 19.2.3では、WCAG 2.1 AAレベルに準拠したアクセシビリティ
             type="text"
             value={newFacilityName}
             onChange={(e) => setNewFacilityName(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-blue-500"
             placeholder="例: 〇〇介護施設"
             required
             aria-required="true"
@@ -109,7 +109,7 @@ Phase 19.2.3では、WCAG 2.1 AAレベルに準拠したアクセシビリティ
         </div>
 
         {createError && (
-          <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded text-sm text-red-600" role="alert" aria-live="assertive">
+          <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-sm text-sm text-red-600" role="alert" aria-live="assertive">
             {createError}
           </div>
         )}

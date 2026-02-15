@@ -240,7 +240,7 @@ export const ErrorMessage: React.FC<ErrorMessageProps> = ({
     >
       <div className="flex">
         {/* アイコン */}
-        <div className="flex-shrink-0">
+        <div className="shrink-0">
           <Icon />
         </div>
 
@@ -257,7 +257,7 @@ export const ErrorMessage: React.FC<ErrorMessageProps> = ({
               {/* 解決策 */}
               {solutionArray.length > 0 && (
                 <div
-                  className={`mt-3 p-3 border rounded ${styles.solution} text-sm`}
+                  className={`mt-3 p-3 border rounded-sm ${styles.solution} text-sm`}
                 >
                   <div className="font-medium mb-1">💡 解決策:</div>
                   <ul className="list-disc list-inside space-y-1">
@@ -289,10 +289,10 @@ export const ErrorMessage: React.FC<ErrorMessageProps> = ({
 
         {/* 閉じるボタン */}
         {dismissible && onDismiss && (
-          <div className="ml-auto pl-3 flex-shrink-0">
+          <div className="ml-auto pl-3 shrink-0">
             <button
               onClick={onDismiss}
-              className="inline-flex text-gray-400 hover:text-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 rounded"
+              className="inline-flex text-gray-400 hover:text-gray-600 focus:outline-hidden focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 rounded-sm"
               aria-label={dismissLabel}
             >
               <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">

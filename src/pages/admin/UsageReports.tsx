@@ -405,7 +405,7 @@ export function UsageReports(): React.ReactElement {
       <h1 className="text-3xl font-bold text-gray-900 mb-6">使用状況レポート</h1>
 
       {/* 期間選択 */}
-      <div className="bg-white shadow rounded-lg p-6 mb-6">
+      <div className="bg-white shadow-sm rounded-lg p-6 mb-6">
         <h2 className="text-xl font-semibold text-gray-900 mb-4">期間選択</h2>
         <div className="flex flex-wrap gap-4 items-end">
           <div>
@@ -465,19 +465,19 @@ export function UsageReports(): React.ReactElement {
           {/* シフト生成統計カード */}
           {shiftStats && (
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
-              <div className="bg-white shadow rounded-lg p-6">
+              <div className="bg-white shadow-sm rounded-lg p-6">
                 <div className="text-sm font-medium text-gray-600 mb-2">総シフト生成</div>
                 <div className="text-3xl font-bold text-gray-900">{shiftStats.total}</div>
               </div>
-              <div className="bg-white shadow rounded-lg p-6">
+              <div className="bg-white shadow-sm rounded-lg p-6">
                 <div className="text-sm font-medium text-gray-600 mb-2">成功</div>
                 <div className="text-3xl font-bold text-green-600">{shiftStats.success}</div>
               </div>
-              <div className="bg-white shadow rounded-lg p-6">
+              <div className="bg-white shadow-sm rounded-lg p-6">
                 <div className="text-sm font-medium text-gray-600 mb-2">失敗</div>
                 <div className="text-3xl font-bold text-red-600">{shiftStats.failure}</div>
               </div>
-              <div className="bg-white shadow rounded-lg p-6">
+              <div className="bg-white shadow-sm rounded-lg p-6">
                 <div className="text-sm font-medium text-gray-600 mb-2">成功率</div>
                 <div className="text-3xl font-bold text-blue-600">
                   {shiftStats.successRate.toFixed(1)}%
@@ -514,7 +514,7 @@ export function UsageReports(): React.ReactElement {
           </div>
 
           {/* 施設別利用統計 */}
-          <div className="bg-white shadow rounded-lg mb-6">
+          <div className="bg-white shadow-sm rounded-lg mb-6">
             <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
               <h2 className="text-xl font-semibold text-gray-900">施設別利用統計</h2>
             </div>
@@ -561,7 +561,7 @@ export function UsageReports(): React.ReactElement {
           </div>
 
           {/* ユーザー別活動ログ */}
-          <div className="bg-white shadow rounded-lg mb-6">
+          <div className="bg-white shadow-sm rounded-lg mb-6">
             <div className="px-6 py-4 border-b border-gray-200">
               <h2 className="text-xl font-semibold text-gray-900">ユーザー別活動ログ</h2>
             </div>
