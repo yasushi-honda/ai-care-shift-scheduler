@@ -29,7 +29,7 @@
         "tests"
       ],
       "predeploy": [
-        "command -v python3.12 >/dev/null 2>&1 && cd \"$RESOURCE_DIR\" && python3.12 -m venv venv && venv/bin/pip install -r requirements.txt || echo 'SKIP: python3.12 not found (solver-functions predeploy skipped)'"
+        "cd \"$RESOURCE_DIR\" && python3.12 -m venv venv && venv/bin/pip install -r requirements.txt"
       ]
     }
   ],
