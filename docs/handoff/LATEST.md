@@ -1,7 +1,7 @@
 # ハンドオフメモ - 最新状態
 
-**更新日**: 2026-02-15
-**フェーズ**: Phase 2 Solver化（ロードマップフェーズ2）**本番検証完了** ✅
+**更新日**: 2026-02-16
+**フェーズ**: Phase 3 全体最適化（ロードマップフェーズ3）**完了** ✅
 
 ---
 
@@ -9,8 +9,9 @@
 
 ### 最新の重要決定
 - **ADR-0004**: ハイブリッドアーキテクチャ採用決定
-  - ステータス: **採用**（2026-02-14確定）
-  - 成功基準: 全達成（Solver版: スコア100、処理1秒、決定性完全）
+  - ステータス: **採用（フェーズ3完了）**（2026-02-16確定）
+  - Phase 1-3を統合した単一CP-SATモデル。LLMを生成パイプラインから完全除去
+  - 性能: 15名<5s, 50名<15s, 100名<30s, 決定性100%
 
 ### Active Specifications
 
@@ -30,49 +31,26 @@
 | data-configuration-diagnosis | 55 | ✅ 完了 |
 | hybrid-solver-poc | 57 | ✅ 完了 |
 | solver-production-deploy | 58 | ✅ 完了 |
+| dependency-updates-p0-p3 | 59 | ✅ 完了 |
 
 ---
 
 ## 直近の変更（最新5件）
 
-1. **PR #70** (2026-02-15): tailwindcss v3→v4移行（CSS-first設定）
-   - @tailwindcss/upgrade公式ツールによる自動移行完了
-   - tailwind.config.js削除→index.css @theme ブロック化
-   - postcss.config.js を @tailwindcss/postcss に更新
-   - ビルド成功（14.86s）、164テスト全パス
+1. **PR #71** (2026-02-16): 統合CP-SAT Solver実装（Phase 3全体最適化）
+   - LLM Phase1 + Solver Phase2 + Algorithm Phase3 → 単一CP-SATモデルに統合
+   - LLMを生成パイプラインから完全除去
+   - 性能: 12名0.22s, 50名0.89s, 100名<30s（全目標達成）
+   - 58テスト全通過（+25テスト追加）
+   - CI/CD全チェック通過、mainマージ完了
 
-2. **PR #69** (2026-02-15): firebase-functions v6→v7, uuid→crypto.randomUUID()に置換
-   - firebase-functions 6.6.0→7.0.5 メジャー更新
-   - uuid v12+ ESM-only対応：Node.js 組み込みcrypto.randomUUID()で置換
-   - 型チェック成功、350テスト全パス
+2. **PR #70** (2026-02-15): tailwindcss v3→v4移行（CSS-first設定）
 
-3. **PR #68** (2026-02-15): jspdf v3→v4, vite v6→v7メジャー更新
-   - jspdf 3→4：セキュリティ向上（Node.js fs制限）
-   - vite 6→7：Node.js 20+ 対応、不要な型定義削除
-   - ビルド成功（8.09s）、164テスト全パス
+3. **PR #69** (2026-02-15): firebase-functions v6→v7, uuid→crypto.randomUUID()に置換
 
-4. **PR #65** (2026-02-15): Firebase Emulator functions対応とTimestamp互換性修正
-   - `firebase.json` に functions emulator（port 5001）追加
-   - `package.json` emulatorスクリプトに `functions` 追加
-   - solver-functions predeploy に Python 3.12 存在チェック追加
-   - `demoSignIn.ts`: `admin.firestore.Timestamp` → モジュラーインポートに修正（firebase-admin v13互換性）
-   - ローカルデモログイン動作確認済み
+4. **PR #68** (2026-02-15): jspdf v3→v4, vite v6→v7メジャー更新
 
-2. **PR #63** (2026-02-15): Cloud Scheduler権限エラーによるCI失敗を非ブロッキング化
-   - Firebase Functions デプロイ時の Cloud Scheduler 権限エラー問題を解決
-   - ci.yml を修正して関数コード自体のデプロイ成功を確保
-   - **Solver本番デプロイ完全完了**：asia-northeast1リージョンで稼働中
-
-3. **PR #62** (2026-02-15): SOLVER_FUNCTION_URL環境変数設定とデプロイ安定化
-   - `functions/.env` に SOLVER_FUNCTION_URL を設定
-   - `firebase.json` predeploy コマンドの venv 依存を修正
-
-4. **PR #61** (2026-02-15): Solver Functions デプロイ用venv環境構築を追加
-   - CI/CD に Python 3.12 仮想環境作成ステップを追加
-   - Firebase CLI の Python Functions デプロイ要件対応
-
-5. **PR #60** (2026-02-15): Solver Functions predeployパス修正とCI/CDエラー検知改善
-   - firebase.json predeploy で `$RESOURCE_DIR` 変数を使用して solver-functions/ パスを指定
+5. **PR #67** (2026-02-15): 依存関係マイナーバージョン更新
 
 ---
 
@@ -80,51 +58,45 @@
 
 | モジュール | 状態 | 備考 |
 |-----------|------|------|
-| **Phase 1** (骨子生成) | ✅ 本番運用中 | LLMベース、柔軟な制約解釈 |
-| **Phase 2** (詳細生成) | ✅ Solver本番デプロイ | CP-SAT Solver 稼働中（asia-northeast1） |
-| **Phase 3** (リバランス) | ✅ アルゴリズムベース | 資格要件スワップ対応 |
-| **CP-SAT Solver** | ✅ 本番稼働中 | 決定的スケジュール生成（レイテンシ1s） |
+| **統合Solver** | ✅ 本番デプロイ待ち | 単一CP-SATモデル（Phase 1-3統合）, LLM不要 |
+| **従来パイプライン** | ✅ フォールバック | LLM Phase1→Solver Phase2→Rebalance Phase3 |
+| **CP-SAT Solver** | ✅ 本番稼働中 | 決定的スケジュール生成、100名対応 |
 | **評価システム** | ✅ 4段階評価 | Level 1-4対応、動的制約生成 |
 
 ---
 
-## ✅ Phase 2 Solver版本番検証 完了（2026-02-15）
+## ✅ Phase 3 統合Solver 完了（2026-02-16）
 
-### 検証結果
+### A/B比較結果
 
-**Solver本番エンドポイント稼働確認**
-- ✅ HTTP 200 OK
-- ✅ レスポンス時間: 0.94秒（コールドスタート含む）
+| 指標 | LLM版（Phase 1+2+3） | 統合Solver | 改善 |
+|------|---------------------|-----------|------|
+| 12名処理時間 | 90-400秒 | 0.22秒 | 99.8%削減 |
+| 50名処理時間 | タイムアウト | 0.89秒 | 対応不可→対応可 |
+| 100名処理時間 | 対応不可 | <30秒 | 新規対応 |
+| Level 1違反 | 0-5件 | 0件 | 数学的保証 |
+| 評価スコア | 72-100 | 100 | 安定的最適解 |
+| 決定性 | 非決定的 | 完全決定的 | 分散0 |
+| LLMコスト/回 | ~$0.15 | $0.00 | 100%削減 |
 
-**求解品質（テストデータ: 5スタッフ × 31日）**
-- ✅ ステータス: **OPTIMAL**（最適解）
-- ✅ 求解時間: 546-772ms（<1秒）
-- ✅ 人員配置違反: **0件**（全31日で必要人員充足）
-- ✅ 最大連続勤務: 6日以下（制約内）
-- ✅ timeSlotPreference遵守: 完全（日勤のみスタッフは全日勤割当）
-
-**決定性検証（3回連続実行）**
-- ✅ 3回全て同一スケジュール生成（hash一致）
-- ✅ objectiveValue: 全て2060
-- ✅ **決定性100%確認**
-
-**PoC成功基準達成状況**
-- ✅ Level 1違反: 0件 ← **PoC目標達成**
-- ✅ 処理時間: <1秒 ← **PoC目標達成**
-- ✅ 決定性: 完全 ← **PoC目標達成**
-- ✅ OPTIMAL到達: OPTIMAL ← **PoC目標達成**
-
-### 結論
-**Phase 2 Solver版本番検証: 全項目合格**
+### 実装概要
+- **コアファイル**: `solver-functions/solver/unified_builder.py`
+- **変数**: `x[staff_id, day, shift_type]` = BoolVar
+- **ハード制約**: exactly-one, 人員充足, 連続勤務上限, 遅番→早番禁止, 夜勤チェーン, 固定休日
+- **ソフト制約**: シフト希望ボーナス, 公平性, 夜勤公平性, 休息間隔, 勤務日数目標
+- **テスト**: 58/58全通過（単体15 + スケーラビリティ3 + PoC34 + A/B比較6）
 
 ---
 
 ## 次のアクション候補（優先度順）
 
-### A. その他改善
+### A. 統合Solver本番デプロイ
+- Python Cloud Functionの統合Solverエンドポイント（`solverUnifiedGenerate`）をデプロイ
+- 本番環境での動作確認・性能検証
+
+### B. その他改善
 - 既存バグ修正
 - UI/UX改善
-- ドキュメント更新（Solver統合ガイド等）
 
 ---
 
@@ -134,22 +106,23 @@
 |------|-----------|------|
 | **開発** | ✅ 運用中 | Firebase Emulator, Node.js v20 |
 | **本番** | ✅ 運用中 | Cloud Functions (Node.js + Python Solver), Cloud Firestore |
-| **Solver** | ✅ 本番稼働中 | asia-northeast1, メモリ1GB, タイムアウト60秒 |
+| **Solver (Phase2)** | ✅ 本番稼働中 | asia-northeast1, メモリ1GB, タイムアウト60秒 |
+| **統合Solver** | ⏳ デプロイ待ち | コード完了、エンドポイント `solverUnifiedGenerate` |
 
 ---
 
 ## E2Eテスト状況
 
 - **Playwright**: UI自動テスト実装済み
-- **Solver**: 33/33テスト通過（単体・統合）
+- **Solver**: 58/58テスト通過（単体15 + スケーラビリティ3 + PoC34 + A/B比較6）
 
 ---
 
 ## 重要な判断・制約
 
-1. **ハイブリッド戦略**: LLMとSolver の役割分離
-   - LLM: 制約解釈、説明生成
-   - Solver: 最適解生成（決定的）
+1. **統合Solver戦略**: LLMを生成パイプラインから完全除去
+   - 統合Solver: 単一CP-SATモデルで全制約を一括求解
+   - フォールバック: 従来3段パイプライン（useSolver/useUnifiedSolverフラグで制御）
    - 参考: [ADR-0004](../adr/0004-hybrid-architecture-adoption.md)
 
 2. **4段階評価システ**: Level 1-4の制約評価
@@ -180,13 +153,10 @@
 再開前に以下を確認:
 
 - [ ] `git status` がclean（未コミット変更なし）
-- [ ] `git log` で最新コミット確認（PR #65マージ確認）
-- [ ] Solver本番稼働確認: `curl https://asia-northeast1-ai-care-shift-scheduler.cloudfunctions.net/solverGenerateShift`
+- [ ] `git log` で最新コミット確認（PR #71マージ確認）
 - [ ] CI/CD ジョブが全て pass（デプロイ成功）
-- [ ] アプリUIからシフト生成テスト（Solver版で自動使用）
+- [ ] 統合Solver本番デプロイ確認（`solverUnifiedGenerate`エンドポイント）
 
 ---
 
 **次セッション開始時**: このファイルを読んで現状把握してから作業開始
-
-**Phase 2 Solver版本番検証**: 実装完了、本番デプロイ確認待ち
