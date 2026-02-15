@@ -11,7 +11,7 @@
 
 import { onCall, HttpsError } from 'firebase-functions/v2/https';
 import * as admin from 'firebase-admin';
-import { v4 as uuidv4 } from 'uuid';
+import { randomUUID } from 'crypto';
 
 interface BackupRequest {
   facilityId: string;
@@ -119,7 +119,7 @@ export const backupFacilityData = onCall<BackupRequest, Promise<BackupResponse>>
       const leaveRequests = leaveRequestsSnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
 
       // 6. バックアップオブジェクトを作成
-      const backupId = uuidv4();
+      const backupId = randomUUID();
       const timestamp = new Date().toISOString();
 
       const backupData = {

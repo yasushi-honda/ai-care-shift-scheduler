@@ -11,7 +11,7 @@
 
 import { onSchedule } from 'firebase-functions/v2/scheduler';
 import * as admin from 'firebase-admin';
-import { v4 as uuidv4 } from 'uuid';
+import { randomUUID } from 'crypto';
 
 /**
  * 毎日午前2時（JST）に全施設のバックアップを実行
@@ -87,7 +87,7 @@ export const scheduledBackup = onSchedule(
             .get();
           const leaveRequests = leaveRequestsSnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
 
-          const backupId = uuidv4();
+          const backupId = randomUUID();
           const timestamp = new Date().toISOString();
 
           const backupData = {
