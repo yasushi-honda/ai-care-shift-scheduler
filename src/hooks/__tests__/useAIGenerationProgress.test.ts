@@ -1,12 +1,21 @@
 /**
  * useAIGenerationProgress カスタムフック ユニットテスト
  * Phase 45: AIシフト生成進行状況表示機能
+ * Phase 60: Solver時代のUI刷新
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import { useAIGenerationProgress } from '../useAIGenerationProgress';
-import { DEFAULT_ESTIMATED_SECONDS, GENERATION_STEPS } from '../../components/AIGenerationProgress/types';
+import type { GenerationResult } from '../../components/AIGenerationProgress/types';
+
+const mockResult: GenerationResult = {
+  overallScore: 85,
+  fulfillmentRate: 92,
+  violationCount: 1,
+  recommendationCount: 2,
+  elapsedSeconds: 3,
+};
 
 describe('useAIGenerationProgress', () => {
   beforeEach(() => {
@@ -22,17 +31,9 @@ describe('useAIGenerationProgress', () => {
       const { result } = renderHook(() => useAIGenerationProgress());
 
       expect(result.current.state.status).toBe('idle');
-      expect(result.current.state.currentStep).toBe(1);
       expect(result.current.state.elapsedSeconds).toBe(0);
-      expect(result.current.state.estimatedTotalSeconds).toBe(DEFAULT_ESTIMATED_SECONDS);
       expect(result.current.state.errorMessage).toBeUndefined();
-    });
-
-    it('カスタム予測時間を設定できること', () => {
-      const customTime = 240;
-      const { result } = renderHook(() => useAIGenerationProgress(customTime));
-
-      expect(result.current.state.estimatedTotalSeconds).toBe(customTime);
+      expect(result.current.state.result).toBeUndefined();
     });
   });
 
@@ -45,7 +46,6 @@ describe('useAIGenerationProgress', () => {
       });
 
       expect(result.current.state.status).toBe('generating');
-      expect(result.current.state.currentStep).toBe(1);
       expect(result.current.state.elapsedSeconds).toBe(0);
     });
 
@@ -63,41 +63,6 @@ describe('useAIGenerationProgress', () => {
 
       expect(result.current.state.elapsedSeconds).toBe(3);
     });
-
-    it('時間経過によってステップが正しく進行すること', () => {
-      const { result } = renderHook(() => useAIGenerationProgress());
-
-      act(() => {
-        result.current.startGeneration();
-      });
-
-      // 初期: ステップ1（リクエスト送信中）
-      expect(result.current.state.currentStep).toBe(1);
-
-      // 5秒後: ステップ2（骨子を生成中）
-      act(() => {
-        vi.advanceTimersByTime(5000);
-      });
-      expect(result.current.state.currentStep).toBe(2);
-
-      // 180秒後: ステップ3（シフト詳細を生成中）
-      act(() => {
-        vi.advanceTimersByTime(175000);
-      });
-      expect(result.current.state.currentStep).toBe(3);
-
-      // 300秒後: ステップ4（評価・最適化中）
-      act(() => {
-        vi.advanceTimersByTime(120000);
-      });
-      expect(result.current.state.currentStep).toBe(4);
-
-      // 320秒後: ステップ5（完了処理中）
-      act(() => {
-        vi.advanceTimersByTime(20000);
-      });
-      expect(result.current.state.currentStep).toBe(5);
-    });
   });
 
   describe('completeGeneration', () => {
@@ -113,11 +78,11 @@ describe('useAIGenerationProgress', () => {
       });
 
       act(() => {
-        result.current.completeGeneration();
+        result.current.completeGeneration(mockResult);
       });
 
       expect(result.current.state.status).toBe('completed');
-      expect(result.current.state.currentStep).toBe(GENERATION_STEPS.length);
+      expect(result.current.state.result).toEqual(mockResult);
     });
 
     it('completeGeneration後はタイマーが停止すること', () => {
@@ -134,7 +99,7 @@ describe('useAIGenerationProgress', () => {
       const elapsedAtComplete = result.current.state.elapsedSeconds;
 
       act(() => {
-        result.current.completeGeneration();
+        result.current.completeGeneration(mockResult);
       });
 
       // さらに時間を進めても経過時間は更新されない
@@ -249,9 +214,9 @@ describe('useAIGenerationProgress', () => {
       });
 
       expect(result.current.state.status).toBe('idle');
-      expect(result.current.state.currentStep).toBe(1);
       expect(result.current.state.elapsedSeconds).toBe(0);
       expect(result.current.state.errorMessage).toBeUndefined();
+      expect(result.current.state.result).toBeUndefined();
     });
 
     it('generating状態からresetできること', () => {
@@ -313,7 +278,6 @@ describe('useAIGenerationProgress', () => {
 
       // リセットされていること
       expect(result.current.state.elapsedSeconds).toBe(0);
-      expect(result.current.state.currentStep).toBe(1);
     });
   });
 });

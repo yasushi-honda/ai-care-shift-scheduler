@@ -1,6 +1,7 @@
 /**
  * AIGenerationProgress 統合テスト
  * Phase 45: AIシフト生成進行状況表示機能
+ * Phase 60: Solver時代のUI刷新
  *
  * フックとコンポーネントを組み合わせた実際の使用シナリオをテスト
  */
@@ -9,6 +10,15 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { render, screen, fireEvent, act } from '@testing-library/react';
 import { useAIGenerationProgress } from '../../../hooks/useAIGenerationProgress';
 import { AIGenerationProgress } from '../AIGenerationProgress';
+import type { GenerationResult } from '../types';
+
+const mockResult: GenerationResult = {
+  overallScore: 85,
+  fulfillmentRate: 92,
+  violationCount: 1,
+  recommendationCount: 2,
+  elapsedSeconds: 3,
+};
 
 /**
  * フックとコンポーネントを統合したテスト用コンポーネント
@@ -31,7 +41,7 @@ function TestComponent({
     failGeneration,
     cancelGeneration,
     reset,
-  } = useAIGenerationProgress(180); // 180秒の予測時間
+  } = useAIGenerationProgress();
 
   const handleStart = () => {
     startGeneration();
@@ -39,7 +49,7 @@ function TestComponent({
   };
 
   const handleComplete = () => {
-    completeGeneration();
+    completeGeneration(mockResult);
     onGenerationComplete?.();
   };
 
@@ -71,7 +81,7 @@ function TestComponent({
       </button>
 
       {/* プログレス表示 */}
-      <AIGenerationProgress state={state} onCancel={handleCancel} />
+      <AIGenerationProgress state={state} onCancel={handleCancel} onClose={reset} />
     </div>
   );
 }
@@ -86,52 +96,54 @@ describe('AIGenerationProgress 統合テスト', () => {
   });
 
   describe('シフト作成実行からプログレス表示開始までの流れ', () => {
-    it('シフト作成実行ボタンクリックでプログレス表示が開始されること', () => {
+    it('シフト作成実行ボタンクリックでスピナーが表示されること', () => {
       const onStart = vi.fn();
       render(<TestComponent onGenerationStart={onStart} />);
 
       // 初期状態ではプログレス表示なし
-      expect(screen.queryByText('AIがシフトを生成中...')).not.toBeInTheDocument();
+      expect(screen.queryByText('最適化計算中...')).not.toBeInTheDocument();
 
       // シフト作成実行
       fireEvent.click(screen.getByTestId('start-btn'));
 
-      // プログレス表示開始
-      expect(screen.getByText('AIがシフトを生成中...')).toBeInTheDocument();
+      // スピナー表示開始
+      expect(screen.getByText('最適化計算中...')).toBeInTheDocument();
       expect(onStart).toHaveBeenCalledTimes(1);
-    });
-
-    it('時間経過でステップが自動的に進行すること', () => {
-      render(<TestComponent />);
-
-      fireEvent.click(screen.getByTestId('start-btn'));
-
-      // 初期: ステップ1「リクエスト送信中」
-      expect(screen.getByText('リクエスト送信中')).toBeInTheDocument();
-
-      // 5秒後: ステップ2「骨子を生成中」
-      act(() => {
-        vi.advanceTimersByTime(5000);
-      });
-      expect(screen.getByText('骨子を生成中')).toBeInTheDocument();
     });
   });
 
   describe('処理完了時の動作', () => {
-    it('処理完了時にプログレスが完了状態になること', () => {
+    it('処理完了時に結果サマリーが表示されること', () => {
       const onComplete = vi.fn();
       render(<TestComponent onGenerationComplete={onComplete} />);
 
       // 開始
       fireEvent.click(screen.getByTestId('start-btn'));
-      expect(screen.getByText('AIがシフトを生成中...')).toBeInTheDocument();
+      expect(screen.getByText('最適化計算中...')).toBeInTheDocument();
 
       // 完了
       fireEvent.click(screen.getByTestId('complete-btn'));
 
-      expect(screen.getByText('シフト生成が完了しました！')).toBeInTheDocument();
-      expect(screen.queryByText('AIがシフトを生成中...')).not.toBeInTheDocument();
+      expect(screen.getByText('シフト生成が完了しました')).toBeInTheDocument();
+      expect(screen.getByText('85')).toBeInTheDocument();
+      expect(screen.queryByText('最適化計算中...')).not.toBeInTheDocument();
       expect(onComplete).toHaveBeenCalledTimes(1);
+    });
+
+    it('確認ボタンクリックで初期状態に戻ること', () => {
+      render(<TestComponent />);
+
+      // 開始 → 完了
+      fireEvent.click(screen.getByTestId('start-btn'));
+      fireEvent.click(screen.getByTestId('complete-btn'));
+      expect(screen.getByText('シフト生成が完了しました')).toBeInTheDocument();
+
+      // 確認ボタンクリック（onClose=reset）
+      fireEvent.click(screen.getByRole('button', { name: '確認' }));
+
+      // プログレス表示が消えている（idle状態）
+      expect(screen.queryByText('シフト生成が完了しました')).not.toBeInTheDocument();
+      expect(screen.queryByText('最適化計算中...')).not.toBeInTheDocument();
     });
 
     it('リセット後に初期状態に戻ること', () => {
@@ -140,14 +152,14 @@ describe('AIGenerationProgress 統合テスト', () => {
       // 開始 → 完了
       fireEvent.click(screen.getByTestId('start-btn'));
       fireEvent.click(screen.getByTestId('complete-btn'));
-      expect(screen.getByText('シフト生成が完了しました！')).toBeInTheDocument();
+      expect(screen.getByText('シフト生成が完了しました')).toBeInTheDocument();
 
       // リセット
       fireEvent.click(screen.getByTestId('reset-btn'));
 
       // プログレス表示が消えている（idle状態）
-      expect(screen.queryByText('シフト生成が完了しました！')).not.toBeInTheDocument();
-      expect(screen.queryByText('AIがシフトを生成中...')).not.toBeInTheDocument();
+      expect(screen.queryByText('シフト生成が完了しました')).not.toBeInTheDocument();
+      expect(screen.queryByText('最適化計算中...')).not.toBeInTheDocument();
     });
   });
 
@@ -164,7 +176,7 @@ describe('AIGenerationProgress 統合テスト', () => {
 
       expect(screen.getByText('エラーが発生しました')).toBeInTheDocument();
       expect(screen.getByText('APIエラーが発生しました')).toBeInTheDocument();
-      expect(screen.queryByText('AIがシフトを生成中...')).not.toBeInTheDocument();
+      expect(screen.queryByText('最適化計算中...')).not.toBeInTheDocument();
       expect(onError).toHaveBeenCalledWith('APIエラーが発生しました');
     });
 
@@ -181,25 +193,21 @@ describe('AIGenerationProgress 統合テスト', () => {
 
       // 再実行
       fireEvent.click(screen.getByTestId('start-btn'));
-      expect(screen.getByText('AIがシフトを生成中...')).toBeInTheDocument();
+      expect(screen.getByText('最適化計算中...')).toBeInTheDocument();
     });
   });
 
   describe('キャンセル機能の動作', () => {
-    it('キャンセル確認モーダルからキャンセルを実行できること', () => {
+    it('キャンセルボタンクリックでキャンセル状態になること', () => {
       const onCancel = vi.fn();
       render(<TestComponent onGenerationCancel={onCancel} />);
 
       // 開始
       fireEvent.click(screen.getByTestId('start-btn'));
-      expect(screen.getByText('AIがシフトを生成中...')).toBeInTheDocument();
+      expect(screen.getByText('最適化計算中...')).toBeInTheDocument();
 
-      // キャンセルボタンクリック → 確認モーダル表示
-      fireEvent.click(screen.getByRole('button', { name: 'AI生成をキャンセル' }));
-      expect(screen.getByText('AI生成をキャンセルしますか？')).toBeInTheDocument();
-
-      // モーダル内「キャンセル」ボタンをクリック
-      fireEvent.click(screen.getByRole('button', { name: 'キャンセル' }));
+      // キャンセルボタンクリック（直接キャンセル、確認モーダルなし）
+      fireEvent.click(screen.getByText('キャンセル'));
 
       // キャンセル状態
       expect(screen.getByText('処理がキャンセルされました')).toBeInTheDocument();
@@ -211,45 +219,17 @@ describe('AIGenerationProgress 統合テスト', () => {
 
       // 開始 → キャンセル
       fireEvent.click(screen.getByTestId('start-btn'));
-      fireEvent.click(screen.getByRole('button', { name: 'AI生成をキャンセル' }));
-      fireEvent.click(screen.getByRole('button', { name: 'キャンセル' }));
+      fireEvent.click(screen.getByText('キャンセル'));
       expect(screen.getByText('処理がキャンセルされました')).toBeInTheDocument();
 
       // リセット → 再実行
       fireEvent.click(screen.getByTestId('reset-btn'));
       fireEvent.click(screen.getByTestId('start-btn'));
-      expect(screen.getByText('AIがシフトを生成中...')).toBeInTheDocument();
+      expect(screen.getByText('最適化計算中...')).toBeInTheDocument();
     });
   });
 
   describe('タイマーの動作確認', () => {
-    it('generating中は経過時間が更新されること', () => {
-      render(<TestComponent />);
-
-      fireEvent.click(screen.getByTestId('start-btn'));
-
-      // 初期: 0:00
-      expect(screen.getByText('0:00')).toBeInTheDocument();
-
-      // 1秒後
-      act(() => {
-        vi.advanceTimersByTime(1000);
-      });
-      expect(screen.getByText('0:01')).toBeInTheDocument();
-
-      // 10秒後
-      act(() => {
-        vi.advanceTimersByTime(9000);
-      });
-      expect(screen.getByText('0:10')).toBeInTheDocument();
-
-      // 1分後
-      act(() => {
-        vi.advanceTimersByTime(50000);
-      });
-      expect(screen.getByText('1:00')).toBeInTheDocument();
-    });
-
     it('完了後はタイマーが停止すること', () => {
       render(<TestComponent />);
 
@@ -261,14 +241,12 @@ describe('AIGenerationProgress 統合テスト', () => {
 
       fireEvent.click(screen.getByTestId('complete-btn'));
 
-      // 完了後に時間を進めても表示は変わらない
-      // （完了状態では時間表示がないので、直接確認はできないが、
-      //   エラーが発生しないことで停止を確認）
+      // 完了後に時間を進めてもエラーが発生しないこと
       act(() => {
         vi.advanceTimersByTime(10000);
       });
 
-      expect(screen.getByText('シフト生成が完了しました！')).toBeInTheDocument();
+      expect(screen.getByText('シフト生成が完了しました')).toBeInTheDocument();
     });
   });
 });

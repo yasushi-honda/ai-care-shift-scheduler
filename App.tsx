@@ -1143,8 +1143,15 @@ const App: React.FC = () => {
         }
 
         setViewMode('shift');
-        // Phase 45: プログレス完了
-        aiProgress.completeGeneration();
+        // Phase 60: プログレス完了（結果サマリー付き）
+        const eval_ = generationResult.evaluation;
+        aiProgress.completeGeneration({
+          overallScore: eval_?.overallScore ?? 0,
+          fulfillmentRate: eval_?.fulfillmentRate ?? 0,
+          violationCount: eval_?.constraintViolations?.length ?? 0,
+          recommendationCount: eval_?.recommendations?.length ?? 0,
+          elapsedSeconds: aiProgress.state.elapsedSeconds,
+        });
       } finally {
         // Phase 43: ロック解放
         await LockService.releaseLock(
@@ -1652,12 +1659,13 @@ const App: React.FC = () => {
       </aside>
 
       <main className="flex-1 p-6 flex flex-col overflow-hidden relative">
-        {/* Phase 45: AI生成プログレスオーバーレイ */}
-        {aiProgress.state.status === 'generating' && (
+        {/* Phase 60: AI生成オーバーレイ（生成中+結果表示） */}
+        {aiProgress.state.status !== 'idle' && (
           <div className="absolute inset-0 bg-slate-100/80 backdrop-blur-xs z-40 flex items-center justify-center">
             <AIGenerationProgress
               state={aiProgress.state}
               onCancel={handleCancelGeneration}
+              onClose={aiProgress.reset}
             />
           </div>
         )}
