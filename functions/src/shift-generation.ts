@@ -3,7 +3,7 @@ import { GoogleGenAI } from '@google/genai';
 import { TimeSlotPreference } from './types';
 import type { Staff, ShiftRequirement, LeaveRequest, StaffSchedule, AIEvaluationResult } from './types';
 import { generateSkeleton, generateDetailedShifts, parseGeminiJsonResponse } from './phased-generation';
-import { generateDetailedShiftsWithSolver } from './solver-client';
+import { generateDetailedShiftsWithSolver, generateShiftsWithUnifiedSolver } from './solver-client';
 import { rebalanceShifts } from './shift-rebalance';
 import { EvaluationService, createDefaultEvaluation } from './evaluation/evaluationLogic';
 import {
@@ -78,7 +78,7 @@ export const generateShift = onRequest(
     }
 
     try {
-      const { staffList: rawStaffList, requirements, leaveRequests, useSolver = true } = req.body;
+      const { staffList: rawStaffList, requirements, leaveRequests, useSolver = true, useUnifiedSolver = true } = req.body;
 
       // バリデーション
       if (!rawStaffList || !Array.isArray(rawStaffList) || rawStaffList.length === 0) {
@@ -240,9 +240,24 @@ export const generateShift = onRequest(
         scheduleData = parseGeminiJsonResponse(responseText);
         console.log(`✅ 一括生成完了 (使用モデル: ${usedModel})`);
 
+      } else if (useUnifiedSolver) {
+        // 6名以上（デフォルト）：統合Solver（Phase 3: 全体最適化）
+        // LLM不要 → 単一CP-SATモデルで全制約を一括求解
+        console.log(`📊 統合Solver生成（${staffList.length}名）`);
+
+        const unifiedSchedules = await generateShiftsWithUnifiedSolver(
+          staffList,
+          requirements as ShiftRequirement,
+          leaveRequests || {},
+        );
+
+        scheduleData = { schedule: unifiedSchedules };
+        tokensUsed = 0;
+        usedModel = 'cp-sat-unified';
+        console.log('✅ 統合Solver生成完了');
       } else {
-        // 6名以上：段階的生成（骨子→詳細バッチ処理）
-        console.log(`📊 大規模シフト生成（${staffList.length}名）: 段階的生成モード`);
+        // フォールバック：従来の段階的生成（LLM Phase 1 → Solver/LLM Phase 2 → リバランス Phase 3）
+        console.log(`📊 段階的生成モード（${staffList.length}名）: フォールバック`);
 
         // Phase 1: 骨子生成
         const skeleton = await generateSkeleton(
@@ -253,8 +268,6 @@ export const generateShift = onRequest(
         );
 
         // Phase 2: 詳細生成
-        // デフォルト: CP-SAT Solver（ADR-0004 採用済み）
-        // useSolver=false で従来LLM版にフォールバック可能
         let detailedSchedules: StaffSchedule[];
         if (useSolver) {
           console.log('🔧 Solver版Phase 2を使用');
@@ -265,7 +278,7 @@ export const generateShift = onRequest(
             leaveRequests || {},
           );
         } else {
-          console.log('📝 LLM版Phase 2を使用（フォールバック）');
+          console.log('📝 LLM版Phase 2を使用');
           detailedSchedules = await generateDetailedShifts(
             staffList,
             skeleton,
@@ -275,11 +288,10 @@ export const generateShift = onRequest(
         }
 
         scheduleData = { schedule: detailedSchedules };
-        tokensUsed = 0; // 複数回呼び出しのため集計は省略
+        tokensUsed = 0;
         console.log('✅ 段階的生成完了');
 
-        // 戦略A: 後処理リバランス（ai-shift-optimization-strategy.md参照）
-        // バッチ処理の独立性によるシフト配分の偏りを修正
+        // Phase 3: リバランス
         console.log('📊 リバランス処理開始...');
         const rebalanceResult = rebalanceShifts(
           scheduleData.schedule as StaffSchedule[],

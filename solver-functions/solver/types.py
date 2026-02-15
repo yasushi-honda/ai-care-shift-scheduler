@@ -51,6 +51,7 @@ class StaffDict(TypedDict):
     availableWeekdays: list[int]
     timeSlotPreference: str
     isNightShiftOnly: bool
+    unavailableDates: list[str]  # ["2026-03-05", ...] 出勤不可日
 
 
 class StaffScheduleSkeletonDict(TypedDict):
@@ -135,5 +136,12 @@ class SolverErrorResponse(TypedDict):
 class SolverRequest(TypedDict):
     staffList: list[StaffDict]
     skeleton: ScheduleSkeletonDict
+    requirements: ShiftRequirementDict
+    leaveRequests: dict[str, dict[str, str]]
+
+
+class UnifiedSolverRequest(TypedDict):
+    """統合Solver用リクエスト（skeletonなし）"""
+    staffList: list[StaffDict]
     requirements: ShiftRequirementDict
     leaveRequests: dict[str, dict[str, str]]

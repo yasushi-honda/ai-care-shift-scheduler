@@ -1,7 +1,7 @@
 # ADR-0004: ハイブリッドアーキテクチャ採用の決定
 
-**日付**: 2026-02-14
-**ステータス**: 採用
+**日付**: 2026-02-14（フェーズ3更新: 2026-02-16）
+**ステータス**: 採用（フェーズ3完了）
 **関連**: [ai-shift-optimization-strategy.md](../../.kiro/steering/ai-shift-optimization-strategy.md) 戦略C、[ai-generation-flow.md](../../.kiro/steering/ai-generation-flow.md) セクション7.3
 
 ## コンテキスト
@@ -82,7 +82,7 @@ PoCで5名×31日のテストデータに対しCP-SAT SolverとLLM版のA/B比�
 
 **詳細**: [A/B比較レポート](../../solver-functions/tests/output/ab_comparison_report.md)
 
-**成功基準テスト**: 33/33通過（`solver-functions/tests/`）
+**成功基準テスト**: 58/58通過（`solver-functions/tests/`）（フェーズ3で+25テスト追加）
 
 ## 移行ロードマップ
 
@@ -93,17 +93,38 @@ PoCで5名×31日のテストデータに対しCP-SAT SolverとLLM版のA/B比�
 - **成果物**: PoC用Cloud Function（既存APIとは別エンドポイント）
 - **結果**: 全成功基準達成 → ステータスを「採用」に変更
 
-### フェーズ2: Phase 2 Solver化
+### フェーズ2: Phase 2 Solver化 - 完了
 
 - **スコープ**: Phase 2（詳細生成）をOR-Tools CP-SATに置換
 - **Phase 1（骨子生成）は当面LLMを維持**（柔軟な制約解釈が必要なため）
 - **Phase 3（リバランス）はSolverに統合**
 
-### フェーズ3: 全体最適化
+### フェーズ3: 全体最適化 - 完了（2026-02-16）
 
-- **スコープ**: Phase 1もSolver化、LLMは制約解釈・説明生成に限定
-- **100名以上の施設に対応**
-- **処理時間目標**: < 30秒（全フェーズ合計）
+- **スコープ**: Phase 1-3を統合した単一CP-SATモデル。LLMは生成パイプラインから完全除去
+- **アーキテクチャ**: `LLM Phase1(60-120s) → Solver Phase2(~1s) → Algorithm Phase3(<1s)` → **`Unified Solver(<30s)`**
+- **100名以上の施設に対応**: 15名<5s, 50名<15s, 100名<30s（全目標達成）
+- **決定性保証**: `num_workers=1` で同一入力→同一出力（3回テスト検証済み）
+- **テスト**: 58テスト全通過（単体15 + スケーラビリティ3 + PoC34 + A/B比較6）
+
+#### フェーズ3 A/B比較結果
+
+| 指標 | LLM版（Phase 1+2+3） | 統合Solver | 改善 |
+|------|---------------------|-----------|------|
+| 12名処理時間 | 90-400秒 | 0.22秒 | 99.8%削減 |
+| 50名処理時間 | タイムアウト | 0.89秒 | 対応不可→対応可 |
+| 100名処理時間 | 対応不可 | <30秒 | 新規対応 |
+| Level 1違反 | 0-5件 | 0件 | 数学的保証 |
+| 評価スコア | 72-100 | 100 | 安定的最適解 |
+| 決定性 | 非決定的 | 完全決定的 | 分散0 |
+| LLMコスト/回 | ~$0.15 | $0.00 | 100%削減 |
+
+#### 統合Solverモデル概要
+
+- **変数**: `x[staff_id, day, shift_type]` = BoolVar（各スタッフ×各日×各シフト種別）
+- **ハード制約**: exactly-one, 人員充足, 連続勤務上限, 遅番→早番禁止, 夜勤チェーン, 固定休日, timeSlotPreference
+- **ソフト制約（目的関数）**: シフト希望ボーナス, 公平性, 夜勤公平性, 休息間隔, 勤務日数目標
+- **実装**: `solver-functions/solver/unified_builder.py` (UnifiedModelBuilder + UnifiedConstraintBuilder + UnifiedObjectiveBuilder)
 
 ## 影響
 
