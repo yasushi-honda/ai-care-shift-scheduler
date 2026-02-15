@@ -1,5 +1,7 @@
 """テスト共通フィクスチャ: 5名・30日のテストデータ"""
 
+from __future__ import annotations
+
 import pytest
 from solver.types import (
     StaffDict,
@@ -16,6 +18,7 @@ def make_staff(
     qualifications: list[str] | None = None,
     time_slot_preference: str = "いつでも可",
     is_night_shift_only: bool = False,
+    unavailable_dates: list[str] | None = None,
 ) -> StaffDict:
     return StaffDict(
         id=staff_id,
@@ -27,6 +30,7 @@ def make_staff(
         availableWeekdays=[0, 1, 2, 3, 4, 5, 6],
         timeSlotPreference=time_slot_preference,
         isNightShiftOnly=is_night_shift_only,
+        unavailableDates=unavailable_dates or [],
     )
 
 
