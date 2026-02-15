@@ -119,7 +119,7 @@ const LeaveRequestCalendar: React.FC<LeaveRequestCalendarProps> = ({ staffList, 
                   >
                     <button
                       onClick={() => handleCellClick(staff.id, dateStr)}
-                      className={`w-full h-8 rounded text-xs font-semibold transition-colors duration-150 border ${isCellActive ? 'ring-2 ring-care-secondary' : ''} ${getLeaveTypeColor(leaveType)}`}
+                      className={`w-full h-8 rounded-sm text-xs font-semibold transition-colors duration-150 border ${isCellActive ? 'ring-2 ring-care-secondary' : ''} ${getLeaveTypeColor(leaveType)}`}
                     >
                       {leaveType || <span className="text-slate-300">+</span>}
                     </button>

@@ -219,7 +219,7 @@ const SkeletonCard: React.FC<Pick<SkeletonLoaderProps, 'className' | 'noAnimatio
   noAnimation = false,
 }) => {
   return (
-    <div className={`bg-white rounded-lg shadow-sm p-6 space-y-4 ${className}`}>
+    <div className={`bg-white rounded-lg shadow-xs p-6 space-y-4 ${className}`}>
       {/* カードヘッダー */}
       <div className="flex items-center justify-between">
         <SkeletonText width="40%" height="1.5rem" noAnimation={noAnimation} />

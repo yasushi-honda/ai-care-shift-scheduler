@@ -202,7 +202,7 @@ export function EvaluationPanel({
           role="alert"
         >
           <div className="flex items-start gap-3">
-            <span className="text-2xl flex-shrink-0">{warningConfig.icon}</span>
+            <span className="text-2xl shrink-0">{warningConfig.icon}</span>
             <div>
               <h3 className={`font-bold ${warningConfig.textColor}`}>
                 {warningConfig.title}
@@ -215,7 +215,7 @@ export function EvaluationPanel({
         </div>
       )}
 
-      <div className="bg-white border border-gray-200 rounded-lg shadow-sm">
+      <div className="bg-white border border-gray-200 rounded-lg shadow-xs">
         {/* ヘッダー（常に表示） */}
       <button
         onClick={handleToggle}
@@ -227,7 +227,7 @@ export function EvaluationPanel({
           <span className="text-lg font-semibold text-gray-800">AI評価</span>
 
           {isEvaluationFailed ? (
-            <span className="px-2 py-1 text-xs font-medium bg-gray-100 text-gray-600 rounded">
+            <span className="px-2 py-1 text-xs font-medium bg-gray-100 text-gray-600 rounded-sm">
               評価不可
             </span>
           ) : (
@@ -331,7 +331,7 @@ function ScoreBadge({ score }: { score: number }) {
   const displayText = score === 0 ? '要調整' : `${score}点`;
 
   return (
-    <span className={`px-2 py-1 text-sm font-bold ${bgColor} ${textColor} rounded`}>
+    <span className={`px-2 py-1 text-sm font-bold ${bgColor} ${textColor} rounded-sm`}>
       {displayText}
     </span>
   );
@@ -497,7 +497,7 @@ function ViolationsSection({ violations }: { violations: ConstraintViolation[] }
 
       {/* レベル1がない場合のポジティブメッセージ */}
       {!groupedData[1] && (
-        <div className="mb-4 flex items-center gap-2 text-sm px-4 py-3 rounded-lg bg-green-50 text-green-700 border border-green-200 shadow-sm">
+        <div className="mb-4 flex items-center gap-2 text-sm px-4 py-3 rounded-lg bg-green-50 text-green-700 border border-green-200 shadow-xs">
           <span className="text-lg">✅</span>
           <span className="font-medium">労基法違反（絶対必須）はありません</span>
         </div>
@@ -514,7 +514,7 @@ function ViolationsSection({ violations }: { violations: ConstraintViolation[] }
           );
 
           return (
-            <div key={level} className="rounded-lg overflow-hidden shadow-sm border border-gray-200">
+            <div key={level} className="rounded-lg overflow-hidden shadow-xs border border-gray-200">
               {/* レベルヘッダー */}
               <div className={`flex items-center justify-between px-4 py-2.5 ${config.bgColor}`}>
                 <div className="flex items-center gap-2">
@@ -604,7 +604,7 @@ function ViolationsSection({ violations }: { violations: ConstraintViolation[] }
                                   <span className="text-xs text-gray-400">対象:</span>
                                   <div className="flex flex-wrap gap-1">
                                     {staff.map((s, i) => (
-                                      <span key={i} className="text-xs bg-gray-100 text-gray-700 px-2 py-0.5 rounded">
+                                      <span key={i} className="text-xs bg-gray-100 text-gray-700 px-2 py-0.5 rounded-sm">
                                         {s}
                                       </span>
                                     ))}
@@ -615,7 +615,7 @@ function ViolationsSection({ violations }: { violations: ConstraintViolation[] }
                               {/* 提案 */}
                               {suggestion && (
                                 <div className="mt-2.5 ml-1 flex items-start gap-2 bg-blue-50 border border-blue-100 rounded-lg px-3 py-2">
-                                  <span className="text-sm flex-shrink-0">💡</span>
+                                  <span className="text-sm shrink-0">💡</span>
                                   <span className="text-xs text-blue-700 leading-relaxed">{suggestion}</span>
                                 </div>
                               )}
@@ -671,7 +671,7 @@ function RecommendationsSection({ recommendations }: { recommendations: Recommen
                 <span>{style.icon}</span>
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-1">
-                    <span className={`text-xs font-bold ${style.text} px-1.5 py-0.5 rounded ${style.bg} border ${style.text.replace('text-', 'border-')}`}>
+                    <span className={`text-xs font-bold ${style.text} px-1.5 py-0.5 rounded-sm ${style.bg} border ${style.text.replace('text-', 'border-')}`}>
                       {style.label}
                     </span>
                     <span className={`text-xs font-medium ${style.text}`}>{displayCategory}</span>
@@ -830,7 +830,7 @@ function AICommentSection({ comment }: { comment: string }) {
     <div className="px-4 py-3 bg-slate-50 border-t border-slate-200">
       {/* サマリー: 判断 */}
       {parsed.summary && (
-        <div className="mb-3 p-3 bg-white rounded-lg border border-slate-200 shadow-sm">
+        <div className="mb-3 p-3 bg-white rounded-lg border border-slate-200 shadow-xs">
           <p className="text-sm text-gray-800 leading-relaxed font-medium">{parsed.summary}</p>
         </div>
       )}
@@ -862,7 +862,7 @@ function AICommentSection({ comment }: { comment: string }) {
                   <ul className="mt-1.5 space-y-1">
                     {section.items.map((item, itemIndex) => (
                       <li key={itemIndex} className="text-sm text-gray-700 flex items-start gap-2">
-                        <span className="text-gray-400 flex-shrink-0 mt-0.5">•</span>
+                        <span className="text-gray-400 shrink-0 mt-0.5">•</span>
                         <span>{item}</span>
                       </li>
                     ))}
@@ -876,7 +876,7 @@ function AICommentSection({ comment }: { comment: string }) {
 
       {/* アクションセクション: 強調表示 */}
       {actionSection && (
-        <div className="p-3 rounded-lg border-2 border-emerald-400 bg-emerald-50 shadow-sm">
+        <div className="p-3 rounded-lg border-2 border-emerald-400 bg-emerald-50 shadow-xs">
           <div className="text-sm font-bold text-emerald-800 flex items-center gap-1.5 mb-2">
             <span>✅</span>
             <span>次のアクション</span>
@@ -887,8 +887,8 @@ function AICommentSection({ comment }: { comment: string }) {
           {actionSection.items.length > 0 && (
             <ul className="space-y-1.5">
               {actionSection.items.map((item, itemIndex) => (
-                <li key={itemIndex} className="text-sm text-gray-800 flex items-start gap-2 bg-white rounded px-2 py-1.5 border border-emerald-200">
-                  <span className="text-emerald-600 flex-shrink-0 font-bold">{itemIndex + 1}.</span>
+                <li key={itemIndex} className="text-sm text-gray-800 flex items-start gap-2 bg-white rounded-sm px-2 py-1.5 border border-emerald-200">
+                  <span className="text-emerald-600 shrink-0 font-bold">{itemIndex + 1}.</span>
                   <span>{item}</span>
                 </li>
               ))}
@@ -980,18 +980,18 @@ function RootCauseSection({ rootCauseAnalysis }: { rootCauseAnalysis: RootCauseA
             {primaryCause.metrics && (
               <div className="mt-2 flex flex-wrap gap-2">
                 {primaryCause.metrics.required !== undefined && (
-                  <span className="text-xs bg-white px-2 py-1 rounded border">
+                  <span className="text-xs bg-white px-2 py-1 rounded-sm border">
                     必要: {primaryCause.metrics.required}人日
                   </span>
                 )}
                 {primaryCause.metrics.available !== undefined && (
-                  <span className="text-xs bg-white px-2 py-1 rounded border">
+                  <span className="text-xs bg-white px-2 py-1 rounded-sm border">
                     利用可能: {primaryCause.metrics.available}人日
                   </span>
                 )}
                 {primaryCause.metrics.shortage !== undefined &&
                   primaryCause.metrics.shortage > 0 && (
-                    <span className="text-xs bg-red-100 text-red-700 px-2 py-1 rounded border border-red-200">
+                    <span className="text-xs bg-red-100 text-red-700 px-2 py-1 rounded-sm border border-red-200">
                       不足: {primaryCause.metrics.shortage}人日
                     </span>
                   )}

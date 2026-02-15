@@ -102,7 +102,7 @@ const StaffSettings: React.FC<StaffSettingsProps> = ({
                   type="text"
                   value={staff.name} 
                   onChange={e => onStaffChange({...staff, name: e.target.value})}
-                  className="w-full p-2 bg-white text-slate-800 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-care-secondary focus:border-care-secondary"
+                  className="w-full p-2 bg-white text-slate-800 border border-slate-300 rounded-md shadow-xs focus:outline-hidden focus:ring-2 focus:ring-care-secondary focus:border-care-secondary"
                 />
               </div>
               {/* Role */}
@@ -111,7 +111,7 @@ const StaffSettings: React.FC<StaffSettingsProps> = ({
                 <select 
                   value={staff.role} 
                   onChange={e => onStaffChange({...staff, role: e.target.value as Role})}
-                  className="w-full p-2 pr-8 bg-white text-slate-800 border border-slate-300 rounded-md shadow-sm appearance-none bg-select-arrow bg-no-repeat bg-[center_right_0.75rem] focus:outline-none focus:ring-2 focus:ring-care-secondary focus:border-care-secondary"
+                  className="w-full p-2 pr-8 bg-white text-slate-800 border border-slate-300 rounded-md shadow-xs appearance-none bg-select-arrow bg-no-repeat bg-position-[center_right_0.75rem] focus:outline-hidden focus:ring-2 focus:ring-care-secondary focus:border-care-secondary"
                 >
                   {ROLES.map(r => <option key={r} value={r} className="text-black">{r}</option>)}
                 </select>
@@ -131,7 +131,7 @@ const StaffSettings: React.FC<StaffSettingsProps> = ({
                             : staff.qualifications.filter(qual => qual !== q);
                           onStaffChange({...staff, qualifications: newQuals});
                         }}
-                        className="rounded text-care-secondary focus:ring-care-secondary"
+                        className="rounded-sm text-care-secondary focus:ring-care-secondary"
                       />
                       <span>{q}</span>
                     </label>
@@ -145,7 +145,7 @@ const StaffSettings: React.FC<StaffSettingsProps> = ({
                     type="checkbox"
                     checked={staff.isNightShiftOnly}
                     onChange={e => onStaffChange({ ...staff, isNightShiftOnly: e.target.checked })}
-                    className="rounded text-care-secondary focus:ring-care-secondary"
+                    className="rounded-sm text-care-secondary focus:ring-care-secondary"
                   />
                   <span>夜勤専従</span>
                 </label>
@@ -155,7 +155,7 @@ const StaffSettings: React.FC<StaffSettingsProps> = ({
                 <label className="block font-medium text-slate-600 mb-1">勤務できない日</label>
                 <div 
                     onClick={() => setEditingCalendarFor(staff.id)}
-                    className="w-full p-2 border border-slate-300 rounded-md shadow-sm bg-white cursor-pointer min-h-[40px] flex flex-wrap gap-1 items-center"
+                    className="w-full p-2 border border-slate-300 rounded-md shadow-xs bg-white cursor-pointer min-h-[40px] flex flex-wrap gap-1 items-center"
                 >
                     {staff.unavailableDates.length > 0 ? (
                         staff.unavailableDates.map(date => (

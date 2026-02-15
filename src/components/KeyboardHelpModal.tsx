@@ -90,7 +90,7 @@ const KeyboardHelpModal: React.FC<KeyboardHelpModalProps> = ({ isOpen, onClose }
                     className="flex justify-between items-center py-1 border-b border-slate-100 last:border-0"
                   >
                     <span className="text-sm text-slate-700">{item.description}</span>
-                    <kbd className="px-2 py-1 bg-slate-100 rounded text-xs font-mono text-slate-600 border border-slate-200">
+                    <kbd className="px-2 py-1 bg-slate-100 rounded-sm text-xs font-mono text-slate-600 border border-slate-200">
                       {item.key}
                     </kbd>
                   </div>
@@ -103,7 +103,7 @@ const KeyboardHelpModal: React.FC<KeyboardHelpModalProps> = ({ isOpen, onClose }
         <div className="sticky bottom-0 bg-white border-t px-6 py-4">
           <button
             onClick={onClose}
-            className="w-full px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+            className="w-full px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 focus:outline-hidden focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
           >
             閉じる (Esc)
           </button>

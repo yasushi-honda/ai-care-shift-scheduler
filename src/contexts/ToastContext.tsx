@@ -286,7 +286,7 @@ const ToastItem: React.FC<{ toast: Toast; onDismiss: (id: string) => void }> = (
       )}
 
       {/* アイコン */}
-      <div className="flex-shrink-0">
+      <div className="shrink-0">
         {toast.type === 'success' ? (
           <svg
             className="w-6 h-6 text-green-600"
@@ -386,7 +386,7 @@ const ToastItem: React.FC<{ toast: Toast; onDismiss: (id: string) => void }> = (
       {/* 閉じるボタン */}
       <button
         onClick={() => onDismiss(toast.id)}
-        className={`flex-shrink-0 inline-flex text-gray-400 hover:text-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 ${
+        className={`shrink-0 inline-flex text-gray-400 hover:text-gray-600 focus:outline-hidden focus:ring-2 focus:ring-offset-2 ${
           toast.type === 'success'
             ? 'focus:ring-green-500'
             : toast.type === 'error'

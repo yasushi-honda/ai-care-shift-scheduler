@@ -2,7 +2,7 @@ import React from 'react';
 
 interface ButtonProps {
   /** ボタンのバリアント（スタイル種別） */
-  variant?: 'primary' | 'secondary' | 'success' | 'danger' | 'ghost' | 'outline';
+  variant?: 'primary' | 'secondary' | 'success' | 'danger' | 'ghost' | 'outline-solid';
   /** ボタンのサイズ */
   size?: 'sm' | 'md' | 'lg';
   /** アイコン（左側に表示） */
@@ -45,7 +45,7 @@ export function Button({
     rounded-lg font-medium transition-all duration-200
     disabled:opacity-50 disabled:cursor-not-allowed
     inline-flex items-center justify-center gap-2
-    active:scale-95 focus:outline-none focus:ring-2 focus:ring-offset-2
+    active:scale-95 focus:outline-hidden focus:ring-2 focus:ring-offset-2
   `;
 
   // サイズ別スタイル（Phase 42追加）

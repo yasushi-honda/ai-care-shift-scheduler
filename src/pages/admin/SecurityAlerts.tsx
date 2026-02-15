@@ -276,14 +276,14 @@ export function SecurityAlerts(): React.ReactElement {
         <button
           onClick={handleRunDetection}
           disabled={scanning}
-          className="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          className="px-4 py-2 bg-indigo-600 text-white rounded-sm hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {scanning ? '🔄 スキャン中...' : '🔍 異常検知実行'}
         </button>
       </div>
 
       {/* フィルターパネル */}
-      <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
+      <div className="bg-white p-4 rounded-lg shadow-xs border border-gray-200">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-semibold text-gray-900">フィルター</h2>
           <button
@@ -305,7 +305,7 @@ export function SecurityAlerts(): React.ReactElement {
               onChange={(e) =>
                 setFilterStatus(e.target.value as SecurityAlertStatus | '')
               }
-              className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-sm focus:outline-hidden focus:ring-2 focus:ring-blue-500"
             >
               <option value="">すべて</option>
               {Object.values(SecurityAlertStatus).map((status) => (
@@ -326,7 +326,7 @@ export function SecurityAlerts(): React.ReactElement {
               onChange={(e) =>
                 setFilterType(e.target.value as SecurityAlertType | '')
               }
-              className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-sm focus:outline-hidden focus:ring-2 focus:ring-blue-500"
             >
               <option value="">すべて</option>
               {Object.values(SecurityAlertType).map((type) => (
@@ -347,7 +347,7 @@ export function SecurityAlerts(): React.ReactElement {
               onChange={(e) =>
                 setFilterSeverity(e.target.value as SecurityAlertSeverity | '')
               }
-              className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-sm focus:outline-hidden focus:ring-2 focus:ring-blue-500"
             >
               <option value="">すべて</option>
               {Object.values(SecurityAlertSeverity).map((severity) => (
@@ -362,7 +362,7 @@ export function SecurityAlerts(): React.ReactElement {
         <div className="mt-4 flex justify-end">
           <button
             onClick={handleFilterApply}
-            className="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+            className="px-6 py-2 bg-blue-600 text-white rounded-sm hover:bg-blue-700 transition-colors"
           >
             フィルター適用
           </button>
@@ -370,7 +370,7 @@ export function SecurityAlerts(): React.ReactElement {
       </div>
 
       {/* アラート一覧テーブル */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+      <div className="bg-white rounded-lg shadow-xs border border-gray-200">
         {loading ? (
           <div className="p-8 text-center text-gray-500">読み込み中...</div>
         ) : error ? (
@@ -458,14 +458,14 @@ export function SecurityAlerts(): React.ReactElement {
               <button
                 onClick={() => loadAlerts('prev')}
                 disabled={!hasPrev || loading}
-                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-4 py-2 bg-blue-600 text-white rounded-sm hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 ← 前へ
               </button>
               <button
                 onClick={() => loadAlerts('next')}
                 disabled={!hasNext || loading}
-                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-4 py-2 bg-blue-600 text-white rounded-sm hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 次へ →
               </button>
@@ -581,7 +581,7 @@ export function SecurityAlerts(): React.ReactElement {
                     <h3 className="text-sm font-semibold text-gray-900 mb-2">
                       メタデータ（JSON）
                     </h3>
-                    <pre className="bg-gray-50 border border-gray-200 rounded p-3 text-xs overflow-x-auto">
+                    <pre className="bg-gray-50 border border-gray-200 rounded-sm p-3 text-xs overflow-x-auto">
                       {JSON.stringify(selectedAlert.metadata, null, 2)}
                     </pre>
                   </div>
@@ -596,12 +596,12 @@ export function SecurityAlerts(): React.ReactElement {
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
                   rows={4}
-                  className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-sm focus:outline-hidden focus:ring-2 focus:ring-blue-500"
                   placeholder="メモを入力..."
                 />
                 <button
                   onClick={handleAddNotes}
-                  className="mt-2 px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700 transition-colors"
+                  className="mt-2 px-4 py-2 bg-gray-600 text-white rounded-sm hover:bg-gray-700 transition-colors"
                 >
                   メモを保存
                 </button>
@@ -615,7 +615,7 @@ export function SecurityAlerts(): React.ReactElement {
                   onClick={() =>
                     handleUpdateStatus(SecurityAlertStatus.ACKNOWLEDGED)
                   }
-                  className="px-4 py-2 bg-yellow-600 text-white rounded hover:bg-yellow-700 transition-colors"
+                  className="px-4 py-2 bg-yellow-600 text-white rounded-sm hover:bg-yellow-700 transition-colors"
                 >
                   確認済みにする
                 </button>
@@ -623,7 +623,7 @@ export function SecurityAlerts(): React.ReactElement {
                   onClick={() =>
                     handleUpdateStatus(SecurityAlertStatus.INVESTIGATING)
                   }
-                  className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+                  className="px-4 py-2 bg-blue-600 text-white rounded-sm hover:bg-blue-700 transition-colors"
                 >
                   調査中にする
                 </button>
@@ -631,7 +631,7 @@ export function SecurityAlerts(): React.ReactElement {
                   onClick={() =>
                     handleUpdateStatus(SecurityAlertStatus.RESOLVED)
                   }
-                  className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition-colors"
+                  className="px-4 py-2 bg-green-600 text-white rounded-sm hover:bg-green-700 transition-colors"
                 >
                   解決済みにする
                 </button>
@@ -639,13 +639,13 @@ export function SecurityAlerts(): React.ReactElement {
                   onClick={() =>
                     handleUpdateStatus(SecurityAlertStatus.FALSE_POSITIVE)
                   }
-                  className="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700 transition-colors"
+                  className="px-4 py-2 bg-gray-600 text-white rounded-sm hover:bg-gray-700 transition-colors"
                 >
                   誤検知にする
                 </button>
                 <button
                   onClick={closeDetailModal}
-                  className="ml-auto px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 transition-colors"
+                  className="ml-auto px-4 py-2 bg-gray-200 text-gray-700 rounded-sm hover:bg-gray-300 transition-colors"
                 >
                   閉じる
                 </button>

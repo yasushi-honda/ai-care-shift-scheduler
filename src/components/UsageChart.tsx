@@ -132,7 +132,7 @@ export function UsageChart({
   };
 
   return (
-    <div className="bg-white p-6 rounded-lg shadow">
+    <div className="bg-white p-6 rounded-lg shadow-sm">
       {title && !options?.plugins?.title && (
         <h3 className="text-lg font-semibold text-gray-900 mb-4">{title}</h3>
       )}

@@ -22,10 +22,10 @@ const MonthNavigator: React.FC<MonthNavigatorProps> = ({ currentMonth, onMonthCh
   const [year, month] = currentMonth.split('-');
 
   return (
-    <div className="flex items-center justify-between bg-white p-2 border border-slate-300 rounded-md shadow-sm">
+    <div className="flex items-center justify-between bg-white p-2 border border-slate-300 rounded-md shadow-xs">
       <button
         onClick={() => changeMonth(-1)}
-        className="p-2 rounded-md hover:bg-slate-100 text-slate-500 hover:text-slate-800 focus:outline-none focus:ring-2 focus:ring-care-secondary"
+        className="p-2 rounded-md hover:bg-slate-100 text-slate-500 hover:text-slate-800 focus:outline-hidden focus:ring-2 focus:ring-care-secondary"
         aria-label="前の月へ"
       >
         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
@@ -37,7 +37,7 @@ const MonthNavigator: React.FC<MonthNavigatorProps> = ({ currentMonth, onMonthCh
       </div>
       <button
         onClick={() => changeMonth(1)}
-        className="p-2 rounded-md hover:bg-slate-100 text-slate-500 hover:text-slate-800 focus:outline-none focus:ring-2 focus:ring-care-secondary"
+        className="p-2 rounded-md hover:bg-slate-100 text-slate-500 hover:text-slate-800 focus:outline-hidden focus:ring-2 focus:ring-care-secondary"
         aria-label="次の月へ"
       >
         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">

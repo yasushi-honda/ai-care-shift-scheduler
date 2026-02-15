@@ -113,7 +113,7 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
 
   // ストライプのグラデーション
   const stripeGradient = striped
-    ? 'bg-[length:1rem_1rem] bg-[linear-gradient(45deg,rgba(255,255,255,.15)_25%,transparent_25%,transparent_50%,rgba(255,255,255,.15)_50%,rgba(255,255,255,.15)_75%,transparent_75%,transparent)]'
+    ? 'bg-size-[1rem_1rem] bg-[linear-gradient(45deg,rgba(255,255,255,.15)_25%,transparent_25%,transparent_50%,rgba(255,255,255,.15)_50%,rgba(255,255,255,.15)_75%,transparent_75%,transparent)]'
     : '';
 
   // ストライプアニメーション

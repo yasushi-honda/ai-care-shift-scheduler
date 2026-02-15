@@ -161,12 +161,12 @@ export const EvaluationHistory: React.FC<EvaluationHistoryProps> = ({
                       }`}
                     >
                       {/* 日時 */}
-                      <div className="flex-shrink-0 text-xs text-gray-500 w-20">
+                      <div className="shrink-0 text-xs text-gray-500 w-20">
                         {formatDate(item.createdAt)}
                       </div>
 
                       {/* タイプラベル */}
-                      <span className={`flex-shrink-0 text-xs px-2 py-0.5 rounded ${typeLabel.color}`}>
+                      <span className={`shrink-0 text-xs px-2 py-0.5 rounded-sm ${typeLabel.color}`}>
                         {typeLabel.text}
                       </span>
 

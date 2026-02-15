@@ -17,7 +17,7 @@
  *   alt="説明"
  *   width={300}
  *   height={200}
- *   className="rounded"
+ *   className="rounded-sm"
  * />
  * ```
  */

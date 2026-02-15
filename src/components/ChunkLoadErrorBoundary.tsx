@@ -119,7 +119,7 @@ export class ChunkLoadErrorBoundary extends React.Component<Props, State> {
                 <summary className="cursor-pointer text-sm text-slate-500 hover:text-slate-700">
                   技術的な詳細を表示
                 </summary>
-                <pre className="mt-3 p-4 bg-slate-100 rounded text-xs text-red-600 overflow-auto">
+                <pre className="mt-3 p-4 bg-slate-100 rounded-sm text-xs text-red-600 overflow-auto">
                   {error.toString()}
                   {'\n\n'}
                   {error.stack}

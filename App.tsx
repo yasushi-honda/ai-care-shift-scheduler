@@ -1462,7 +1462,7 @@ const App: React.FC = () => {
 
       <div className="flex flex-1 overflow-hidden">
       <aside className="w-1/3 max-w-lg bg-white shadow-2xl flex flex-col h-full">
-        <header className="p-5 bg-gradient-to-r from-care-dark to-care-secondary text-white shadow-md">
+        <header className="p-5 bg-linear-to-r from-care-dark to-care-secondary text-white shadow-md">
           <div className="flex items-center justify-between mb-3">
             <div>
               <h1 className="text-2xl font-bold">AIシフト自動作成</h1>
@@ -1533,7 +1533,7 @@ const App: React.FC = () => {
                     id="facility-select"
                     value={selectedFacilityId || ''}
                     onChange={handleFacilityChange}
-                    className="w-full px-3 py-2 text-sm bg-white text-slate-800 rounded-lg border-0 focus:outline-none focus:ring-2 focus:ring-white focus:ring-opacity-50"
+                    className="w-full px-3 py-2 text-sm bg-white text-slate-800 rounded-lg border-0 focus:outline-hidden focus:ring-2 focus:ring-white focus:ring-opacity-50"
                     disabled={loadingFacilities}
                   >
                     <option value="">-- 施設を選択してください --</option>
@@ -1551,7 +1551,7 @@ const App: React.FC = () => {
             </div>
           )}
         </header>
-        <div className="flex-grow overflow-y-auto">
+        <div className="grow overflow-y-auto">
           <Accordion title="スタッフ情報設定" icon={<UserGroupIcon/>}>
             {loadingStaff ? (
               <div className="p-8 text-center">
@@ -1566,7 +1566,7 @@ const App: React.FC = () => {
                 </div>
                 <button
                   onClick={handleRetryStaffLoad}
-                  className="px-4 py-2 bg-care-secondary hover:bg-care-dark text-white font-semibold rounded-lg transition-colors shadow-sm"
+                  className="px-4 py-2 bg-care-secondary hover:bg-care-dark text-white font-semibold rounded-lg transition-colors shadow-xs"
                 >
                   再試行
                 </button>
@@ -1654,7 +1654,7 @@ const App: React.FC = () => {
       <main className="flex-1 p-6 flex flex-col overflow-hidden relative">
         {/* Phase 45: AI生成プログレスオーバーレイ */}
         {aiProgress.state.status === 'generating' && (
-          <div className="absolute inset-0 bg-slate-100/80 backdrop-blur-sm z-40 flex items-center justify-center">
+          <div className="absolute inset-0 bg-slate-100/80 backdrop-blur-xs z-40 flex items-center justify-center">
             <AIGenerationProgress
               state={aiProgress.state}
               onCancel={handleCancelGeneration}
@@ -1695,7 +1695,7 @@ const App: React.FC = () => {
                 </div>
                 <button
                   onClick={handleRetryScheduleLoad}
-                  className="px-4 py-2 bg-care-secondary hover:bg-care-dark text-white font-semibold rounded-lg transition-colors shadow-sm"
+                  className="px-4 py-2 bg-care-secondary hover:bg-care-dark text-white font-semibold rounded-lg transition-colors shadow-xs"
                 >
                   再試行
                 </button>

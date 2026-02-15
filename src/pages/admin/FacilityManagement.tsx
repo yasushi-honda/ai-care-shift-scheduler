@@ -189,7 +189,7 @@ export function FacilityManagement(): React.ReactElement {
         </div>
 
         {/* テーブル（スケルトン） */}
-        <div className="bg-white rounded-lg shadow-sm overflow-hidden p-6">
+        <div className="bg-white rounded-lg shadow-xs overflow-hidden p-6">
           <SkeletonLoader variant="table" count={5} columns={6} />
         </div>
 
@@ -265,7 +265,7 @@ export function FacilityManagement(): React.ReactElement {
                   type="text"
                   value={newFacilityName}
                   onChange={(e) => setNewFacilityName(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-blue-500"
                   placeholder="例: 〇〇介護施設"
                   required
                   aria-required="true"
@@ -280,7 +280,7 @@ export function FacilityManagement(): React.ReactElement {
               </div>
 
               {createError && (
-                <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded text-sm text-red-600" role="alert" aria-live="assertive">
+                <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-sm text-sm text-red-600" role="alert" aria-live="assertive">
                   {createError}
                 </div>
               )}
@@ -313,7 +313,7 @@ export function FacilityManagement(): React.ReactElement {
 
       {/* 施設一覧テーブル */}
       {facilities.length === 0 ? (
-        <div className="bg-white rounded-lg shadow-sm p-12 text-center">
+        <div className="bg-white rounded-lg shadow-xs p-12 text-center">
           <div className="text-6xl mb-4">🏢</div>
           <h2 className="text-xl font-semibold text-gray-900 mb-2">
             施設がまだありません
@@ -323,7 +323,7 @@ export function FacilityManagement(): React.ReactElement {
           </p>
         </div>
       ) : (
-        <div className="bg-white rounded-lg shadow-sm overflow-hidden">
+        <div className="bg-white rounded-lg shadow-xs overflow-hidden">
           {/* Phase 19.2.1: モバイル対応 - 横スクロール */}
           {/* Phase 19.2.1.5: 横スクロールヒント追加 */}
           <div className="relative">

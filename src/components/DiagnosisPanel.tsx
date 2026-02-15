@@ -227,7 +227,7 @@ export function DiagnosisPanel({
                 e.stopPropagation();
                 onRefresh();
               }}
-              className="p-1 hover:bg-white/50 rounded"
+              className="p-1 hover:bg-white/50 rounded-sm"
               aria-label="診断を再実行"
               data-testid="diagnosis-refresh-button"
             >
@@ -269,7 +269,7 @@ export function DiagnosisPanel({
         <div className="border-t border-gray-200 bg-white p-4 space-y-4 max-h-96 overflow-y-auto">
           {/* 警告あっても実行可能メッセージ */}
           {status === 'warning' && (
-            <div className="text-sm text-gray-600 bg-gray-50 p-2 rounded">
+            <div className="text-sm text-gray-600 bg-gray-50 p-2 rounded-sm">
               ※ 警告があってもシフト生成は実行可能です。
             </div>
           )}
@@ -302,7 +302,7 @@ function SupplyDemandSection({ balance }: { balance: SupplyDemandBalance }) {
       <h4 className="font-medium text-gray-700 mb-2">需給バランス</h4>
 
       {/* 全体バランス */}
-      <div className="bg-gray-50 rounded p-3 mb-3">
+      <div className="bg-gray-50 rounded-sm p-3 mb-3">
         <div className="grid grid-cols-3 gap-4 text-center">
           <div>
             <div className="text-sm text-gray-500">供給人日数</div>
@@ -446,7 +446,7 @@ const IssueItem: React.FC<IssueItemProps> = ({ issue }) => {
 
   return (
     <div
-      className={`${config.bgColor} rounded p-3`}
+      className={`${config.bgColor} rounded-sm p-3`}
       data-testid={`issue-item-${issue.id}`}
     >
       <div className="flex items-start gap-2">
@@ -501,7 +501,7 @@ const SuggestionItem: React.FC<SuggestionItemProps> = ({ suggestion }) => {
 
   return (
     <div
-      className="bg-gray-50 rounded p-3"
+      className="bg-gray-50 rounded-sm p-3"
       data-testid={`suggestion-item-${suggestion.priority}`}
     >
       <div className="flex items-start gap-2">

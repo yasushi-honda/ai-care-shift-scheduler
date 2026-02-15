@@ -235,7 +235,7 @@ export function BackupManagement(): React.ReactElement {
       </div>
 
       {/* バックアップ一覧 */}
-      <div className="bg-white shadow rounded-lg">
+      <div className="bg-white shadow-sm rounded-lg">
         <div className="px-6 py-4 border-b border-gray-200">
           <h2 className="text-xl font-semibold">バックアップ履歴</h2>
         </div>

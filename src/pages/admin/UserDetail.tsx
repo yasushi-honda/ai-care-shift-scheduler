@@ -222,7 +222,7 @@ export function UserDetail(): React.ReactElement {
       </div>
 
       {/* 基本情報 */}
-      <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
+      <div className="bg-white rounded-lg shadow-xs p-6 mb-6">
         <h2 className="text-xl font-semibold text-gray-900 mb-4">基本情報</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
@@ -291,7 +291,7 @@ export function UserDetail(): React.ReactElement {
                   id="facility-select"
                   value={selectedFacilityId}
                   onChange={(e) => setSelectedFacilityId(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-blue-500"
                   required
                   aria-required="true"
                   aria-invalid={grantError ? 'true' : 'false'}
@@ -313,7 +313,7 @@ export function UserDetail(): React.ReactElement {
                   id="role-select"
                   value={selectedRole}
                   onChange={(e) => setSelectedRole(e.target.value as FacilityRole)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-blue-500"
                   required
                   aria-required="true"
                 >
@@ -327,7 +327,7 @@ export function UserDetail(): React.ReactElement {
               </div>
 
               {grantError && (
-                <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded text-sm text-red-600" role="alert" aria-live="assertive">
+                <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-sm text-sm text-red-600" role="alert" aria-live="assertive">
                   {grantError}
                 </div>
               )}
@@ -360,7 +360,7 @@ export function UserDetail(): React.ReactElement {
       )}
 
       {/* 所属施設とロール */}
-      <div className="bg-white rounded-lg shadow-sm p-6">
+      <div className="bg-white rounded-lg shadow-xs p-6">
         <h2 className="text-xl font-semibold text-gray-900 mb-4">
           所属施設とロール
         </h2>

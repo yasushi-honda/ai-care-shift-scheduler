@@ -57,7 +57,7 @@ const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 **実装コード**:
 ```tsx
 {/* デスクトップサイドバー */}
-<aside className="hidden md:block w-64 bg-white shadow-sm">
+<aside className="hidden md:block w-64 bg-white shadow-xs">
   {/* navigation items */}
 </aside>
 
@@ -118,14 +118,14 @@ const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
 ```tsx
 {/* Before */}
-<div className="bg-white rounded-lg shadow-sm overflow-hidden">
+<div className="bg-white rounded-lg shadow-xs overflow-hidden">
   <table className="min-w-full divide-y divide-gray-200">
     {/* table content */}
   </table>
 </div>
 
 {/* After */}
-<div className="bg-white rounded-lg shadow-sm overflow-hidden">
+<div className="bg-white rounded-lg shadow-xs overflow-hidden">
   <div className="overflow-x-auto">
     <table className="min-w-full divide-y divide-gray-200">
       {/* table content */}

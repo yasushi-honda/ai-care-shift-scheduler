@@ -30,7 +30,7 @@
   tabIndex={0}
   role="button"
   aria-label={`${staffName}の${date}の予定: ${shiftType}`}
-  className="... focus:outline-none focus:ring-2 focus:ring-blue-500"
+  className="... focus:outline-hidden focus:ring-2 focus:ring-blue-500"
   onKeyDown={handleKeyDown}
 >
 ```
@@ -81,7 +81,7 @@ const handleKeyDown = useCallback((e: React.KeyboardEvent, /* params */) => {
 ### フォーカススタイル
 
 ```css
-focus:outline-none focus:ring-2 focus:ring-blue-500
+focus:outline-hidden focus:ring-2 focus:ring-blue-500
 ```
 
 ---

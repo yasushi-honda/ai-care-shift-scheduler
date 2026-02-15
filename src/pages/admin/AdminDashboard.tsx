@@ -46,7 +46,7 @@ export function AdminDashboard(): React.ReactElement {
           <Link
             key={link.path}
             to={link.path}
-            className={`block p-6 bg-white rounded-lg shadow-sm border-2 border-transparent hover:shadow-md transition-all ${link.hoverClass}`}
+            className={`block p-6 bg-white rounded-lg shadow-xs border-2 border-transparent hover:shadow-md transition-all ${link.hoverClass}`}
           >
             <div className="text-4xl mb-4">{link.icon}</div>
             <h2 className="text-xl font-semibold text-gray-900 mb-2">

@@ -14,7 +14,7 @@ const Accordion: React.FC<AccordionProps> = ({ title, children, icon, defaultOpe
     <div className="border-b border-slate-200">
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full flex justify-between items-center p-4 text-left text-lg font-semibold text-slate-800 bg-white hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-care-secondary"
+        className="w-full flex justify-between items-center p-4 text-left text-lg font-semibold text-slate-800 bg-white hover:bg-slate-50 focus:outline-hidden focus-visible:ring-2 focus-visible:ring-care-secondary"
       >
         <div className="flex items-center">
           {icon}

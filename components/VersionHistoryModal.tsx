@@ -102,7 +102,7 @@ const VersionHistoryModal: React.FC<VersionHistoryModalProps> = ({
                           </p>
                         </div>
                       </div>
-                      <div className="mt-3 text-xs text-slate-600 bg-slate-50 p-3 rounded">
+                      <div className="mt-3 text-xs text-slate-600 bg-slate-50 p-3 rounded-sm">
                         <span className="font-medium">スタッフ数:</span> {version.staffSchedules?.length || 0}名
                         {version.previousVersion !== undefined && (
                           <span className="ml-4">

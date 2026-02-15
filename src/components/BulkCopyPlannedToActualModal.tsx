@@ -195,7 +195,7 @@ ${overwrite ? '※既存の実績を上書きします' : '※実績未入力の
                               checked={isSelected}
                               onChange={() => handleToggleStaff(staff.staffId)}
                               disabled={!hasUnfilled}
-                              className="mr-3 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                              className="mr-3 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded-sm"
                             />
                             <span className="text-sm text-gray-900">{staff.staffName}</span>
                           </div>
@@ -248,7 +248,7 @@ ${overwrite ? '※既存の実績を上書きします' : '※実績未入力の
                       type="checkbox"
                       checked={overwrite}
                       onChange={(e) => setOverwrite(e.target.checked)}
-                      className="mr-3 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                      className="mr-3 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded-sm"
                     />
                     <span className="text-sm text-gray-700">
                       既存の実績を上書きする
@@ -270,14 +270,14 @@ ${overwrite ? '※既存の実績を上書きします' : '※実績未入力の
               type="button"
               onClick={handleExecute}
               disabled={selectedStaffIds.length === 0}
-              className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:ml-3 sm:w-auto sm:text-sm disabled:bg-gray-300 disabled:cursor-not-allowed"
+              className="w-full inline-flex justify-center rounded-md border border-transparent shadow-xs px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-hidden focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:ml-3 sm:w-auto sm:text-sm disabled:bg-gray-300 disabled:cursor-not-allowed"
             >
               実行
             </button>
             <button
               type="button"
               onClick={onClose}
-              className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
+              className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-xs px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-hidden focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
             >
               キャンセル
             </button>
