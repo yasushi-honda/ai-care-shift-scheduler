@@ -4,11 +4,11 @@ import {
   Role, Qualification, TimeSlotPreference, LeaveType,
   type Staff, type ShiftRequirement, type StaffSchedule, type GeneratedShift, type LeaveRequest, type ScheduleVersion, type LeaveRequestDocument, type Facility,
   type FacilityShiftSettings, type FacilityLeaveSettings,
-  type AIEvaluationResult,
+  type EvaluationResult,
   assertResultError, assertResultSuccess
 } from './types';
 import { DEFAULT_TIME_SLOTS, DEFAULT_SHIFT_TYPES, DEFAULT_SHIFT_CYCLE, DEFAULT_LEAVE_SETTINGS } from './constants';
-import { generateShiftSchedule } from './services/geminiService';
+import { generateShiftSchedule } from './services/shiftGenerationService';
 import { exportToCSV } from './services/exportService';
 import { StaffService } from './src/services/staffService';
 import { ScheduleService } from './src/services/scheduleService';
@@ -40,9 +40,9 @@ import { ActionToolbar } from './src/components/ActionToolbar';
 import { DemoBanner } from './src/components/DemoBanner';
 import { LockStatusModal } from './src/components/LockStatusModal';
 import { LockService, LockInfo } from './src/services/lockService';
-// Phase 45: AI生成プログレス表示
-import { AIGenerationProgress } from './src/components/AIGenerationProgress';
-import { useAIGenerationProgress } from './src/hooks/useAIGenerationProgress';
+// 自動生成プログレス表示
+import { GenerationProgress } from './src/components/GenerationProgress';
+import { useGenerationProgress } from './src/hooks/useGenerationProgress';
 // Phase 54: 評価履歴サービス
 import { getLatestEvaluationForMonth } from './src/services/evaluationHistoryService';
 import { reevaluateShift } from './src/services/reevaluateService';
@@ -104,12 +104,12 @@ const App: React.FC = () => {
     }
   });
   const [schedule, setSchedule] = useState<StaffSchedule[]>([]);
-  const [evaluation, setEvaluation] = useState<AIEvaluationResult | null>(null);
+  const [evaluation, setEvaluation] = useState<EvaluationResult | null>(null);
   const [currentScheduleId, setCurrentScheduleId] = useState<string | null>(null);
   const [currentScheduleStatus, setCurrentScheduleStatus] = useState<'draft' | 'confirmed' | 'archived'>('draft');
   const [isLoading, setIsLoading] = useState(false);
   const [generatingSchedule, setGeneratingSchedule] = useState(false);
-  // AI生成直後のFirestoreリスナー発火時に評価がクリアされるのを防ぐためのRef
+  // 生成直後のFirestoreリスナー発火時に評価がクリアされるのを防ぐためのRef
   // 複数回のリスナー発火に対応するため、カウンターを使用（BUG-005修正）
   const skipEvaluationClearCountRef = useRef(0);
   const [error, setError] = useState<string | null>(null);
@@ -128,8 +128,8 @@ const App: React.FC = () => {
   // Phase 54: 再評価中フラグ
   const [isReevaluating, setIsReevaluating] = useState(false);
 
-  // Phase 45: AI生成プログレス表示
-  const aiProgress = useAIGenerationProgress();
+  // 自動生成プログレス表示
+  const generationProgress = useGenerationProgress();
 
   // Phase 55: データ設定診断機能（自動診断トリガー付き）
   const diagnosis = useDiagnosis({
@@ -142,16 +142,16 @@ const App: React.FC = () => {
 
   // Phase 45: AI生成キャンセルハンドラー
   const handleCancelGeneration = useCallback(() => {
-    aiProgress.cancelGeneration();
+    generationProgress.cancelGeneration();
     setIsLoading(false);
     setGeneratingSchedule(false);
-    showError('AI生成がキャンセルされました');
-  }, [aiProgress, showError]);
+    showError('シフト生成がキャンセルされました');
+  }, [generationProgress, showError]);
 
   // Phase 45: ブラウザ離脱時の警告（タスク3.4）
   useEffect(() => {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-      if (aiProgress.state.status === 'generating') {
+      if (generationProgress.state.status === 'generating') {
         e.preventDefault();
         e.returnValue = ''; // クロスブラウザ互換性のため必須
       }
@@ -161,7 +161,7 @@ const App: React.FC = () => {
     return () => {
       window.removeEventListener('beforeunload', handleBeforeUnload);
     };
-  }, [aiProgress.state.status]);
+  }, [generationProgress.state.status]);
 
   // Phase 31: アンドゥ履歴スタック（最大10件）
   const [undoStack, setUndoStack] = useState<ShiftHistoryEntry[]>([]);
@@ -1068,7 +1068,7 @@ const App: React.FC = () => {
     setGeneratingSchedule(true);
     setError(null);
     // Phase 45: プログレス表示開始
-    aiProgress.startGeneration();
+    generationProgress.startGeneration();
 
     try {
       // Phase 43: ロック取得（デモ環境でも競合防止のため取得）
@@ -1076,7 +1076,7 @@ const App: React.FC = () => {
         selectedFacilityId,
         requirements.targetMonth,
         currentUser.uid,
-        'ai-generation',
+        'shift-generation',
         currentUser.email || undefined
       );
 
@@ -1084,7 +1084,7 @@ const App: React.FC = () => {
         setCurrentLockInfo(lockResult.existingLock ?? null);
         setLockModalOpen(true);
         // Phase 45: プログレスをキャンセル状態に
-        aiProgress.cancelGeneration();
+        generationProgress.cancelGeneration();
         return;
       }
 
@@ -1145,12 +1145,12 @@ const App: React.FC = () => {
         setViewMode('shift');
         // Phase 60: プログレス完了（結果サマリー付き）
         const eval_ = generationResult.evaluation;
-        aiProgress.completeGeneration({
+        generationProgress.completeGeneration({
           overallScore: eval_?.overallScore ?? 0,
           fulfillmentRate: eval_?.fulfillmentRate ?? 0,
           violationCount: eval_?.constraintViolations?.length ?? 0,
           recommendationCount: eval_?.recommendations?.length ?? 0,
-          elapsedSeconds: aiProgress.state.elapsedSeconds,
+          elapsedSeconds: generationProgress.state.elapsedSeconds,
         });
       } finally {
         // Phase 43: ロック解放
@@ -1165,12 +1165,12 @@ const App: React.FC = () => {
       setError(errorMessage);
       showError(errorMessage);
       // Phase 45: プログレスエラー
-      aiProgress.failGeneration(errorMessage);
+      generationProgress.failGeneration(errorMessage);
     } finally {
       setIsLoading(false);
       setGeneratingSchedule(false);
     }
-  }, [staffList, requirements, leaveRequests, selectedFacilityId, currentUser, currentScheduleId, showSuccess, showError, isDemoEnvironment, aiProgress]);
+  }, [staffList, requirements, leaveRequests, selectedFacilityId, currentUser, currentScheduleId, showSuccess, showError, isDemoEnvironment, generationProgress]);
 
   const handleExportCSV = () => {
     if (schedule.length > 0) {
@@ -1659,13 +1659,13 @@ const App: React.FC = () => {
       </aside>
 
       <main className="flex-1 p-6 flex flex-col overflow-hidden relative">
-        {/* Phase 60: AI生成オーバーレイ（生成中+結果表示） */}
-        {aiProgress.state.status !== 'idle' && (
+        {/* 自動生成オーバーレイ（生成中+結果表示） */}
+        {generationProgress.state.status !== 'idle' && (
           <div className="absolute inset-0 bg-slate-100/80 backdrop-blur-xs z-40 flex items-center justify-center">
-            <AIGenerationProgress
-              state={aiProgress.state}
+            <GenerationProgress
+              state={generationProgress.state}
               onCancel={handleCancelGeneration}
-              onClose={aiProgress.reset}
+              onClose={generationProgress.reset}
             />
           </div>
         )}

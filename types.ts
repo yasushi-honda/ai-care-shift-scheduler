@@ -504,9 +504,9 @@ export interface SimulationResult {
 }
 
 /**
- * AI評価結果
+ * 評価結果
  */
-export interface AIEvaluationResult {
+export interface EvaluationResult {
   overallScore: number;           // 0-100
   fulfillmentRate: number;        // 0-100（充足率%）
   constraintViolations: ConstraintViolation[];
@@ -554,7 +554,7 @@ export interface AIGenerationHistory {
   id: string;
   targetMonth: string;           // YYYY-MM
   schedule: StaffSchedule[];     // 生成されたシフト
-  evaluation: AIEvaluationResult; // 評価結果
+  evaluation: EvaluationResult; // 評価結果
   generatedBy: string;           // ユーザーID
   createdAt: Timestamp;
   // Phase 54 追加フィールド
@@ -568,9 +568,9 @@ export interface AIGenerationHistory {
 }
 
 /**
- * AI評価サービスエラー型
+ * 評価サービスエラー型
  */
-export type AIEvaluationError =
+export type EvaluationError =
   | { code: 'PERMISSION_DENIED'; message: string }
   | { code: 'VALIDATION_ERROR'; message: string }
   | { code: 'FIRESTORE_ERROR'; message: string }
@@ -583,7 +583,7 @@ export type AIEvaluationError =
 export interface GenerateShiftResponse {
   success: boolean;
   schedule?: StaffSchedule[];
-  evaluation?: AIEvaluationResult;  // Phase 40で追加（後方互換性のためオプショナル）
+  evaluation?: EvaluationResult;  // Phase 40で追加（後方互換性のためオプショナル）
   metadata?: {
     generatedAt: string;
     model: string;

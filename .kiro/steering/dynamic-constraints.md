@@ -1,13 +1,15 @@
 # Dynamic Constraints - 動的制約生成パターン
 
-**最終更新**: 2025-12-29
+**最終更新**: 2026-02-16
 **関連Phase**: Phase 44-49
+**ステータス**: LLMプロンプト向け制約は廃止。制約はCP-SAT Solverモデル内で直接定義。
 
 ---
 
 ## 概要
 
-静的な制約記述ではAIが無視しやすいため、スタッフデータから動的に具体的な制約を生成する。
+※ 以下はLLM時代の設計パターン記録（アーカイブ）。
+現在の制約定義は `solver-functions/solver/unified_builder.py` で数学的に実装されている。
 
 ---
 
@@ -60,7 +62,7 @@ ${targetStaff.map(s => `- ${s.name}: ...`).join('\n')}
 | `buildDynamicConsecutiveConstraints` | 連続勤務制限 |
 | `buildDynamicStaffingConstraints` | 日別必要勤務人数 |
 
-実装ファイル: `functions/src/phased-generation.ts`
+※ 旧実装ファイル `functions/src/phased-generation.ts` は削除済み。制約は `solver-functions/solver/unified_builder.py` で実装。
 
 ---
 

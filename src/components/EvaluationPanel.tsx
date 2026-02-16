@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import type { AIEvaluationResult, ConstraintViolation, ConstraintLevel, Recommendation, SimulationResult } from '../../types';
+import type { EvaluationResult, ConstraintViolation, ConstraintLevel, Recommendation, SimulationResult } from '../../types';
 
 // 自動展開のしきい値定数
 const AUTO_EXPAND_SCORE_THRESHOLD = 60;
@@ -127,7 +127,7 @@ const WARNING_MESSAGES: Record<WarningLevel, { title: string; message: string; b
 };
 
 interface EvaluationPanelProps {
-  evaluation: AIEvaluationResult | null;
+  evaluation: EvaluationResult | null;
   isExpanded?: boolean;
   onToggle?: () => void;
 }

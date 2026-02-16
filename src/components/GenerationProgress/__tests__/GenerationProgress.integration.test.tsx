@@ -1,5 +1,5 @@
 /**
- * AIGenerationProgress 統合テスト
+ * GenerationProgress 統合テスト
  * Phase 45: AIシフト生成進行状況表示機能
  * Phase 60: Solver時代のUI刷新
  *
@@ -8,8 +8,8 @@
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { render, screen, fireEvent, act } from '@testing-library/react';
-import { useAIGenerationProgress } from '../../../hooks/useAIGenerationProgress';
-import { AIGenerationProgress } from '../AIGenerationProgress';
+import { useGenerationProgress } from '../../../hooks/useGenerationProgress';
+import { GenerationProgress } from '../GenerationProgress';
 import type { GenerationResult } from '../types';
 
 const mockResult: GenerationResult = {
@@ -41,7 +41,7 @@ function TestComponent({
     failGeneration,
     cancelGeneration,
     reset,
-  } = useAIGenerationProgress();
+  } = useGenerationProgress();
 
   const handleStart = () => {
     startGeneration();
@@ -81,12 +81,12 @@ function TestComponent({
       </button>
 
       {/* プログレス表示 */}
-      <AIGenerationProgress state={state} onCancel={handleCancel} onClose={reset} />
+      <GenerationProgress state={state} onCancel={handleCancel} onClose={reset} />
     </div>
   );
 }
 
-describe('AIGenerationProgress 統合テスト', () => {
+describe('GenerationProgress 統合テスト', () => {
   beforeEach(() => {
     vi.useFakeTimers();
   });

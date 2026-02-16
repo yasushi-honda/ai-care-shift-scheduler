@@ -5,13 +5,13 @@
  */
 import React, { useState, useEffect, useCallback } from 'react';
 import { Timestamp } from 'firebase/firestore';
-import type { AIEvaluationResult, EvaluationType } from '../../types';
+import type { EvaluationResult, EvaluationType } from '../../types';
 import { getEvaluationHistory, type AIGenerationHistory } from '../services/evaluationHistoryService';
 
 interface EvaluationHistoryProps {
   facilityId: string;
   targetMonth: string;
-  onSelectEvaluation?: (evaluation: AIEvaluationResult) => void;
+  onSelectEvaluation?: (evaluation: EvaluationResult) => void;
   className?: string;
 }
 
@@ -36,7 +36,7 @@ function getEvaluationTypeLabel(type: EvaluationType | undefined): { text: strin
   if (type === 'manual_reevaluate') {
     return { text: '手動評価', color: 'bg-purple-100 text-purple-700' };
   }
-  return { text: 'AI生成時', color: 'bg-blue-100 text-blue-700' };
+  return { text: '自動生成時', color: 'bg-blue-100 text-blue-700' };
 }
 
 /**

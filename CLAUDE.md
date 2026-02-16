@@ -1,6 +1,6 @@
 # Claude Code Spec-Driven Development
 
-**最終更新**: 2026-02-16（Phase 3 統合Solver完了 - ADR-0004フェーズ3）
+**最終更新**: 2026-02-16（LLM→Solver完全移行完了 - LLMコード削除・UI表記統一）
 
 Kiro-style Spec Driven Development implementation using claude code slash commands, hooks and agents.
 
@@ -121,8 +121,7 @@ gh pr create --title "..." --body "..."
 | # | 項目 | 実行方法 |
 |---|------|---------|
 | 1 | 型チェック | `cd functions && npx tsc --noEmit` |
-| 2 | AIプロンプト変更時 | [ai-prompt-design-checklist.md](.kiro/ai-prompt-design-checklist.md) |
-| 3 | CodeRabbitレビュー | PR作成時に自動実行（GitHub連携） |
+| 2 | CodeRabbitレビュー | PR作成時に自動実行（GitHub連携） |
 
 詳細: [pre-implementation-test-checklist.md](.kiro/pre-implementation-test-checklist.md)
 
@@ -168,24 +167,6 @@ gh pr diff <PR番号>  # 差分を確認してレビュー依頼
 
 以下のルールは詳細をsteeringファイルで管理。**変更前に必ず参照すること**。
 
-### Gemini API設定（最重要）
-
-```typescript
-// クイックリファレンス - 詳細は gemini-rules.md
-import { GoogleGenAI } from '@google/genai';  // ❗ 必須SDK
-
-config: {
-  maxOutputTokens: 65536,      // ❗ 必須
-  thinkingConfig: {
-    thinkingBudget: 16384,     // ❗ 必須
-  },
-  // responseSchema: 使用禁止
-  // responseMimeType: 使用禁止
-}
-```
-
-**詳細**: [gemini-rules.md](.kiro/steering/gemini-rules.md)
-
 ### 権限管理
 
 - `users.facilities[]`と`facilities.members[]`の**両方を同期更新**
@@ -200,17 +181,10 @@ config: {
 
 **詳細**: [demo-environment.md](.kiro/steering/demo-environment.md)
 
-### 動的制約生成
+### CP-SAT Solver（シフト生成エンジン）
 
-- データ駆動型、条件付き生成、明示的な警告、可読性重視
-- 実装: `functions/src/phased-generation.ts`
-
-**詳細**: [dynamic-constraints.md](.kiro/steering/dynamic-constraints.md)
-
-### ハイブリッドアーキテクチャ移行（採用）
-
-- LLM全面依存からSolver（OR-Tools CP-SAT）併用への段階的移行
-- ステータス「採用」：PoC成功基準達成済み（A/B比較レポート参照）
+- OR-Tools CP-SATによる決定的シフト生成（LLM完全廃止済み）
+- 制約はSolverモデル内で定義（`solver-functions/solver/unified_builder.py`）
 
 **詳細**: [ADR-0004](docs/adr/0004-hybrid-architecture-adoption.md)
 
@@ -250,14 +224,11 @@ config: {
 | [architecture.md](.kiro/steering/architecture.md) | システムアーキテクチャ |
 | [structure.md](.kiro/steering/structure.md) | ファイル構成 |
 | [development-workflow.md](.kiro/steering/development-workflow.md) | 開発ワークフロー |
-| [gemini-rules.md](.kiro/steering/gemini-rules.md) | Gemini API設定ルール |
 | [permission-rules.md](.kiro/steering/permission-rules.md) | 権限管理ルール |
 | [demo-environment.md](.kiro/steering/demo-environment.md) | デモ環境設計 |
-| [dynamic-constraints.md](.kiro/steering/dynamic-constraints.md) | 動的制約パターン |
-| [phased-generation-contract.md](.kiro/steering/phased-generation-contract.md) | Phase間データ契約 |
 | [documentation-standards.md](.kiro/steering/documentation-standards.md) | ドキュメント基準 |
-| [ai-shift-optimization-strategy.md](.kiro/steering/ai-shift-optimization-strategy.md) | AI最適化戦略 |
-| [ai-generation-flow.md](.kiro/steering/ai-generation-flow.md) | AI生成フロー図 |
+| [solver-generation-flow.md](.kiro/steering/solver-generation-flow.md) | Solverシフト生成フロー |
+| [solver-optimization-strategy.md](.kiro/steering/solver-optimization-strategy.md) | Solver最適化戦略 |
 | [care-compliance.md](.kiro/steering/care-compliance.md) | 介護報酬算定ガイドライン |
 | [deployment-troubleshooting.md](.kiro/steering/deployment-troubleshooting.md) | デプロイトラブルシューティング |
 | [implementation-log-index.md](.kiro/steering/implementation-log-index.md) | 実装ログインデックス |
@@ -269,15 +240,13 @@ config: {
 全バグ修正記録は `.kiro/bugfix-*.md` に保存。
 
 主要なバグと教訓:
-- **BUG-002/003/008/012/013/014**: Gemini API設定 → [gemini-rules.md](.kiro/steering/gemini-rules.md)
+- **BUG-002/003/008/012/013/014/022**: Gemini API設定（LLM廃止済み・アーカイブ）
 - **BUG-009**: 権限同期 → [permission-rules.md](.kiro/steering/permission-rules.md)
 - **BUG-019**: Firestoreインデックス → `COLLECTION_GROUP`必須
-- **BUG-022**: マルチモデル戦略 → [gemini-rules.md](.kiro/steering/gemini-rules.md)
-- **BUG-023**: Phase間データ欠落 → [phased-generation-contract.md](.kiro/steering/phased-generation-contract.md)
+- **BUG-023/025**: LLM生成品質（LLM廃止済み・アーカイブ）
 - **BUG-024**: staffId→idマッピング不整合 → [bugfix-024-staffid-mapping.md](.kiro/bugfix-024-staffid-mapping.md)
-- **BUG-025**: AI生成スコア不安定 → [ai-shift-optimization-strategy.md](.kiro/steering/ai-shift-optimization-strategy.md)
 
-ポストモーテム: [postmortem-gemini-bugs-2025-12-05.md](.kiro/postmortem-gemini-bugs-2025-12-05.md)
+ポストモーテム: [postmortem-gemini-bugs-2025-12-05.md](.kiro/postmortem-gemini-bugs-2025-12-05.md)（LLM時代の参考資料）
 
 ---
 

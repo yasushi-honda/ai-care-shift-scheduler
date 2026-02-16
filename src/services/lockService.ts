@@ -1,10 +1,9 @@
 /**
  * LockService - 排他制御サービス
  *
- * Phase 43: デモ環境改善・排他制御
- * - 同一シフト（施設・月）への同時操作を防止
- * - AI生成、保存処理時にロックを取得
- * - タイムアウトによる自動解放
+ * 同一シフト（施設・月）への同時操作を防止
+ * シフト自動生成・保存処理時にロックを取得
+ * タイムアウトによる自動解放
  */
 
 import {
@@ -16,7 +15,7 @@ import {
 } from 'firebase/firestore';
 import { db } from '../../firebase';
 
-export type LockOperation = 'ai-generation' | 'saving';
+export type LockOperation = 'shift-generation' | 'saving';
 
 export interface LockInfo {
   lockedBy: string;
@@ -34,13 +33,13 @@ export interface LockResult {
 
 // タイムアウト設定（ミリ秒）
 const LOCK_TIMEOUTS: Record<LockOperation, number> = {
-  'ai-generation': 5 * 60 * 1000, // 5分（AI生成は時間がかかる）
+  'shift-generation': 60 * 1000, // 1分（Solverは数秒で完了）
   'saving': 30 * 1000, // 30秒
 };
 
 // 操作名の日本語表示
 export const OPERATION_LABELS: Record<LockOperation, string> = {
-  'ai-generation': 'AI生成',
+  'shift-generation': '自動生成',
   'saving': '保存処理',
 };
 

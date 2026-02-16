@@ -1,18 +1,21 @@
 # ハンドオフメモ - 最新状態
 
-**更新日**: 2026-02-16（Solver性能改善完了）
-**フェーズ**: Phase 3 全体最適化（ロードマップフェーズ3）**完了** ✅
-**最新デプロイ**: PR #73（Solver relative_gap_limit緩和）本番デプロイ成功 ✅
+**更新日**: 2026-02-16（LLM→Solver完全移行完了）
+**フェーズ**: LLM→Solver完全移行 **完了** ✅
+**最新作業**: LLMコード完全削除（~3,500行削減）・UI表記「AI生成」→「自動生成」統一
 
 ---
 
 ## 現在地
 
 ### 最新の重要決定
-- **ADR-0004**: ハイブリッドアーキテクチャ採用決定
-  - ステータス: **採用（フェーズ3完了・性能改善済み）**（2026-02-16確定）
-  - Phase 1-3を統合した単一CP-SATモデル。LLMを生成パイプラインから完全除去
-  - 性能改善: 15名×4シフト **30s→5.8s**（5.2倍高速化、OPTIMAL達成）
+- **LLM→Solver完全移行**: LLMコード完全削除、UI表記統一
+  - Backend: LLM関連12ファイル削除（~2,300行）、Gemini SDK依存削除
+  - Frontend: サービス・コンポーネントリネーム（AI→自動生成）、タイムアウト360s→60s
+  - Firestore互換性維持: コレクション名・フィールド値は変更なし
+- **ADR-0004**: CP-SAT Solver完全採用
+  - 性能: 12名0.22s, 50名0.89s, 100名<30s
+  - 決定的生成、LLMコスト100%削減
 
 ### Active Specifications
 
@@ -38,7 +41,13 @@
 
 ## 直近の変更（最新5件）
 
-1. **PR #73** (2026-02-16): Solver relative_gap_limit緩和で4シフト対応高速化
+1. **LLM→Solver完全移行** (2026-02-16): LLMコード削除・UI表記統一（feature/llm-to-solver-migration）
+   - Backend: 12ファイル削除（phased-generation.ts, ai-model-config.ts等）、Gemini SDK削除
+   - Frontend: geminiService→shiftGenerationService, AIGenerationProgress→GenerationProgress等リネーム
+   - 型定義: AIEvaluationResult→EvaluationResult, AIEvaluationError→EvaluationError
+   - ドキュメント: steeringファイル更新（gemini-rules.md, phased-generation-contract.md削除）
+
+2. **PR #73** (2026-02-16): Solver relative_gap_limit緩和で4シフト対応高速化
    - **問題**: 本番テストで15名×4シフト→30s、FEASIBLE（タイムアウト）
    - **修正**: `relative_gap_limit: 0.01→0.05` に緩和（最適値の5%以内で早期終了）
    - **結果**: 15名×4シフト **5.8s, OPTIMAL**達成、50名×4シフト **8.44s**
@@ -69,8 +78,7 @@
 
 | モジュール | 状態 | 備考 |
 |-----------|------|------|
-| **統合Solver** | ✅ 本番デプロイ完了 | 単一CP-SATモデル（Phase 1-3統合）, solverUnifiedGenerate稼働中 |
-| **従来パイプライン** | ✅ フォールバック | LLM Phase1→Solver Phase2→Rebalance Phase3 |
+| **統合Solver** | ✅ 本番デプロイ完了 | 単一CP-SATモデル、LLM完全廃止済み |
 | **CP-SAT Solver** | ✅ 本番稼働中 | 決定的スケジュール生成、100名対応 |
 | **評価システム** | ✅ 4段階評価 | Level 1-4対応、動的制約生成 |
 
@@ -109,7 +117,6 @@
 ### B. その他改善
 - 既存バグ修正
 - UI/UX改善
-- 移行戦略（従来パイプラインのフェーズアウト検討）
 
 ---
 
@@ -133,9 +140,9 @@
 
 ## 重要な判断・制約
 
-1. **統合Solver戦略**: LLMを生成パイプラインから完全除去
+1. **CP-SAT Solver**: LLMコード完全削除、Solver一本化
    - 統合Solver: 単一CP-SATモデルで全制約を一括求解
-   - フォールバック: 従来3段パイプライン（useSolver/useUnifiedSolverフラグで制御）
+   - LLMフォールバックパス削除済み（useSolver/useUnifiedSolverフラグ廃止）
    - 参考: [ADR-0004](../adr/0004-hybrid-architecture-adoption.md)
 
 2. **4段階評価システ**: Level 1-4の制約評価

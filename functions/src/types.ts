@@ -86,24 +86,8 @@ export interface StaffSchedule {
   monthlyShifts: GeneratedShift[];
 }
 
-/**
- * Phase 1: 骨子スケジュール（軽量版）
- * 全スタッフの休日・夜勤パターンのみを決定
- */
-export interface StaffScheduleSkeleton {
-  staffId: string;
-  staffName: string;
-  restDays: number[];  // 休日の日付リスト（1-31）
-  nightShiftDays: number[];  // 夜勤の日付リスト（1-31）
-  nightShiftFollowupDays: number[];  // 夜勤明け・公休の日付リスト（1-31）
-}
-
-export interface ScheduleSkeleton {
-  staffSchedules: StaffScheduleSkeleton[];
-}
-
 // ============================================
-// Phase 40: AI評価・フィードバック機能 型定義
+// 評価・フィードバック機能 型定義
 // ============================================
 
 /**
@@ -159,9 +143,9 @@ export interface SimulationResult {
 }
 
 /**
- * AI評価結果
+ * 評価結果
  */
-export interface AIEvaluationResult {
+export interface EvaluationResult {
   overallScore: number;           // 0-100
   fulfillmentRate: number;        // 0-100（充足率%）
   constraintViolations: ConstraintViolation[];
@@ -218,7 +202,7 @@ export interface AIGenerationHistory {
   id: string;
   targetMonth: string;           // YYYY-MM
   schedule: StaffSchedule[];     // 生成されたシフト
-  evaluation: AIEvaluationResult; // 評価結果
+  evaluation: EvaluationResult; // 評価結果
   generatedBy: string;           // ユーザーID
   createdAt: FirebaseFirestore.Timestamp;
   // Phase 54 追加フィールド
@@ -237,7 +221,7 @@ export interface AIGenerationHistory {
 export interface GenerateShiftResponse {
   success: boolean;
   schedule?: StaffSchedule[];
-  evaluation?: AIEvaluationResult;  // Phase 40で追加（後方互換性のためオプショナル）
+  evaluation?: EvaluationResult;  // Phase 40で追加（後方互換性のためオプショナル）
   metadata?: {
     generatedAt: string;
     model: string;

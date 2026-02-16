@@ -11,7 +11,7 @@ import type {
   StaffSchedule,
   ShiftRequirement,
   LeaveRequest,
-  AIEvaluationResult,
+  EvaluationResult,
 } from './types';
 
 // CORS設定
@@ -39,7 +39,7 @@ interface ReevaluateShiftRequest {
  */
 interface ReevaluateShiftResponse {
   success: boolean;
-  evaluation?: AIEvaluationResult;
+  evaluation?: EvaluationResult;
   historyId?: string;
   error?: string;
 }

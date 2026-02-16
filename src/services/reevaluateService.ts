@@ -3,7 +3,7 @@
  *
  * 手動編集後のシフトをCloud Functionで再評価する
  */
-import type { Staff, StaffSchedule, ShiftRequirement, LeaveRequest, AIEvaluationResult } from '../../types';
+import type { Staff, StaffSchedule, ShiftRequirement, LeaveRequest, EvaluationResult } from '../../types';
 
 /**
  * 再評価リクエスト型
@@ -22,7 +22,7 @@ interface ReevaluateShiftRequest {
  */
 interface ReevaluateShiftResponse {
   success: boolean;
-  evaluation?: AIEvaluationResult;
+  evaluation?: EvaluationResult;
   historyId?: string;
   error?: string;
 }
@@ -42,7 +42,7 @@ const FUNCTION_BASE_URL =
  */
 export async function reevaluateShift(
   params: ReevaluateShiftRequest
-): Promise<{ evaluation: AIEvaluationResult | null; historyId: string | null; error: string | null }> {
+): Promise<{ evaluation: EvaluationResult | null; historyId: string | null; error: string | null }> {
   const url = `${FUNCTION_BASE_URL}/reevaluateShift`;
 
   console.log('📊 [reevaluateService] 再評価リクエスト送信:', {
