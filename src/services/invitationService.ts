@@ -326,19 +326,8 @@ export async function verifyInvitationToken(
 /**
  * 招待を受け入れてアクセス権限を付与
  *
- * TODO: RACE CONDITION ISSUE
- * CodeRabbitレビュー指摘事項：
- * 現在の実装では、招待の検証とステータス更新の間にrace conditionが存在します。
- * 複数のユーザーが同時に同じ招待を受け入れられる可能性があります。
- *
- * 推奨される修正：
- * 1. Firestoreトランザクションを使用して、招待ドキュメントの取得、検証、
- *    ステータス更新をアトミックに実行
- * 2. grantAccessFromInvitation()もトランザクション内で呼び出すか、
- *    または別途処理してエラーハンドリング
- *
- * 現時点では小規模システムで同時アクセスが少ないため、
- * 簡易的なチェックで実装を保留
+ * Firestoreトランザクションで招待ドキュメントの取得・検証・ステータス更新をアトミックに実行し、
+ * 同一招待の同時受け入れ（race condition）を防止する。
  *
  * @param token - 招待トークン
  * @param userId - ユーザーID（受け入れるユーザー）
@@ -351,38 +340,84 @@ export async function acceptInvitation(
   userEmail: string
 ): Promise<Result<void, InvitationError>> {
   try {
-    // 招待を検証
-    const verifyResult = await verifyInvitationToken(token);
+    // Step 1: トランザクションで招待の検証とステータス更新をアトミックに実行
+    // トークンからドキュメントIDを事前取得（トランザクション内ではqueryが使えないため）
+    const invitationsQuery = query(
+      collection(db, 'invitations'),
+      where('token', '==', token)
+    );
+    const invitationsSnapshot = await getDocs(invitationsQuery);
 
-    if (!verifyResult.success) {
-      return verifyResult as Result<void, InvitationError>;
-    }
-
-    const { invitation, facilityId } = verifyResult.data;
-
-    // メールアドレスが一致するか確認
-    if (invitation.email.toLowerCase() !== userEmail.toLowerCase()) {
+    if (invitationsSnapshot.empty) {
       return {
         success: false,
-        error: {
-          code: 'PERMISSION_DENIED',
-          message: 'この招待は別のメールアドレス宛です',
-        },
+        error: { code: 'NOT_FOUND', message: '招待が見つかりません' },
       };
     }
 
-    // grantAccessFromInvitationを使ってアクセス権限を付与
-    // この関数は権限チェックをスキップし、招待トークンが検証済みであることを前提とします
-    // invitation.role（文字列）をFacilityRole enumにマッピング
+    const topLevelDocRef = invitationsSnapshot.docs[0].ref;
+    const topLevelData = invitationsSnapshot.docs[0].data();
+    const facilityId = topLevelData.facilityId as string;
+
+    if (!facilityId) {
+      return {
+        success: false,
+        error: { code: 'FIRESTORE_ERROR', message: '招待データが不正です（facilityIdが見つかりません）' },
+      };
+    }
+
+    const subDocRef = doc(db, 'facilities', facilityId, 'invitations', topLevelData.id as string);
+
+    // トランザクション内で最新データを再取得し、検証→ステータス更新をアトミック実行
+    const { invitation: validatedInvitation, facilityId: validatedFacilityId } = await runTransaction(db, async (transaction) => {
+      const freshDoc = await transaction.get(topLevelDocRef);
+      if (!freshDoc.exists()) {
+        throw new Error('NOT_FOUND');
+      }
+
+      const freshData = freshDoc.data();
+      const { facilityId: fId, ...invData } = freshData;
+      const inv = invData as Invitation;
+
+      // ステータスチェック（トランザクション内で最新値を検証）
+      if (inv.status === 'accepted') {
+        throw new Error('ALREADY_ACCEPTED');
+      }
+      if (inv.status === 'expired') {
+        throw new Error('EXPIRED');
+      }
+
+      // 有効期限チェック
+      const now = new Date();
+      const expiresAt = inv.expiresAt.toDate();
+      if (now > expiresAt) {
+        transaction.update(topLevelDocRef, { status: 'expired' as InvitationStatus });
+        transaction.update(subDocRef, { status: 'expired' as InvitationStatus });
+        throw new Error('EXPIRED');
+      }
+
+      // メールアドレスチェック
+      if (inv.email.toLowerCase() !== userEmail.toLowerCase()) {
+        throw new Error('PERMISSION_DENIED');
+      }
+
+      // ステータスを 'accepted' に更新（トップレベル + サブコレクション）
+      transaction.update(topLevelDocRef, { status: 'accepted' as InvitationStatus });
+      transaction.update(subDocRef, { status: 'accepted' as InvitationStatus });
+
+      return { invitation: inv, facilityId: fId as string };
+    });
+
+    // Step 2: トランザクション成功後にアクセス権限を付与
     const roleMap: Record<'editor' | 'viewer', FacilityRole> = {
       'editor': FacilityRole.Editor,
       'viewer': FacilityRole.Viewer,
     };
     const grantResult = await grantAccessFromInvitation(
       userId,
-      facilityId,
-      roleMap[invitation.role],
-      invitation.createdBy // 招待を作成したユーザーのUIDを使用
+      validatedFacilityId,
+      roleMap[validatedInvitation.role],
+      validatedInvitation.createdBy
     );
 
     if (!grantResult.success) {
@@ -390,75 +425,50 @@ export async function acceptInvitation(
       // 既にアクセス権限がある場合は成功とみなす
       if (grantResult.error.code === 'VALIDATION_ERROR' &&
           grantResult.error.message.includes('すでに')) {
-        // 招待ステータスを更新（Phase 22: 両方のコレクションを更新）
-        // トップレベルコレクション
-        const topLevelQuery = query(
-          collection(db, 'invitations'),
-          where('token', '==', token)
-        );
-        const topLevelSnapshot = await getDocs(topLevelQuery);
-        if (!topLevelSnapshot.empty) {
-          await updateDoc(topLevelSnapshot.docs[0].ref, { status: 'accepted' as InvitationStatus });
-        }
-
-        // サブコレクション（後方互換性）
-        const invitationRef = doc(
-          db,
-          'facilities',
-          facilityId,
-          'invitations',
-          invitation.id
-        );
-        await updateDoc(invitationRef, { status: 'accepted' as InvitationStatus });
-
         return { success: true, data: undefined };
+      }
+
+      // 権限付与失敗時は招待ステータスを 'pending' に戻す
+      try {
+        await runTransaction(db, async (transaction) => {
+          transaction.update(topLevelDocRef, { status: 'pending' as InvitationStatus });
+          transaction.update(subDocRef, { status: 'pending' as InvitationStatus });
+        });
+      } catch (rollbackError) {
+        console.error('Failed to rollback invitation status:', rollbackError);
       }
 
       return {
         success: false,
-        error: {
-          code: 'FIRESTORE_ERROR',
-          message: grantResult.error.message,
-        },
+        error: { code: 'FIRESTORE_ERROR', message: grantResult.error.message },
       };
     }
 
-    // 招待ステータスを 'accepted' に更新（Phase 22: 両方のコレクションを更新）
-    // トップレベルコレクション
-    const topLevelQuery = query(
-      collection(db, 'invitations'),
-      where('token', '==', token)
-    );
-    const topLevelSnapshot = await getDocs(topLevelQuery);
-    if (!topLevelSnapshot.empty) {
-      await updateDoc(topLevelSnapshot.docs[0].ref, { status: 'accepted' as InvitationStatus });
-    }
-
-    // サブコレクション（後方互換性）
-    const invitationRef = doc(
-      db,
-      'facilities',
-      facilityId,
-      'invitations',
-      invitation.id
-    );
-    await updateDoc(invitationRef, { status: 'accepted' as InvitationStatus });
-
     console.log('招待を受け入れました:', {
-      invitationId: invitation.id,
-      facilityId,
-      role: invitation.role,
+      invitationId: validatedInvitation.id,
+      facilityId: validatedFacilityId,
+      role: validatedInvitation.role,
     });
 
     return { success: true, data: undefined };
   } catch (error: any) {
+    // トランザクション内のthrowをInvitationErrorに変換
+    const errorMap: Record<string, InvitationError> = {
+      'NOT_FOUND': { code: 'NOT_FOUND', message: '招待が見つかりません' },
+      'ALREADY_ACCEPTED': { code: 'ALREADY_ACCEPTED', message: 'この招待は既に受け入れられています' },
+      'EXPIRED': { code: 'EXPIRED', message: 'この招待は期限切れです' },
+      'PERMISSION_DENIED': { code: 'PERMISSION_DENIED', message: 'この招待は別のメールアドレス宛です' },
+    };
+
+    const mappedError = errorMap[error.message];
+    if (mappedError) {
+      return { success: false, error: mappedError };
+    }
+
     console.error('Error accepting invitation:', error);
     return {
       success: false,
-      error: {
-        code: 'FIRESTORE_ERROR',
-        message: '招待の受け入れに失敗しました',
-      },
+      error: { code: 'FIRESTORE_ERROR', message: '招待の受け入れに失敗しました' },
     };
   }
 }

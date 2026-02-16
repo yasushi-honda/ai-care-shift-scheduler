@@ -46,7 +46,6 @@ jobs:
       # 4. Lintチェック（TypeScriptの型チェック）
       - name: TypeScript型チェック
         run: npx tsc --noEmit
-        continue-on-error: true # 型エラーがあっても続行
 
       # 4.5. Cloud Functions依存関係のインストール
       - name: Cloud Functions依存関係をインストール
