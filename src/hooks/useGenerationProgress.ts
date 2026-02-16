@@ -1,11 +1,11 @@
 /**
- * AI生成プログレス管理カスタムフック
- * Phase 45: AIシフト生成進行状況表示機能
- * Phase 60: Solver時代のUI刷新（プログレス→結果サマリー）
+ * 自動生成プログレス管理カスタムフック
+ *
+ * Solverは数秒で完了するため、シンプルな経過時間追跡と結果サマリー表示のみ
  */
 
 import { useState, useCallback, useEffect, useRef } from 'react';
-import type { GenerationProgressState, GenerationResult, UseAIGenerationProgressReturn } from '../components/AIGenerationProgress/types';
+import type { GenerationProgressState, GenerationResult, UseGenerationProgressReturn } from '../components/GenerationProgress/types';
 
 /**
  * 初期状態
@@ -18,13 +18,9 @@ const initialState: GenerationProgressState = {
 };
 
 /**
- * AI生成処理の進行状況を管理するカスタムフック
- *
- * Phase 60: Solver対応
- * - ステップ管理・予測時間を廃止（Solverは数秒で完了するため）
- * - 完了時に結果サマリーを受け取り、ユーザーが確認後に閉じる
+ * 生成処理の進行状況を管理するカスタムフック
  */
-export function useAIGenerationProgress(): UseAIGenerationProgressReturn {
+export function useGenerationProgress(): UseGenerationProgressReturn {
   const [state, setState] = useState<GenerationProgressState>(initialState);
 
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);

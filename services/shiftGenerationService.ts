@@ -4,15 +4,14 @@ import type {
   StaffSchedule,
   LeaveRequest,
   GenerateShiftResponse,
-  AIEvaluationResult,
+  EvaluationResult,
 } from '../types';
 
 /**
- * Cloud Functions 経由でAIシフトを生成
+ * Cloud Functions 経由でシフトを自動生成
  *
  * @description
- * セキュリティのため、ブラウザから直接Gemini APIを呼び出さず、
- * Cloud Functions経由でVertex AIを使用します。
+ * Cloud Functions経由でCP-SAT Solverによるシフト生成を行います。
  */
 
 // Cloud Functions エンドポイントURL
@@ -40,7 +39,7 @@ const getCloudFunctionUrl = (): string => {
  */
 export interface ShiftGenerationResult {
   schedule: StaffSchedule[];
-  evaluation: AIEvaluationResult | null;
+  evaluation: EvaluationResult | null;
   metadata?: {
     generatedAt: string;
     model: string;
@@ -62,11 +61,9 @@ export const generateShiftSchedule = async (
       targetMonth: requirements.targetMonth,
     });
 
-    // タイムアウト設定（6分 = 360秒）
-    // BUG-022対策: gemini-2.5-pro（thinking常時ON）は12名規模で約5-6分かかる
-    // Phase 1: ~3分, Phase 2: ~2-3分, 評価: ~数秒
+    // タイムアウト設定（60秒）Solverは通常数秒で完了
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 360000);
+    const timeoutId = setTimeout(() => controller.abort(), 60000);
 
     // Cloud Functions に POST リクエスト
     const response = await fetch(CLOUD_FUNCTION_URL, {
@@ -92,12 +89,6 @@ export const generateShiftSchedule = async (
         statusText: response.statusText,
         error: errorData,
       });
-
-      // parseError情報があれば詳細をログ出力
-      if (errorData.parseError) {
-        console.error('🔍 JSON Parse Error Details:', errorData.parseError);
-        console.error('📝 Error Context:', errorData.parseError.contextAroundError);
-      }
 
       throw new Error(
         errorData.error ||
@@ -129,7 +120,7 @@ export const generateShiftSchedule = async (
 
     // 評価データのログ出力
     if (result.evaluation) {
-      console.log('📊 AI評価結果:', {
+      console.log('📊 評価結果:', {
         overallScore: result.evaluation.overallScore,
         fulfillmentRate: result.evaluation.fulfillmentRate,
         violationCount: result.evaluation.constraintViolations?.length || 0,
@@ -145,7 +136,7 @@ export const generateShiftSchedule = async (
 
     return {
       schedule: result.schedule as StaffSchedule[],
-      evaluation: (result.evaluation as AIEvaluationResult) || null,
+      evaluation: (result.evaluation as EvaluationResult) || null,
       metadata: result.metadata,
     };
 

@@ -12,7 +12,7 @@ import {
   ShiftRequirement,
   LeaveRequest,
   ConstraintViolation,
-  AIEvaluationResult,
+  EvaluationResult,
   Recommendation,
   SimulationResult,
 } from '../types';
@@ -63,7 +63,7 @@ export class EvaluationService {
   /**
    * シフトスケジュールを評価し、制約違反と改善提案を生成
    */
-  evaluateSchedule(input: EvaluationInput): AIEvaluationResult {
+  evaluateSchedule(input: EvaluationInput): EvaluationResult {
     const violations: ConstraintViolation[] = [];
 
     // 各制約チェックを実行
@@ -325,7 +325,7 @@ export class EvaluationService {
  * デフォルトの評価結果を生成（フォールバック用）
  * 呼び出し時にTimestamp.now()を評価するためファクトリ関数として実装
  */
-export const createDefaultEvaluation = (): AIEvaluationResult => ({
+export const createDefaultEvaluation = (): EvaluationResult => ({
   overallScore: -1, // 未評価を示す
   fulfillmentRate: -1,
   constraintViolations: [],

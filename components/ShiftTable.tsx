@@ -1,6 +1,6 @@
 
 import React, { useState, useRef, useCallback, useEffect, useMemo } from 'react';
-import type { StaffSchedule, GeneratedShift, FacilityShiftSettings, AIEvaluationResult } from '../types';
+import type { StaffSchedule, GeneratedShift, FacilityShiftSettings, EvaluationResult } from '../types';
 import { WEEKDAYS, DEFAULT_SHIFT_TYPES, DEFAULT_SHIFT_CYCLE } from '../constants';
 import { ShiftEditConfirmModal } from '../src/components/ShiftEditConfirmModal';
 import { EvaluationPanel } from '../src/components/EvaluationPanel';
@@ -17,7 +17,7 @@ interface ShiftTableProps {
   /** Phase 38: シフトタイプ設定（オプション - 指定されない場合はデフォルト使用） */
   shiftSettings?: FacilityShiftSettings;
   /** Phase 40: AI評価結果（オプション） */
-  evaluation?: AIEvaluationResult | null;
+  evaluation?: EvaluationResult | null;
   /** Phase 54: シフト再評価コールバック */
   onReevaluate?: () => void;
   /** Phase 54: 再評価中フラグ */
@@ -25,7 +25,7 @@ interface ShiftTableProps {
   /** Phase 54: 施設ID（評価履歴取得用） */
   facilityId?: string;
   /** Phase 54: 評価選択コールバック */
-  onSelectEvaluation?: (evaluation: AIEvaluationResult) => void;
+  onSelectEvaluation?: (evaluation: EvaluationResult) => void;
 }
 
 const getShiftColor = (shiftType: string) => {

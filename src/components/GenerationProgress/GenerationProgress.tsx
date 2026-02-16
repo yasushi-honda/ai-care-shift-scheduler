@@ -1,7 +1,5 @@
 /**
- * AI生成プログレス表示メインコンポーネント
- * Phase 45: AIシフト生成進行状況表示機能
- * Phase 60: Solver時代のUI刷新（プログレス→結果サマリー）
+ * 自動生成プログレス表示メインコンポーネント
  *
  * Solver（CP-SAT）は数秒で完了するため:
  * - 生成中: シンプルなスピナー表示
@@ -10,7 +8,7 @@
 
 import type { GenerationProgressState, GenerationResult } from './types';
 
-interface AIGenerationProgressProps {
+interface GenerationProgressProps {
   state: GenerationProgressState;
   onCancel?: () => void;
   onClose?: () => void;
@@ -196,9 +194,9 @@ function CancelledMessage() {
 }
 
 /**
- * AI生成プログレス表示メインコンポーネント
+ * 自動生成プログレス表示メインコンポーネント
  */
-export function AIGenerationProgress({ state, onCancel, onClose }: AIGenerationProgressProps) {
+export function GenerationProgress({ state, onCancel, onClose }: GenerationProgressProps) {
   const { status, errorMessage, result } = state;
 
   if (status === 'idle') {

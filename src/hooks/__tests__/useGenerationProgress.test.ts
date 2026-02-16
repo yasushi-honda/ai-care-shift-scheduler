@@ -1,13 +1,13 @@
 /**
- * useAIGenerationProgress カスタムフック ユニットテスト
+ * useGenerationProgress カスタムフック ユニットテスト
  * Phase 45: AIシフト生成進行状況表示機能
  * Phase 60: Solver時代のUI刷新
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
-import { useAIGenerationProgress } from '../useAIGenerationProgress';
-import type { GenerationResult } from '../../components/AIGenerationProgress/types';
+import { useGenerationProgress } from '../useGenerationProgress';
+import type { GenerationResult } from '../../components/GenerationProgress/types';
 
 const mockResult: GenerationResult = {
   overallScore: 85,
@@ -17,7 +17,7 @@ const mockResult: GenerationResult = {
   elapsedSeconds: 3,
 };
 
-describe('useAIGenerationProgress', () => {
+describe('useGenerationProgress', () => {
   beforeEach(() => {
     vi.useFakeTimers();
   });
@@ -28,7 +28,7 @@ describe('useAIGenerationProgress', () => {
 
   describe('初期状態', () => {
     it('初期状態がidle状態であること', () => {
-      const { result } = renderHook(() => useAIGenerationProgress());
+      const { result } = renderHook(() => useGenerationProgress());
 
       expect(result.current.state.status).toBe('idle');
       expect(result.current.state.elapsedSeconds).toBe(0);
@@ -39,7 +39,7 @@ describe('useAIGenerationProgress', () => {
 
   describe('startGeneration', () => {
     it('startGeneration呼び出し後にgenerating状態になること', () => {
-      const { result } = renderHook(() => useAIGenerationProgress());
+      const { result } = renderHook(() => useGenerationProgress());
 
       act(() => {
         result.current.startGeneration();
@@ -50,7 +50,7 @@ describe('useAIGenerationProgress', () => {
     });
 
     it('時間経過によって経過時間が更新されること', () => {
-      const { result } = renderHook(() => useAIGenerationProgress());
+      const { result } = renderHook(() => useGenerationProgress());
 
       act(() => {
         result.current.startGeneration();
@@ -67,7 +67,7 @@ describe('useAIGenerationProgress', () => {
 
   describe('completeGeneration', () => {
     it('completeGeneration呼び出し後にcompleted状態になること', () => {
-      const { result } = renderHook(() => useAIGenerationProgress());
+      const { result } = renderHook(() => useGenerationProgress());
 
       act(() => {
         result.current.startGeneration();
@@ -86,7 +86,7 @@ describe('useAIGenerationProgress', () => {
     });
 
     it('completeGeneration後はタイマーが停止すること', () => {
-      const { result } = renderHook(() => useAIGenerationProgress());
+      const { result } = renderHook(() => useGenerationProgress());
 
       act(() => {
         result.current.startGeneration();
@@ -113,7 +113,7 @@ describe('useAIGenerationProgress', () => {
 
   describe('failGeneration', () => {
     it('failGeneration呼び出し後にerror状態になること', () => {
-      const { result } = renderHook(() => useAIGenerationProgress());
+      const { result } = renderHook(() => useGenerationProgress());
       const errorMessage = 'テストエラーメッセージ';
 
       act(() => {
@@ -129,7 +129,7 @@ describe('useAIGenerationProgress', () => {
     });
 
     it('failGeneration後はタイマーが停止すること', () => {
-      const { result } = renderHook(() => useAIGenerationProgress());
+      const { result } = renderHook(() => useGenerationProgress());
 
       act(() => {
         result.current.startGeneration();
@@ -155,7 +155,7 @@ describe('useAIGenerationProgress', () => {
 
   describe('cancelGeneration', () => {
     it('cancelGeneration呼び出し後にcancelled状態になること', () => {
-      const { result } = renderHook(() => useAIGenerationProgress());
+      const { result } = renderHook(() => useGenerationProgress());
 
       act(() => {
         result.current.startGeneration();
@@ -169,7 +169,7 @@ describe('useAIGenerationProgress', () => {
     });
 
     it('cancelGeneration後はタイマーが停止すること', () => {
-      const { result } = renderHook(() => useAIGenerationProgress());
+      const { result } = renderHook(() => useGenerationProgress());
 
       act(() => {
         result.current.startGeneration();
@@ -195,7 +195,7 @@ describe('useAIGenerationProgress', () => {
 
   describe('reset', () => {
     it('reset呼び出し後に初期状態に戻ること', () => {
-      const { result } = renderHook(() => useAIGenerationProgress());
+      const { result } = renderHook(() => useGenerationProgress());
 
       act(() => {
         result.current.startGeneration();
@@ -220,7 +220,7 @@ describe('useAIGenerationProgress', () => {
     });
 
     it('generating状態からresetできること', () => {
-      const { result } = renderHook(() => useAIGenerationProgress());
+      const { result } = renderHook(() => useGenerationProgress());
 
       act(() => {
         result.current.startGeneration();
@@ -241,7 +241,7 @@ describe('useAIGenerationProgress', () => {
 
   describe('タイマークリーンアップ', () => {
     it('アンマウント時にタイマーがクリアされること', () => {
-      const { result, unmount } = renderHook(() => useAIGenerationProgress());
+      const { result, unmount } = renderHook(() => useGenerationProgress());
 
       act(() => {
         result.current.startGeneration();
@@ -261,7 +261,7 @@ describe('useAIGenerationProgress', () => {
     });
 
     it('startGenerationを複数回呼んでも問題ないこと', () => {
-      const { result } = renderHook(() => useAIGenerationProgress());
+      const { result } = renderHook(() => useGenerationProgress());
 
       act(() => {
         result.current.startGeneration();

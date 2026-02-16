@@ -11,24 +11,23 @@ import {
   Timestamp,
 } from 'firebase/firestore';
 import { db } from '../../firebase';
-import type { StaffSchedule, AIEvaluationResult, EvaluationType } from '../../types';
+import type { StaffSchedule, EvaluationResult, EvaluationType } from '../../types';
 
 /**
- * Phase 40/54: AI生成履歴
+ * シフト生成履歴
  *
  * シフト生成とその評価結果を保存する履歴データ
- * Phase 54で evaluationType を追加
+ * コレクション名 'aiGenerationHistory' はFirestore互換性のため維持
  */
 export interface AIGenerationHistory {
   id?: string;
   facilityId: string;
   targetMonth: string;
   schedule: StaffSchedule[];
-  evaluation: AIEvaluationResult;
+  evaluation: EvaluationResult;
   createdBy: string;
   createdAt: Timestamp;
-  // Phase 54 追加フィールド
-  evaluationType?: EvaluationType;  // 'ai_generated' | 'manual_reevaluate'
+  evaluationType?: EvaluationType;  // 'ai_generated' | 'manual_reevaluate' (Firestore保存値のため変更なし)
   metadata?: {
     model?: string;
     tokensUsed?: number;
@@ -53,7 +52,7 @@ export async function saveEvaluationHistory(
   facilityId: string,
   targetMonth: string,
   schedule: StaffSchedule[],
-  evaluation: AIEvaluationResult,
+  evaluation: EvaluationResult,
   userId: string,
   evaluationType: EvaluationType = 'ai_generated',
   metadata?: {

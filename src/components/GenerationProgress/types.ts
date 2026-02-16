@@ -1,7 +1,5 @@
 /**
- * AI生成プログレス表示の型定義
- * Phase 45: AIシフト生成進行状況表示機能
- * Phase 60: Solver時代のUI刷新（プログレス→結果サマリー）
+ * 自動生成プログレス表示の型定義
  */
 
 /**
@@ -38,9 +36,9 @@ export interface GenerationProgressState {
 }
 
 /**
- * useAIGenerationProgress フックの戻り値
+ * useGenerationProgress フックの戻り値
  */
-export interface UseAIGenerationProgressReturn {
+export interface UseGenerationProgressReturn {
   state: GenerationProgressState;
   startGeneration: () => void;
   completeGeneration: (result: GenerationResult) => void;

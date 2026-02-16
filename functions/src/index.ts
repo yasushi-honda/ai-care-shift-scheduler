@@ -9,7 +9,7 @@ admin.initializeApp();
 setGlobalOptions({
   region: 'asia-northeast1', // 東京リージョン（日本国内データ処理）
   memory: '512MiB',
-  timeoutSeconds: 120, // 大規模シフト生成（50名×1ヶ月）に対応
+  timeoutSeconds: 120, // Solver + 評価処理に十分な時間
   minInstances: 0,
   maxInstances: 10,
 });
