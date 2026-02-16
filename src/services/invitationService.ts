@@ -392,7 +392,7 @@ export async function acceptInvitation(
       const expiresAt = inv.expiresAt.toDate();
       if (now > expiresAt) {
         transaction.update(topLevelDocRef, { status: 'expired' as InvitationStatus });
-        transaction.update(subDocRef, { status: 'expired' as InvitationStatus });
+        transaction.set(subDocRef, { status: 'expired' as InvitationStatus }, { merge: true });
         throw new Error('EXPIRED');
       }
 
@@ -403,7 +403,7 @@ export async function acceptInvitation(
 
       // ステータスを 'accepted' に更新（トップレベル + サブコレクション）
       transaction.update(topLevelDocRef, { status: 'accepted' as InvitationStatus });
-      transaction.update(subDocRef, { status: 'accepted' as InvitationStatus });
+      transaction.set(subDocRef, { status: 'accepted' as InvitationStatus }, { merge: true });
 
       return { invitation: inv, facilityId: fId as string };
     });
@@ -432,7 +432,7 @@ export async function acceptInvitation(
       try {
         await runTransaction(db, async (transaction) => {
           transaction.update(topLevelDocRef, { status: 'pending' as InvitationStatus });
-          transaction.update(subDocRef, { status: 'pending' as InvitationStatus });
+          transaction.set(subDocRef, { status: 'pending' as InvitationStatus }, { merge: true });
         });
       } catch (rollbackError) {
         console.error('Failed to rollback invitation status:', rollbackError);
