@@ -30,7 +30,6 @@
     "emulators:exec": "firebase emulators:exec --only auth,firestore,functions"
   },
   "dependencies": {
-    "@google/genai": "^1.41.0",
     "chart.js": "^4.5.1",
     "firebase": "^12.9.0",
     "jspdf": "^4.1.0",
