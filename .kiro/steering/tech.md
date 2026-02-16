@@ -14,8 +14,15 @@ React 19.x
 ```
 Firebase Functions (Gen 2)
 ├── Node.js 20
-├── TypeScript 5.x
-└── Vertex AI SDK for Node.js
+└── TypeScript 5.x
+```
+
+### シフト生成エンジン（Solver Functions）
+```
+Cloud Functions (Python)
+├── Python 3.12
+├── OR-Tools CP-SAT Solver
+└── Flask (HTTPトリガー)
 ```
 
 ### インフラストラクチャ（GCP）
@@ -24,8 +31,7 @@ Google Cloud Platform
 ├── Firebase Hosting (フロントエンド配信)
 ├── Cloud Functions (バックエンドAPI) - asia-northeast1
 ├── Firestore (データベース) - asia-northeast1
-├── Cloud Storage for Firebase (ファイル保存)
-└── Vertex AI (Gemini 2.5 Pro) - asia-northeast1
+└── Cloud Storage for Firebase (ファイル保存)
 ```
 
 ### 開発・CI/CD
@@ -166,64 +172,36 @@ setGlobalOptions({
 
 **現在実装されているエンドポイント** (asia-northeast1):
 
-- `generateShift`: AIシフト生成API（Vertex AI Gemini 2.5 Flash使用）
+- `solverUnifiedGenerate`: CP-SAT Solverによるシフト生成API
+- `solverGenerateShift`: Solver呼び出しラッパー
+- `evaluateSchedule`: シフト評価API
 
 **セキュリティ設定**:
 
 - CORS: すべてのオリジンを許可（開発段階）
-- 認証: なし（将来実装予定）
+- 認証: Firebase Authentication
 
-#### Vertex AI - Gemini 2.5 Pro
+#### CP-SAT Solver（シフト生成エンジン）
 
 **選定理由**:
 
-- **高精度**: Gemini 2.5シリーズの高精度モデル
-- **思考モード常時ON**: 複雑な制約条件の推論に最適
-- **日本リージョン対応**: asia-northeast1で利用可能
-- **日本語対応**: 日本語プロンプト・出力に最適化
-
-**モデル情報**（2025年12月時点）:
-
-- **モデル名**: `gemini-2.5-pro`
-- **選定理由**: gemini-2.5-flashはthinkingBudgetバグがあるため、gemini-2.5-proを採用
+- **決定的生成**: 同一入力→同一出力（LLMの非決定性を排除）
+- **高速**: 12名0.22s, 50名0.89s, 100名<30s
+- **コスト**: LLMコスト100%削減（API呼び出し不要）
+- **制約充足保証**: 数理最適化による厳密な制約処理
 
 **本プロジェクトでのリージョン構成**:
 
 - **Cloud Functions**: `asia-northeast1`（東京）- 日本国内データ処理完結
-- **Vertex AI location**: `asia-northeast1`（東京）- 日本国内データセンターを使用
 - **Firestore**: `asia-northeast1`（東京）- 日本国内データセンター
 
 ✅ **セキュリティ**: すべてのデータ処理が日本国内（東京リージョン）で完結します。医療介護業界のデータセキュリティ要件に適合した構成です。
 
-**使用方針**:
-
-- モデル名: `gemini-2.5-pro`
-- Vertex AI location: `asia-northeast1` （東京）
-- SDK: `@google/genai`（必須）
-- thinkingConfig: 使用しない（gemini-2.5-proは常時thinking ON）
-
 **参考ドキュメント**:
 
-- [Gemini 2.5 Pro 公式ドキュメント](https://cloud.google.com/vertex-ai/generative-ai/docs/models/gemini/2-5-pro)
-- [Model versions and lifecycle](https://cloud.google.com/vertex-ai/generative-ai/docs/learn/model-versions)
-- `.kiro/steering/gemini-rules.md`（プロジェクト固有ルール）
-
-**プロンプト設計**:
-```
-あなたは介護施設のシフト作成AIです。
-以下の条件でシフトを作成してください：
-
-【スタッフ情報】
-- 氏名、役職、資格、勤務不可日
-
-【要件】
-- 時間帯別必要人員
-- 資格要件
-
-【制約条件】
-- 労働基準法遵守
-- 公平性の確保
-```
+- [ADR-0004: ハイブリッドアーキテクチャ→CP-SAT完全採用](docs/adr/0004-hybrid-architecture-adoption.md)
+- [solver-generation-flow.md](.kiro/steering/solver-generation-flow.md)
+- [solver-optimization-strategy.md](.kiro/steering/solver-optimization-strategy.md)
 
 ---
 
@@ -459,7 +437,7 @@ VITE_GCP_PROJECT_NUMBER=737067812481
 
 ### バックエンド
 - **API応答時間**: < 500ms (p95)
-- **AIシフト生成**: 90-400秒（スタッフ数による、gemini-2.5-pro使用）
+- **シフト生成**: 12名0.22s, 50名0.89s, 100名<30s（CP-SAT Solver）
 - **コールドスタート**: < 2秒
 
 ### 最適化手法
@@ -473,16 +451,14 @@ VITE_GCP_PROJECT_NUMBER=737067812481
 
 ## セキュリティ
 
-### 現状（MVP）
-- ⚠️ 認証なし
-- ⚠️ Firestore全開放
+### 現状
+- ✅ Firebase Authentication（Google OAuth + デモログイン）
+- ✅ Firestore Security Rules（RBAC: Admin/Manager/Staff）
 - ✅ HTTPS通信
 - ✅ CORS設定
-- ✅ APIキー非公開（Cloud Functions経由）
+- ✅ LLM API呼び出し不要（CP-SAT Solver使用）
 
 ### 将来実装
-- Firebase Authentication
-- Firestore Security Rules
 - Cloud Armor（DDoS対策）
 - Secret Manager（APIキー管理）
 
