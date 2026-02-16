@@ -1,8 +1,8 @@
 # ハンドオフメモ - 最新状態
 
-**更新日**: 2026-02-16（LLM→Solver完全移行完了）
-**フェーズ**: LLM→Solver完全移行 **完了** ✅
-**最新作業**: LLMコード完全削除（~3,500行削減）・UI表記「AI生成」→「自動生成」統一
+**更新日**: 2026-02-16（LLM→Solver完全移行 本番デプロイ完了）
+**フェーズ**: LLM→Solver完全移行 **本番稼働中** ✅
+**最新作業**: PR #76マージ・Firebaseデプロイ完了（46ファイル, +450/-8,450行）
 
 ---
 
@@ -41,13 +41,21 @@
 
 ## 直近の変更（最新5件）
 
-1. **LLM→Solver完全移行** (2026-02-16): LLMコード削除・UI表記統一（feature/llm-to-solver-migration）
-   - Backend: 12ファイル削除（phased-generation.ts, ai-model-config.ts等）、Gemini SDK削除
+1. **PR #76本番デプロイ完了** (2026-02-16): LLM→Solver完全移行 Firebaseデプロイ成功
+   - コミット: `61fed5c` - refactor: LLM→Solver完全移行 - Geminiコード削除・UI表記統一 (#76)
+   - CI/CD全通過（ビルド/Lighthouse/Solver/デモデータ検証/E2Eテスト）
+   - Firebaseデプロイ成功: solverUnifiedGenerate, solverGenerateShift稼働確認
+   - CodeRabbitレビュー完了（4/4チェック通過）
+   - 削減規模: 48ファイル変更、+450/-8,450行
+
+2. **LLM→Solver完全移行** (2026-02-16): コード削除・UI表記統一
+   - Backend: 14ファイル削除（phased-generation.ts, ai-model-config.ts等~6,000行）、@google/genai削除
    - Frontend: geminiService→shiftGenerationService, AIGenerationProgress→GenerationProgress等リネーム
    - 型定義: AIEvaluationResult→EvaluationResult, AIEvaluationError→EvaluationError
-   - ドキュメント: steeringファイル更新（gemini-rules.md, phased-generation-contract.md削除）
+   - ドキュメント: CLAUDE.md更新、steering旧ファイル4件削除（gemini-rules.md等）
+   - Firestore互換性: コレクション名・フィールド値は変更なし
 
-2. **PR #73** (2026-02-16): Solver relative_gap_limit緩和で4シフト対応高速化
+3. **PR #73** (2026-02-16): Solver relative_gap_limit緩和で4シフト対応高速化
    - **問題**: 本番テストで15名×4シフト→30s、FEASIBLE（タイムアウト）
    - **修正**: `relative_gap_limit: 0.01→0.05` に緩和（最適値の5%以内で早期終了）
    - **結果**: 15名×4シフト **5.8s, OPTIMAL**達成、50名×4シフト **8.44s**
@@ -173,46 +181,46 @@
 再開前に以下を確認:
 
 - [x] `git status` がclean（未コミット変更なし）✅
-- [x] `git log` で最新コミット確認（PR #72マージ完了）✅
-- [x] CI/CD ジョブが全て pass（Lighthouse + CI/CD Pipeline）✅
-- [x] 統合Solver本番デプロイ確認（solverUnifiedGenerate稼働中）✅
+- [x] `git log` で最新コミット確認（PR #76 Firebaseデプロイ完了）✅
+- [x] CI/CD ジョブが全て pass（Lighthouse + CI/CD Pipeline + Firebaseデプロイ）✅
+- [x] LLM→Solver完全移行 本番稼働確認（solverUnifiedGenerate稼働中）✅
+- [x] テスト全通過確認（Frontend 161, Backend 230, Solver 60）✅
 
 ---
 
-## 本セッション作業内容（2026-02-16：Solver性能改善＋Phase 60 UI刷新）
+## 本セッション作業内容（2026-02-16：PR #76 LLM→Solver完全移行 本番デプロイ）
 
-### A. 本番動作検証（15名×4シフト）
-- **問題特定**: 修正前は30秒→FEASIBLE（タイムアウト）
-- **根本原因分析**: `relative_gap_limit=0.01`（最適値の1%）が厳しすぎ、4シフト化により計算量増加
+### A. PR #76コードレビュー実施
+- **実施内容**: Code Reviewer agentで削除ファイル参照・リネーム追跡・Firestore互換性検証
+- **結果**:
+  - 孤立import: なし ✅
+  - リネーム追跡: 全て更新済み ✅
+  - Firestore互換性: 維持（コレクション名・フィールド値変更なし） ✅
 
-### B. 性能改善実装（PR #73）
-- **修正内容**: `relative_gap_limit: 0.01→0.05`（最適値の5%以内で早期終了）
-- **結果**: 15名×4シフト **30s→5.8s（5.2倍高速化）**、OPTIMAL達成
-- **テスト追加**: `TestScalability4Shifts`（15名<10s, 50名<20s）
-- **テスト結果**: 60/60全通過（回帰なし）
+### B. 追加修正実施
+1. root `package.json`から`@google/genai`依存を削除（LLM完全廃止済み）
+2. `.kiro/steering/gemini-rules.md`削除（LLM設定ルール、不要）
+3. `.kiro/steering/phased-generation-contract.md`削除（Phase間データ契約、LLM専用）
+4. `npm install`でpackage-lock.json同期
 
-### C. デプロイと本番検証
-- Firebaseデプロイ成功、CI/CD全チェック通過
-- 本番テスト: 15名×4シフト **5.8s（目標<10s達成）**
-- ウォームスタート: 5.7s（安定）
+### C. CI/CD全通過確認
+- **Backend**: TypeScript型チェック通過、ユニットテスト 230/230通過
+- **Frontend**: TypeScript型チェック通過、ユニットテスト 161/161通過
+- **CI/CD Pipeline**:
+  - ビルドとテスト ✅
+  - Lighthouse ✅
+  - Solverテスト（Python）✅
+  - デモデータ検証 ✅
+  - E2Eテスト ✅
+  - GitGuardian Security ✅
+  - CodeRabbit Pre-merge (4/4チェック) ✅
 
-### D. Phase 60 UI刷新（PR #74～#75）
-- **PR #74**: requirements形式不一致による統合Solver 500エラーを修正
-  - 原因: FrontendがShift単位（"日勤"）で送信、Solverが日付修飾キー（"2026-03-01_日勤"）を要求
-  - 修正: `expandRequirementsToDaily()` で要件を日単位に拡張、`unified_builder.py`で防衛的バリデーション追加
-  - デプロイ成功、本番確認完了
-
-- **PR #75**: Solver時代のUI刷新 - プログレスバーから結果サマリーへ
-  - **背景**: CP-SAT Solverは数秒で完了するため、LLM時代の5段階プログレスバー（360秒想定）は不要
-  - **変更**:
-    - `types.ts`: `StepDefinition`/`GENERATION_STEPS`/`DEFAULT_ESTIMATED_SECONDS`削除、`GenerationResult`追加
-    - `useAIGenerationProgress.ts`: ステップ計算・予測時間廃止、`completeGeneration(result)`に変更
-    - `AIGenerationProgress.tsx`: スピナー表示＋結果サマリーカード（スコア/充足率/違反数/処理時間）
-    - 不要サブコンポーネント3ファイル削除（ProgressSteps/ProgressBar/ProgressTimer）
-    - `App.tsx`: 評価データを`GenerationResult`として渡す、全状態でオーバーレイ表示
-  - **コード削減**: +349 / -755行（406行削減）
-  - **テスト**: 37件全通過
-  - **CI**: 全ジョブ通過、squashマージ完了 ✅
+### D. PR #76マージ＆本番デプロイ
+- **マージ**: squash merge `61fed5c`
+- **デプロイ**: Firebaseにデプロイ成功
+  - solverUnifiedGenerate稼働確認
+  - solverGenerateShift稼働確認
+  - 本番環境でLLM→Solver完全移行確認完了
 
 ---
 
