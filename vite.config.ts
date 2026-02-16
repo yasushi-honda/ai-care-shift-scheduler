@@ -36,6 +36,8 @@ export default defineConfig(({ mode }) => {
               'react-vendor': ['react', 'react-dom', 'react-router-dom'],
               // Firebase関連
               'firebase-vendor': ['firebase/app', 'firebase/auth', 'firebase/firestore'],
+              // Chart.js関連（レポートページでのみ使用）
+              'chart-vendor': ['chart.js', 'react-chartjs-2'],
             },
             // ファイル名にハッシュを含める（長期キャッシュのため）
             chunkFileNames: 'assets/[name]-[hash].js',
