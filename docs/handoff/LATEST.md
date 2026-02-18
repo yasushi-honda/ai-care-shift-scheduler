@@ -1,8 +1,8 @@
 # ハンドオフメモ - 最新状態
 
-**更新日**: 2026-02-18（希望休重複の事前バリデーション PR #81 マージ済み）
+**更新日**: 2026-02-19（スタッフ設定UI最大連続勤務日数フィールド追加 PR #82 マージ済み）
 **フェーズ**: LLM→Solver完全移行 **本番稼働中** ✅
-**最新作業**: 希望休重複事前バリデーション（資格要件競合を診断フェーズで事前検出）
+**最新作業**: スタッフ設定UIに最大連続勤務日数フィールドを追加（StaffSettings.tsx）
 
 ---
 
@@ -41,26 +41,27 @@
 
 ## 直近の変更（最新5件）
 
-1. **PR #81マージ** (2026-02-18): 希望休重複の事前バリデーション
+1. **PR #82マージ** (2026-02-19): スタッフ設定UI最大連続勤務日数フィールド追加
+   - `StaffSettings.tsx` に「最大連続勤務日数」number入力欄を追加
+   - A/B比較レポートの処理時間計測値を更新（0.217秒→0.221秒、速度比564x→553x）
+
+2. **PR #81マージ** (2026-02-18): 希望休重複の事前バリデーション
    - 資格要件競合を診断フェーズで事前検出
    - CI/CD: 完了・成功（6m31s）
 
-2. **PR #80マージ** (2026-02-18): Solver警告フロントエンド表示
+3. **PR #80マージ** (2026-02-18): Solver警告フロントエンド表示
    - `SolverWarningsSection` コンポーネント新設（constraintType別グループ化、日付チップ、折りたたみ）
    - フロントエンド型定義追加（`SolverWarning`, `EvaluationResult.solverWarnings`, `GenerateShiftResponse.solverWarnings`）
    - 変更ファイル: `types.ts`, `EvaluationPanel.tsx`, `shiftGenerationService.ts`, `functions/src/types.ts`
 
-3. **PR #79マージ** (2026-02-18): Solver Level 2 事前検証警告
+4. **PR #79マージ** (2026-02-18): Solver Level 2 事前検証警告
    - CP-SAT Solverの `_add_staffing` / `_add_qualification` でサイレントスキップを解消
    - `SolverWarning`（`staffShortage` / `qualificationMissing`）を事前検知して返却
    - Pythonテスト: 65/65全通過
 
-4. **PR #78マージ** (2026-02-16): 技術的負債解消
+5. **PR #78マージ** (2026-02-16): 技術的負債解消
    - 招待機能race condition修正（Firestoreトランザクション化）
    - CI型チェック厳格化（`continue-on-error: true` 削除）
-
-5. **PR #76本番デプロイ完了** (2026-02-16): LLM→Solver完全移行
-   - 削減規模: 48ファイル変更、+450/-8,450行
 
 ---
 
@@ -74,6 +75,7 @@
 | **事前検証警告** | ✅ PR #79マージ済み | staffShortage/qualificationMissing警告 |
 | **警告UI表示** | ✅ PR #80マージ済み | EvaluationPanelにSolverWarningsSection追加 |
 | **希望休重複バリデーション** | ✅ PR #81マージ済み | 資格要件競合を診断フェーズで事前検出 |
+| **スタッフ設定UI改善** | ✅ PR #82マージ済み | 最大連続勤務日数フィールド追加 |
 
 ---
 
@@ -93,7 +95,7 @@
 ## 次のアクション候補（優先度順）
 
 ### A. 既存バグ修正・UI/UX改善
-- solver-functions/tests/output/ab_comparison_report.md の未コミット変更を確認してコミット or 破棄
+- 特になし（全PR マージ済み・ワーキングツリークリーン）
 
 ### B. その他改善
 - 新機能開発・パフォーマンス最適化など
@@ -152,11 +154,11 @@
 
 再開前に以下を確認:
 
-- [x] `git log` で最新コミット確認（PR #81 希望休重複事前バリデーション マージ済み）✅
-- [x] CI/CD ジョブ確認（PR #81 main push → CI/CD Pipeline 成功）✅
+- [x] `git log` で最新コミット確認（PR #82 スタッフ設定UI最大連続勤務日数追加 マージ済み）✅
+- [x] CI/CD ジョブ確認（GitHub Pages デプロイ 成功 2026-02-18）✅
 - [x] LLM→Solver完全移行 本番稼働確認（solverUnifiedGenerate稼働中）✅
 - [x] テスト全通過確認（Frontend 161, Backend 230, Solver 65）✅
-- [ ] `solver-functions/tests/output/ab_comparison_report.md` の未コミット変更を確認
+- [x] ワーキングツリークリーン確認（未コミット変更なし）✅
 
 ---
 
