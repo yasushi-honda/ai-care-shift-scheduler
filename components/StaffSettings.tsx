@@ -150,6 +150,24 @@ const StaffSettings: React.FC<StaffSettingsProps> = ({
                   <span>夜勤専従</span>
                 </label>
               </div>
+              {/* Max Consecutive Work Days */}
+              <div>
+                <label className="block font-medium text-slate-600 mb-1">最大連続勤務日数</label>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="number"
+                    min={1}
+                    max={7}
+                    value={staff.maxConsecutiveWorkDays}
+                    onChange={e => {
+                      const val = Math.min(7, Math.max(1, Number(e.target.value)));
+                      onStaffChange({ ...staff, maxConsecutiveWorkDays: val });
+                    }}
+                    className="w-20 p-2 bg-white text-slate-800 border border-slate-300 rounded-md shadow-xs focus:outline-hidden focus:ring-2 focus:ring-care-secondary focus:border-care-secondary"
+                  />
+                  <span className="text-slate-500">日（1〜7日）</span>
+                </div>
+              </div>
               {/* Unavailable Dates */}
               <div className="relative">
                 <label className="block font-medium text-slate-600 mb-1">勤務できない日</label>
