@@ -49,6 +49,10 @@ export interface LeaveRequestDocument {
   updatedAt?: Timestamp;
 }
 
+// 勤務形態区分（標準様式第1号）
+// A=常勤専従, B=常勤兼務, C=非常勤専従, D=非常勤兼務
+export type EmploymentType = 'A' | 'B' | 'C' | 'D';
+
 export interface Staff {
   id: string;
   name: string;
@@ -60,6 +64,8 @@ export interface Staff {
   unavailableDates: string[]; // YYYY-MM-DD
   timeSlotPreference: TimeSlotPreference;
   isNightShiftOnly: boolean;
+  employmentType?: EmploymentType;   // 勤務形態区分（標準様式第1号）
+  weeklyContractHours?: number;      // 契約週時間（非常勤用、常勤換算計算に使用）
   createdAt?: Timestamp; // Firestore永続化時に使用
   updatedAt?: Timestamp; // Firestore永続化時に使用
 }
@@ -230,6 +236,7 @@ export interface Facility {
   createdAt: Timestamp;
   createdBy: string; // super-admin UID
   members: FacilityMember[]; // 非正規化（パフォーマンス最適化）
+  standardWeeklyHours?: number; // 常勤職員の週所定労働時間（常勤換算計算用、デフォルト40h）
 }
 
 // 施設メンバー（非正規化）

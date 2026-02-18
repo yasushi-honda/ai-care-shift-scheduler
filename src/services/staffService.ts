@@ -70,6 +70,8 @@ export const StaffService = {
             unavailableDates: data.unavailableDates || [],
             timeSlotPreference: data.timeSlotPreference || {},
             isNightShiftOnly: data.nightShiftOnly ?? data.isNightShiftOnly ?? false,  // nightShiftOnly → isNightShiftOnly
+            employmentType: data.employmentType ?? 'A',  // 未設定時は常勤専従をデフォルト
+            ...(data.weeklyContractHours !== undefined && { weeklyContractHours: data.weeklyContractHours }),
             createdAt: data.createdAt,
             updatedAt: data.updatedAt,
           } as Staff;
