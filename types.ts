@@ -455,6 +455,50 @@ export type LeaveBalanceError =
   | { code: 'NOT_FOUND'; message: string };
 
 
+// ==================== コンプライアンス・常勤換算（Phase 25）====================
+
+// FTE（常勤換算）エントリ
+export interface FullTimeEquivalentEntry {
+  staffId: string;
+  staffName: string;
+  role: string;
+  employmentType: EmploymentType;
+  monthlyHours: number;         // 月間勤務時間
+  weeklyAverageHours: number;   // 週平均勤務時間（monthlyHours / 4.33）
+  fteValue: number;             // 常勤換算値（小数点第2位）
+}
+
+// コンプライアンス違反（労基法・労働安全衛生）
+export interface ComplianceViolationItem {
+  type: 'break_time' | 'rest_interval';
+  severity: 'error' | 'warning';
+  staffId: string;
+  staffName: string;
+  date: string;          // YYYY-MM-DD
+  description: string;
+  legalBasis: string;    // 根拠法令
+  detail: {
+    workHours?: number;
+    breakMinutes?: number;
+    intervalHours?: number;
+  };
+}
+
+// コンプライアンスチェック結果
+export interface ComplianceCheckResult {
+  targetMonth: string;
+  checkedAt: Date;
+  useActual: boolean;
+  violations: ComplianceViolationItem[];
+  fteEntries: FullTimeEquivalentEntry[];
+  fteTotalByRole: Record<string, number>; // 役職別FTE合計
+}
+
+// コンプライアンスエラー型
+export type ComplianceError =
+  | { code: 'INVALID_DATA'; message: string }
+  | { code: 'CALCULATION_FAILED'; message: string };
+
 // ==================== AI評価・フィードバック（Phase 40）====================
 
 /**
