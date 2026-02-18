@@ -1,8 +1,8 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import type { Staff } from '../types';
+import type { Staff, EmploymentType } from '../types';
 import { Role, Qualification, TimeSlotPreference } from '../types';
-import { ROLES, QUALIFICATIONS, TIME_SLOT_PREFERENCES } from '../constants';
+import { ROLES, QUALIFICATIONS, TIME_SLOT_PREFERENCES, EMPLOYMENT_TYPES } from '../constants';
 import CalendarPicker from './CalendarPicker';
 
 interface StaffSettingsProps {
@@ -138,6 +138,39 @@ const StaffSettings: React.FC<StaffSettingsProps> = ({
                   ))}
                 </div>
               </div>
+              {/* Employment Type */}
+              <div>
+                <label className="block font-medium text-slate-600 mb-1">勤務形態区分</label>
+                <select
+                  value={staff.employmentType ?? 'A'}
+                  onChange={e => onStaffChange({ ...staff, employmentType: e.target.value as EmploymentType })}
+                  className="w-full p-2 pr-8 bg-white text-slate-800 border border-slate-300 rounded-md shadow-xs appearance-none bg-select-arrow bg-no-repeat bg-position-[center_right_0.75rem] focus:outline-hidden focus:ring-2 focus:ring-care-secondary focus:border-care-secondary"
+                >
+                  {(Object.entries(EMPLOYMENT_TYPES) as [EmploymentType, string][]).map(([key, label]) => (
+                    <option key={key} value={key}>{key}: {label}</option>
+                  ))}
+                </select>
+                <p className="mt-1 text-xs text-slate-400">行政提出用（標準様式第1号）に使用します</p>
+              </div>
+              {/* Weekly Contract Hours (non-constant staff only) */}
+              {(staff.employmentType === 'C' || staff.employmentType === 'D') && (
+                <div>
+                  <label className="block font-medium text-slate-600 mb-1">契約週時間（非常勤）</label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="number"
+                      min={1}
+                      max={40}
+                      step={0.5}
+                      value={staff.weeklyContractHours ?? ''}
+                      onChange={e => onStaffChange({ ...staff, weeklyContractHours: Number(e.target.value) })}
+                      placeholder="例: 20"
+                      className="w-24 p-2 bg-white text-slate-800 border border-slate-300 rounded-md shadow-xs focus:outline-hidden focus:ring-2 focus:ring-care-secondary focus:border-care-secondary"
+                    />
+                    <span className="text-slate-500">時間/週（常勤換算計算に使用）</span>
+                  </div>
+                </div>
+              )}
               {/* isNightShiftOnly */}
               <div>
                 <label className="flex items-center space-x-2 font-medium text-slate-600 cursor-pointer">

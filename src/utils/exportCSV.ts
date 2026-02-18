@@ -12,6 +12,7 @@
 
 import { unparse } from 'papaparse';
 import { Schedule, Staff, LeaveRequestDocument, StaffSchedule } from '../../types';
+import { EMPLOYMENT_TYPES } from '../../constants';
 
 /**
  * シフトデータをCSVエクスポート
@@ -85,21 +86,26 @@ export function exportStaffToCSV(
   }
 
   // データ行を作成
-  const rows = staffList.map((staff) => ({
-    'ID': staff.id,
-    '名前': staff.name,
-    '役職': staff.role,
-    '資格': staff.qualifications.join(', '),
-    '週間勤務数（希望）': staff.weeklyWorkCount.hope,
-    '週間勤務数（必須）': staff.weeklyWorkCount.must,
-    '最大連続勤務日数': staff.maxConsecutiveWorkDays,
-    '利用可能曜日': formatWeekdays(staff.availableWeekdays),
-    '利用不可日': staff.unavailableDates.join(', ') || 'なし',
-    '時間帯希望': staff.timeSlotPreference,
-    '夜勤専従': staff.isNightShiftOnly ? 'はい' : 'いいえ',
-    '作成日': formatTimestamp(staff.createdAt),
-    '更新日': formatTimestamp(staff.updatedAt),
-  }));
+  const rows = staffList.map((staff) => {
+    const empType = staff.employmentType ?? 'A';
+    return {
+      'ID': staff.id,
+      '名前': staff.name,
+      '役職': staff.role,
+      '資格': staff.qualifications.join(', '),
+      '勤務形態区分': `${empType}: ${EMPLOYMENT_TYPES[empType]}`,
+      '契約週時間': staff.weeklyContractHours ?? '-',
+      '週間勤務数（希望）': staff.weeklyWorkCount.hope,
+      '週間勤務数（必須）': staff.weeklyWorkCount.must,
+      '最大連続勤務日数': staff.maxConsecutiveWorkDays,
+      '利用可能曜日': formatWeekdays(staff.availableWeekdays),
+      '利用不可日': staff.unavailableDates.join(', ') || 'なし',
+      '時間帯希望': staff.timeSlotPreference,
+      '夜勤専従': staff.isNightShiftOnly ? 'はい' : 'いいえ',
+      '作成日': formatTimestamp(staff.createdAt),
+      '更新日': formatTimestamp(staff.updatedAt),
+    };
+  });
 
   // papaparseでCSV生成
   const csv = unparse(rows);

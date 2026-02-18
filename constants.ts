@@ -1,5 +1,5 @@
 
-import { Role, Qualification, TimeSlotPreference, ShiftTime, LeaveType, ShiftColor, ShiftTypeConfig } from './types';
+import { Role, Qualification, TimeSlotPreference, ShiftTime, LeaveType, ShiftColor, ShiftTypeConfig, EmploymentType } from './types';
 
 export const ROLES: Role[] = [
   Role.Admin,
@@ -123,6 +123,19 @@ export const DEFAULT_SHIFT_TYPES: ShiftTypeConfig[] = [
 
 // デフォルトシフトサイクル（ダブルクリック時のサイクル順序）
 export const DEFAULT_SHIFT_CYCLE: string[] = ['early', 'day', 'late', 'night', 'off', 'postnight'];
+
+// ==================== 勤務形態区分（Phase 25）====================
+
+// 勤務形態区分ラベルマップ（標準様式第1号）
+export const EMPLOYMENT_TYPES: Record<EmploymentType, string> = {
+  A: '常勤専従',
+  B: '常勤兼務',
+  C: '非常勤専従',
+  D: '非常勤兼務',
+};
+
+// 常勤の週所定労働時間デフォルト値（時間）
+export const DEFAULT_STANDARD_WEEKLY_HOURS = 40;
 
 // ==================== 休暇残高管理（Phase 39）====================
 
