@@ -314,6 +314,125 @@ class TestDeterminism:
                     ), f"実行{i+1}回目で差異: staff={s_idx}, day={d_idx}"
 
 
+class TestPreValidationWarnings:
+    """事前検証警告のテスト"""
+
+    def test_all_staff_fixed_rest_staffing_warning(self):
+        """全スタッフが同日に固定休日 → staffShortage警告"""
+        # 全員が3/5に出勤不可
+        staff = [
+            make_staff(f"s{i}", f"スタッフ{i}", unavailable_dates=["2026-03-05"])
+            for i in range(1, 6)
+        ]
+        reqs = _make_requirements(days=31, total_staff=1)
+        result = UnifiedSolverService.solve(staff, reqs, {})
+
+        assert result["success"] is True
+        warnings = result["warnings"]
+        # 3/5の全シフト(早番,日勤,遅番)で警告
+        staff_shortage = [
+            w for w in warnings
+            if w["constraintType"] == "staffShortage" and w["date"] == "2026-03-05"
+        ]
+        assert len(staff_shortage) == 3  # 早番, 日勤, 遅番
+        for w in staff_shortage:
+            assert w["requiredCount"] == 1
+            assert w["availableCount"] == 0
+
+    def test_qualified_staff_all_rest_qualification_warning(self):
+        """有資格者が全員休日 → qualificationMissing警告"""
+        # 看護師1名のみ、3/10に出勤不可
+        # 日勤のみ看護師1名必須 → 3/10はqualificationMissing警告
+        # 注: 看護師1名で31日の日勤カバーは不可能なためINFEASIBLEになり得る
+        # テストは警告生成を検証（成功/失敗は問わない）
+        staff = [
+            make_staff("s1", "看護太郎", qualifications=["看護師"], unavailable_dates=["2026-03-10"]),
+            make_staff("s2", "介護花子"),
+            make_staff("s3", "介護一郎"),
+            make_staff("s4", "介護次郎"),
+            make_staff("s5", "介護三郎"),
+        ]
+        base_req = DailyRequirementDict(
+            totalStaff=1,
+            requiredQualifications=[],
+            requiredRoles=[],
+        )
+        nurse_req = DailyRequirementDict(
+            totalStaff=1,
+            requiredQualifications=[{"qualification": "看護師", "count": 1}],
+            requiredRoles=[],
+        )
+        reqs: dict[str, DailyRequirementDict] = {}
+        for day in range(1, 32):
+            for st in ["早番", "遅番"]:
+                reqs[f"2026-03-{day:02d}_{st}"] = base_req
+            reqs[f"2026-03-{day:02d}_日勤"] = nurse_req
+        requirements = ShiftRequirementDict(
+            targetMonth="2026-03",
+            timeSlots=[
+                {"name": "早番", "start": "07:00", "end": "16:00", "restHours": 1.0},
+                {"name": "日勤", "start": "09:00", "end": "18:00", "restHours": 1.0},
+                {"name": "遅番", "start": "11:00", "end": "20:00", "restHours": 1.0},
+            ],
+            requirements=reqs,
+        )
+        result = UnifiedSolverService.solve(staff, requirements, {})
+
+        # 成功/失敗にかかわらず警告は返却される
+        qual_warnings = [
+            w for w in result["warnings"]
+            if w["constraintType"] == "qualificationMissing" and w["date"] == "2026-03-10"
+        ]
+        assert len(qual_warnings) == 1
+        assert qual_warnings[0]["shiftType"] == "日勤"
+        assert "看護師" in qual_warnings[0]["detail"]
+
+    def test_no_warnings_when_sufficient(self):
+        """充足可能な場合 → 警告なし"""
+        staff = _make_staff_list(5)
+        reqs = _make_requirements(days=28, total_staff=1)
+        result = UnifiedSolverService.solve(staff, reqs, {})
+
+        assert result["success"] is True
+        assert result["warnings"] == []
+
+    def test_leave_requests_cause_warning(self):
+        """全員が同日に休暇申請 → staffShortage警告"""
+        staff = _make_staff_list(5)
+        reqs = _make_requirements(days=31, total_staff=1)
+        leave = {
+            f"s{i}": {"2026-03-15": "希望休"} for i in range(1, 6)
+        }
+        result = UnifiedSolverService.solve(staff, reqs, leave)
+
+        assert result["success"] is True
+        shortage = [
+            w for w in result["warnings"]
+            if w["constraintType"] == "staffShortage" and w["date"] == "2026-03-15"
+        ]
+        assert len(shortage) == 3  # 早番, 日勤, 遅番
+
+    def test_warning_fields_completeness(self):
+        """警告フィールドが全て存在し正しい型"""
+        staff = [
+            make_staff(f"s{i}", f"スタッフ{i}", unavailable_dates=["2026-03-01"])
+            for i in range(1, 6)
+        ]
+        reqs = _make_requirements(days=31, total_staff=1)
+        result = UnifiedSolverService.solve(staff, reqs, {})
+
+        assert len(result["warnings"]) > 0
+        for w in result["warnings"]:
+            assert isinstance(w["date"], str)
+            assert isinstance(w["shiftType"], str)
+            assert w["constraintType"] in ("staffShortage", "qualificationMissing")
+            assert isinstance(w["requiredCount"], int)
+            assert isinstance(w["availableCount"], int)
+            assert isinstance(w["detail"], str)
+            assert w["requiredCount"] > 0
+            assert w["availableCount"] == 0
+
+
 class TestFlaskEndpoint:
     """Flaskエンドポイントテスト"""
 

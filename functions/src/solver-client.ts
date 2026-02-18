@@ -9,6 +9,7 @@ import type {
   Staff,
   ShiftRequirement,
   StaffSchedule,
+  SolverWarning,
 } from './types';
 
 /**
@@ -54,6 +55,7 @@ interface SolverResponse {
     numConstraints: number;
     objectiveValue: number;
   };
+  warnings?: SolverWarning[];
 }
 
 interface SolverErrorResponse {
@@ -61,6 +63,11 @@ interface SolverErrorResponse {
   error: string;
   errorType: string;
   details: Record<string, unknown>;
+}
+
+export interface UnifiedSolverResult {
+  schedule: StaffSchedule[];
+  warnings: SolverWarning[];
 }
 
 /**
@@ -77,7 +84,7 @@ export async function generateShiftsWithUnifiedSolver(
   staffList: Staff[],
   requirements: ShiftRequirement,
   leaveRequests: Record<string, Record<string, string>> = {},
-): Promise<StaffSchedule[]> {
+): Promise<UnifiedSolverResult> {
   if (!UNIFIED_SOLVER_FUNCTION_URL) {
     throw new Error(
       'UNIFIED_SOLVER_FUNCTION_URL が設定されていません。' +
@@ -114,12 +121,19 @@ export async function generateShiftsWithUnifiedSolver(
 
   const result: SolverResponse = await response.json();
 
+  const solverWarnings = result.warnings ?? [];
   console.log(`✅ 統合Solver完了 (${elapsed}ms):`, {
     status: result.solverStats.status,
     solveTimeMs: result.solverStats.solveTimeMs,
     objectiveValue: result.solverStats.objectiveValue,
     staffCount: result.schedule.length,
+    warningCount: solverWarnings.length,
   });
 
-  return result.schedule;
+  if (solverWarnings.length > 0) {
+    console.warn(`⚠️ Solver事前検証警告 (${solverWarnings.length}件):`,
+      solverWarnings.map(w => w.detail));
+  }
+
+  return { schedule: result.schedule, warnings: solverWarnings };
 }

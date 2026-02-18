@@ -118,10 +118,21 @@ class SolverStats(TypedDict):
     objectiveValue: int
 
 
+class SolverWarningDict(TypedDict):
+    """制約スキップ警告: 配置可能スタッフ不足で制約適用不可"""
+    date: str           # "2026-03-05"
+    shiftType: str      # "日勤"
+    constraintType: str # "staffShortage" | "qualificationMissing"
+    requiredCount: int
+    availableCount: int
+    detail: str         # 人間向け説明
+
+
 class SolverResponse(TypedDict):
     success: bool
     schedule: list[StaffScheduleDict]
     solverStats: SolverStats
+    warnings: list[SolverWarningDict]
 
 
 class SolverErrorResponse(TypedDict):

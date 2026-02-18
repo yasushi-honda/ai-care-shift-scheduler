@@ -87,6 +87,22 @@ export interface StaffSchedule {
 }
 
 // ============================================
+// Solver警告 型定義
+// ============================================
+
+/**
+ * Solver事前検証警告: 制約スキップの検知結果
+ */
+export interface SolverWarning {
+  date: string;
+  shiftType: string;
+  constraintType: 'staffShortage' | 'qualificationMissing';
+  requiredCount: number;
+  availableCount: number;
+  detail: string;
+}
+
+// ============================================
 // 評価・フィードバック機能 型定義
 // ============================================
 
@@ -163,6 +179,7 @@ export interface EvaluationResult {
     infeasibilityReasons: string[];
     suggestions: string[];
   };
+  solverWarnings?: SolverWarning[]; // Solver事前検証警告
   rootCauseAnalysis?: {           // Phase 55: 根本原因分析結果
     primaryCause: {
       category: string;

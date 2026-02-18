@@ -21,6 +21,7 @@ from solver.types import (
     ALL_SHIFT_TYPES,
     SHIFT_TYPES,
     ShiftRequirementDict,
+    SolverWarningDict,
     StaffDict,
     StaffScheduleDict,
 )
@@ -97,11 +98,13 @@ class UnifiedModelBuilder:
         for staff in staff_list:
             self._fixed_rest[staff["id"]] = self._compute_fixed_rest(staff)
 
+        self._warnings: list[SolverWarningDict] = []
+
     def build(self) -> cp_model.CpModel:
         """モデル構築のエントリポイント"""
         self._create_variables()
         self._add_exactly_one()
-        UnifiedConstraintBuilder.add_all(
+        self._warnings = UnifiedConstraintBuilder.add_all(
             self._model,
             self._variables,
             self._staff_list,
@@ -129,6 +132,10 @@ class UnifiedModelBuilder:
     @property
     def variables(self) -> dict[tuple[str, int, str], cp_model.IntVar]:
         return self._variables
+
+    @property
+    def warnings(self) -> list[SolverWarningDict]:
+        return self._warnings
 
     def extract_solution(self, solver: cp_model.CpSolver) -> list[StaffScheduleDict]:
         """求解結果をStaffSchedule[]形式に変換"""
@@ -250,12 +257,15 @@ class UnifiedConstraintBuilder:
         fixed_rest: dict[str, set[int]],
         year: int,
         month: int,
-    ) -> None:
+    ) -> list[SolverWarningDict]:
+        warnings: list[SolverWarningDict] = []
         UnifiedConstraintBuilder._add_staffing(
-            model, variables, staff_list, requirements, target_month, days_in_month
+            model, variables, staff_list, requirements, target_month, days_in_month,
+            warnings,
         )
         UnifiedConstraintBuilder._add_qualification(
-            model, variables, staff_list, requirements, target_month, days_in_month
+            model, variables, staff_list, requirements, target_month, days_in_month,
+            warnings,
         )
         UnifiedConstraintBuilder._add_consecutive_work(
             model, variables, staff_list, days_in_month, fixed_rest
@@ -267,6 +277,7 @@ class UnifiedConstraintBuilder:
             UnifiedConstraintBuilder._add_night_shift_chain(
                 model, variables, staff_list, days_in_month
             )
+        return warnings
 
     @staticmethod
     def _add_staffing(
@@ -276,6 +287,7 @@ class UnifiedConstraintBuilder:
         requirements: ShiftRequirementDict,
         target_month: str,
         days_in_month: int,
+        warnings: list[SolverWarningDict],
     ) -> None:
         """各日・各シフトの必要人数制約"""
         for day in range(1, days_in_month + 1):
@@ -293,6 +305,16 @@ class UnifiedConstraintBuilder:
                 ]
                 if staff_on_shift:
                     model.Add(sum(staff_on_shift) >= total_required)
+                elif total_required > 0:
+                    date_str = f"{target_month}-{day:02d}"
+                    warnings.append(SolverWarningDict(
+                        date=date_str,
+                        shiftType=shift_type,
+                        constraintType="staffShortage",
+                        requiredCount=total_required,
+                        availableCount=0,
+                        detail=f"{date_str}の{shift_type}: 必要{total_required}名に対し配置可能0名",
+                    ))
 
     @staticmethod
     def _add_qualification(
@@ -302,6 +324,7 @@ class UnifiedConstraintBuilder:
         requirements: ShiftRequirementDict,
         target_month: str,
         days_in_month: int,
+        warnings: list[SolverWarningDict],
     ) -> None:
         """資格要件制約"""
         for day in range(1, days_in_month + 1):
@@ -321,6 +344,16 @@ class UnifiedConstraintBuilder:
                     ]
                     if qualified:
                         model.Add(sum(qualified) >= required_count)
+                    elif required_count > 0:
+                        date_str = f"{target_month}-{day:02d}"
+                        warnings.append(SolverWarningDict(
+                            date=date_str,
+                            shiftType=shift_type,
+                            constraintType="qualificationMissing",
+                            requiredCount=required_count,
+                            availableCount=0,
+                            detail=f"{date_str}の{shift_type}: {qualification}{required_count}名必要だが配置可能0名",
+                        ))
 
     @staticmethod
     def _add_consecutive_work(
