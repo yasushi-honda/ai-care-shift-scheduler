@@ -22,6 +22,7 @@ import {
   MonthComparisonData,
   QualificationCoverageData,
   Qualification,
+  StaffSchedule,
 } from '../../types';
 import {
   aggregateWorkTime,
@@ -562,4 +563,51 @@ function generateRecommendations(
   }
 
   return recommendations;
+}
+
+// ==================== Phase 25: コンプライアンスチェック用データ取得 ====================
+
+export interface ComplianceRawData {
+  staffSchedules: StaffSchedule[];
+  staffList: Staff[];
+  shiftSettings: FacilityShiftSettings | null;
+}
+
+/**
+ * コンプライアンスチェックに必要な生データを取得する
+ */
+export async function getComplianceData(
+  facilityId: string,
+  targetMonth: string
+): Promise<Result<ComplianceRawData, ReportError>> {
+  try {
+    const [schedules, staffList, shiftSettings] = await Promise.all([
+      fetchSchedules(facilityId, targetMonth),
+      fetchStaff(facilityId),
+      fetchShiftSettings(facilityId),
+    ]);
+
+    if (schedules.length === 0) {
+      return {
+        success: false,
+        error: { code: 'NO_SCHEDULE_DATA', message: `${targetMonth}のシフトデータがありません`, targetMonth },
+      };
+    }
+
+    const staffSchedules = schedules[0].staffSchedules ?? [];
+
+    return {
+      success: true,
+      data: { staffSchedules, staffList, shiftSettings },
+    };
+  } catch (error) {
+    return {
+      success: false,
+      error: {
+        code: 'AGGREGATION_FAILED',
+        message: error instanceof Error ? error.message : 'データ取得に失敗しました',
+        reason: 'fetchError',
+      },
+    };
+  }
 }

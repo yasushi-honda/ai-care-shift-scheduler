@@ -6,6 +6,7 @@ import {
   getMonthlyReport,
   getManagementReport,
   getPersonalReport,
+  getComplianceData,
 } from '../../services/reportService';
 // pdfService は PDF生成時のみ動的importする（jsPDF + html2canvas の遅延読み込み）
 import {
@@ -13,6 +14,9 @@ import {
   ManagementReportData,
   PersonalReportData,
   FacilityRole,
+  StaffSchedule,
+  Staff,
+  FacilityShiftSettings,
 } from '../../../types';
 import MonthNavigator from '../../../components/MonthNavigator';
 import { SkeletonLoader } from '../../components/SkeletonLoader';
@@ -23,6 +27,7 @@ import { ShiftTypeContent } from './ShiftTypeContent';
 import { StaffActivityContent } from './StaffActivityContent';
 import { ManagementContent } from './ManagementContent';
 import { PersonalContent } from './PersonalContent';
+import { ComplianceContent } from './ComplianceContent';
 
 /**
  * Phase 41: 月次レポートページ
@@ -36,7 +41,7 @@ import { PersonalContent } from './PersonalContent';
  * - 個人: 自分の勤務実績（スタッフのみ）
  */
 
-type ReportTab = 'dashboard' | 'workTime' | 'shiftType' | 'staffActivity' | 'management' | 'personal';
+type ReportTab = 'dashboard' | 'workTime' | 'shiftType' | 'staffActivity' | 'management' | 'personal' | 'compliance';
 
 /**
  * Phase 42.1: 戻るボタン用アイコン
@@ -64,6 +69,11 @@ export function ReportPage(): React.ReactElement {
   const [monthlyReport, setMonthlyReport] = useState<MonthlyReportData | null>(null);
   const [managementReport, setManagementReport] = useState<ManagementReportData | null>(null);
   const [personalReport, setPersonalReport] = useState<PersonalReportData | null>(null);
+
+  // コンプライアンスデータ
+  const [complianceStaffSchedules, setComplianceStaffSchedules] = useState<StaffSchedule[] | null>(null);
+  const [complianceStaffList, setComplianceStaffList] = useState<Staff[] | null>(null);
+  const [complianceShiftSettings, setComplianceShiftSettings] = useState<FacilityShiftSettings | null>(null);
 
   // ユーザーの施設ロールを取得
   const getUserFacilityRole = useCallback((): FacilityRole | null => {
@@ -127,6 +137,35 @@ export function ReportPage(): React.ReactElement {
     setIsLoading(false);
   }, [selectedFacilityId, targetMonth, isManager]);
 
+  // コンプライアンスデータを取得
+  const fetchComplianceData = useCallback(async () => {
+    if (!selectedFacilityId) return;
+
+    setIsLoading(true);
+    setError(null);
+
+    const result = await getComplianceData(selectedFacilityId, targetMonth);
+
+    if (result.success === true) {
+      const { staffSchedules, staffList, shiftSettings } = result.data;
+      setComplianceStaffSchedules(staffSchedules);
+      setComplianceStaffList(staffList);
+      setComplianceShiftSettings(shiftSettings);
+    } else if (result.success === false) {
+      const err = result.error;
+      if (err.code === 'NO_SCHEDULE_DATA') {
+        setError(`${targetMonth}のシフトデータがありません`);
+      } else {
+        setError(`コンプライアンスデータの取得に失敗しました: ${err.message}`);
+      }
+      setComplianceStaffSchedules(null);
+      setComplianceStaffList(null);
+      setComplianceShiftSettings(null);
+    }
+
+    setIsLoading(false);
+  }, [selectedFacilityId, targetMonth]);
+
   // 個人レポートを取得
   const fetchPersonalReport = useCallback(async () => {
     if (!selectedFacilityId || !currentUser) return;
@@ -167,8 +206,11 @@ export function ReportPage(): React.ReactElement {
       case 'personal':
         fetchPersonalReport();
         break;
+      case 'compliance':
+        fetchComplianceData();
+        break;
     }
-  }, [activeTab, selectedFacilityId, targetMonth, fetchMonthlyReport, fetchManagementReport, fetchPersonalReport]);
+  }, [activeTab, selectedFacilityId, targetMonth, fetchMonthlyReport, fetchManagementReport, fetchPersonalReport, fetchComplianceData]);
 
   // ダッシュボードPDFダウンロード
   const handleDownloadDashboardPDF = async () => {
@@ -226,6 +268,7 @@ export function ReportPage(): React.ReactElement {
     { id: 'staffActivity', label: 'スタッフ稼働', visible: true },
     { id: 'management', label: '経営分析', visible: isManager },
     { id: 'personal', label: '個人レポート', visible: isStaff },
+    { id: 'compliance', label: 'コンプライアンス', visible: isManager },
   ];
 
   // 施設未選択時の表示
@@ -319,6 +362,9 @@ export function ReportPage(): React.ReactElement {
                 case 'personal':
                   fetchPersonalReport();
                   break;
+                case 'compliance':
+                  fetchComplianceData();
+                  break;
               }
             }}
           />
@@ -365,6 +411,20 @@ export function ReportPage(): React.ReactElement {
                 isPdfGenerating={isPdfGenerating}
               />
             )}
+
+            {/* コンプライアンスタブ */}
+            {activeTab === 'compliance' &&
+              complianceStaffSchedules &&
+              complianceStaffList &&
+              complianceShiftSettings && (
+                <ComplianceContent
+                  staffSchedules={complianceStaffSchedules}
+                  staffList={complianceStaffList}
+                  shiftSettings={complianceShiftSettings}
+                  facilityName={getFacilityName()}
+                  targetMonth={targetMonth}
+                />
+              )}
           </>
         )}
       </main>
