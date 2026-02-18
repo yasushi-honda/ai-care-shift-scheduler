@@ -31,6 +31,7 @@
   },
   "dependencies": {
     "chart.js": "^4.5.1",
+    "exceljs": "^4.4.0",
     "firebase": "^12.9.0",
     "jspdf": "^4.1.0",
     "jspdf-autotable": "^5.0.7",
