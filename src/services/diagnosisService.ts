@@ -13,6 +13,7 @@ import {
   LeaveRequest,
   TimeSlotPreference,
 } from '../../types';
+import { detectLeaveQualificationConflicts } from './leaveConflictValidator';
 import {
   DiagnosisResult,
   DiagnosisStatus,
@@ -288,6 +289,25 @@ function detectIssues(
         affectedDates: [concentration.date],
       });
     }
+  });
+
+  // 5. 希望休による資格不足を検出（Level 2警告の事前バリデーション）
+  const qualConflicts = detectLeaveQualificationConflicts(
+    staffList,
+    leaveRequests,
+    requirements
+  );
+  qualConflicts.forEach((conflict) => {
+    const dateLabel = conflict.date.split('-').slice(1).join('/');
+    issues.push({
+      id: `leave-qual-conflict-${conflict.date}-${conflict.qualification}`,
+      severity: 'high',
+      category: 'leave',
+      title: `${dateLabel}に${conflict.qualification}が不足（希望休の重複）`,
+      description: `${conflict.affectedStaff.join('、')}が${dateLabel}に希望休を申請しており、${conflict.qualification}の配置可能人数が${conflict.availableCount}名（必要${conflict.requiredCount}名）になります。シフト生成時にLevel 2違反が発生します。`,
+      affectedStaff: conflict.affectedStaff,
+      affectedDates: [conflict.date],
+    });
   });
 
   return issues;
