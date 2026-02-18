@@ -1,8 +1,8 @@
 # ハンドオフメモ - 最新状態
 
-**更新日**: 2026-02-18（PR #79 Solver Level 2 事前検証警告 マージ完了）
+**更新日**: 2026-02-18（Solver警告フロントエンド表示 PR作成中）
 **フェーズ**: LLM→Solver完全移行 **本番稼働中** ✅
-**最新作業**: PR #79マージ（Solver Level 2 事前検証警告機能）
+**最新作業**: Solver警告フロントエンド表示（PR #79のBackend実装に対するUI対応）
 
 ---
 
@@ -41,7 +41,15 @@
 
 ## 直近の変更（最新5件）
 
-1. **PR #79マージ** (2026-02-18): Solver Level 2 事前検証警告
+1. **PR #80（作成中）** (2026-02-18): Solver警告フロントエンド表示
+   - PR #79のBackend `SolverWarning` に対するフロントエンドUI対応
+   - `SolverWarningsSection` コンポーネント新設（constraintType別グループ化、日付チップ、折りたたみ）
+   - フロントエンド型定義追加（`SolverWarning`, `EvaluationResult.solverWarnings`, `GenerateShiftResponse.solverWarnings`）
+   - Backend `GenerateShiftResponse` にも `solverWarnings` フィールド追加（型安全性修正）
+   - `formatDateWithDay` 重複解消（ファイルトップレベルに共通化）
+   - 変更ファイル: `types.ts`, `EvaluationPanel.tsx`, `shiftGenerationService.ts`, `functions/src/types.ts`
+
+2. **PR #79マージ** (2026-02-18): Solver Level 2 事前検証警告
    - コミット: `8427a4b` - feat: Solver Level 2 事前検証警告 - 制約スキップを事前検知し警告返却
    - CP-SAT Solverの `_add_staffing` / `_add_qualification` でサイレントスキップを解消
    - 配置可能スタッフ不足時に `SolverWarning`（`staffShortage` / `qualificationMissing`）を事前検知して返却
@@ -61,8 +69,7 @@
 
 4. **PR #77** (2026-02-16): ReportPageバンドルサイズ最適化（90%削減）
 
-5. **PR #73** (2026-02-16): Solver relative_gap_limit緩和で4シフト対応高速化
-   - 15名×4シフト: 30s FEASIBLE → 5.8s OPTIMAL
+5. ~~PR #73 (2026-02-16): Solver relative_gap_limit緩和で4シフト対応高速化~~
 
 ---
 
@@ -74,6 +81,7 @@
 | **CP-SAT Solver** | ✅ 本番稼働中 | 決定的スケジュール生成、100名対応 |
 | **評価システム** | ✅ 4段階評価 | Level 1-4対応、動的制約生成 |
 | **事前検証警告** | ✅ PR #79マージ済み | staffShortage/qualificationMissing警告 |
+| **警告UI表示** | 🔧 PR作成中 | EvaluationPanelにSolverWarningsSection追加 |
 
 ---
 
@@ -167,35 +175,33 @@
 
 - [x] `git status` がclean（未コミット変更なし）✅
 - [x] `git log` で最新コミット確認（PR #79 Solver Level 2 事前検証警告 マージ済み）✅
-- [ ] CI/CD ジョブ確認（PR #79 main push → Lighthouse/CI/CD in_progress）⚠️
+- [x] CI/CD ジョブ確認（PR #79 main push → CI/CD Pipeline + Lighthouse CI 全成功）✅
 - [x] LLM→Solver完全移行 本番稼働確認（solverUnifiedGenerate稼働中）✅
 - [x] テスト全通過確認（Frontend 161, Backend 230, Solver 65）✅
 
 ---
 
-## 本セッション作業内容（2026-02-18セッション：Solver Level 2 事前検証警告 PR #79）
+## 本セッション作業内容（2026-02-18セッション：Solver警告フロントエンド表示）
 
 ### 実装内容
-- CP-SAT Solverの `_add_staffing` / `_add_qualification` でのサイレントスキップ問題を解消
-- `SolverWarning` 型（`staffShortage` / `qualificationMissing`）を新設
-- 警告はevaluation結果とAPIレスポンス両方に添付。Level 2違反の原因が明確化
-- Pythonテスト: `TestPreValidationWarnings` 5テスト追加（65/65全通過）
+- PR #79のBackend `SolverWarning` に対するフロントエンドUI対応
+- `SolverWarningsSection` コンポーネント新設（constraintType別グループ化、日付チップ、5件超折りたたみ）
+- フロントエンド型定義追加（`SolverWarning`, `EvaluationResult.solverWarnings`, `GenerateShiftResponse.solverWarnings`）
+- Backend `GenerateShiftResponse` の型安全性修正（`solverWarnings` フィールド追加）
+- コードレビュー指摘対応: `formatDateWithDay` 重複解消、React keyの一意化
 
 ### 変更ファイル
 | ファイル | 変更内容 |
 |---------|---------|
-| `solver-functions/solver/types.py` | `SolverWarningDict` 型追加 |
-| `solver-functions/solver/unified_builder.py` | 警告収集ロジック追加 |
-| `solver-functions/solver/service.py` | レスポンスに `warnings` フィールド追加 |
-| `functions/src/types.ts` | `SolverWarning` interface追加、`EvaluationResult` 拡張 |
-| `functions/src/solver-client.ts` | `UnifiedSolverResult` 型追加、戻り値変更 |
-| `functions/src/shift-generation.ts` | 警告をevaluation/レスポンスに添付 |
-| `solver-functions/tests/test_unified_builder.py` | `TestPreValidationWarnings` 5テスト追加 |
+| `types.ts` (root) | `SolverWarning` interface追加、`EvaluationResult`/`GenerateShiftResponse` 拡張 |
+| `src/components/EvaluationPanel.tsx` | `SolverWarningsSection` コンポーネント追加、`formatDateWithDay` 共通化 |
+| `services/shiftGenerationService.ts` | `SolverWarning` import、ログ出力追加 |
+| `functions/src/types.ts` | `GenerateShiftResponse` に `solverWarnings` フィールド追加 |
 
 ### 成果
-- **品質**: Level 2違反の原因がAPIレスポンスで可視化
-- **テスト**: Solver 60/60 → 65/65
-- **マージ**: PR #79 スカッシュマージ完了（8427a4b）
+- **品質**: Level 2違反の根本原因がUIで可視化（配置可能スタッフ不足 / 資格要件未充足）
+- **型安全性**: FE/BE両方の `GenerateShiftResponse` で `solverWarnings` 型定義済み
+- **検証**: Frontend/Backend型チェック + ビルド全通過
 
 ---
 

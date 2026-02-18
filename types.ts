@@ -503,6 +503,22 @@ export interface SimulationResult {
   risks: string[];                  // リスク要因
 }
 
+// ============================================
+// Solver警告 型定義
+// ============================================
+
+/**
+ * Solver事前検証警告: 制約スキップの検知結果
+ */
+export interface SolverWarning {
+  date: string;
+  shiftType: string;
+  constraintType: 'staffShortage' | 'qualificationMissing';
+  requiredCount: number;
+  availableCount: number;
+  detail: string;
+}
+
 /**
  * 評価結果
  */
@@ -515,6 +531,7 @@ export interface EvaluationResult {
   generatedAt: Timestamp;
   aiComment?: string;             // AI総合コメント（200文字以内）
   positiveSummary?: string;       // Phase 53: ポジティブサマリー
+  solverWarnings?: SolverWarning[];  // Solver事前検証警告
   rootCauseAnalysis?: {           // Phase 55: 根本原因分析結果
     primaryCause: {
       category: string;
@@ -589,6 +606,7 @@ export interface GenerateShiftResponse {
     model: string;
     tokensUsed: number;
   };
+  solverWarnings?: SolverWarning[];  // Solver事前検証警告
   error?: string;
   parseError?: unknown;  // デバッグ用
 }
