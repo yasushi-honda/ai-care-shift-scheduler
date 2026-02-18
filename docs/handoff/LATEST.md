@@ -1,8 +1,8 @@
 # ハンドオフメモ - 最新状態
 
-**更新日**: 2026-02-16（LLM→Solver完全移行 本番デプロイ完了）
+**更新日**: 2026-02-18（PR #79 Solver Level 2 事前検証警告 マージ完了）
 **フェーズ**: LLM→Solver完全移行 **本番稼働中** ✅
-**最新作業**: PR #76マージ・Firebaseデプロイ完了（46ファイル, +450/-8,450行）
+**最新作業**: PR #79マージ（Solver Level 2 事前検証警告機能）
 
 ---
 
@@ -41,44 +41,28 @@
 
 ## 直近の変更（最新5件）
 
-1. **PR #76本番デプロイ完了** (2026-02-16): LLM→Solver完全移行 Firebaseデプロイ成功
-   - コミット: `61fed5c` - refactor: LLM→Solver完全移行 - Geminiコード削除・UI表記統一 (#76)
-   - CI/CD全通過（ビルド/Lighthouse/Solver/デモデータ検証/E2Eテスト）
-   - Firebaseデプロイ成功: solverUnifiedGenerate, solverGenerateShift稼働確認
-   - CodeRabbitレビュー完了（4/4チェック通過）
+1. **PR #79マージ** (2026-02-18): Solver Level 2 事前検証警告
+   - コミット: `8427a4b` - feat: Solver Level 2 事前検証警告 - 制約スキップを事前検知し警告返却
+   - CP-SAT Solverの `_add_staffing` / `_add_qualification` でサイレントスキップを解消
+   - 配置可能スタッフ不足時に `SolverWarning`（`staffShortage` / `qualificationMissing`）を事前検知して返却
+   - 警告をevaluation結果とAPIレスポンス両方に添付。Level 2違反の原因が明確に
+   - 変更ファイル: `types.py`, `unified_builder.py`, `service.py`, `types.ts`, `solver-client.ts`, `shift-generation.ts`
+   - Pythonテスト: 65/65全通過（`TestPreValidationWarnings` 5テスト新規追加）
+   - CI/CDはマージ後 in_progress（完了次第確認推奨）
+
+2. **PR #78マージ** (2026-02-16): 技術的負債解消
+   - 招待機能race condition修正（Firestoreトランザクション化）
+   - CI型チェック厳格化（`continue-on-error: true` 削除）
+   - vite.config.ts LLM残骸削除
+   - tech.md Solver実態更新
+
+3. **PR #76本番デプロイ完了** (2026-02-16): LLM→Solver完全移行 Firebaseデプロイ成功
    - 削減規模: 48ファイル変更、+450/-8,450行
 
-2. **LLM→Solver完全移行** (2026-02-16): コード削除・UI表記統一
-   - Backend: 14ファイル削除（phased-generation.ts, ai-model-config.ts等~6,000行）、@google/genai削除
-   - Frontend: geminiService→shiftGenerationService, AIGenerationProgress→GenerationProgress等リネーム
-   - 型定義: AIEvaluationResult→EvaluationResult, AIEvaluationError→EvaluationError
-   - ドキュメント: CLAUDE.md更新、steering旧ファイル4件削除（gemini-rules.md等）
-   - Firestore互換性: コレクション名・フィールド値は変更なし
+4. **PR #77** (2026-02-16): ReportPageバンドルサイズ最適化（90%削減）
 
-3. **PR #73** (2026-02-16): Solver relative_gap_limit緩和で4シフト対応高速化
-   - **問題**: 本番テストで15名×4シフト→30s、FEASIBLE（タイムアウト）
-   - **修正**: `relative_gap_limit: 0.01→0.05` に緩和（最適値の5%以内で早期終了）
-   - **結果**: 15名×4シフト **5.8s, OPTIMAL**達成、50名×4シフト **8.44s**
-   - 新規スケーラビリティテスト（TestScalability4Shifts）追加、60/60テスト全通過 ✅
-   - Firebaseデプロイ成功 ✅
-
-2. **PR #72** (2026-02-16): solver-functions predeploy修正（本番デプロイ成功）
-   - **問題**: CI環境（Ubuntu/dash）で `command -v python3.12 ... || echo '...()'` がシンタックスエラー
-   - **修正**: POSIX互換のシンプルコマンドに変更（CIですでにvenv作成済み）
-   - **結果**: solverUnifiedGenerate新規作成、solverGenerateShift更新成功
-   - CI/CD全チェック通過、mainマージ完了 ✅
-
-2. **PR #71** (2026-02-16): 統合CP-SAT Solver実装（Phase 3全体最適化）
-   - LLM Phase1 + Solver Phase2 + Algorithm Phase3 → 単一CP-SATモデルに統合
-   - LLMを生成パイプラインから完全除去
-   - 性能: 12名0.22s, 50名0.89s, 100名<30s（全目標達成）
-   - 58テスト全通過（+25テスト追加）
-
-3. **PR #70** (2026-02-15): tailwindcss v3→v4移行（CSS-first設定）
-
-4. **PR #69** (2026-02-15): firebase-functions v6→v7, uuid→crypto.randomUUID()に置換
-
-5. **PR #68** (2026-02-15): jspdf v3→v4, vite v6→v7メジャー更新
+5. **PR #73** (2026-02-16): Solver relative_gap_limit緩和で4シフト対応高速化
+   - 15名×4シフト: 30s FEASIBLE → 5.8s OPTIMAL
 
 ---
 
@@ -89,6 +73,7 @@
 | **統合Solver** | ✅ 本番デプロイ完了 | 単一CP-SATモデル、LLM完全廃止済み |
 | **CP-SAT Solver** | ✅ 本番稼働中 | 決定的スケジュール生成、100名対応 |
 | **評価システム** | ✅ 4段階評価 | Level 1-4対応、動的制約生成 |
+| **事前検証警告** | ✅ PR #79マージ済み | staffShortage/qualificationMissing警告 |
 
 ---
 
@@ -142,7 +127,7 @@
 ## E2Eテスト状況
 
 - **Playwright**: UI自動テスト実装済み
-- **Solver**: 60/60テスト通過（単体15 + スケーラビリティ5 + PoC34 + A/B比較6）
+- **Solver**: 65/65テスト通過（単体15 + スケーラビリティ5 + PoC34 + A/B比較6 + 事前検証5）
 
 ---
 
@@ -181,53 +166,36 @@
 再開前に以下を確認:
 
 - [x] `git status` がclean（未コミット変更なし）✅
-- [x] `git log` で最新コミット確認（PR #76 Firebaseデプロイ完了）✅
-- [x] CI/CD ジョブが全て pass（Lighthouse + CI/CD Pipeline + Firebaseデプロイ）✅
+- [x] `git log` で最新コミット確認（PR #79 Solver Level 2 事前検証警告 マージ済み）✅
+- [ ] CI/CD ジョブ確認（PR #79 main push → Lighthouse/CI/CD in_progress）⚠️
 - [x] LLM→Solver完全移行 本番稼働確認（solverUnifiedGenerate稼働中）✅
-- [x] テスト全通過確認（Frontend 161, Backend 230, Solver 60）✅
+- [x] テスト全通過確認（Frontend 161, Backend 230, Solver 65）✅
 
 ---
 
-## 本セッション作業内容（2026-02-16セッション2：技術的負債解消 PR #78）
+## 本セッション作業内容（2026-02-18セッション：Solver Level 2 事前検証警告 PR #79）
 
-### A. 技術的負債調査（Explore agent）
-- **スコープ**: セキュリティ、テスト、TODO、CI、パフォーマンス、ドキュメント
-- **優先度**: P0-P3で分類、推奨順：P0 → P1 → P2
-- **結果**: 推奨4項目を確認
+### 実装内容
+- CP-SAT Solverの `_add_staffing` / `_add_qualification` でのサイレントスキップ問題を解消
+- `SolverWarning` 型（`staffShortage` / `qualificationMissing`）を新設
+- 警告はevaluation結果とAPIレスポンス両方に添付。Level 2違反の原因が明確化
+- Pythonテスト: `TestPreValidationWarnings` 5テスト追加（65/65全通過）
 
-### B. P0-P1の実装計画 & 実装
-1. **A: invitationService.ts RACE CONDITION修正** (P0)
-   - 招待受け入れの検証→ステータス更新をFirestoreトランザクションでアトミック化
-   - `runTransaction`で同一招待の二重受け入れ防止
-   - rollback時の状態を`pending`に設定
-
-2. **B: CI型チェック厳格化** (P1)
-   - `continue-on-error: true`削除（型エラーでCIが止まるように修正）
-   - 本番への型エラー漏洩を防止
-
-3. **C: vite.config.ts残骸削除** (P1)
-   - Gemini環境変数の`define`ブロック削除
-   - CodeRabbitレビュー対応：`loadEnv`インポート・`env`変数削除
-
-4. **D: tech.md Solver実態更新** (P1)
-   - バックエンド欄からVertex AI削除
-   - CP-SAT Solverセクション新設
-   - エンドポイント一覧更新（solverUnifiedGenerate等）
-
-### C. CodeRabbit指摘対応
-- **subDocRef安全性**: `transaction.set(..., { merge: true })`に3箇所変更
-  - L395, L406, L435でトランザクション内のupdate→setに変更
-- **loadEnv未使用**: vite.config.tsから削除完了
-
-### D. 品質ゲート＆マージ
-- **品質ゲート**: tsc OK / ビルド 2.27s / テスト 161件全通過
-- **CI/CD全通過**: ビルド/Lighthouse/Solver/デモデータ検証/E2Eテスト/GitGuardian/CodeRabbit
-- **マージ**: PR #78 スカッシュマージ完了（f950eec）
+### 変更ファイル
+| ファイル | 変更内容 |
+|---------|---------|
+| `solver-functions/solver/types.py` | `SolverWarningDict` 型追加 |
+| `solver-functions/solver/unified_builder.py` | 警告収集ロジック追加 |
+| `solver-functions/solver/service.py` | レスポンスに `warnings` フィールド追加 |
+| `functions/src/types.ts` | `SolverWarning` interface追加、`EvaluationResult` 拡張 |
+| `functions/src/solver-client.ts` | `UnifiedSolverResult` 型追加、戻り値変更 |
+| `functions/src/shift-generation.ts` | 警告をevaluation/レスポンスに添付 |
+| `solver-functions/tests/test_unified_builder.py` | `TestPreValidationWarnings` 5テスト追加 |
 
 ### 成果
-- **技術的負債削減**: Race condition修正、CI品質向上、LLM残骸完全除去、ドキュメント整合
-- **コード品質**: Firestore安全性向上、トランザクション設計の堅牢化
-- **ドキュメント**: Solver実態を100%反映
+- **品質**: Level 2違反の原因がAPIレスポンスで可視化
+- **テスト**: Solver 60/60 → 65/65
+- **マージ**: PR #79 スカッシュマージ完了（8427a4b）
 
 ---
 
