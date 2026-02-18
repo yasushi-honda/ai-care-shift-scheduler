@@ -470,3 +470,89 @@ class TestFlaskEndpoint:
         resp = client.post("/solverUnifiedGenerate", data="not json",
                            content_type="text/plain")
         assert resp.status_code == 400
+
+
+class TestConsecutiveWorkSoft:
+    """連勤最小化ソフト制約のテスト"""
+
+    def _make_staff_with_max_consec(
+        self,
+        n: int,
+        max_consec: int,
+        weekly_must: int = 4,
+    ) -> list[StaffDict]:
+        return [
+            StaffDict(
+                id=f"s{i}",
+                name=f"スタッフ{i}",
+                role="介護職員",
+                qualifications=[],
+                weeklyWorkCount={"hope": weekly_must, "must": weekly_must},
+                maxConsecutiveWorkDays=max_consec,
+                availableWeekdays=[0, 1, 2, 3, 4, 5, 6],
+                timeSlotPreference="いつでも可",
+                isNightShiftOnly=False,
+                unavailableDates=[],
+            )
+            for i in range(1, n + 1)
+        ]
+
+    def test_avoids_max_consecutive_when_possible(self):
+        """余裕がある場合、maxConsecutiveWorkDays連勤を避ける
+
+        8名・日勤のみ1名必須・maxConsecutiveWorkDays=4 の緩い条件では、
+        各スタッフの平均勤務日数が28/8≈3.5日となり、
+        ソフト制約が効いて4連勤が発生しないことを確認する。
+        """
+        staff = self._make_staff_with_max_consec(8, max_consec=4, weekly_must=2)
+        reqs = _make_requirements(
+            target_month="2026-02",
+            days=28,
+            shift_types=["日勤"],
+            total_staff=1,
+        )
+        result = UnifiedSolverService.solve(staff, reqs, {})
+        assert result["success"] is True
+
+        for s in result["schedule"]:
+            consecutive = 0
+            for shift in s["monthlyShifts"]:
+                if shift["shiftType"] in ["休", "明け休み"]:
+                    consecutive = 0
+                else:
+                    consecutive += 1
+                assert consecutive < 4, (
+                    f"{s['staffName']}: {consecutive}連勤（ソフト制約により4連勤未満が期待値）"
+                )
+
+    def test_hard_constraint_still_respected(self):
+        """ソフト制約追加後もハード制約（maxConsecutiveWorkDays上限）は維持される"""
+        max_consec = 4
+        staff = self._make_staff_with_max_consec(5, max_consec=max_consec, weekly_must=4)
+        reqs = _make_requirements(days=28, total_staff=1)
+        result = UnifiedSolverService.solve(staff, reqs, {})
+        assert result["success"] is True
+
+        for s in result["schedule"]:
+            consecutive = 0
+            for shift in s["monthlyShifts"]:
+                if shift["shiftType"] in ["休", "明け休み"]:
+                    consecutive = 0
+                else:
+                    consecutive += 1
+                assert consecutive <= max_consec, (
+                    f"{s['staffName']}: {consecutive}連勤（上限{max_consec}日超過）"
+                )
+
+    def test_tight_constraint_still_feasible(self):
+        """人員ギリギリでもINFEASIBLEにならない
+
+        4名・3シフト各1名必須（1名/日が休める最低ライン）で、
+        ソフト制約追加後も求解に成功することを確認する。
+        """
+        staff = self._make_staff_with_max_consec(4, max_consec=6, weekly_must=5)
+        reqs = _make_requirements(days=28, total_staff=1)
+        result = UnifiedSolverService.solve(staff, reqs, {})
+
+        assert result["success"] is True
+        assert result["solverStats"]["status"] in ("OPTIMAL", "FEASIBLE")

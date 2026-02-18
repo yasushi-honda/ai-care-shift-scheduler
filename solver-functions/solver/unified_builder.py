@@ -10,7 +10,7 @@ LLMによる骨子生成を排除し、全フェーズを1回の求解で完結�
 制約:
   ハード: exactly-one, 人員充足, 資格要件, 連続勤務上限,
          勤務間インターバル, 夜勤チェーン, 固定休日
-  ソフト: timeSlotPreference, 均等配分, 夜勤均等, 休日間隔
+  ソフト: timeSlotPreference, 均等配分, 夜勤均等, 休日間隔, 連勤最小化
 """
 
 import datetime
@@ -530,6 +530,9 @@ class UnifiedObjectiveBuilder:
         UnifiedObjectiveBuilder._add_work_count_target(
             model, variables, staff_list, days_in_month, fixed_rest, terms
         )
+        UnifiedObjectiveBuilder._add_consecutive_work_soft(
+            model, variables, staff_list, days_in_month, fixed_rest, terms
+        )
         if terms:
             model.Maximize(sum(terms))
 
@@ -714,3 +717,53 @@ class UnifiedObjectiveBuilder:
             model.Add(diff >= total_work - target)
             model.Add(diff >= target - total_work)
             terms.append(weight * (days_in_month - diff))
+
+    @staticmethod
+    def _add_consecutive_work_soft(
+        model: cp_model.CpModel,
+        variables: dict,
+        staff_list: list[StaffDict],
+        days_in_month: int,
+        fixed_rest: dict[str, set[int]],
+        terms: list,
+    ) -> None:
+        """連勤最小化ソフト制約（重み: 4）
+
+        soft_limit = maxConsecutiveWorkDays - 1 として、
+        (soft_limit+1) 日ウィンドウ内の勤務日数が soft_limit を超えた場合にペナルティ。
+        余裕がある場合は Solver が連勤を分散させ、上限ギリギリの連勤を回避する。
+
+        BoolVar exceeded = 1 iff ウィンドウ内勤務数 > soft_limit
+        目的: terms に weight * (1 - exceeded) を追加（超過しないほどボーナス）
+        """
+        weight = 4
+        for staff in staff_list:
+            staff_id = staff["id"]
+            max_consec = staff["maxConsecutiveWorkDays"]
+            soft_limit = max_consec - 1
+            window_size = soft_limit + 1  # = max_consec
+            fixed = fixed_rest[staff_id]
+
+            for start in range(1, days_in_month - window_size + 2):
+                work_in_window = []
+                for d in range(start, min(start + window_size, days_in_month + 1)):
+                    if d in fixed:
+                        continue
+                    for st in SHIFT_TYPES + NIGHT_SHIFT_TYPES:
+                        key = (staff_id, d, st)
+                        if key in variables:
+                            work_in_window.append(variables[key])
+
+                if len(work_in_window) <= soft_limit:
+                    continue  # この窓では超過不可 → BoolVar不要
+
+                exceeded = model.NewBoolVar(
+                    f"consec_soft_exceeded_{staff_id}_{start}"
+                )
+                model.Add(
+                    sum(work_in_window) >= soft_limit + 1
+                ).OnlyEnforceIf(exceeded)
+                model.Add(
+                    sum(work_in_window) <= soft_limit
+                ).OnlyEnforceIf(exceeded.Not())
+                terms.append(weight * (1 - exceeded))
