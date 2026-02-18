@@ -101,6 +101,7 @@ class UnifiedSolverService:
         try:
             builder = UnifiedModelBuilder(staff_list, requirements, leave_requests)
             model = builder.build()
+            pre_warnings = builder.warnings
 
             solver = cp_model.CpSolver()
             solver.parameters.max_time_in_seconds = 30.0
@@ -126,6 +127,7 @@ class UnifiedSolverService:
                         "numConstraints": model.Proto().constraints.__len__(),
                         "objectiveValue": int(solver.ObjectiveValue()),
                     },
+                    "warnings": pre_warnings,
                 }
             else:
                 return {
@@ -136,6 +138,7 @@ class UnifiedSolverService:
                         "status": status_name,
                         "solveTimeMs": solve_time_ms,
                     },
+                    "warnings": pre_warnings,
                 }
 
         except Exception as e:
@@ -144,4 +147,5 @@ class UnifiedSolverService:
                 "error": str(e),
                 "errorType": "INTERNAL_ERROR",
                 "details": {},
+                "warnings": [],
             }

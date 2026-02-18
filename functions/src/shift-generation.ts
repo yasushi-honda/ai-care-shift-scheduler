@@ -105,7 +105,7 @@ export const generateShift = onRequest(
       // 統合Solver（CP-SAT）で全スタッフ数のシフトを一括生成
       console.log(`📊 統合Solver生成（${staffList.length}名）`);
 
-      const schedules = await generateShiftsWithUnifiedSolver(
+      const { schedule: schedules, warnings: solverWarnings } = await generateShiftsWithUnifiedSolver(
         staffList,
         requirements as ShiftRequirement,
         leaveRequests || {},
@@ -135,11 +135,17 @@ export const generateShift = onRequest(
         evaluation = createDefaultEvaluation();
       }
 
+      // Solver事前検証警告を評価結果に添付
+      if (solverWarnings.length > 0) {
+        evaluation.solverWarnings = solverWarnings;
+      }
+
       // 成功レスポンス（scheduleデータ + 評価データ）
       res.status(200).json({
         success: true,
         schedule: scheduleData.schedule,
         evaluation: evaluation,
+        solverWarnings,
         metadata: {
           generatedAt: new Date().toISOString(),
           model: 'cp-sat-unified',
