@@ -244,6 +244,7 @@ export interface GenerateShiftResponse {
     model: string;
     tokensUsed: number;
   };
+  solverWarnings?: SolverWarning[];  // Solver事前検証警告
   error?: string;
   parseError?: unknown;  // デバッグ用
 }

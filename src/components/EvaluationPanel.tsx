@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import type { EvaluationResult, ConstraintViolation, ConstraintLevel, Recommendation, SimulationResult } from '../../types';
+import type { EvaluationResult, ConstraintViolation, ConstraintLevel, Recommendation, SimulationResult, SolverWarning } from '../../types';
 
 // 自動展開のしきい値定数
 const AUTO_EXPAND_SCORE_THRESHOLD = 60;
@@ -52,6 +52,20 @@ const LEVEL_UI_CONFIG: Record<
 };
 
 // Phase 53: 制約タイプからデフォルトレベルへのマッピング
+// 日付をM/D（曜）形式で表示（共通ユーティリティ）
+const formatDateWithDay = (dateStr: string): { short: string; day: string; isWeekend: boolean } => {
+  const match = dateStr.match(/(\d{4})-(\d{2})-(\d{2})/);
+  if (!match) return { short: dateStr, day: '', isWeekend: false };
+  const date = new Date(parseInt(match[1]), parseInt(match[2]) - 1, parseInt(match[3]));
+  const dayIndex = date.getDay();
+  const days = ['日', '月', '火', '水', '木', '金', '土'];
+  return {
+    short: `${parseInt(match[2])}/${parseInt(match[3])}`,
+    day: days[dayIndex],
+    isWeekend: dayIndex === 0 || dayIndex === 6,
+  };
+};
+
 const CONSTRAINT_LEVEL_MAPPING: Record<string, ConstraintLevel> = {
   nightRestViolation: 1,
   staffShortage: 2,
@@ -184,7 +198,7 @@ export function EvaluationPanel({
     return null;
   }
 
-  const { overallScore, fulfillmentRate, constraintViolations, recommendations, simulation, aiComment, rootCauseAnalysis } = evaluation;
+  const { overallScore, fulfillmentRate, constraintViolations, recommendations, simulation, aiComment, rootCauseAnalysis, solverWarnings } = evaluation;
 
   // スコアが-1の場合は評価失敗
   const isEvaluationFailed = overallScore < 0;
@@ -282,6 +296,11 @@ export function EvaluationPanel({
                 errorCount={errorCount}
                 warningCount={warningCount}
               />
+
+              {/* Solver事前検証警告 */}
+              {solverWarnings && solverWarnings.length > 0 && (
+                <SolverWarningsSection warnings={solverWarnings} />
+              )}
 
               {/* 制約違反リスト */}
               {constraintViolations && constraintViolations.length > 0 && (
@@ -414,6 +433,173 @@ function ScoreBar({ score }: { score: number }) {
 }
 
 /**
+ * Solver事前検証警告セクション
+ * 制約スキップの根本原因（人員不足・資格要件未充足）を表示
+ */
+function SolverWarningsSection({ warnings }: { warnings: SolverWarning[] }) {
+  const [expanded, setExpanded] = useState(false);
+  const MAX_GROUPS = 5;
+
+  // constraintType の UI設定
+  const constraintConfig: Record<string, { icon: string; label: string; bgColor: string; textColor: string; borderColor: string }> = {
+    staffShortage: { icon: '👥', label: '配置可能スタッフ不足', bgColor: 'bg-amber-50', textColor: 'text-amber-800', borderColor: 'border-amber-200' },
+    qualificationMissing: { icon: '📋', label: '資格要件未充足', bgColor: 'bg-purple-50', textColor: 'text-purple-800', borderColor: 'border-purple-200' },
+  };
+
+  // シフト種別のアイコン
+  const shiftIcons: Record<string, string> = {
+    '日勤': '☀️',
+    '早番': '🌅',
+    '遅番': '🌆',
+    '夜勤': '🌙',
+  };
+
+  // constraintType → shiftType でグループ化し、日付と数値を集約
+  type WarningGroup = {
+    constraintType: string;
+    shiftType: string;
+    dates: string[];
+    requiredCount: number;
+    availableCount: number;
+    detail: string;
+  };
+
+  const groups: WarningGroup[] = [];
+  const groupKey = (w: SolverWarning) => `${w.constraintType}::${w.shiftType}::${w.requiredCount}::${w.availableCount}`;
+  const groupMap = new Map<string, WarningGroup>();
+
+  for (const w of warnings) {
+    const key = groupKey(w);
+    const existing = groupMap.get(key);
+    if (existing) {
+      if (!existing.dates.includes(w.date)) {
+        existing.dates.push(w.date);
+      }
+    } else {
+      const group: WarningGroup = {
+        constraintType: w.constraintType,
+        shiftType: w.shiftType,
+        dates: [w.date],
+        requiredCount: w.requiredCount,
+        availableCount: w.availableCount,
+        detail: w.detail,
+      };
+      groupMap.set(key, group);
+      groups.push(group);
+    }
+  }
+
+  // constraintType でソート（staffShortage先）
+  groups.sort((a, b) => {
+    if (a.constraintType !== b.constraintType) {
+      return a.constraintType === 'staffShortage' ? -1 : 1;
+    }
+    return a.shiftType.localeCompare(b.shiftType);
+  });
+
+  // 各グループ内の日付をソート
+  for (const g of groups) {
+    g.dates.sort();
+  }
+
+  const visibleGroups = expanded ? groups : groups.slice(0, MAX_GROUPS);
+  const hiddenCount = groups.length - MAX_GROUPS;
+
+  // constraintType でセクション分け
+  const byConstraintType = new Map<string, WarningGroup[]>();
+  for (const g of visibleGroups) {
+    const list = byConstraintType.get(g.constraintType) || [];
+    list.push(g);
+    byConstraintType.set(g.constraintType, list);
+  }
+
+  return (
+    <div className="mt-4" data-testid="solver-warnings-section">
+      <h4 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
+        <span className="text-base">🔧</span>
+        Solver事前検証 ({warnings.length}件)
+      </h4>
+
+      <div className="space-y-3">
+        {Array.from(byConstraintType.entries()).map(([type, typeGroups]) => {
+          const config = constraintConfig[type] || constraintConfig.staffShortage;
+
+          return (
+            <div key={type} className={`rounded-lg overflow-hidden border ${config.borderColor}`}>
+              {/* constraintType ヘッダー */}
+              <div className={`flex items-center gap-2 px-4 py-2.5 ${config.bgColor}`}>
+                <span className="text-base">{config.icon}</span>
+                <span className={`font-semibold text-sm ${config.textColor}`}>{config.label}</span>
+              </div>
+
+              {/* シフト種別グループ */}
+              <div className="bg-white divide-y divide-gray-50">
+                {typeGroups.map((group) => (
+                  <div key={`${group.constraintType}-${group.shiftType}-${group.requiredCount}`} className="px-4 py-3">
+                    {/* シフト種別ラベル */}
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="text-sm">
+                        {shiftIcons[group.shiftType] || '📋'}
+                      </span>
+                      <span className="text-sm font-medium text-gray-700">{group.shiftType}</span>
+                    </div>
+
+                    {/* 日付チップ */}
+                    <div className="flex flex-wrap gap-1.5 ml-1 mb-2">
+                      {group.dates.map((d, i) => {
+                        const dateInfo = formatDateWithDay(d);
+                        return (
+                          <span
+                            key={i}
+                            className={`inline-flex items-center text-xs px-2 py-1 rounded-md border ${
+                              dateInfo.isWeekend
+                                ? 'bg-red-50 border-red-200 text-red-700'
+                                : `${config.bgColor} ${config.borderColor} ${config.textColor}`
+                            }`}
+                          >
+                            <span className="font-medium">{dateInfo.short}</span>
+                            <span className={`ml-1 text-[10px] ${dateInfo.isWeekend ? 'text-red-500' : 'opacity-70'}`}>
+                              {dateInfo.day}
+                            </span>
+                          </span>
+                        );
+                      })}
+                    </div>
+
+                    {/* 数値表示 */}
+                    <div className={`ml-1 text-xs ${config.textColor}`}>
+                      必要{group.requiredCount}名 → 配置可能{group.availableCount}名
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* 折りたたみボタン */}
+      {!expanded && hiddenCount > 0 && (
+        <button
+          onClick={() => setExpanded(true)}
+          className="mt-2 text-sm text-blue-600 hover:text-blue-800 font-medium"
+        >
+          +{hiddenCount}件を表示
+        </button>
+      )}
+      {expanded && hiddenCount > 0 && (
+        <button
+          onClick={() => setExpanded(false)}
+          className="mt-2 text-sm text-blue-600 hover:text-blue-800 font-medium"
+        >
+          折りたたむ
+        </button>
+      )}
+    </div>
+  );
+}
+
+/**
  * 制約違反セクション
  * 3階層グループ化: レベル → タイプ → シフト種別
  * 視認性重視のUI/UX設計
@@ -451,20 +637,6 @@ function ViolationsSection({ violations }: { violations: ConstraintViolation[] }
     if (v.affectedDates?.length) return v.affectedDates[0];
     const match = v.description?.match(/(\d{4}-\d{2}-\d{2})/);
     return match ? match[1] : null;
-  };
-
-  // 日付をM/D（曜）形式で表示
-  const formatDateWithDay = (dateStr: string): { short: string; day: string; isWeekend: boolean } => {
-    const match = dateStr.match(/(\d{4})-(\d{2})-(\d{2})/);
-    if (!match) return { short: dateStr, day: '', isWeekend: false };
-    const date = new Date(parseInt(match[1]), parseInt(match[2]) - 1, parseInt(match[3]));
-    const dayIndex = date.getDay();
-    const days = ['日', '月', '火', '水', '木', '金', '土'];
-    return {
-      short: `${parseInt(match[2])}/${parseInt(match[3])}`,
-      day: days[dayIndex],
-      isWeekend: dayIndex === 0 || dayIndex === 6,
-    };
   };
 
   // 3階層グループ化: レベル → タイプ → シフト種別

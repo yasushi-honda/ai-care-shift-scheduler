@@ -5,6 +5,7 @@ import type {
   LeaveRequest,
   GenerateShiftResponse,
   EvaluationResult,
+  SolverWarning,
 } from '../types';
 
 /**
@@ -125,6 +126,13 @@ export const generateShiftSchedule = async (
         fulfillmentRate: result.evaluation.fulfillmentRate,
         violationCount: result.evaluation.constraintViolations?.length || 0,
         recommendationCount: result.evaluation.recommendations?.length || 0,
+      });
+    }
+
+    if (result.solverWarnings?.length) {
+      console.log('⚠️ Solver事前検証警告:', {
+        count: result.solverWarnings.length,
+        types: [...new Set(result.solverWarnings.map((w: SolverWarning) => w.constraintType))],
       });
     }
 
