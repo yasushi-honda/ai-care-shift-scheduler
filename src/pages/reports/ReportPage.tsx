@@ -8,6 +8,7 @@ import {
   getPersonalReport,
   getComplianceData,
 } from '../../services/reportService';
+import { subscribeStaffingStandard } from '../../services/staffingStandardService';
 // pdfService は PDF生成時のみ動的importする（jsPDF + html2canvas の遅延読み込み）
 import {
   MonthlyReportData,
@@ -17,6 +18,7 @@ import {
   StaffSchedule,
   Staff,
   FacilityShiftSettings,
+  StaffingStandardConfig,
 } from '../../../types';
 import MonthNavigator from '../../../components/MonthNavigator';
 import { SkeletonLoader } from '../../components/SkeletonLoader';
@@ -77,6 +79,9 @@ export function ReportPage(): React.ReactElement {
   const [complianceStaffList, setComplianceStaffList] = useState<Staff[] | null>(null);
   const [complianceShiftSettings, setComplianceShiftSettings] = useState<FacilityShiftSettings | null>(null);
 
+  // Phase 65: 人員配置基準設定
+  const [staffingStandardConfig, setStaffingStandardConfig] = useState<StaffingStandardConfig | null>(null);
+
   // Phase 61: 電子申請フロー案内モーダル
   const [submissionGuideOpen, setSubmissionGuideOpen] = useState(false);
 
@@ -97,6 +102,17 @@ export function ReportPage(): React.ReactElement {
     const facilityAccess = userProfile.facilities?.find(f => f.facilityId === selectedFacilityId);
     return facilityAccess?.facilityId || '施設';
   }, [userProfile, selectedFacilityId]);
+
+  // Phase 65: 人員配置基準設定を購読
+  useEffect(() => {
+    if (!selectedFacilityId) return;
+    const unsubscribe = subscribeStaffingStandard(
+      selectedFacilityId,
+      (config) => setStaffingStandardConfig(config),
+      () => setStaffingStandardConfig(null)
+    );
+    return () => unsubscribe();
+  }, [selectedFacilityId]);
 
   // 月次レポートデータを取得
   const fetchMonthlyReport = useCallback(async () => {
@@ -435,6 +451,7 @@ export function ReportPage(): React.ReactElement {
                   facilityId={selectedFacilityId ?? undefined}
                   userId={currentUser?.uid}
                   onOpenSubmissionGuide={() => setSubmissionGuideOpen(true)}
+                  staffingConfig={staffingStandardConfig ?? undefined}
                 />
               )}
 

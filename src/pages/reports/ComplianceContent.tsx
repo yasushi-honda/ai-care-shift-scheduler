@@ -18,12 +18,18 @@ import type {
   ComplianceViolationItem,
   FullTimeEquivalentEntry,
   DocType,
+  StaffingStandardConfig,
 } from '../../../types';
-import { runComplianceCheck } from '../../services/complianceService';
+import {
+  runComplianceCheck,
+  calculateDailyFulfillment,
+  calculateMonthlyFulfillmentSummary,
+} from '../../services/complianceService';
 import { saveDocumentMeta } from '../../services/documentArchiveService';
 import { DEFAULT_STANDARD_WEEKLY_HOURS } from '../../../constants';
 import { useToast } from '../../contexts/ToastContext';
 import { StandardFormViewer } from '../../components/StandardFormViewer';
+import { MonthlyFulfillmentChart } from '../../components/MonthlyFulfillmentChart';
 
 interface ComplianceContentProps {
   staffSchedules: StaffSchedule[];
@@ -35,6 +41,8 @@ interface ComplianceContentProps {
   facilityId?: string;
   userId?: string;
   onOpenSubmissionGuide?: () => void;
+  /** Phase 65: 人員配置基準設定（充足率表示用） */
+  staffingConfig?: StaffingStandardConfig;
 }
 
 // 重大度バッジのスタイルマップ
@@ -79,12 +87,29 @@ export function ComplianceContent({
   facilityId,
   userId,
   onOpenSubmissionGuide,
+  staffingConfig,
 }: ComplianceContentProps): React.ReactElement {
   const { showSuccess, showError, showWarning, showWithAction } = useToast();
   const [useActual, setUseActual] = useState(false);
   const [standardWeeklyHours, setStandardWeeklyHours] = useState(DEFAULT_STANDARD_WEEKLY_HOURS);
   const [isExporting, setIsExporting] = useState<DocType | null>(null);
   const [showPreview, setShowPreview] = useState(false);
+  const [showFulfillmentDetail, setShowFulfillmentDetail] = useState(false);
+
+  // Phase 65: 月次充足率サマリー（メモ化）
+  const fulfillmentSummary = useMemo(() => {
+    if (!staffingConfig || staffSchedules.length === 0) return null;
+    const daily = calculateDailyFulfillment(
+      staffSchedules,
+      staffList,
+      shiftSettings,
+      staffingConfig,
+      targetMonth,
+      standardWeeklyHours,
+      useActual
+    );
+    return calculateMonthlyFulfillmentSummary(daily, targetMonth);
+  }, [staffSchedules, staffList, shiftSettings, staffingConfig, targetMonth, standardWeeklyHours, useActual]);
 
   // コンプライアンスチェック実行（メモ化）
   const result = useMemo(
@@ -253,7 +278,7 @@ export function ComplianceContent({
       </div>
 
       {/* サマリーカード */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
         <SummaryCard
           label="対象スタッフ数"
           value={result.fteEntries.length}
@@ -273,6 +298,20 @@ export function ComplianceContent({
           label="注意件数"
           value={warningCount}
           colorClass={warningCount > 0 ? 'bg-yellow-50 text-yellow-900' : 'bg-green-50 text-green-900'}
+        />
+        {/* Phase 65: 充足率カード */}
+        <SummaryCard
+          label="平均充足率"
+          value={fulfillmentSummary ? `${fulfillmentSummary.averageFulfillmentRate}%` : '―'}
+          colorClass={
+            !fulfillmentSummary
+              ? 'bg-slate-50 text-slate-500'
+              : fulfillmentSummary.averageFulfillmentRate >= 100
+              ? 'bg-green-50 text-green-900'
+              : fulfillmentSummary.averageFulfillmentRate >= 80
+              ? 'bg-yellow-50 text-yellow-900'
+              : 'bg-red-50 text-red-900'
+          }
         />
       </div>
 
@@ -302,6 +341,65 @@ export function ComplianceContent({
               </tbody>
             </table>
           </div>
+        </section>
+      )}
+
+      {/* Phase 65: 人員配置基準充足状況 */}
+      {fulfillmentSummary && (
+        <section className="bg-white rounded-lg shadow-sm overflow-hidden">
+          <button
+            type="button"
+            onClick={() => setShowFulfillmentDetail((v) => !v)}
+            className="w-full flex items-center justify-between px-4 py-3 text-base font-semibold text-gray-900 border-b hover:bg-gray-50 transition-colors"
+          >
+            <span>人員配置基準 充足状況</span>
+            <span className="text-sm font-normal text-slate-500">
+              平均 {fulfillmentSummary.averageFulfillmentRate}% / 未達 {fulfillmentSummary.shortfallDays}日
+              {showFulfillmentDetail ? ' ▲' : ' ▼'}
+            </span>
+          </button>
+
+          {showFulfillmentDetail && (
+            <div className="p-4 space-y-4">
+              {/* 職種別 基準vs実績 */}
+              {fulfillmentSummary.byRole.length > 0 && (
+                <div>
+                  <h3 className="text-sm font-medium text-gray-700 mb-2">職種別 月平均充足状況</h3>
+                  <div className="space-y-2">
+                    {fulfillmentSummary.byRole.map((r) => (
+                      <div key={r.role} className="flex items-center gap-3 text-sm">
+                        <span className="w-28 text-gray-700 flex-shrink-0">{r.role}</span>
+                        <div className="flex-1 bg-gray-100 rounded-full h-2 overflow-hidden">
+                          <div
+                            className={`h-2 rounded-full ${
+                              r.averageFulfillmentRate >= 100
+                                ? 'bg-green-500'
+                                : r.averageFulfillmentRate >= 80
+                                ? 'bg-yellow-400'
+                                : 'bg-red-500'
+                            }`}
+                            style={{ width: `${Math.min(r.averageFulfillmentRate, 100)}%` }}
+                          />
+                        </div>
+                        <span className="w-24 text-right text-gray-900 flex-shrink-0">
+                          {r.averageFulfillmentRate}%
+                          {r.shortfallDays > 0 && (
+                            <span className="text-red-500 ml-1">（未達 {r.shortfallDays}日）</span>
+                          )}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* 月次充足率グラフ */}
+              <div>
+                <h3 className="text-sm font-medium text-gray-700 mb-2">日別充足率推移</h3>
+                <MonthlyFulfillmentChart summary={fulfillmentSummary} />
+              </div>
+            </div>
+          )}
         </section>
       )}
 

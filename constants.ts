@@ -1,5 +1,5 @@
 
-import { Role, Qualification, TimeSlotPreference, ShiftTime, LeaveType, ShiftColor, ShiftTypeConfig, EmploymentType, CareServiceType } from './types';
+import { Role, Qualification, TimeSlotPreference, ShiftTime, LeaveType, ShiftColor, ShiftTypeConfig, EmploymentType, CareServiceType, StaffingRequirementEntry } from './types';
 
 export const ROLES: Role[] = [
   Role.Admin,
@@ -163,4 +163,159 @@ export const DEFAULT_LEAVE_SETTINGS = {
   paidLeave: {
     carryOverYears: 2,     // 2年繰越
   },
+};
+
+// ==================== 人員配置基準（Phase 65）====================
+
+/**
+ * サービス種別ごとのデフォルト配置基準マスタ
+ * 根拠: 指定居宅サービス等の事業の人員・設備及び運営に関する基準
+ */
+export const DEFAULT_STAFFING_STANDARDS: Record<CareServiceType, StaffingRequirementEntry[]> = {
+  '訪問介護': [
+    {
+      role: Role.CareWorker,
+      requiredFte: 2.5,
+      calculationMethod: 'fixed',
+      notes: '常勤換算2.5人以上（介護職員）',
+    },
+    {
+      role: Role.Operator,
+      requiredFte: 0,
+      calculationMethod: 'ratio',
+      ratioNumerator: 40,
+      notes: 'サービス提供責任者: 利用者40人に1名以上',
+    },
+  ],
+  '訪問入浴介護': [
+    {
+      role: Role.CareWorker,
+      requiredFte: 1,
+      calculationMethod: 'fixed',
+      notes: '介護職員 常勤換算1人以上',
+    },
+  ],
+  '訪問看護': [
+    {
+      role: Role.Nurse,
+      requiredFte: 2.5,
+      calculationMethod: 'fixed',
+      notes: '看護職員 常勤換算2.5人以上',
+    },
+  ],
+  '通所介護': [
+    {
+      role: Role.CareWorker,
+      requiredFte: 0,
+      calculationMethod: 'ratio',
+      ratioNumerator: 5,
+      notes: '介護職員: 利用者÷5 + 1名以上',
+    },
+    {
+      role: Role.Nurse,
+      requiredFte: 1,
+      calculationMethod: 'fixed',
+      notes: '看護職員 1名以上',
+    },
+    {
+      role: Role.Operator,
+      requiredFte: 1,
+      calculationMethod: 'fixed',
+      notes: '生活相談員 1名以上（資格要件あり）',
+    },
+    {
+      role: Role.FunctionalTrainer,
+      requiredFte: 1,
+      calculationMethod: 'fixed',
+      notes: '機能訓練指導員 1名以上',
+    },
+  ],
+  '通所リハビリテーション': [
+    {
+      role: Role.CareWorker,
+      requiredFte: 0,
+      calculationMethod: 'ratio',
+      ratioNumerator: 5,
+      notes: '介護職員: 利用者÷5以上',
+    },
+    {
+      role: Role.FunctionalTrainer,
+      requiredFte: 1,
+      calculationMethod: 'fixed',
+      notes: '理学療法士等 1名以上',
+    },
+  ],
+  '短期入所生活介護': [
+    {
+      role: Role.CareWorker,
+      requiredFte: 0,
+      calculationMethod: 'ratio',
+      ratioNumerator: 3,
+      notes: '介護・看護合計: 利用者3:1以上',
+    },
+    {
+      role: Role.Nurse,
+      requiredFte: 1,
+      calculationMethod: 'fixed',
+      notes: '看護職員 1名以上',
+    },
+  ],
+  '特定施設入居者生活介護': [
+    {
+      role: Role.CareWorker,
+      requiredFte: 0,
+      calculationMethod: 'ratio',
+      ratioNumerator: 3,
+      notes: '介護・看護合計: 入居者3:1以上',
+    },
+  ],
+  '介護老人福祉施設': [
+    {
+      role: Role.CareWorker,
+      requiredFte: 0,
+      calculationMethod: 'ratio',
+      ratioNumerator: 3,
+      notes: '介護・看護合計: 入所者3:1以上（常勤換算）',
+    },
+    {
+      role: Role.Nurse,
+      requiredFte: 0,
+      calculationMethod: 'ratio',
+      ratioNumerator: 30,
+      notes: 'うち看護職員: 入所者30:1以上（最低1名）',
+    },
+  ],
+  '介護老人保健施設': [
+    {
+      role: Role.Nurse,
+      requiredFte: 0,
+      calculationMethod: 'ratio',
+      ratioNumerator: 6,
+      notes: '看護職員: 入所者6:1以上',
+    },
+    {
+      role: Role.CareWorker,
+      requiredFte: 0,
+      calculationMethod: 'ratio',
+      ratioNumerator: 5,
+      notes: '介護職員: 入所者5:1以上',
+    },
+  ],
+  '認知症対応型共同生活介護': [
+    {
+      role: Role.CareWorker,
+      requiredFte: 0,
+      calculationMethod: 'ratio',
+      ratioNumerator: 3,
+      notes: '介護・看護: 入居者3:1以上',
+    },
+  ],
+  'その他': [
+    {
+      role: Role.CareWorker,
+      requiredFte: 1,
+      calculationMethod: 'fixed',
+      notes: '（各サービス基準を参照して設定してください）',
+    },
+  ],
 };
