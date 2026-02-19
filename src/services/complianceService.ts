@@ -16,6 +16,7 @@ import type {
   Staff,
   FacilityShiftSettings,
   FullTimeEquivalentEntry,
+  RoleGroupedFTEData,
   ComplianceViolationItem,
   ComplianceCheckResult,
 } from '../../types';
@@ -124,9 +125,20 @@ export function calculateFullTimeEquivalent(
   return staffSchedules.map((ss) => {
     const staff = staffList.find((s) => s.id === ss.staffId);
     const employmentType = staff?.employmentType ?? 'A';
+    const isFullTime = employmentType === 'A' || employmentType === 'B';
 
     const monthlyHours = ss.monthlyShifts.reduce((sum, shift) => {
-      return sum + getShiftWorkHours(shift, shiftSettings, useActual);
+      let hours = getShiftWorkHours(shift, shiftSettings, useActual);
+      // 常勤(A/B)の有給休暇は所定労働時間（1日分 = 週所定時間 ÷ 5）を計上
+      if (hours === 0 && isFullTime) {
+        const shiftName = useActual && shift.actualShiftType
+          ? shift.actualShiftType
+          : shift.plannedShiftType;
+        if (shiftName === '有給休暇') {
+          hours = standardWeeklyHours / 5;
+        }
+      }
+      return sum + hours;
     }, 0);
 
     const weeklyAverageHours = monthlyHours / WEEKS_PER_MONTH;
@@ -142,6 +154,47 @@ export function calculateFullTimeEquivalent(
       fteValue,
     };
   });
+}
+
+/**
+ * FTEエントリを職種別にグループ化し、小計を算出する（Phase 62）
+ *
+ * @param entries - calculateFullTimeEquivalentの結果
+ * @returns 職種別グループデータ（各グループに小計を含む）
+ */
+export function groupFTEByRole(entries: FullTimeEquivalentEntry[]): RoleGroupedFTEData[] {
+  const roleMap = new Map<string, FullTimeEquivalentEntry[]>();
+
+  for (const entry of entries) {
+    const role = entry.role || '(未分類)';
+    if (!roleMap.has(role)) {
+      roleMap.set(role, []);
+    }
+    roleMap.get(role)!.push(entry);
+  }
+
+  return Array.from(roleMap.entries())
+    .sort(([a], [b]) => a.localeCompare(b, 'ja'))
+    .map(([role, roleEntries]) => {
+      const subtotalHours = Math.round(
+        roleEntries.reduce((sum, e) => sum + e.monthlyHours, 0) * 10
+      ) / 10;
+      const subtotalWeeklyAvgHours = Math.round(
+        roleEntries.reduce((sum, e) => sum + e.weeklyAverageHours, 0) * 10
+      ) / 10;
+      const subtotalFte = Math.round(
+        roleEntries.reduce((sum, e) => sum + e.fteValue, 0) * 100
+      ) / 100;
+
+      return {
+        role,
+        entries: roleEntries,
+        subtotalHours,
+        subtotalWeeklyAvgHours,
+        subtotalFte,
+        staffCount: roleEntries.length,
+      };
+    });
 }
 
 /**

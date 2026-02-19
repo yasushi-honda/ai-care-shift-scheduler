@@ -13,9 +13,8 @@
  */
 
 import ExcelJS from 'exceljs';
-import type { StaffSchedule, Staff, FacilityShiftSettings } from '../../types';
-import { EMPLOYMENT_TYPES } from '../../constants';
-import { calculateFullTimeEquivalent } from '../services/complianceService';
+import type { StaffSchedule, Staff, FacilityShiftSettings, StandardFormOptions } from '../../types';
+import { calculateFullTimeEquivalent, groupFTEByRole } from '../services/complianceService';
 
 // ==================== 定数 ====================
 
@@ -102,6 +101,9 @@ const STYLES = {
  * @param facilityName - 施設名
  * @param targetMonth - 対象月（YYYY-MM）
  * @param standardWeeklyHours - 常勤週所定労働時間（デフォルト40h）
+ * @param facilityNumber - 事業所番号（省略可）
+ * @param serviceType - サービス種類（省略可）
+ * @param creatorName - 作成者氏名（省略可）
  * @returns ExcelJS Workbook
  */
 export async function createStandardFormWorkbook(
@@ -110,7 +112,10 @@ export async function createStandardFormWorkbook(
   shiftSettings: FacilityShiftSettings,
   facilityName: string,
   targetMonth: string,
-  standardWeeklyHours: number = 40
+  standardWeeklyHours: number = 40,
+  facilityNumber?: string,
+  serviceType?: string,
+  creatorName?: string
 ): Promise<ExcelJS.Workbook> {
   const workbook = new ExcelJS.Workbook();
   workbook.creator = 'AI介護シフトスケジューラー';
@@ -134,18 +139,24 @@ export async function createStandardFormWorkbook(
     staffSchedules, staffList, shiftSettings, standardWeeklyHours, false
   );
 
+  // 職種別グループ化
+  const roleGroups = groupFTEByRole(fteEntries);
+
   // ==================== 列定義 ====================
-  // 固定列: 番号(1), 氏名(2), 職種(3), 資格(4), 常勤区分(5)
-  // 日付列: 6 + day - 1
-  // 集計列: 月間勤務時間, 常勤換算値
+  // 固定列: No.(1), 氏名(2), 職種(3), 資格(4), 常勤/非常勤(5), 専従/兼務(6), 雇用開始日(7)
+  // 日付列: 8 + day - 1
+  // 集計列: 月間勤務時間, 週平均h, 常勤換算値
   const COL_NO = 1;
   const COL_NAME = 2;
   const COL_ROLE = 3;
   const COL_QUAL = 4;
-  const COL_EMP = 5;
-  const COL_DAYS_START = 6;
+  const COL_FULLTIME = 5;
+  const COL_DUTY = 6;
+  const COL_HIRE_DATE = 7;
+  const COL_DAYS_START = 8;
   const COL_TOTAL_HOURS = COL_DAYS_START + daysInMonth;
-  const COL_FTE = COL_TOTAL_HOURS + 1;
+  const COL_WEEKLY_AVG = COL_TOTAL_HOURS + 1;
+  const COL_FTE = COL_WEEKLY_AVG + 1;
   const totalCols = COL_FTE;
 
   // 列幅設定
@@ -153,11 +164,14 @@ export async function createStandardFormWorkbook(
   worksheet.getColumn(COL_NAME).width = 12;
   worksheet.getColumn(COL_ROLE).width = 10;
   worksheet.getColumn(COL_QUAL).width = 12;
-  worksheet.getColumn(COL_EMP).width = 8;
+  worksheet.getColumn(COL_FULLTIME).width = 7;
+  worksheet.getColumn(COL_DUTY).width = 6;
+  worksheet.getColumn(COL_HIRE_DATE).width = 10;
   for (let d = 0; d < daysInMonth; d++) {
     worksheet.getColumn(COL_DAYS_START + d).width = 3.2;
   }
   worksheet.getColumn(COL_TOTAL_HOURS).width = 9;
+  worksheet.getColumn(COL_WEEKLY_AVG).width = 7;
   worksheet.getColumn(COL_FTE).width = 8;
 
   // ==================== 行1: タイトル ====================
@@ -169,16 +183,24 @@ export async function createStandardFormWorkbook(
   worksheet.mergeCells(1, COL_NAME, 1, totalCols);
   titleRow.height = 24;
 
-  // ==================== 行2: 施設名・対象月 ====================
-  const infoRow = worksheet.getRow(2);
-  infoRow.getCell(COL_NAME).value = `事業所名: ${facilityName}`;
+  // ==================== 行2: 事業所番号・サービス種類 ====================
+  const facilityInfoRow = worksheet.getRow(2);
+  facilityInfoRow.getCell(COL_NAME).value =
+    `事業所番号: ${facilityNumber ?? ''}　サービス種類: ${serviceType ?? ''}`;
+  facilityInfoRow.getCell(COL_NAME).font = { size: 10 };
+  worksheet.mergeCells(2, COL_NAME, 2, totalCols);
+  facilityInfoRow.height = 18;
+
+  // ==================== 行3: 施設名・対象月・作成日・作成者 ====================
+  const infoRow = worksheet.getRow(3);
+  infoRow.getCell(COL_NAME).value =
+    `事業所名: ${facilityName}　対象月: ${formatTargetMonthJa(targetMonth)}　作成日: ${new Date().toLocaleDateString('ja-JP')}　作成者: ${creatorName ?? ''}`;
   infoRow.getCell(COL_NAME).font = { size: 10 };
-  infoRow.getCell(COL_EMP).value = `対象月: ${formatTargetMonthJa(targetMonth)}`;
-  infoRow.getCell(COL_EMP).font = { size: 10 };
+  worksheet.mergeCells(3, COL_NAME, 3, totalCols);
   infoRow.height = 18;
 
-  // ==================== 行4: ヘッダー ====================
-  const headerRow = worksheet.getRow(4);
+  // ==================== 行5: ヘッダー ====================
+  const headerRow = worksheet.getRow(5);
   headerRow.height = 28;
 
   const setHeader = (col: number, value: string) => {
@@ -194,7 +216,9 @@ export async function createStandardFormWorkbook(
   setHeader(COL_NAME, '職員氏名');
   setHeader(COL_ROLE, '職種');
   setHeader(COL_QUAL, '資格');
-  setHeader(COL_EMP, '勤務\n形態');
+  setHeader(COL_FULLTIME, '常勤/\n非常勤');
+  setHeader(COL_DUTY, '専従/\n兼務');
+  setHeader(COL_HIRE_DATE, '雇用\n開始日');
 
   // 日付ヘッダー（1〜daysInMonth）
   for (let d = 0; d < daysInMonth; d++) {
@@ -215,60 +239,124 @@ export async function createStandardFormWorkbook(
   }
 
   setHeader(COL_TOTAL_HOURS, '月間\n勤務時間');
+  setHeader(COL_WEEKLY_AVG, '週平均\nh');
   setHeader(COL_FTE, '常勤\n換算値');
 
-  // ==================== 行5+: スタッフデータ ====================
-  staffSchedules.forEach((ss, idx) => {
-    const staff = staffList.find((s) => s.id === ss.staffId);
-    const fteEntry = fteEntries.find((e) => e.staffId === ss.staffId);
-    const empType = staff?.employmentType ?? 'A';
-    const empLabel = `${empType}: ${EMPLOYMENT_TYPES[empType]}`;
+  // ==================== 行6+: 職種別グループ化スタッフデータ ====================
+  // staffSchedules の元の順序を保持するためのマップ
+  const ssOrderMap = new Map<string, number>();
+  staffSchedules.forEach((ss, idx) => ssOrderMap.set(ss.staffId, idx));
 
-    const row = worksheet.getRow(5 + idx);
-    row.height = 16;
+  let currentDataRow = 6;
+  let staffRowNumber = 1; // 通し番号
 
-    const setCell = (col: number, value: ExcelJS.CellValue, opts?: Partial<ExcelJS.Style>) => {
-      const cell = row.getCell(col);
-      cell.value = value;
-      cell.font = { size: 9, ...opts?.font };
-      cell.alignment = { ...STYLES.alignCenter, ...opts?.alignment };
-      cell.border = STYLES.borderThin;
-      if (opts?.fill) cell.fill = opts.fill;
-    };
+  for (const group of roleGroups) {
+    // グループヘッダー行（薄青）
+    const groupHeaderRow = worksheet.getRow(currentDataRow);
+    groupHeaderRow.height = 16;
+    const groupHeaderCell = groupHeaderRow.getCell(COL_NO);
+    groupHeaderCell.value = `【${group.role}】`;
+    groupHeaderCell.font = { bold: true, size: 9 };
+    groupHeaderCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFDEEBF7' } };
+    groupHeaderCell.alignment = STYLES.alignLeft;
+    groupHeaderCell.border = STYLES.borderThin;
+    worksheet.mergeCells(currentDataRow, COL_NO, currentDataRow, totalCols);
+    currentDataRow++;
 
-    setCell(COL_NO, idx + 1);
-    setCell(COL_NAME, ss.staffName, { alignment: { horizontal: 'left', vertical: 'middle' } });
-    setCell(COL_ROLE, staff?.role ?? '');
-    setCell(COL_QUAL, staff?.qualifications?.join(', ') ?? '');
-    setCell(COL_EMP, empLabel, { alignment: { horizontal: 'left', vertical: 'middle' } });
-
-    // 各日シフト
-    dates.forEach((date, d) => {
-      const shift = ss.monthlyShifts.find((s) => s.date === date);
-      const shiftName = shift?.plannedShiftType ?? '';
-      const abbrev = shiftName ? toAbbrev(shiftName) : '';
-
-      const isWeekend = new Date(date).getDay() === 0 || new Date(date).getDay() === 6;
-      setCell(COL_DAYS_START + d, abbrev, {
-        font: {
-          size: 9,
-          color: isWeekend ? { argb: 'FFCC0000' } : undefined,
-        },
-      });
+    // グループ内スタッフを元のstaffSchedules順にソート
+    const sortedEntries = [...group.entries].sort((a, b) => {
+      const idxA = ssOrderMap.get(a.staffId) ?? 9999;
+      const idxB = ssOrderMap.get(b.staffId) ?? 9999;
+      return idxA - idxB;
     });
 
-    // 集計
-    setCell(COL_TOTAL_HOURS, fteEntry?.monthlyHours ?? 0);
-    setCell(COL_FTE, fteEntry?.fteValue ?? 0);
-  });
+    // スタッフデータ行
+    for (const fteEntry of sortedEntries) {
+      const ss = staffSchedules.find((s) => s.staffId === fteEntry.staffId);
+      if (!ss) continue;
 
-  // ==================== 行(最終+2): 合計行 ====================
-  const totalRowIdx = 5 + staffSchedules.length + 1;
+      const staff = staffList.find((s) => s.id === ss.staffId);
+      const empType = staff?.employmentType ?? 'A';
+
+      // 常勤/非常勤判定: A/B → 常勤, C/D → 非常勤
+      const fulltimeLabel = (empType === 'A' || empType === 'B') ? '常勤' : '非常勤';
+      // 専従/兼務判定: A/C → 専従, B/D → 兼務
+      const dutyLabel = (empType === 'A' || empType === 'C') ? '専従' : '兼務';
+
+      const row = worksheet.getRow(currentDataRow);
+      row.height = 16;
+
+      const setCell = (col: number, value: ExcelJS.CellValue, opts?: Partial<ExcelJS.Style>) => {
+        const cell = row.getCell(col);
+        cell.value = value;
+        cell.font = { size: 9, ...opts?.font };
+        cell.alignment = { ...STYLES.alignCenter, ...opts?.alignment };
+        cell.border = STYLES.borderThin;
+        if (opts?.fill) cell.fill = opts.fill;
+      };
+
+      setCell(COL_NO, staffRowNumber);
+      setCell(COL_NAME, ss.staffName, { alignment: { horizontal: 'left', vertical: 'middle' } });
+      setCell(COL_ROLE, staff?.role ?? '');
+      setCell(COL_QUAL, staff?.qualifications?.join(', ') ?? '');
+      setCell(COL_FULLTIME, fulltimeLabel);
+      setCell(COL_DUTY, dutyLabel);
+      setCell(COL_HIRE_DATE, staff?.hireDate ?? '');
+
+      // 各日シフト
+      dates.forEach((date, d) => {
+        const shift = ss.monthlyShifts.find((s) => s.date === date);
+        const shiftName = shift?.plannedShiftType ?? '';
+        const abbrev = shiftName ? toAbbrev(shiftName) : '';
+
+        const isWeekend = new Date(date).getDay() === 0 || new Date(date).getDay() === 6;
+        setCell(COL_DAYS_START + d, abbrev, {
+          font: {
+            size: 9,
+            color: isWeekend ? { argb: 'FFCC0000' } : undefined,
+          },
+        });
+      });
+
+      // 集計
+      setCell(COL_TOTAL_HOURS, fteEntry.monthlyHours);
+      setCell(COL_WEEKLY_AVG, fteEntry.weeklyAverageHours);
+      setCell(COL_FTE, fteEntry.fteValue);
+
+      staffRowNumber++;
+      currentDataRow++;
+    }
+
+    // 小計行（薄黄）
+    const subtotalRow = worksheet.getRow(currentDataRow);
+    subtotalRow.height = 16;
+
+    const setSubtotalCell = (col: number, value: ExcelJS.CellValue) => {
+      const cell = subtotalRow.getCell(col);
+      cell.value = value;
+      cell.font = { bold: true, size: 9 };
+      cell.alignment = STYLES.alignCenter;
+      cell.border = STYLES.borderThin;
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFF3CD' } };
+    };
+
+    setSubtotalCell(COL_NO, `${group.role} 小計`);
+    worksheet.mergeCells(currentDataRow, COL_NO, currentDataRow, COL_HIRE_DATE);
+    setSubtotalCell(COL_TOTAL_HOURS, group.subtotalHours);
+    setSubtotalCell(COL_WEEKLY_AVG, group.subtotalWeeklyAvgHours);
+    setSubtotalCell(COL_FTE, group.subtotalFte);
+
+    currentDataRow++;
+  }
+
+  // ==================== 合計行 ====================
+  const totalRowIdx = currentDataRow + 1;
   const totalRow = worksheet.getRow(totalRowIdx);
   totalRow.height = 18;
 
   const totalFTE = fteEntries.reduce((sum, e) => sum + e.fteValue, 0);
   const totalHours = fteEntries.reduce((sum, e) => sum + e.monthlyHours, 0);
+  const totalWeeklyAvg = fteEntries.reduce((sum, e) => sum + e.weeklyAverageHours, 0);
 
   const setTotalCell = (col: number, value: ExcelJS.CellValue) => {
     const cell = totalRow.getCell(col);
@@ -280,20 +368,44 @@ export async function createStandardFormWorkbook(
   };
 
   setTotalCell(COL_NO, '合計');
-  worksheet.mergeCells(totalRowIdx, COL_NO, totalRowIdx, COL_EMP);
+  worksheet.mergeCells(totalRowIdx, COL_NO, totalRowIdx, COL_HIRE_DATE);
   setTotalCell(COL_TOTAL_HOURS, Math.round(totalHours * 10) / 10);
+  setTotalCell(COL_WEEKLY_AVG, Math.round(totalWeeklyAvg * 10) / 10);
   setTotalCell(COL_FTE, Math.round(totalFTE * 100) / 100);
 
-  // ==================== 行(最終+3): 注記 ====================
+  // ==================== 注記行 ====================
   const noteRow = worksheet.getRow(totalRowIdx + 1);
   const noteCell = noteRow.getCell(COL_NO);
   noteCell.value =
+    `※ 常勤職員の有給休暇は所定労働時間として計上しています　` +
     `※ 常勤換算値 = 月間勤務時間 ÷ (週所定労働時間${standardWeeklyHours}h × 4.33週)　` +
     '略称: 早=早番 日=日勤 遅=遅番 夜=夜勤 明=明け休み 休=休日 有=有給';
   noteCell.font = { size: 8, color: { argb: 'FF666666' } };
   worksheet.mergeCells(totalRowIdx + 1, COL_NO, totalRowIdx + 1, totalCols);
 
   return workbook;
+}
+
+/**
+ * StandardFormOptions オブジェクトを受け取って標準様式第1号を生成するラッパー
+ *
+ * @param options - StandardFormOptions
+ * @returns ExcelJS Workbook
+ */
+export async function createStandardFormWorkbookFromOptions(
+  options: StandardFormOptions
+): Promise<ExcelJS.Workbook> {
+  return createStandardFormWorkbook(
+    options.staffSchedules,
+    options.staffList,
+    options.shiftSettings,
+    options.facilityName,
+    options.targetMonth,
+    options.standardWeeklyHours ?? 40,
+    options.facilityNumber,
+    options.serviceType,
+    options.creatorName
+  );
 }
 
 // ==================== 予実2段書き ====================

@@ -53,6 +53,22 @@ export interface LeaveRequestDocument {
 // A=常勤専従, B=常勤兼務, C=非常勤専従, D=非常勤兼務
 export type EmploymentType = 'A' | 'B' | 'C' | 'D';
 
+// ==================== 介護サービス種類（Phase 62）====================
+
+// 介護サービス種類（厚生労働省告示・様式第1号ヘッダー用）
+export type CareServiceType =
+  | '訪問介護'
+  | '訪問入浴介護'
+  | '訪問看護'
+  | '通所介護'
+  | '通所リハビリテーション'
+  | '短期入所生活介護'
+  | '特定施設入居者生活介護'
+  | '介護老人福祉施設'
+  | '介護老人保健施設'
+  | '認知症対応型共同生活介護'
+  | 'その他';
+
 export interface Staff {
   id: string;
   name: string;
@@ -66,6 +82,7 @@ export interface Staff {
   isNightShiftOnly: boolean;
   employmentType?: EmploymentType;   // 勤務形態区分（標準様式第1号）
   weeklyContractHours?: number;      // 契約週時間（非常勤用、常勤換算計算に使用）
+  hireDate?: string;                 // 雇用開始日（YYYY-MM-DD、標準様式第1号用）
   createdAt?: Timestamp; // Firestore永続化時に使用
   updatedAt?: Timestamp; // Firestore永続化時に使用
 }
@@ -237,6 +254,8 @@ export interface Facility {
   createdBy: string; // super-admin UID
   members: FacilityMember[]; // 非正規化（パフォーマンス最適化）
   standardWeeklyHours?: number; // 常勤職員の週所定労働時間（常勤換算計算用、デフォルト40h）
+  facilityNumber?: string;      // 事業所番号（10桁、標準様式第1号ヘッダー用）
+  serviceType?: CareServiceType; // サービス種類（標準様式第1号ヘッダー用）
 }
 
 // 施設メンバー（非正規化）
@@ -466,6 +485,29 @@ export interface FullTimeEquivalentEntry {
   monthlyHours: number;         // 月間勤務時間
   weeklyAverageHours: number;   // 週平均勤務時間（monthlyHours / 4.33）
   fteValue: number;             // 常勤換算値（小数点第2位）
+}
+
+// 職種別グループ化FTEデータ（標準様式第1号 職種別小計用）
+export interface RoleGroupedFTEData {
+  role: string;                        // 職種名
+  entries: FullTimeEquivalentEntry[];  // 職種に属するスタッフのFTEエントリ
+  subtotalHours: number;               // 勤務時間小計
+  subtotalWeeklyAvgHours: number;      // 週平均時間小計
+  subtotalFte: number;                 // FTE小計
+  staffCount: number;                  // 人数
+}
+
+// 標準様式第1号出力オプション（Phase 62 拡張オプション）
+export interface StandardFormOptions {
+  staffSchedules: StaffSchedule[];
+  staffList: Staff[];
+  shiftSettings: FacilityShiftSettings;
+  facilityName: string;
+  targetMonth: string;
+  standardWeeklyHours?: number;
+  facilityNumber?: string;   // 事業所番号（10桁）
+  serviceType?: string;      // サービス種類
+  creatorName?: string;      // 作成者氏名
 }
 
 // コンプライアンス違反（労基法・労働安全衛生）

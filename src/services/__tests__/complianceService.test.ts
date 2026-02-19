@@ -11,6 +11,7 @@ import {
   checkBreakTimeCompliance,
   checkRestIntervalCompliance,
   runComplianceCheck,
+  groupFTEByRole,
 } from '../complianceService';
 import type { StaffSchedule, Staff, FacilityShiftSettings } from '../../../types';
 import { Timestamp } from 'firebase/firestore';
@@ -239,6 +240,131 @@ describe('checkRestIntervalCompliance', () => {
     ]);
     const violations = checkRestIntervalCompliance([schedule], mockShiftSettings, true);
     expect(violations).toHaveLength(0);
+  });
+});
+
+// ==================== Phase 62: 有給休暇計上ルール ====================
+
+describe('Phase 62: calculateFullTimeEquivalent 有給休暇ルール', () => {
+  it('常勤(A)の有給休暇は standardWeeklyHours/5 時間として計上される', () => {
+    // 有給1日 = 40/5 = 8h → 1日分が計上されること
+    const schedule = makeSchedule('s1', '常勤スタッフA', [
+      { date: '2025-01-01', plannedShiftType: '日勤' },   // 8h
+      { date: '2025-01-02', plannedShiftType: '有給休暇' }, // 8h (計上)
+      { date: '2025-01-03', plannedShiftType: '休' },      // 0h
+    ]);
+    const staff = makeStaff('s1', '常勤スタッフA', 'A');
+
+    const result = calculateFullTimeEquivalent([schedule], [staff], mockShiftSettings, 40);
+    // 日勤8h + 有給8h = 16h
+    expect(result[0].monthlyHours).toBe(16);
+  });
+
+  it('常勤(B)の有給休暇も所定時間として計上される', () => {
+    const schedule = makeSchedule('s1', '常勤スタッフB', [
+      { date: '2025-01-01', plannedShiftType: '有給休暇' },
+      { date: '2025-01-02', plannedShiftType: '有給休暇' },
+    ]);
+    const staff = makeStaff('s1', '常勤スタッフB', 'B');
+
+    const result = calculateFullTimeEquivalent([schedule], [staff], mockShiftSettings, 40);
+    // 8h × 2日 = 16h
+    expect(result[0].monthlyHours).toBe(16);
+  });
+
+  it('非常勤(C)の有給休暇は計上されない（0時間）', () => {
+    const schedule = makeSchedule('s2', '非常勤スタッフC', [
+      { date: '2025-01-01', plannedShiftType: '有給休暇' },
+      { date: '2025-01-02', plannedShiftType: '有給休暇' },
+    ]);
+    const staff = makeStaff('s2', '非常勤スタッフC', 'C', 20);
+
+    const result = calculateFullTimeEquivalent([schedule], [staff], mockShiftSettings, 40);
+    expect(result[0].monthlyHours).toBe(0);
+  });
+
+  it('非常勤(D)の有給休暇も計上されない（0時間）', () => {
+    const schedule = makeSchedule('s3', '非常勤スタッフD', [
+      { date: '2025-01-01', plannedShiftType: '有給休暇' },
+    ]);
+    const staff = makeStaff('s3', '非常勤スタッフD', 'D', 15);
+
+    const result = calculateFullTimeEquivalent([schedule], [staff], mockShiftSettings, 40);
+    expect(result[0].monthlyHours).toBe(0);
+  });
+
+  it('実績ベースで常勤(A)の有給休暇が計上される', () => {
+    // actualShiftType = '有給休暇' の場合も常勤は計上
+    const schedule = makeSchedule('s1', '常勤スタッフA', [
+      { date: '2025-01-01', plannedShiftType: '日勤', actualShiftType: '有給休暇' },
+    ]);
+    const staff = makeStaff('s1', '常勤スタッフA', 'A');
+
+    const resultActual = calculateFullTimeEquivalent([schedule], [staff], mockShiftSettings, 40, true);
+    expect(resultActual[0].monthlyHours).toBe(8); // 有給として計上
+
+    const resultPlan = calculateFullTimeEquivalent([schedule], [staff], mockShiftSettings, 40, false);
+    expect(resultPlan[0].monthlyHours).toBe(8); // 予定は日勤=8h
+  });
+});
+
+// ==================== Phase 62: groupFTEByRole ====================
+
+describe('Phase 62: groupFTEByRole', () => {
+  it('空配列を渡すと空配列を返す', () => {
+    expect(groupFTEByRole([])).toEqual([]);
+  });
+
+  it('同一職種のエントリが1グループにまとめられる', () => {
+    const entries = [
+      { staffId: 's1', staffName: '田中', role: '介護職員', employmentType: 'A' as const, monthlyHours: 160, weeklyAverageHours: 36.9, fteValue: 0.92 },
+      { staffId: 's2', staffName: '佐藤', role: '介護職員', employmentType: 'C' as const, monthlyHours: 80, weeklyAverageHours: 18.5, fteValue: 0.46 },
+    ];
+
+    const result = groupFTEByRole(entries);
+    expect(result).toHaveLength(1);
+    expect(result[0].role).toBe('介護職員');
+    expect(result[0].staffCount).toBe(2);
+    expect(result[0].entries).toHaveLength(2);
+  });
+
+  it('異なる職種のエントリが別グループに分けられる', () => {
+    const entries = [
+      { staffId: 's1', staffName: '田中', role: '介護職員', employmentType: 'A' as const, monthlyHours: 160, weeklyAverageHours: 36.9, fteValue: 0.92 },
+      { staffId: 's2', staffName: '佐藤', role: '看護職員', employmentType: 'A' as const, monthlyHours: 160, weeklyAverageHours: 36.9, fteValue: 0.92 },
+      { staffId: 's3', staffName: '鈴木', role: '介護職員', employmentType: 'C' as const, monthlyHours: 80, weeklyAverageHours: 18.5, fteValue: 0.46 },
+    ];
+
+    const result = groupFTEByRole(entries);
+    expect(result).toHaveLength(2);
+
+    const careGroup = result.find((g) => g.role === '介護職員');
+    const nurseGroup = result.find((g) => g.role === '看護職員');
+    expect(careGroup?.staffCount).toBe(2);
+    expect(nurseGroup?.staffCount).toBe(1);
+  });
+
+  it('小計（subtotalHours / subtotalFte / staffCount）が正しく算出される', () => {
+    const entries = [
+      { staffId: 's1', staffName: '田中', role: '介護職員', employmentType: 'A' as const, monthlyHours: 160, weeklyAverageHours: 36.9, fteValue: 0.92 },
+      { staffId: 's2', staffName: '鈴木', role: '介護職員', employmentType: 'C' as const, monthlyHours: 80, weeklyAverageHours: 18.5, fteValue: 0.46 },
+    ];
+
+    const result = groupFTEByRole(entries);
+    const careGroup = result[0];
+
+    expect(careGroup.subtotalHours).toBe(240);
+    expect(careGroup.subtotalFte).toBeCloseTo(1.38, 2);
+    expect(careGroup.staffCount).toBe(2);
+  });
+
+  it('roleが空文字のエントリは「(未分類)」グループにまとめられる', () => {
+    const entries = [
+      { staffId: 's1', staffName: '田中', role: '', employmentType: 'A' as const, monthlyHours: 100, weeklyAverageHours: 23.1, fteValue: 0.58 },
+    ];
+
+    const result = groupFTEByRole(entries);
+    expect(result[0].role).toBe('(未分類)');
   });
 });
 

@@ -1,5 +1,5 @@
 
-import { Role, Qualification, TimeSlotPreference, ShiftTime, LeaveType, ShiftColor, ShiftTypeConfig, EmploymentType } from './types';
+import { Role, Qualification, TimeSlotPreference, ShiftTime, LeaveType, ShiftColor, ShiftTypeConfig, EmploymentType, CareServiceType } from './types';
 
 export const ROLES: Role[] = [
   Role.Admin,
@@ -136,6 +136,21 @@ export const EMPLOYMENT_TYPES: Record<EmploymentType, string> = {
 
 // 常勤の週所定労働時間デフォルト値（時間）
 export const DEFAULT_STANDARD_WEEKLY_HOURS = 40;
+
+// 介護サービス種類一覧（厚生労働省告示・標準様式第1号ヘッダー用）
+export const CARE_SERVICE_TYPES: CareServiceType[] = [
+  '訪問介護',
+  '訪問入浴介護',
+  '訪問看護',
+  '通所介護',
+  '通所リハビリテーション',
+  '短期入所生活介護',
+  '特定施設入居者生活介護',
+  '介護老人福祉施設',
+  '介護老人保健施設',
+  '認知症対応型共同生活介護',
+  'その他',
+];
 
 // ==================== 休暇残高管理（Phase 39）====================
 
