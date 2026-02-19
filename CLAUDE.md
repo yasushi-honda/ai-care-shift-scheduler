@@ -1,6 +1,6 @@
 # Claude Code Spec-Driven Development
 
-**最終更新**: 2026-02-19（Phase 61 administrative-compliance-ui 完了）
+**最終更新**: 2026-02-19（Phase 62 standard-form-compliance 完了）
 
 Kiro-style Spec Driven Development implementation using claude code slash commands, hooks and agents.
 
@@ -56,6 +56,7 @@ Kiro-style Spec Driven Development implementation using claude code slash comman
 | undo-functionality | - | ✅ 完了 |
 | redo-functionality | - | ✅ 完了 |
 | administrative-compliance-ui | 61 | ✅ 完了 |
+| standard-form-compliance | 62 | ✅ 完了 |
 
 Use `/kiro:spec-status [feature-name]` to check progress.
 
