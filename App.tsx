@@ -57,7 +57,7 @@ import { SubmissionGuideModal } from './src/components/SubmissionGuideModal';
 // Phase 65: 人員配置基準ダッシュボード
 import { StaffingStandardSettings } from './src/components/StaffingStandardSettings';
 import { subscribeStaffingStandard } from './src/services/staffingStandardService';
-import { calculateDailyFulfillment, calculateMonthlyFulfillmentSummary } from './src/services/complianceService';
+import { calculateDailyFulfillment } from './src/services/complianceService';
 
 type ViewMode = 'shift' | 'leaveRequest';
 
