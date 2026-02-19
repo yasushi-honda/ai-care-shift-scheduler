@@ -1,6 +1,6 @@
 # Claude Code Spec-Driven Development
 
-**最終更新**: 2026-02-19（PR #102 Phase 65 人員配置基準ダッシュボード強化 完了）
+**最終更新**: 2026-02-19（PR #103 Phase 66 勤務体制一覧表 サービス種別対応 完了）
 
 Kiro-style Spec Driven Development implementation using claude code slash commands, hooks and agents.
 
@@ -43,6 +43,7 @@ Kiro-style Spec Driven Development implementation using claude code slash comman
 | leave-balance-management | 39 | ✅ 完了 |
 | leave-balance-ux-renewal | 64 | ✅ 完了 |
 | staffing-dashboard | 65 | ✅ 完了 |
+| standard-form-service-type | 66 | ✅ 完了 |
 | double-click-shift-edit | 38.5 | ✅ 完了 |
 | arrow-key-navigation | - | ✅ 完了 |
 | ctrl-arrow-navigation | - | ✅ 完了 |
