@@ -1057,9 +1057,9 @@ export type StaffingStandardError = {
 
 /**
  * 通知タイプ
- * 将来: 'balance_shortage' | 'leave_expiry' | 'inspection_alert' | 'system'
+ * Phase 63.2追加: 'balance_shortage' | 'leave_expiry'
  */
-export type NotificationType = 'schedule_confirmed';
+export type NotificationType = 'schedule_confirmed' | 'balance_shortage' | 'leave_expiry';
 
 /**
  * 通知ドキュメント
@@ -1078,6 +1078,12 @@ export interface AppNotification {
     targetMonth?: string;
     confirmedBy?: string;
     confirmedByName?: string;
+    // Phase 63.2: 残高不足・有給時効アラート
+    staffId?: string;
+    staffName?: string;
+    alertType?: 'public_holiday_shortage' | 'paid_leave_expiry_90d' | 'paid_leave_expiry_30d' | 'paid_leave_expiry_7d';
+    balanceAmount?: number;
+    daysUntilExpiry?: number;
   };
   createdAt: Timestamp;
 }

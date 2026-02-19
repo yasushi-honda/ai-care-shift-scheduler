@@ -37,3 +37,5 @@ export { reevaluateShift } from './reevaluateShift';
 
 // Phase 63: 通知システム
 export { onScheduleConfirmed } from './onScheduleConfirmed';
+// Phase 63.2: 残高不足アラート
+export { scheduledLeaveAlert } from './scheduledLeaveAlert';
