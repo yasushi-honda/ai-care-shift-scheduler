@@ -34,3 +34,6 @@ export { demoSignIn } from './demoSignIn';
 
 // Phase 54: シフト再評価機能
 export { reevaluateShift } from './reevaluateShift';
+
+// Phase 63: 通知システム
+export { onScheduleConfirmed } from './onScheduleConfirmed';

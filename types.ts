@@ -1052,3 +1052,51 @@ export type StaffingStandardError = {
   code: 'PERMISSION_DENIED' | 'VALIDATION_ERROR' | 'FIRESTORE_ERROR' | 'NOT_FOUND';
   message: string;
 };
+
+// ==================== Phase 63: 通知システム ====================
+
+/**
+ * 通知タイプ
+ * 将来: 'balance_shortage' | 'leave_expiry' | 'inspection_alert' | 'system'
+ */
+export type NotificationType = 'schedule_confirmed';
+
+/**
+ * 通知ドキュメント
+ * Firestoreパス: facilities/{facilityId}/notifications/{notificationId}
+ */
+export interface AppNotification {
+  id: string;
+  facilityId: string;
+  type: NotificationType;
+  title: string;
+  body: string;
+  recipientIds: string[];      // 対象userId配列（array-containsで検索）
+  readBy: string[];             // 既読userId配列（arrayUnion/Removeで管理）
+  metadata: {
+    scheduleId?: string;
+    targetMonth?: string;
+    confirmedBy?: string;
+    confirmedByName?: string;
+  };
+  createdAt: Timestamp;
+}
+
+/**
+ * 通知設定
+ * Firestoreパス: users/{userId}/notificationSettings/default
+ */
+export interface NotificationSettings {
+  enabledTypes: {
+    schedule_confirmed: boolean;
+  };
+  updatedAt: Timestamp;
+}
+
+/**
+ * 通知サービスのエラー型
+ */
+export type NotificationError =
+  | { code: 'PERMISSION_DENIED'; message: string }
+  | { code: 'NOT_FOUND'; message: string }
+  | { code: 'FIRESTORE_ERROR'; message: string };

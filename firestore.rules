@@ -76,6 +76,11 @@ service cloud.firestore {
 
     // users collection
     match /users/{userId} {
+      // notificationSettings subcollection (Phase 63)
+      match /notificationSettings/{settingId} {
+        // 自分の設定のみ読み書き可能
+        allow read, write: if isAuthenticated() && request.auth.uid == userId;
+      }
       // super-adminは全ユーザーをリスト可能（getAllUsers用）
       allow list: if isAuthenticated() && isSuperAdmin();
       // 自分のドキュメント または super-adminは個別読み取り可能
@@ -251,6 +256,24 @@ service cloud.firestore {
       match /documentArchive/{yearMonth} {
         // admin以上で読み書き可能（書類アーカイブ・運営指導機能）
         allow read, write: if isAuthenticated() && (isSuperAdmin() || hasRole(facilityId, 'admin'));
+      }
+
+      // notifications subcollection (Phase 63で実装)
+      // シフト確定通知等
+      match /notifications/{notificationId} {
+        // viewer以上の施設メンバーが読み取り可能
+        allow read: if isAuthenticated() && (isSuperAdmin() || hasRole(facilityId, 'viewer'));
+
+        // Cloud Functionのみ作成可能
+        allow create: if false;
+
+        // readByへの追加のみ許可（自分のuidをarrayUnionで追加）
+        allow update: if isAuthenticated()
+          && (isSuperAdmin() || hasRole(facilityId, 'viewer'))
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['readBy']);
+
+        // 削除は禁止
+        allow delete: if false;
       }
     }
 
