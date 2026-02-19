@@ -16,7 +16,7 @@ import { LeaveRequestService } from './src/services/leaveRequestService';
 import { RequirementService } from './src/services/requirementService';
 import { getFacilityById } from './src/services/facilityService';
 import { subscribeToShiftSettings, saveShiftSettings } from './src/services/shiftTypeService';
-import { subscribeToLeaveSettings, saveLeaveSettings } from './src/services/leaveBalanceService';
+import { subscribeToLeaveSettings, saveLeaveSettings, updateLeaveUsage } from './src/services/leaveBalanceService';
 import { useAuth } from './src/contexts/AuthContext';
 import { useToast } from './src/contexts/ToastContext';
 import ShiftTable from './components/ShiftTable';
@@ -1328,6 +1328,27 @@ const App: React.FC = () => {
       // LocalStorageの下書きを削除
       const key = `draft-schedule-${selectedFacilityId}-${requirements.targetMonth}`;
       localStorage.removeItem(key);
+      // シフト確定後の休暇残高を自動同期（ベストエフォート・バックグラウンド実行）
+      const syncFacilityId = selectedFacilityId;
+      const syncUserId = currentUser.uid;
+      const syncYearMonth = requirements.targetMonth;
+      const syncTasks = schedule.flatMap((staffSchedule) => {
+        const phCount = staffSchedule.monthlyShifts.filter(
+          (s) => s.plannedShiftType === '休'
+        ).length;
+        const plCount = staffSchedule.monthlyShifts.filter(
+          (s) => s.plannedShiftType === LeaveType.PaidLeave
+        ).length;
+        const tasks: Promise<unknown>[] = [];
+        if (phCount > 0) {
+          tasks.push(updateLeaveUsage(syncFacilityId, staffSchedule.staffId, syncYearMonth, 'publicHoliday', phCount, syncUserId));
+        }
+        if (plCount > 0) {
+          tasks.push(updateLeaveUsage(syncFacilityId, staffSchedule.staffId, syncYearMonth, 'paidLeave', plCount, syncUserId));
+        }
+        return tasks;
+      });
+      void Promise.allSettled(syncTasks);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : '確定時にエラーが発生しました';
       showError(errorMessage);
