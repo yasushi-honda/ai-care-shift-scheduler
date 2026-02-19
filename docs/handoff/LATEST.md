@@ -1,8 +1,8 @@
 # ハンドオフメモ - 最新状態
 
-**更新日**: 2026-02-19（Phase 61 administrative-compliance-ui 完了・PR #94 マージ済み）
+**更新日**: 2026-02-19（Phase 62 standard-form-compliance 完了・PR #95 マージ済み）
 **フェーズ**: LLM→Solver完全移行 **本番稼働中** ✅
-**最新作業**: Phase 61 運営指導モード・月別書類管理（行政対応UI）を追加
+**最新作業**: Phase 62 勤務体制一覧表 標準様式準拠（厚生労働省標準様式第1号）を追加
 
 ---
 
@@ -54,23 +54,28 @@
 | undo-functionality | - | ✅ 完了 |
 | redo-functionality | - | ✅ 完了 |
 | administrative-compliance-ui | 61 | ✅ 完了 |
+| standard-form-compliance | 62 | ✅ 完了 |
 
 ---
 
 ## 直近の変更（最新5件）
 
-1. **PR #94マージ** (2026-02-19): Phase 61 運営指導モード・月別書類管理（administrative-compliance-ui）
+1. **PR #95マージ** (2026-02-19): Phase 62 勤務体制一覧表 標準様式準拠（standard-form-compliance）
+   - `StandardFormViewer.tsx` 新規作成: 厚生労働省標準様式第1号の画面プレビューコンポーネント
+   - `exportExcel.ts` 列拡張: 常勤/非常勤・専従/兼務・雇用開始日・週平均時間、職種別グループ化・小計行
+   - `complianceService.ts` FTE計算改善: 常勤(A/B)の有給を所定労働時間として計上、`groupFTEByRole` 追加
+   - `InspectionModeDashboard.tsx`: シフトグリッドを StandardFormViewer に置き換え
+   - `ComplianceContent.tsx`: 折りたたみ式標準様式プレビューセクション追加
+   - テスト: Frontend 221テスト全通過（有給計上ルール・groupFTEByRole・Excel職種別小計を追加）
+
+2. **PR #94マージ** (2026-02-19): Phase 61 運営指導モード・月別書類管理（administrative-compliance-ui）
    - 書類アーカイブ（Firestore保存・一覧・再DL・一括ZIP DL）
    - 運営指導モードトグル（全画面ダッシュボード切替）
    - 常勤換算値・人員配置基準ダッシュボード
    - 電子申請フロー案内モーダル（4ステップ）
-   - tasks.md 全チェックボックス `[x]` 完了確認済み
 
-2. **PR #92マージ** (2026-02-19): demo-shift-removal 残工事完了・CLAUDE.md Spec一覧全件更新
+3. **PR #92マージ** (2026-02-19): demo-shift-removal 残工事完了・CLAUDE.md Spec一覧全件更新
    - CLAUDE.md の Active Specifications テーブルに未登録Specを全件追加
-
-3. **PR #91マージ** (2026-02-19): Phase 39 tasks.md の全チェックボックスを完了状態に更新
-   - leave-balance-management tasks.md のドキュメント未更新を解消
 
 4. **PR #88マージ** (2026-02-19): シフト確定時に休暇残高を自動同期（Phase 25 #F）
    - `handleConfirmSchedule` 後に `updateLeaveUsage` でベストエフォート同期
@@ -100,6 +105,7 @@
 | **書類アーカイブ** | ✅ PR #94マージ済み | Firestore保存・一覧・再DL・一括ZIP DL |
 | **運営指導モード** | ✅ PR #94マージ済み | 全画面ダッシュボード・印刷対応 |
 | **電子申請案内モーダル** | ✅ PR #94マージ済み | 4ステップ案内・印刷ボタン |
+| **標準様式第1号準拠Excel/プレビュー** | ✅ PR #95マージ済み | 職種別グループ・常勤/非常勤・FTE計算改善 |
 
 ---
 
@@ -122,7 +128,8 @@
 - 特になし（全PR マージ済み・ワーキングツリークリーン）
 
 ### B. 次フェーズ候補
-- Phase 62: 通知システム（未着手）
+- Phase 63: 通知システム（未着手）
+- 標準様式準拠の運用検証・フィードバック収集
 
 ---
 
@@ -140,7 +147,7 @@
 
 - **Playwright**: UI自動テスト実装済み
 - **Solver**: 68/68テスト通過（単体15 + スケーラビリティ5 + PoC34 + A/B比較6 + 事前検証5 + 連勤最小化3）
-- **Frontend**: 204テスト通過（Phase 25 追加: complianceService 6 + exportExcel 15 + leaveConflict 11 + 他）
+- **Frontend**: 221テスト通過（Phase 62 追加: 有給計上ルール + groupFTEByRole + Excel職種別小計 + 他）
 - **Backend**: 230テスト通過
 
 ---
@@ -178,10 +185,10 @@
 
 再開前に以下を確認:
 
-- [x] `git log` で最新コミット確認（PR #94 Phase 61 administrative-compliance-ui マージ済み）✅
-- [x] CI/CD ジョブ確認（Lighthouse CI 成功、CI/CD Pipeline in_progress）✅
+- [x] `git log` で最新コミット確認（PR #95 Phase 62 standard-form-compliance マージ済み）✅
+- [x] CI/CD ジョブ確認（Lighthouse CI 成功）✅
 - [x] LLM→Solver完全移行 本番稼働確認（solverUnifiedGenerate稼働中）✅
-- [x] テスト全通過確認（Frontend 204, Backend 230, Solver 68）✅
+- [x] テスト全通過確認（Frontend 221, Backend 230, Solver 68）✅
 - [x] ワーキングツリークリーン確認（未コミット変更なし）✅
 
 ---
