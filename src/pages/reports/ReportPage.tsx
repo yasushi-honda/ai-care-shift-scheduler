@@ -29,6 +29,7 @@ import { ManagementContent } from './ManagementContent';
 import { PersonalContent } from './PersonalContent';
 import { ComplianceContent } from './ComplianceContent';
 import { DocumentArchiveContent } from './DocumentArchiveContent';
+import { SubmissionGuideModal } from '../../components/SubmissionGuideModal';
 
 /**
  * Phase 41: 月次レポートページ
@@ -75,6 +76,9 @@ export function ReportPage(): React.ReactElement {
   const [complianceStaffSchedules, setComplianceStaffSchedules] = useState<StaffSchedule[] | null>(null);
   const [complianceStaffList, setComplianceStaffList] = useState<Staff[] | null>(null);
   const [complianceShiftSettings, setComplianceShiftSettings] = useState<FacilityShiftSettings | null>(null);
+
+  // Phase 61: 電子申請フロー案内モーダル
+  const [submissionGuideOpen, setSubmissionGuideOpen] = useState(false);
 
   // ユーザーの施設ロールを取得
   const getUserFacilityRole = useCallback((): FacilityRole | null => {
@@ -430,6 +434,7 @@ export function ReportPage(): React.ReactElement {
                   targetMonth={targetMonth}
                   facilityId={selectedFacilityId ?? undefined}
                   userId={currentUser?.uid}
+                  onOpenSubmissionGuide={() => setSubmissionGuideOpen(true)}
                 />
               )}
 
@@ -438,11 +443,18 @@ export function ReportPage(): React.ReactElement {
               <DocumentArchiveContent
                 facilityId={selectedFacilityId}
                 facilityName={getFacilityName()}
+                onOpenSubmissionGuide={() => setSubmissionGuideOpen(true)}
               />
             )}
           </>
         )}
       </main>
+
+      {/* Phase 61: 電子申請フロー案内モーダル */}
+      <SubmissionGuideModal
+        isOpen={submissionGuideOpen}
+        onClose={() => setSubmissionGuideOpen(false)}
+      />
     </div>
   );
 }

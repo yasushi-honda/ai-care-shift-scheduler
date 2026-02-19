@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
-  Role, Qualification, TimeSlotPreference, LeaveType,
+  Role, Qualification, TimeSlotPreference, LeaveType, FacilityRole,
   type Staff, type ShiftRequirement, type StaffSchedule, type GeneratedShift, type LeaveRequest, type ScheduleVersion, type LeaveRequestDocument, type Facility,
   type FacilityShiftSettings, type FacilityLeaveSettings,
   type EvaluationResult,
@@ -49,6 +49,9 @@ import { reevaluateShift } from './src/services/reevaluateService';
 // Phase 55: データ設定診断機能
 import { DiagnosisPanel } from './src/components/DiagnosisPanel';
 import { useDiagnosis } from './src/hooks/useDiagnosis';
+// Phase 61: 運営指導モード
+import { InspectionModeDashboard } from './src/components/InspectionModeDashboard';
+import { SubmissionGuideModal } from './src/components/SubmissionGuideModal';
 
 type ViewMode = 'shift' | 'leaveRequest';
 
@@ -80,7 +83,7 @@ function convertToLeaveRequest(documents: LeaveRequestDocument[]): LeaveRequest 
 }
 
 const App: React.FC = () => {
-  const { selectedFacilityId, currentUser, isSuperAdmin, userProfile, selectFacility, signOut, isDemoEnvironment } = useAuth();
+  const { selectedFacilityId, currentUser, isSuperAdmin, hasRole, userProfile, selectFacility, signOut, isDemoEnvironment } = useAuth();
   const { showSuccess, showError, showWithAction } = useToast();
   const navigate = useNavigate();
   const [facilities, setFacilities] = useState<Map<string, Facility>>(new Map());
@@ -128,6 +131,10 @@ const App: React.FC = () => {
   // Phase 54: 再評価中フラグ
   const [isReevaluating, setIsReevaluating] = useState(false);
 
+  // Phase 61: 運営指導モード
+  const [isInspectionMode, setIsInspectionMode] = useState(false);
+  const [submissionGuideOpen, setSubmissionGuideOpen] = useState(false);
+
   // 自動生成プログレス表示
   const generationProgress = useGenerationProgress();
 
@@ -139,6 +146,11 @@ const App: React.FC = () => {
     enabled: !loadingStaff && staffList.length > 0, // スタッフ読み込み完了後に有効化
     debounceMs: 500, // データ変更後500msで再診断
   });
+
+  // Phase 61: 現在の施設で管理者ロールかどうか判定
+  const isCurrentFacilityAdmin = selectedFacilityId
+    ? isSuperAdmin() || hasRole(selectedFacilityId, FacilityRole.Admin)
+    : false;
 
   // Phase 45: AI生成キャンセルハンドラー
   const handleCancelGeneration = useCallback(() => {
@@ -1694,23 +1706,55 @@ const App: React.FC = () => {
         <header className="flex justify-between items-center mb-1">
           <div>
             <h2 className="text-3xl font-bold text-slate-900">{requirements.targetMonth.replace('-', '年 ')}月</h2>
-            <ViewSwitcher />
+            {!isInspectionMode && <ViewSwitcher />}
           </div>
-          {/* Phase 42: ActionToolbarで統一されたボタンデザイン */}
-          {/* Phase 43: onDemoClick削除（開発用機能） */}
-          <ActionToolbar
-            onSaveClick={handleSaveDraft}
-            onConfirmClick={handleConfirmSchedule}
-            onHistoryClick={handleShowVersionHistory}
-            onExportClick={handleExportCSV}
-            isLoading={isLoading}
-            canSave={!!currentScheduleId && schedule.length > 0 && currentScheduleStatus === 'draft'}
-            canConfirm={!!currentScheduleId && schedule.length > 0 && currentScheduleStatus === 'draft'}
-            canShowHistory={!!currentScheduleId}
-          />
+          <div className="flex items-center gap-2">
+            {/* Phase 61: 運営指導モードトグル（管理者のみ） */}
+            {isCurrentFacilityAdmin && selectedFacilityId && (
+              <button
+                onClick={() => setIsInspectionMode((prev) => !prev)}
+                className={`flex items-center gap-1.5 px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
+                  isInspectionMode
+                    ? 'bg-amber-600 text-white hover:bg-amber-700'
+                    : 'bg-amber-50 text-amber-700 border border-amber-300 hover:bg-amber-100'
+                }`}
+              >
+                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                運営指導モード
+                {isInspectionMode && <span className="text-amber-200 text-xs">ON</span>}
+              </button>
+            )}
+            {/* Phase 42: ActionToolbarで統一されたボタンデザイン */}
+            {/* Phase 43: onDemoClick削除（開発用機能） */}
+            {!isInspectionMode && (
+              <ActionToolbar
+                onSaveClick={handleSaveDraft}
+                onConfirmClick={handleConfirmSchedule}
+                onHistoryClick={handleShowVersionHistory}
+                onExportClick={handleExportCSV}
+                isLoading={isLoading}
+                canSave={!!currentScheduleId && schedule.length > 0 && currentScheduleStatus === 'draft'}
+                canConfirm={!!currentScheduleId && schedule.length > 0 && currentScheduleStatus === 'draft'}
+                canShowHistory={!!currentScheduleId}
+              />
+            )}
+          </div>
         </header>
         <div className="flex-1 overflow-auto pt-4 pb-4">
-          {viewMode === 'shift' ? (
+          {/* Phase 61: 運営指導モード ダッシュボード */}
+          {isInspectionMode && selectedFacilityId ? (
+            <InspectionModeDashboard
+              facilityId={selectedFacilityId}
+              facilityName={facilities.get(selectedFacilityId)?.name ?? selectedFacilityId}
+              targetMonth={requirements.targetMonth}
+              staffList={staffList}
+              schedule={schedule}
+              shiftSettings={shiftSettings}
+              onClose={() => setIsInspectionMode(false)}
+            />
+          ) : viewMode === 'shift' ? (
             loadingSchedule ? (
               <div className="p-8 text-center">
                 <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-care-secondary"></div>
@@ -1791,6 +1835,12 @@ const App: React.FC = () => {
       <KeyboardHelpModal
         isOpen={showKeyboardHelp}
         onClose={() => setShowKeyboardHelp(false)}
+      />
+
+      {/* Phase 61: 電子申請フロー案内モーダル */}
+      <SubmissionGuideModal
+        isOpen={submissionGuideOpen}
+        onClose={() => setSubmissionGuideOpen(false)}
       />
       </div>
     </div>
