@@ -452,6 +452,14 @@ export interface StaffLeaveBalance {
   updatedBy: string;
 }
 
+/// 残高タイムラインエントリ（Phase 64: 3ヶ月推移グラフ用）
+export interface LeaveBalanceTrendEntry {
+  yearMonth: string;               // YYYY-MM形式
+  publicHolidayBalance: number;    // 公休残高
+  paidLeaveBalance: number;        // 有給残高
+  isBorrowed?: boolean;            // 前借り中フラグ
+}
+
 // 施設休暇設定（Firestore /facilities/{facilityId}/leaveSettings/default）
 export interface FacilityLeaveSettings {
   facilityId: string;
