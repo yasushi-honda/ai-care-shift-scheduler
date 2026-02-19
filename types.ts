@@ -514,7 +514,7 @@ export interface StandardFormOptions {
   targetMonth: string;
   standardWeeklyHours?: number;
   facilityNumber?: string;   // 事業所番号（10桁）
-  serviceType?: string;      // サービス種類
+  serviceType?: CareServiceType; // サービス種類
   creatorName?: string;      // 作成者氏名
 }
 
