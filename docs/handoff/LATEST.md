@@ -165,7 +165,7 @@
 - [x] `git log` で最新コミット確認（PR #88 シフト確定→休暇残高連動 マージ済み）✅
 - [x] CI/CD ジョブ確認（GitHub Pages デプロイ 成功）✅
 - [x] LLM→Solver完全移行 本番稼働確認（solverUnifiedGenerate稼働中）✅
-- [x] テスト全通過確認（Frontend 161, Backend 230, Solver 68）✅
+- [x] テスト全通過確認（Frontend 204, Backend 230, Solver 68）✅
 - [x] ワーキングツリークリーン確認（未コミット変更なし）✅
 
 ---
