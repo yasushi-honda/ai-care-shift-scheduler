@@ -1,6 +1,6 @@
 # Claude Code Spec-Driven Development
 
-**最終更新**: 2026-02-19（PR #96 標準様式プレビューA4横印刷最適化 完了）
+**最終更新**: 2026-02-19（PR #101 Phase 64 休暇残高管理 UX刷新 完了）
 
 Kiro-style Spec Driven Development implementation using claude code slash commands, hooks and agents.
 
@@ -41,6 +41,7 @@ Kiro-style Spec Driven Development implementation using claude code slash comman
 | compliance-leave-management | 25 | ✅ 完了 |
 | shift-type-settings | 38 | ✅ 完了 |
 | leave-balance-management | 39 | ✅ 完了 |
+| leave-balance-ux-renewal | 64 | ✅ 完了 |
 | double-click-shift-edit | 38.5 | ✅ 完了 |
 | arrow-key-navigation | - | ✅ 完了 |
 | ctrl-arrow-navigation | - | ✅ 完了 |
