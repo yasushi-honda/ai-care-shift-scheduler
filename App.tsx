@@ -58,6 +58,8 @@ import { SubmissionGuideModal } from './src/components/SubmissionGuideModal';
 import { StaffingStandardSettings } from './src/components/StaffingStandardSettings';
 import { subscribeStaffingStandard } from './src/services/staffingStandardService';
 import { calculateDailyFulfillment } from './src/services/complianceService';
+// Phase 63: 通知システム
+import { NotificationBell } from './src/components/NotificationBell';
 
 type ViewMode = 'shift' | 'leaveRequest';
 
@@ -1565,6 +1567,7 @@ const App: React.FC = () => {
                   <span className="font-medium">{userProfile.name || 'ユーザー'}</span>
                 </div>
               )}
+              <NotificationBell />
               <IconButton
                 as={Link}
                 to="/reports"

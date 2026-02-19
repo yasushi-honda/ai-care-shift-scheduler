@@ -248,3 +248,31 @@ export interface GenerateShiftResponse {
   error?: string;
   parseError?: unknown;  // デバッグ用
 }
+
+// ==================== Phase 63: 通知システム ====================
+
+/**
+ * 通知タイプ
+ */
+export type NotificationType = 'schedule_confirmed';
+
+/**
+ * 通知ドキュメント（バックエンド用）
+ * Firestoreパス: facilities/{facilityId}/notifications/{notificationId}
+ */
+export interface AppNotification {
+  id: string;
+  facilityId: string;
+  type: NotificationType;
+  title: string;
+  body: string;
+  recipientIds: string[];
+  readBy: string[];
+  metadata: {
+    scheduleId?: string;
+    targetMonth?: string;
+    confirmedBy?: string;
+    confirmedByName?: string;
+  };
+  createdAt: FirebaseFirestore.Timestamp;
+}

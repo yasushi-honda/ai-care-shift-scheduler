@@ -5,6 +5,7 @@ import ReactDOM from 'react-dom/client';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './src/contexts/AuthContext';
 import { ToastProvider, ToastContainer } from './src/contexts/ToastContext';
+import { NotificationProvider } from './src/contexts/NotificationContext';
 import { LoadingProvider, LoadingOverlay } from './src/contexts/LoadingContext';
 import { ProtectedRoute } from './src/components/ProtectedRoute';
 import { AdminProtectedRoute } from './src/components/AdminProtectedRoute';
@@ -37,6 +38,7 @@ const root = ReactDOM.createRoot(rootElement);
 root.render(
   <React.StrictMode>
     <AuthProvider>
+      <NotificationProvider>
       <ToastProvider>
         <LoadingProvider>
           <BrowserRouter>
@@ -101,6 +103,7 @@ root.render(
           </BrowserRouter>
         </LoadingProvider>
       </ToastProvider>
+      </NotificationProvider>
     </AuthProvider>
   </React.StrictMode>
 );
