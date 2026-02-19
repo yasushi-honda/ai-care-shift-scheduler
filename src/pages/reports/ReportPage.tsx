@@ -423,6 +423,8 @@ export function ReportPage(): React.ReactElement {
                   shiftSettings={complianceShiftSettings}
                   facilityName={getFacilityName()}
                   targetMonth={targetMonth}
+                  facilityId={selectedFacilityId ?? undefined}
+                  userId={currentUser?.uid}
                 />
               )}
           </>

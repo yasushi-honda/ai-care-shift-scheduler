@@ -17,9 +17,12 @@ import type {
   FacilityShiftSettings,
   ComplianceViolationItem,
   FullTimeEquivalentEntry,
+  DocType,
 } from '../../../types';
 import { runComplianceCheck } from '../../services/complianceService';
+import { saveDocumentMeta } from '../../services/documentArchiveService';
 import { DEFAULT_STANDARD_WEEKLY_HOURS } from '../../../constants';
+import { useToast } from '../../contexts/ToastContext';
 
 interface ComplianceContentProps {
   staffSchedules: StaffSchedule[];
@@ -27,6 +30,10 @@ interface ComplianceContentProps {
   shiftSettings: FacilityShiftSettings;
   facilityName: string;
   targetMonth: string;
+  // Phase 61: 書類アーカイブ・電子申請案内用（オプション）
+  facilityId?: string;
+  userId?: string;
+  onOpenSubmissionGuide?: () => void;
 }
 
 // 重大度バッジのスタイルマップ
@@ -68,10 +75,14 @@ export function ComplianceContent({
   shiftSettings,
   facilityName,
   targetMonth,
+  facilityId,
+  userId,
+  onOpenSubmissionGuide,
 }: ComplianceContentProps): React.ReactElement {
+  const { showSuccess, showError, showWarning, showWithAction } = useToast();
   const [useActual, setUseActual] = useState(false);
   const [standardWeeklyHours, setStandardWeeklyHours] = useState(DEFAULT_STANDARD_WEEKLY_HOURS);
-  const [isExporting, setIsExporting] = useState(false);
+  const [isExporting, setIsExporting] = useState<DocType | null>(null);
 
   // コンプライアンスチェック実行（メモ化）
   const result = useMemo(
@@ -91,28 +102,59 @@ export function ComplianceContent({
   const warningCount = result.violations.filter((v) => v.severity === 'warning').length;
   const totalFte = (Object.values(result.fteTotalByRole) as number[]).reduce((sum, v) => sum + v, 0);
 
-  // Excel エクスポート
-  const handleExcelExport = useCallback(async () => {
-    setIsExporting(true);
-    try {
-      const { createStandardFormWorkbook, downloadExcel, generateStandardFormFilename } =
-        await import('../../utils/exportExcel');
-      const wb = await createStandardFormWorkbook(
-        staffSchedules,
-        staffList,
-        shiftSettings,
-        facilityName,
-        targetMonth,
-        standardWeeklyHours
-      );
-      await downloadExcel(wb, generateStandardFormFilename(targetMonth));
-    } catch {
-      // エクスポートエラーは静かに処理（ToastContextが使用できないため）
-      console.error('Excel export failed');
-    } finally {
-      setIsExporting(false);
-    }
-  }, [staffSchedules, staffList, shiftSettings, facilityName, targetMonth, standardWeeklyHours]);
+  // Excel エクスポート（標準様式・予実2段書き共用）
+  const handleExcelExport = useCallback(
+    async (docType: DocType) => {
+      setIsExporting(docType);
+      try {
+        const {
+          createStandardFormWorkbook,
+          createActualVsPlanWorkbook,
+          downloadExcel,
+          generateStandardFormFilename,
+          generateActualVsPlanFilename,
+        } = await import('../../utils/exportExcel');
+
+        if (docType === 'standard_form') {
+          const wb = await createStandardFormWorkbook(
+            staffSchedules, staffList, shiftSettings, facilityName, targetMonth, standardWeeklyHours
+          );
+          await downloadExcel(wb, generateStandardFormFilename(targetMonth));
+        } else {
+          const wb = await createActualVsPlanWorkbook(
+            staffSchedules, staffList, shiftSettings, facilityName, targetMonth, standardWeeklyHours
+          );
+          await downloadExcel(wb, generateActualVsPlanFilename(targetMonth));
+        }
+
+        // Firestore記録（失敗してもダウンロードはブロックしない）
+        if (facilityId && userId) {
+          try {
+            await saveDocumentMeta(facilityId, targetMonth, docType, userId, facilityName);
+          } catch {
+            showWarning('書類アーカイブへの記録に失敗しました（ダウンロードは完了）');
+          }
+        }
+
+        // 成功トースト（電子申請案内リンク付き）
+        if (onOpenSubmissionGuide) {
+          showWithAction({
+            message: 'Excelをダウンロードしました。提出手順を確認してください。',
+            type: 'success',
+            actionLabel: '電子申請の手順を確認する',
+            onAction: onOpenSubmissionGuide,
+          });
+        } else {
+          showSuccess('Excelをダウンロードしました');
+        }
+      } catch {
+        showError('Excelのエクスポートに失敗しました');
+      } finally {
+        setIsExporting(null);
+      }
+    },
+    [staffSchedules, staffList, shiftSettings, facilityName, targetMonth, standardWeeklyHours, facilityId, userId, onOpenSubmissionGuide, showWarning, showWithAction, showSuccess, showError]
+  );
 
   // 役職別FTE合計テーブルの行
   const roleEntries = (Object.entries(result.fteTotalByRole) as [string, number][]).sort((a, b) => a[0].localeCompare(b[0]));
@@ -169,24 +211,43 @@ export function ComplianceContent({
           </div>
         </div>
 
-        {/* Excel エクスポート */}
-        <button
-          onClick={handleExcelExport}
-          disabled={isExporting}
-          className="inline-flex items-center gap-2 px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-        >
-          {isExporting ? (
-            <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
-              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-            </svg>
-          ) : (
-            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-            </svg>
-          )}
-          勤務形態一覧表（Excel）
-        </button>
+        {/* Excel エクスポートボタン群 */}
+        <div className="flex flex-wrap gap-2">
+          <button
+            onClick={() => handleExcelExport('standard_form')}
+            disabled={isExporting !== null}
+            className="inline-flex items-center gap-2 px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          >
+            {isExporting === 'standard_form' ? (
+              <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+              </svg>
+            ) : (
+              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+              </svg>
+            )}
+            勤務形態一覧表（標準様式）
+          </button>
+          <button
+            onClick={() => handleExcelExport('actual_vs_plan')}
+            disabled={isExporting !== null}
+            className="inline-flex items-center gap-2 px-4 py-2 bg-teal-600 text-white text-sm font-medium rounded-lg hover:bg-teal-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          >
+            {isExporting === 'actual_vs_plan' ? (
+              <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+              </svg>
+            ) : (
+              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+              </svg>
+            )}
+            予実比較（Excel）
+          </button>
+        </div>
       </div>
 
       {/* サマリーカード */}

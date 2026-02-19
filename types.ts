@@ -868,6 +868,7 @@ export type ReportError =
   | { code: 'PDF_GENERATION_FAILED'; message: string; reason: string }
   | { code: 'PERMISSION_DENIED'; message: string; requiredRole: FacilityRole }
   | { code: 'NETWORK_ERROR'; message: string; originalError: Error }
+  | { code: 'STAFF_NOT_FOUND'; message: string; staffId: string }
 
 // ============================================================
 // Phase 61: 行政対応UI（書類アーカイブ・運営指導モード）
@@ -931,4 +932,3 @@ export interface MonthlyOverviewRow {
   isStaffingAdequate: boolean;  // 人員配置充足（true=○ / false=×）
   hasDocumentArchive: boolean;  // 書類アーカイブ有無
 }
-  | { code: 'STAFF_NOT_FOUND'; message: string; staffId: string };
