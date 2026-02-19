@@ -1,8 +1,8 @@
 # ハンドオフメモ - 最新状態
 
-**更新日**: 2026-02-19（Phase 25 コンプライアンス・休暇連動 PR #84〜#88 マージ済み）
+**更新日**: 2026-02-19（Phase 61 administrative-compliance-ui 完了・PR #94 マージ済み）
 **フェーズ**: LLM→Solver完全移行 **本番稼働中** ✅
-**最新作業**: Phase 25 コンプライアンスチェック・常勤換算・休暇残高連動機能を追加
+**最新作業**: Phase 61 運営指導モード・月別書類管理（行政対応UI）を追加
 
 ---
 
@@ -37,34 +37,46 @@
 | solver-production-deploy | 58 | ✅ 完了 |
 | dependency-updates-p0-p3 | 59 | ✅ 完了 |
 | compliance-leave-management | 25 | ✅ 完了 |
+| shift-type-settings | 38 | ✅ 完了 |
+| leave-balance-management | 39 | ✅ 完了 |
+| double-click-shift-edit | 38.5 | ✅ 完了 |
+| arrow-key-navigation | - | ✅ 完了 |
+| ctrl-arrow-navigation | - | ✅ 完了 |
+| home-end-navigation | - | ✅ 完了 |
+| pageup-pagedown-navigation | - | ✅ 完了 |
+| keyboard-accessibility | - | ✅ 完了 |
+| keyboard-shortcut-help | - | ✅ 完了 |
+| ci-cd-e2e-integration | - | ✅ 完了 |
+| demo-data-improvement | - | ✅ 完了 |
+| demo-shift-removal | - | ✅ 完了 |
+| github-pages-optimization | - | ✅ 完了 |
+| mobile-touch-support | - | ✅ 完了 |
+| undo-functionality | - | ✅ 完了 |
+| redo-functionality | - | ✅ 完了 |
+| administrative-compliance-ui | 61 | ✅ 完了 |
 
 ---
 
 ## 直近の変更（最新5件）
 
-1. **PR #88マージ** (2026-02-19): シフト確定時に休暇残高を自動同期（Phase 25 #F）
+1. **PR #94マージ** (2026-02-19): Phase 61 運営指導モード・月別書類管理（administrative-compliance-ui）
+   - 書類アーカイブ（Firestore保存・一覧・再DL・一括ZIP DL）
+   - 運営指導モードトグル（全画面ダッシュボード切替）
+   - 常勤換算値・人員配置基準ダッシュボード
+   - 電子申請フロー案内モーダル（4ステップ）
+   - tasks.md 全チェックボックス `[x]` 完了確認済み
+
+2. **PR #92マージ** (2026-02-19): demo-shift-removal 残工事完了・CLAUDE.md Spec一覧全件更新
+   - CLAUDE.md の Active Specifications テーブルに未登録Specを全件追加
+
+3. **PR #91マージ** (2026-02-19): Phase 39 tasks.md の全チェックボックスを完了状態に更新
+   - leave-balance-management tasks.md のドキュメント未更新を解消
+
+4. **PR #88マージ** (2026-02-19): シフト確定時に休暇残高を自動同期（Phase 25 #F）
    - `handleConfirmSchedule` 後に `updateLeaveUsage` でベストエフォート同期
-   - `'休'`→publicHoliday, `LeaveType.PaidLeave`→paidLeave のカウントをFirestore更新
-   - 全ユニットテスト: 204/204 PASS
 
-2. **PR #87マージ** (2026-02-19): コンプライアンスチェックUIを追加（Phase 25 #E）
+5. **PR #87マージ** (2026-02-19): コンプライアンスチェックUIを追加（Phase 25 #E）
    - `ComplianceContent.tsx`: 常勤換算FTEテーブル・役職別FTE合計・違反一覧
-   - レポートページに「コンプライアンス」タブ追加
-   - 予定/実績トグル・週所定労働時間入力対応
-
-3. **PR #86マージ** (2026-02-19): Excelエクスポート機能を追加（Phase 25 #C）
-   - `exportExcel.ts`: 標準様式第1号 + 予実2段書きのExcelブック生成
-   - ExcelJS 動的import（バンドルサイズ最適化）
-   - ユニットテスト: 15ケース全通過
-
-4. **PR #85マージ** (2026-02-19): コンプライアンスサービスを追加（Phase 25 #B）
-   - `complianceService.ts`: FTE計算・休憩時間チェック（労基法34条）・インターバルチェック
-   - 全純粋関数設計（副作用なし）
-
-5. **PR #84マージ** (2026-02-19): Staff/Facility型に勤務形態区分・週所定労働時間を追加（Phase 25 #A）
-   - `Staff.employmentType: 'A'|'B'|'C'|'D'`（常勤/非常勤区分）
-   - `Staff.weeklyContractHours?: number`（週契約時間）
-   - `FacilityShiftSettings.standardWeeklyHours?: number`（施設の週所定労働時間）
 
 ---
 
@@ -85,6 +97,9 @@
 | **Excelエクスポート** | ✅ PR #86マージ済み | 標準様式第1号・予実2段書き、ExcelJS動的import |
 | **コンプライアンスUI** | ✅ PR #87マージ済み | レポートページにコンプライアンスタブ追加 |
 | **シフト確定→休暇残高連動** | ✅ PR #88マージ済み | 確定後にupdateLeaveUsageでベストエフォート同期 |
+| **書類アーカイブ** | ✅ PR #94マージ済み | Firestore保存・一覧・再DL・一括ZIP DL |
+| **運営指導モード** | ✅ PR #94マージ済み | 全画面ダッシュボード・印刷対応 |
+| **電子申請案内モーダル** | ✅ PR #94マージ済み | 4ステップ案内・印刷ボタン |
 
 ---
 
@@ -106,8 +121,8 @@
 ### A. 既存バグ修正・UI/UX改善
 - 特になし（全PR マージ済み・ワーキングツリークリーン）
 
-### B. その他改善
-- 新機能開発・パフォーマンス最適化など
+### B. 次フェーズ候補
+- Phase 62: 通知システム（未着手）
 
 ---
 
@@ -163,8 +178,8 @@
 
 再開前に以下を確認:
 
-- [x] `git log` で最新コミット確認（PR #88 シフト確定→休暇残高連動 マージ済み）✅
-- [x] CI/CD ジョブ確認（GitHub Pages デプロイ 成功）✅
+- [x] `git log` で最新コミット確認（PR #94 Phase 61 administrative-compliance-ui マージ済み）✅
+- [x] CI/CD ジョブ確認（Lighthouse CI 成功、CI/CD Pipeline in_progress）✅
 - [x] LLM→Solver完全移行 本番稼働確認（solverUnifiedGenerate稼働中）✅
 - [x] テスト全通過確認（Frontend 204, Backend 230, Solver 68）✅
 - [x] ワーキングツリークリーン確認（未コミット変更なし）✅
