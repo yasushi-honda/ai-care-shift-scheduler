@@ -10,6 +10,7 @@ import {
   Timestamp,
   Unsubscribe,
   arrayUnion,
+  writeBatch,
 } from 'firebase/firestore';
 import { db } from '../../firebase';
 import {
@@ -353,6 +354,167 @@ export async function updateLeaveUsage(
         code: 'FIRESTORE_ERROR',
         message: '休暇使用の更新に失敗しました',
       },
+    };
+  }
+}
+
+/**
+ * 複数月の休暇残高を一括取得（Phase 64: タイムライン用）
+ * @param facilityId  施設ID
+ * @param staffId     スタッフID
+ * @param yearMonths  取得する YYYY-MM リスト
+ * @returns key = `${yearMonth}_${staffId}` のマップ
+ */
+export async function getMultiMonthBalances(
+  facilityId: string,
+  staffId: string,
+  yearMonths: string[]
+): Promise<Result<Map<string, StaffLeaveBalance>, LeaveBalanceError>> {
+  try {
+    const results = new Map<string, StaffLeaveBalance>();
+    await Promise.all(
+      yearMonths.map(async (ym) => {
+        const balanceId = `${ym}_${staffId}`;
+        const ref = doc(db, 'facilities', facilityId, 'leaveBalances', balanceId);
+        const snap = await getDoc(ref);
+        if (snap.exists()) {
+          results.set(balanceId, { id: snap.id, ...snap.data() } as StaffLeaveBalance);
+        }
+      })
+    );
+    return { success: true, data: results };
+  } catch (error) {
+    console.error('Error fetching multi-month balances:', error);
+    return {
+      success: false,
+      error: {
+        code: 'FIRESTORE_ERROR',
+        message: '複数月残高の取得に失敗しました',
+      },
+    };
+  }
+}
+
+/**
+ * 翌月から前借りする（Phase 64: 前借りフロー）
+ *
+ * アトミックに以下を実行:
+ * 1. 当月に +borrowAmount の調整（reason: 前借り）
+ * 2. 翌月に -borrowAmount の調整（reason: 前借り返済）
+ */
+export async function borrowFromNextMonth(
+  facilityId: string,
+  staffId: string,
+  yearMonth: string,
+  borrowAmount: number,
+  userId: string
+): Promise<Result<void, LeaveBalanceError>> {
+  if (borrowAmount <= 0) {
+    return {
+      success: false,
+      error: { code: 'VALIDATION_ERROR', message: '前借り日数は 1 日以上にしてください' },
+    };
+  }
+
+  try {
+    // 翌月の yearMonth を計算
+    const [year, month] = yearMonth.split('-').map(Number);
+    const nextYM =
+      month === 12
+        ? `${year + 1}-01`
+        : `${year}-${String(month + 1).padStart(2, '0')}`;
+
+    const currentBalanceId = `${yearMonth}_${staffId}`;
+    const nextBalanceId = `${nextYM}_${staffId}`;
+    const currentRef = doc(db, 'facilities', facilityId, 'leaveBalances', currentBalanceId);
+    const nextRef = doc(db, 'facilities', facilityId, 'leaveBalances', nextBalanceId);
+
+    const [currentSnap, nextSnap] = await Promise.all([getDoc(currentRef), getDoc(nextRef)]);
+
+    if (!currentSnap.exists()) {
+      return {
+        success: false,
+        error: { code: 'NOT_FOUND', message: '当月の休暇残高が見つかりません' },
+      };
+    }
+
+    const currentBalance = currentSnap.data() as StaffLeaveBalance;
+    const now = Timestamp.now();
+    const borrowAdj: LeaveAdjustment = {
+      type: 'publicHoliday',
+      amount: borrowAmount,
+      reason: `前借り（翌月 ${nextYM} から）`,
+      adjustedBy: userId,
+      adjustedAt: now,
+    };
+    const repayAdj: LeaveAdjustment = {
+      type: 'publicHoliday',
+      amount: -borrowAmount,
+      reason: `前借り返済（${yearMonth} 分）`,
+      adjustedBy: userId,
+      adjustedAt: now,
+    };
+
+    const batch = writeBatch(db);
+
+    // 当月: 残高に +borrowAmount
+    batch.set(
+      currentRef,
+      {
+        ...currentBalance,
+        publicHoliday: {
+          ...currentBalance.publicHoliday,
+          balance: currentBalance.publicHoliday.balance + borrowAmount,
+        },
+        adjustments: arrayUnion(borrowAdj),
+        updatedAt: now,
+        updatedBy: userId,
+      },
+      { merge: false }
+    );
+
+    // 翌月: 存在すれば -borrowAmount、なければ調整フラグのみ記録
+    if (nextSnap.exists()) {
+      const nextBalance = nextSnap.data() as StaffLeaveBalance;
+      batch.set(
+        nextRef,
+        {
+          ...nextBalance,
+          publicHoliday: {
+            ...nextBalance.publicHoliday,
+            balance: nextBalance.publicHoliday.balance - borrowAmount,
+          },
+          adjustments: arrayUnion(repayAdj),
+          updatedAt: now,
+          updatedBy: userId,
+        },
+        { merge: false }
+      );
+    } else {
+      // 翌月残高未作成の場合は調整のみ記録（初期化時に反映される）
+      batch.set(
+        nextRef,
+        {
+          id: nextBalanceId,
+          staffId,
+          yearMonth: nextYM,
+          publicHoliday: { allocated: 0, used: 0, carriedOver: 0, balance: -borrowAmount },
+          paidLeave: { annualAllocated: 0, used: 0, carriedOver: 0, balance: 0, expiresAt: now },
+          adjustments: [repayAdj],
+          updatedAt: now,
+          updatedBy: userId,
+        },
+        { merge: true }
+      );
+    }
+
+    await batch.commit();
+    return { success: true, data: undefined };
+  } catch (error) {
+    console.error('Error borrowing from next month:', error);
+    return {
+      success: false,
+      error: { code: 'FIRESTORE_ERROR', message: '前借りの処理に失敗しました' },
     };
   }
 }

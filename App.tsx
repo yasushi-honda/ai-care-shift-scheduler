@@ -31,7 +31,8 @@ import { BulkCopyPlannedToActualModal } from './src/components/BulkCopyPlannedTo
 import { bulkCopyPlannedToActual, type BulkCopyOptions } from './src/utils/bulkCopyPlannedToActual';
 import KeyboardHelpModal from './src/components/KeyboardHelpModal';
 import { ShiftTypeSettings } from './src/components/ShiftTypeSettings';
-import { LeaveBalanceDashboard } from './src/components/LeaveBalanceDashboard';
+import { LeaveBalanceCompact } from './src/components/LeaveBalanceCompact';
+import { LeaveBalanceFullScreen } from './src/components/LeaveBalanceFullScreen';
 import { Timestamp } from 'firebase/firestore';
 // Phase 42: UIデザイン改善コンポーネント
 import { IconButton } from './src/components/IconButton';
@@ -134,6 +135,9 @@ const App: React.FC = () => {
   // Phase 61: 運営指導モード
   const [isInspectionMode, setIsInspectionMode] = useState(false);
   const [submissionGuideOpen, setSubmissionGuideOpen] = useState(false);
+  // Phase 64: 全画面休暇残高ダッシュボード
+  const [isLeaveBalanceFullScreen, setIsLeaveBalanceFullScreen] = useState(false);
+  const [leaveBalanceRefreshTrigger, setLeaveBalanceRefreshTrigger] = useState(0);
 
   // 自動生成プログレス表示
   const generationProgress = useGenerationProgress();
@@ -1340,7 +1344,7 @@ const App: React.FC = () => {
       // LocalStorageの下書きを削除
       const key = `draft-schedule-${selectedFacilityId}-${requirements.targetMonth}`;
       localStorage.removeItem(key);
-      // シフト確定後の休暇残高を自動同期（ベストエフォート・バックグラウンド実行）
+      // シフト確定後の休暇残高を自動同期（Phase 64: 結果チェック + トースト通知）
       const syncFacilityId = selectedFacilityId;
       const syncUserId = currentUser.uid;
       const syncYearMonth = requirements.targetMonth;
@@ -1360,7 +1364,19 @@ const App: React.FC = () => {
         }
         return tasks;
       });
-      void Promise.allSettled(syncTasks);
+      Promise.allSettled(syncTasks).then((results) => {
+        const succeeded = results.filter((r) => r.status === 'fulfilled').length;
+        const failed = results.filter((r) => r.status === 'rejected').length;
+        if (failed > 0) {
+          showError(`休暇残高の同期: ${succeeded}件成功、${failed}件失敗`);
+        } else if (succeeded > 0) {
+          showSuccess(`休暇残高を${succeeded}件同期しました`);
+        }
+        // 同期完了後にダッシュボードをリフレッシュ
+        setLeaveBalanceRefreshTrigger((n) => n + 1);
+      }).catch(() => {
+        showError('休暇残高の同期中にエラーが発生しました');
+      });
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : '確定時にエラーが発生しました';
       showError(errorMessage);
@@ -1631,12 +1647,12 @@ const App: React.FC = () => {
             />
           </Accordion>
           <Accordion title="休暇残高管理" icon={<LeaveBalanceIcon/>}>
-            <LeaveBalanceDashboard
+            <LeaveBalanceCompact
               facilityId={selectedFacilityId || ''}
               staffList={staffList}
               yearMonth={requirements.targetMonth}
-              leaveSettings={leaveSettings}
-              currentUserId={currentUser?.uid || ''}
+              refreshTrigger={leaveBalanceRefreshTrigger}
+              onOpenFullScreen={() => setIsLeaveBalanceFullScreen(true)}
             />
           </Accordion>
           <Accordion title="事業所のシフト要件設定" icon={<ClipboardIcon/>}>
@@ -1743,8 +1759,19 @@ const App: React.FC = () => {
           </div>
         </header>
         <div className="flex-1 overflow-auto pt-4 pb-4">
-          {/* Phase 61: 運営指導モード ダッシュボード */}
-          {isInspectionMode && selectedFacilityId ? (
+          {/* Phase 64: 全画面休暇残高ダッシュボード */}
+          {isLeaveBalanceFullScreen && selectedFacilityId ? (
+            <LeaveBalanceFullScreen
+              facilityId={selectedFacilityId}
+              staffList={staffList}
+              yearMonth={requirements.targetMonth}
+              leaveSettings={leaveSettings}
+              currentUserId={currentUser?.uid || ''}
+              refreshTrigger={leaveBalanceRefreshTrigger}
+              onClose={() => setIsLeaveBalanceFullScreen(false)}
+            />
+          ) : /* Phase 61: 運営指導モード ダッシュボード */
+          isInspectionMode && selectedFacilityId ? (
             <InspectionModeDashboard
               facilityId={selectedFacilityId}
               facilityName={facilities.get(selectedFacilityId)?.name ?? selectedFacilityId}

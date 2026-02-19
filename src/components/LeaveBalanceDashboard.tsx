@@ -38,6 +38,10 @@ interface LeaveBalanceDashboardProps {
   yearMonth: string;
   leaveSettings: FacilityLeaveSettings | null;
   currentUserId: string;
+  /** Phase 64: 値が変わるとデータを再取得する */
+  refreshTrigger?: number;
+  /** Phase 64: 全画面ダッシュボードを開くコールバック */
+  onOpenFullScreen?: () => void;
 }
 
 type FilterType = 'all' | 'low' | 'negative';
@@ -49,6 +53,8 @@ export const LeaveBalanceDashboard: React.FC<LeaveBalanceDashboardProps> = ({
   yearMonth,
   leaveSettings,
   currentUserId,
+  refreshTrigger,
+  onOpenFullScreen,
 }) => {
   const [balances, setBalances] = useState<Map<string, StaffLeaveBalance>>(new Map());
   const [loading, setLoading] = useState(true);
@@ -85,7 +91,7 @@ export const LeaveBalanceDashboard: React.FC<LeaveBalanceDashboardProps> = ({
     };
 
     loadBalances();
-  }, [facilityId, yearMonth]);
+  }, [facilityId, yearMonth, refreshTrigger]);
 
   // スタッフの残高を取得（存在しない場合は初期化）
   const getOrCreateBalance = useCallback(async (staffId: string): Promise<StaffLeaveBalance | null> => {
@@ -208,6 +214,20 @@ export const LeaveBalanceDashboard: React.FC<LeaveBalanceDashboardProps> = ({
 
   return (
     <div className="space-y-4">
+      {/* Phase 64: 全画面ボタン */}
+      {onOpenFullScreen && (
+        <div className="flex justify-end">
+          <button
+            onClick={onOpenFullScreen}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 rounded-lg transition-colors"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
+            </svg>
+            拡大表示
+          </button>
+        </div>
+      )}
       {/* フィルタ・ソート */}
       <div className="flex flex-wrap gap-4 items-center">
         <div>
