@@ -28,6 +28,7 @@ import { StaffActivityContent } from './StaffActivityContent';
 import { ManagementContent } from './ManagementContent';
 import { PersonalContent } from './PersonalContent';
 import { ComplianceContent } from './ComplianceContent';
+import { DocumentArchiveContent } from './DocumentArchiveContent';
 
 /**
  * Phase 41: 月次レポートページ
@@ -41,7 +42,7 @@ import { ComplianceContent } from './ComplianceContent';
  * - 個人: 自分の勤務実績（スタッフのみ）
  */
 
-type ReportTab = 'dashboard' | 'workTime' | 'shiftType' | 'staffActivity' | 'management' | 'personal' | 'compliance';
+type ReportTab = 'dashboard' | 'workTime' | 'shiftType' | 'staffActivity' | 'management' | 'personal' | 'compliance' | 'archive';
 
 /**
  * Phase 42.1: 戻るボタン用アイコン
@@ -209,6 +210,9 @@ export function ReportPage(): React.ReactElement {
       case 'compliance':
         fetchComplianceData();
         break;
+      case 'archive':
+        // DocumentArchiveContent が自律的にデータを取得するため、ここでは何もしない
+        break;
     }
   }, [activeTab, selectedFacilityId, targetMonth, fetchMonthlyReport, fetchManagementReport, fetchPersonalReport, fetchComplianceData]);
 
@@ -269,6 +273,7 @@ export function ReportPage(): React.ReactElement {
     { id: 'management', label: '経営分析', visible: isManager },
     { id: 'personal', label: '個人レポート', visible: isStaff },
     { id: 'compliance', label: 'コンプライアンス', visible: isManager },
+    { id: 'archive', label: '書類アーカイブ', visible: isManager },
   ];
 
   // 施設未選択時の表示
@@ -427,6 +432,14 @@ export function ReportPage(): React.ReactElement {
                   userId={currentUser?.uid}
                 />
               )}
+
+            {/* 書類アーカイブタブ（管理者専用） */}
+            {activeTab === 'archive' && selectedFacilityId && (
+              <DocumentArchiveContent
+                facilityId={selectedFacilityId}
+                facilityName={getFacilityName()}
+              />
+            )}
           </>
         )}
       </main>
