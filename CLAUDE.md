@@ -1,6 +1,6 @@
 # Claude Code Spec-Driven Development
 
-**最終更新**: 2026-02-19（PR #104 Phase 63 通知システム 完了）
+**最終更新**: 2026-02-20（PR #105 Phase 63.2 残高不足アラート 完了）
 
 Kiro-style Spec Driven Development implementation using claude code slash commands, hooks and agents.
 
