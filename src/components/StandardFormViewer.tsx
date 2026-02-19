@@ -18,7 +18,6 @@ import React, { useMemo } from 'react';
 import type { StaffSchedule, Staff, FacilityShiftSettings } from '../../types';
 import { calculateFullTimeEquivalent, groupFTEByRole } from '../services/complianceService';
 import { DEFAULT_STANDARD_WEEKLY_HOURS } from '../../constants';
-import { EMPLOYMENT_TYPES } from '../../constants';
 
 // ==================== 型定義 ====================
 
