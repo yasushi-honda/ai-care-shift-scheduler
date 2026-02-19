@@ -59,7 +59,6 @@ import { StaffingStandardSettings } from './src/components/StaffingStandardSetti
 import { subscribeStaffingStandard } from './src/services/staffingStandardService';
 import { calculateDailyFulfillment } from './src/services/complianceService';
 // Phase 63: 通知システム
-import { NotificationProvider } from './src/contexts/NotificationContext';
 import { NotificationBell } from './src/components/NotificationBell';
 
 type ViewMode = 'shift' | 'leaveRequest';

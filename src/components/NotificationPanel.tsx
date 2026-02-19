@@ -17,7 +17,7 @@ interface NotificationPanelProps {
  */
 export const NotificationPanel: React.FC<NotificationPanelProps> = ({ isOpen, onClose }) => {
   const { notifications, unreadCount, markAsRead, markAllAsRead, loading } = useNotifications();
-  const { currentUser, selectedFacilityId, selectFacility } = useAuth();
+  const { currentUser } = useAuth();
   const navigate = useNavigate();
   const panelRef = useRef<HTMLDivElement>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
