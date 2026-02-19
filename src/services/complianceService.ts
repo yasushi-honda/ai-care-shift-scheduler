@@ -19,6 +19,9 @@ import type {
   RoleGroupedFTEData,
   ComplianceViolationItem,
   ComplianceCheckResult,
+  StaffingStandardConfig,
+  DailyFulfillmentResult,
+  MonthlyFulfillmentSummary,
 } from '../../types';
 import { DEFAULT_STANDARD_WEEKLY_HOURS } from '../../constants';
 
@@ -401,5 +404,159 @@ export function runComplianceCheck(
     violations: [...breakViolations, ...intervalViolations],
     fteEntries,
     fteTotalByRole,
+  };
+}
+
+// ==================== Phase 65: 人員配置基準充足率計算 ====================
+
+/**
+ * 日次人員配置充足率を計算する（純粋関数）
+ *
+ * 各日の勤務スタッフを職種別に集計し、配置基準との充足率を算出する。
+ * 充足率 = 当日の職種別実績FTE / 必要FTE × 100
+ * 日次FTE貢献 = 実勤務時間 / (週所定 ÷ 5)
+ *
+ * @param staffSchedules - 対象月のスタッフスケジュール
+ * @param staffList - スタッフ情報一覧（職種取得用）
+ * @param shiftSettings - 施設シフト設定
+ * @param standardConfig - 人員配置基準設定
+ * @param targetMonth - 対象月 "YYYY-MM"
+ * @param standardWeeklyHours - 週所定労働時間（デフォルト40h）
+ * @param useActual - 実績ベース（true）/ 予定ベース（false）
+ */
+export function calculateDailyFulfillment(
+  staffSchedules: StaffSchedule[],
+  staffList: Staff[],
+  shiftSettings: FacilityShiftSettings,
+  standardConfig: StaffingStandardConfig,
+  targetMonth: string,
+  standardWeeklyHours: number = DEFAULT_STANDARD_WEEKLY_HOURS,
+  useActual: boolean = false
+): DailyFulfillmentResult[] {
+  // 日次FTE計算の基準（1日分の標準労働時間）
+  const dailyStandardHours = standardWeeklyHours / 5;
+
+  // 対象月の全日付を生成
+  const [year, month] = targetMonth.split('-').map(Number);
+  const daysInMonth = new Date(year, month, 0).getDate();
+  const dates: string[] = [];
+  for (let d = 1; d <= daysInMonth; d++) {
+    dates.push(`${targetMonth}-${String(d).padStart(2, '0')}`);
+  }
+
+  // staffId → Staff マッピング
+  const staffMap = new Map<string, Staff>();
+  for (const s of staffList) {
+    staffMap.set(s.id, s);
+  }
+
+  return dates.map((date) => {
+    // 当日の職種別 実績FTE 集計
+    const actualFteByRole = new Map<string, number>();
+
+    for (const ss of staffSchedules) {
+      const shift = ss.monthlyShifts.find((s) => s.date === date);
+      if (!shift) continue;
+
+      const workHours = getShiftWorkHours(shift, shiftSettings, useActual);
+      if (workHours <= 0) continue;
+
+      const staff = staffMap.get(ss.staffId);
+      const role = staff?.role ?? '';
+      const dailyFte = workHours / dailyStandardHours;
+
+      actualFteByRole.set(role, (actualFteByRole.get(role) ?? 0) + dailyFte);
+    }
+
+    // 職種別 充足率算出
+    const byRole = standardConfig.requirements.map((req) => {
+      const requiredFte =
+        req.calculationMethod === 'ratio'
+          ? (standardConfig.userCount ?? 0) / (req.ratioNumerator ?? 1)
+          : req.requiredFte;
+
+      const actualFte = actualFteByRole.get(req.role) ?? 0;
+      const fulfillmentRate = requiredFte > 0 ? (actualFte / requiredFte) * 100 : 100;
+      const status = fulfillmentRate >= 100 ? 'met' : fulfillmentRate >= 80 ? 'warning' : 'shortage';
+
+      return {
+        role: req.role,
+        requiredFte: Math.round(requiredFte * 100) / 100,
+        actualFte: Math.round(actualFte * 100) / 100,
+        fulfillmentRate: Math.round(fulfillmentRate * 10) / 10,
+        status: status as 'met' | 'warning' | 'shortage',
+      };
+    });
+
+    // 全体充足率（全職種の必要FTE合計 vs 実績FTE合計）
+    const totalRequired = byRole.reduce((s, r) => s + r.requiredFte, 0);
+    const totalActual = byRole.reduce((s, r) => s + r.actualFte, 0);
+    const overallRate = totalRequired > 0 ? (totalActual / totalRequired) * 100 : 100;
+    const overallStatus = overallRate >= 100 ? 'met' : overallRate >= 80 ? 'warning' : 'shortage';
+
+    return {
+      date,
+      overall: {
+        requiredFte: Math.round(totalRequired * 100) / 100,
+        actualFte: Math.round(totalActual * 100) / 100,
+        fulfillmentRate: Math.round(overallRate * 10) / 10,
+        status: overallStatus as 'met' | 'warning' | 'shortage',
+      },
+      byRole,
+    };
+  });
+}
+
+/**
+ * 月次充足率サマリーを集計する（純粋関数）
+ *
+ * @param dailyResults - calculateDailyFulfillment の結果
+ * @param targetMonth - 対象月 "YYYY-MM"
+ */
+export function calculateMonthlyFulfillmentSummary(
+  dailyResults: DailyFulfillmentResult[],
+  targetMonth: string
+): MonthlyFulfillmentSummary {
+  const totalDays = dailyResults.length;
+  if (totalDays === 0) {
+    return {
+      targetMonth,
+      averageFulfillmentRate: 100,
+      shortfallDays: 0,
+      totalDays: 0,
+      dailyResults: [],
+      byRole: [],
+    };
+  }
+
+  const sumRate = dailyResults.reduce((s, d) => s + d.overall.fulfillmentRate, 0);
+  const averageFulfillmentRate = Math.round((sumRate / totalDays) * 10) / 10;
+  const shortfallDays = dailyResults.filter((d) => d.overall.status === 'shortage').length;
+
+  // 職種別サマリー
+  const roleNames = dailyResults[0]?.byRole.map((r) => r.role) ?? [];
+  const byRole = roleNames.map((role) => {
+    const roleDays = dailyResults
+      .map((d) => d.byRole.find((r) => r.role === role))
+      .filter(Boolean) as DailyFulfillmentResult['byRole'];
+
+    const avgRate =
+      roleDays.length > 0
+        ? Math.round(
+            (roleDays.reduce((s, r) => s + r.fulfillmentRate, 0) / roleDays.length) * 10
+          ) / 10
+        : 100;
+    const shortfall = roleDays.filter((r) => r.status === 'shortage').length;
+
+    return { role, averageFulfillmentRate: avgRate, shortfallDays: shortfall };
+  });
+
+  return {
+    targetMonth,
+    averageFulfillmentRate,
+    shortfallDays,
+    totalDays,
+    dailyResults,
+    byRole,
   };
 }

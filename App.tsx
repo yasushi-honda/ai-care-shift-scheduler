@@ -1,10 +1,11 @@
-import React, { useState, useCallback, useEffect, useRef } from 'react';
+import React, { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
   Role, Qualification, TimeSlotPreference, LeaveType, FacilityRole,
   type Staff, type ShiftRequirement, type StaffSchedule, type GeneratedShift, type LeaveRequest, type ScheduleVersion, type LeaveRequestDocument, type Facility,
   type FacilityShiftSettings, type FacilityLeaveSettings,
   type EvaluationResult,
+  type StaffingStandardConfig,
   assertResultError, assertResultSuccess
 } from './types';
 import { DEFAULT_TIME_SLOTS, DEFAULT_SHIFT_TYPES, DEFAULT_SHIFT_CYCLE, DEFAULT_LEAVE_SETTINGS } from './constants';
@@ -53,6 +54,10 @@ import { useDiagnosis } from './src/hooks/useDiagnosis';
 // Phase 61: 運営指導モード
 import { InspectionModeDashboard } from './src/components/InspectionModeDashboard';
 import { SubmissionGuideModal } from './src/components/SubmissionGuideModal';
+// Phase 65: 人員配置基準ダッシュボード
+import { StaffingStandardSettings } from './src/components/StaffingStandardSettings';
+import { subscribeStaffingStandard } from './src/services/staffingStandardService';
+import { calculateDailyFulfillment, calculateMonthlyFulfillmentSummary } from './src/services/complianceService';
 
 type ViewMode = 'shift' | 'leaveRequest';
 
@@ -139,6 +144,9 @@ const App: React.FC = () => {
   const [isLeaveBalanceFullScreen, setIsLeaveBalanceFullScreen] = useState(false);
   const [leaveBalanceRefreshTrigger, setLeaveBalanceRefreshTrigger] = useState(0);
 
+  // Phase 65: 人員配置基準設定
+  const [staffingStandardConfig, setStaffingStandardConfig] = useState<StaffingStandardConfig | null>(null);
+
   // 自動生成プログレス表示
   const generationProgress = useGenerationProgress();
 
@@ -196,6 +204,18 @@ const App: React.FC = () => {
     updatedAt: Timestamp.now(),
     updatedBy: 'system',
   });
+
+  // Phase 65: 日次充足率計算（シフト表バッジ用）
+  const dailyFulfillmentResults = useMemo(() => {
+    if (!staffingStandardConfig || !shiftSettings || schedule.length === 0) return [];
+    return calculateDailyFulfillment(
+      schedule,
+      staffList,
+      shiftSettings,
+      staffingStandardConfig,
+      requirements.targetMonth
+    );
+  }, [schedule, staffList, shiftSettings, staffingStandardConfig, requirements.targetMonth]);
 
   // Phase 39: 休暇残高設定
   const [leaveSettings, setLeaveSettings] = useState<FacilityLeaveSettings>({
@@ -469,6 +489,19 @@ const App: React.FC = () => {
         console.error('Failed to subscribe to shift settings:', error);
         showError(`シフト設定の読み込みに失敗しました: ${error.message}`);
       }
+    );
+
+    return () => unsubscribe();
+  }, [selectedFacilityId]);
+
+  // Phase 65: 人員配置基準設定の購読
+  useEffect(() => {
+    if (!selectedFacilityId) return;
+
+    const unsubscribe = subscribeStaffingStandard(
+      selectedFacilityId,
+      (config) => setStaffingStandardConfig(config),
+      (error) => console.error('Failed to subscribe to staffing standard:', error)
     );
 
     return () => unsubscribe();
@@ -1655,6 +1688,13 @@ const App: React.FC = () => {
               onOpenFullScreen={() => setIsLeaveBalanceFullScreen(true)}
             />
           </Accordion>
+          <Accordion title="人員配置基準設定" icon={<StaffingStandardIcon/>}>
+            <StaffingStandardSettings
+              facilityId={selectedFacilityId || ''}
+              userId={currentUser?.uid || 'system'}
+              disabled={!selectedFacilityId}
+            />
+          </Accordion>
           <Accordion title="事業所のシフト要件設定" icon={<ClipboardIcon/>}>
             <div className="space-y-6">
               <div>
@@ -1814,6 +1854,7 @@ const App: React.FC = () => {
                 isReevaluating={isReevaluating}
                 facilityId={selectedFacilityId}
                 onSelectEvaluation={setEvaluation}
+                dailyFulfillmentResults={dailyFulfillmentResults}
               />
             )
           ) : (
@@ -1896,6 +1937,11 @@ const ShiftTypeIcon = () => (
 const LeaveBalanceIcon = () => (
   <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-care-secondary" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
     <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+  </svg>
+);
+const StaffingStandardIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-care-secondary" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+    <path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
   </svg>
 );
 

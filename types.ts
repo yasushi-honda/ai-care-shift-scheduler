@@ -982,3 +982,73 @@ export interface MonthlyOverviewRow {
   isStaffingAdequate: boolean;  // 人員配置充足（true=○ / false=×）
   hasDocumentArchive: boolean;  // 書類アーカイブ有無
 }
+
+// ==================== 人員配置基準管理（Phase 65）====================
+
+/**
+ * 職種別配置基準エントリ
+ */
+export interface StaffingRequirementEntry {
+  role: string;                                 // 職種名（Role enum値）
+  requiredFte: number;                          // 必要常勤換算数（固定方式）
+  calculationMethod: 'fixed' | 'ratio';         // 計算方式
+  ratioNumerator?: number;                      // ratio方式: 利用者÷この数（例: 3:1 → 3）
+  notes?: string;                               // 備考（例: "うち看護職員30:1以上"）
+}
+
+/**
+ * 施設の人員配置基準設定
+ * Firestoreパス: /facilities/{facilityId}/staffingStandards/default
+ */
+export interface StaffingStandardConfig {
+  facilityId: string;
+  serviceType: CareServiceType;
+  userCount: number;                            // 利用者数（ratio計算に使用）
+  requirements: StaffingRequirementEntry[];
+  updatedAt: Timestamp;
+  updatedBy: string;
+}
+
+/**
+ * 日次充足率結果
+ */
+export interface DailyFulfillmentResult {
+  date: string;                                 // "YYYY-MM-DD"
+  overall: {
+    requiredFte: number;
+    actualFte: number;
+    fulfillmentRate: number;                    // 0〜100以上（%）
+    status: 'met' | 'warning' | 'shortage';    // met=>=100%, warning=>=80%, shortage=<80%
+  };
+  byRole: Array<{
+    role: string;
+    requiredFte: number;
+    actualFte: number;
+    fulfillmentRate: number;
+    status: 'met' | 'warning' | 'shortage';
+  }>;
+}
+
+/**
+ * 月次充足率サマリー
+ */
+export interface MonthlyFulfillmentSummary {
+  targetMonth: string;                          // "YYYY-MM"
+  averageFulfillmentRate: number;               // 月平均充足率（%）
+  shortfallDays: number;                        // 基準未達日数（status='shortage'の日数）
+  totalDays: number;                            // 集計対象日数
+  dailyResults: DailyFulfillmentResult[];
+  byRole: Array<{
+    role: string;
+    averageFulfillmentRate: number;
+    shortfallDays: number;
+  }>;
+}
+
+/**
+ * 人員配置基準サービスのエラー型
+ */
+export type StaffingStandardError = {
+  code: 'PERMISSION_DENIED' | 'VALIDATION_ERROR' | 'FIRESTORE_ERROR' | 'NOT_FOUND';
+  message: string;
+};

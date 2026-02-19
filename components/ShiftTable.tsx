@@ -1,10 +1,11 @@
 
 import React, { useState, useRef, useCallback, useEffect, useMemo } from 'react';
-import type { StaffSchedule, GeneratedShift, FacilityShiftSettings, EvaluationResult } from '../types';
+import type { StaffSchedule, GeneratedShift, FacilityShiftSettings, EvaluationResult, DailyFulfillmentResult } from '../types';
 import { WEEKDAYS, DEFAULT_SHIFT_TYPES, DEFAULT_SHIFT_CYCLE } from '../constants';
 import { ShiftEditConfirmModal } from '../src/components/ShiftEditConfirmModal';
 import { EvaluationPanel } from '../src/components/EvaluationPanel';
 import { EvaluationHistory } from '../src/components/EvaluationHistory';
+import { DailyFulfillmentBadges } from '../src/components/DailyFulfillmentBadges';
 
 interface ShiftTableProps {
   schedule: StaffSchedule[];
@@ -26,6 +27,8 @@ interface ShiftTableProps {
   facilityId?: string;
   /** Phase 54: 評価選択コールバック */
   onSelectEvaluation?: (evaluation: EvaluationResult) => void;
+  /** Phase 65: 日次充足率結果（シフトヘッダー下に充足バッジを表示） */
+  dailyFulfillmentResults?: DailyFulfillmentResult[];
 }
 
 const getShiftColor = (shiftType: string) => {
@@ -77,7 +80,7 @@ interface EditModalData {
   currentShift: GeneratedShift | null;
 }
 
-const ShiftTable: React.FC<ShiftTableProps> = ({ schedule, targetMonth, onShiftChange, onShiftUpdate, onBulkCopyClick, onQuickShiftChange, shiftSettings, evaluation, onReevaluate, isReevaluating, facilityId, onSelectEvaluation }) => {
+const ShiftTable: React.FC<ShiftTableProps> = ({ schedule, targetMonth, onShiftChange, onShiftUpdate, onBulkCopyClick, onQuickShiftChange, shiftSettings, evaluation, onReevaluate, isReevaluating, facilityId, onSelectEvaluation, dailyFulfillmentResults }) => {
   const [editingShift, setEditingShift] = useState<{ staffId: string, date: string } | null>(null);
   const [showEditModal, setShowEditModal] = useState(false);
   const [editModalData, setEditModalData] = useState<EditModalData | null>(null);
@@ -484,6 +487,13 @@ const ShiftTable: React.FC<ShiftTableProps> = ({ schedule, targetMonth, onShiftC
                 );
               })}
             </tr>
+            {/* Phase 65: 日次充足率バッジ行 */}
+            {dailyFulfillmentResults && dailyFulfillmentResults.length > 0 && (
+              <DailyFulfillmentBadges
+                dailyResults={dailyFulfillmentResults}
+                targetMonth={targetMonth}
+              />
+            )}
           </thead>
           <tbody className="bg-white">
             {schedule.map((staffSchedule, staffIndex) => {
