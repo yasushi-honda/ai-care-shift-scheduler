@@ -1,8 +1,8 @@
 # ハンドオフメモ - 最新状態
 
-**更新日**: 2026-02-19（連勤最小化ソフト制約追加 PR #83 マージ済み）
+**更新日**: 2026-02-19（Phase 25 コンプライアンス・休暇連動 PR #84〜#88 マージ済み）
 **フェーズ**: LLM→Solver完全移行 **本番稼働中** ✅
-**最新作業**: 連勤最小化ソフト制約を Solver に追加（unified_builder.py）
+**最新作業**: Phase 25 コンプライアンスチェック・常勤換算・休暇残高連動機能を追加
 
 ---
 
@@ -41,28 +41,29 @@
 
 ## 直近の変更（最新5件）
 
-1. **PR #83マージ** (2026-02-19): 連勤最小化ソフト制約を追加
-   - `solver-functions/solver/unified_builder.py` に `UnifiedObjectiveBuilder._add_consecutive_work_soft()` を追加
-   - soft_limit = maxConsecutiveWorkDays - 1、重み: 4（Level 3 相当）
-   - Solverテスト: 68/68 PASS
+1. **PR #88マージ** (2026-02-19): シフト確定時に休暇残高を自動同期（Phase 25 #F）
+   - `handleConfirmSchedule` 後に `updateLeaveUsage` でベストエフォート同期
+   - `'休'`→publicHoliday, `LeaveType.PaidLeave`→paidLeave のカウントをFirestore更新
+   - 全ユニットテスト: 204/204 PASS
 
-2. **PR #82マージ** (2026-02-19): スタッフ設定UI最大連続勤務日数フィールド追加
-   - `StaffSettings.tsx` に「最大連続勤務日数」number入力欄を追加
-   - A/B比較レポートの処理時間計測値を更新（0.217秒→0.221秒、速度比564x→553x）
+2. **PR #87マージ** (2026-02-19): コンプライアンスチェックUIを追加（Phase 25 #E）
+   - `ComplianceContent.tsx`: 常勤換算FTEテーブル・役職別FTE合計・違反一覧
+   - レポートページに「コンプライアンス」タブ追加
+   - 予定/実績トグル・週所定労働時間入力対応
 
-3. **PR #81マージ** (2026-02-18): 希望休重複の事前バリデーション
-   - 資格要件競合を診断フェーズで事前検出
-   - CI/CD: 完了・成功（6m31s）
+3. **PR #86マージ** (2026-02-19): Excelエクスポート機能を追加（Phase 25 #C）
+   - `exportExcel.ts`: 標準様式第1号 + 予実2段書きのExcelブック生成
+   - ExcelJS 動的import（バンドルサイズ最適化）
+   - ユニットテスト: 15ケース全通過
 
-4. **PR #80マージ** (2026-02-18): Solver警告フロントエンド表示
-   - `SolverWarningsSection` コンポーネント新設（constraintType別グループ化、日付チップ、折りたたみ）
-   - フロントエンド型定義追加（`SolverWarning`, `EvaluationResult.solverWarnings`, `GenerateShiftResponse.solverWarnings`）
-   - 変更ファイル: `types.ts`, `EvaluationPanel.tsx`, `shiftGenerationService.ts`, `functions/src/types.ts`
+4. **PR #85マージ** (2026-02-19): コンプライアンスサービスを追加（Phase 25 #B）
+   - `complianceService.ts`: FTE計算・休憩時間チェック（労基法34条）・インターバルチェック
+   - 全純粋関数設計（副作用なし）
 
-5. **PR #79マージ** (2026-02-18): Solver Level 2 事前検証警告
-   - CP-SAT Solverの `_add_staffing` / `_add_qualification` でサイレントスキップを解消
-   - `SolverWarning`（`staffShortage` / `qualificationMissing`）を事前検知して返却
-   - Pythonテスト: 65/65全通過
+5. **PR #84マージ** (2026-02-19): Staff/Facility型に勤務形態区分・週所定労働時間を追加（Phase 25 #A）
+   - `Staff.employmentType: 'A'|'B'|'C'|'D'`（常勤/非常勤区分）
+   - `Staff.weeklyContractHours?: number`（週契約時間）
+   - `FacilityShiftSettings.standardWeeklyHours?: number`（施設の週所定労働時間）
 
 ---
 
@@ -78,6 +79,11 @@
 | **希望休重複バリデーション** | ✅ PR #81マージ済み | 資格要件競合を診断フェーズで事前検出 |
 | **スタッフ設定UI改善** | ✅ PR #82マージ済み | 最大連続勤務日数フィールド追加 |
 | **連勤最小化ソフト制約** | ✅ PR #83マージ済み | `_add_consecutive_work_soft()` soft_limit=maxDays-1、重み4 |
+| **Phase 25 型定義** | ✅ PR #84マージ済み | employmentType・weeklyContractHours・standardWeeklyHours追加 |
+| **コンプライアンスサービス** | ✅ PR #85マージ済み | FTE計算・休憩時間チェック・インターバルチェック |
+| **Excelエクスポート** | ✅ PR #86マージ済み | 標準様式第1号・予実2段書き、ExcelJS動的import |
+| **コンプライアンスUI** | ✅ PR #87マージ済み | レポートページにコンプライアンスタブ追加 |
+| **シフト確定→休暇残高連動** | ✅ PR #88マージ済み | 確定後にupdateLeaveUsageでベストエフォート同期 |
 
 ---
 
@@ -118,7 +124,7 @@
 
 - **Playwright**: UI自動テスト実装済み
 - **Solver**: 68/68テスト通過（単体15 + スケーラビリティ5 + PoC34 + A/B比較6 + 事前検証5 + 連勤最小化3）
-- **Frontend**: 161テスト通過
+- **Frontend**: 204テスト通過（Phase 25 追加: complianceService 6 + exportExcel 15 + leaveConflict 11 + 他）
 - **Backend**: 230テスト通過
 
 ---
@@ -156,7 +162,7 @@
 
 再開前に以下を確認:
 
-- [x] `git log` で最新コミット確認（PR #83 連勤最小化ソフト制約追加 マージ済み）✅
+- [x] `git log` で最新コミット確認（PR #88 シフト確定→休暇残高連動 マージ済み）✅
 - [x] CI/CD ジョブ確認（GitHub Pages デプロイ 成功）✅
 - [x] LLM→Solver完全移行 本番稼働確認（solverUnifiedGenerate稼働中）✅
 - [x] テスト全通過確認（Frontend 161, Backend 230, Solver 68）✅
