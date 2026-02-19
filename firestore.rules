@@ -245,6 +245,13 @@ service cloud.firestore {
         // 削除はCloud Functionのみ
         allow delete: if false;
       }
+
+      // documentArchive subcollection (Phase 61で実装)
+      // 月別書類メタデータの保管・書類アーカイブ機能
+      match /documentArchive/{yearMonth} {
+        // admin以上で読み書き可能（書類アーカイブ・運営指導機能）
+        allow read, write: if isAuthenticated() && (isSuperAdmin() || hasRole(facilityId, 'admin'));
+      }
     }
 
     // auditLogs collection (Phase 13で実装)

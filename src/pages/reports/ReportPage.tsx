@@ -28,6 +28,8 @@ import { StaffActivityContent } from './StaffActivityContent';
 import { ManagementContent } from './ManagementContent';
 import { PersonalContent } from './PersonalContent';
 import { ComplianceContent } from './ComplianceContent';
+import { DocumentArchiveContent } from './DocumentArchiveContent';
+import { SubmissionGuideModal } from '../../components/SubmissionGuideModal';
 
 /**
  * Phase 41: 月次レポートページ
@@ -41,7 +43,7 @@ import { ComplianceContent } from './ComplianceContent';
  * - 個人: 自分の勤務実績（スタッフのみ）
  */
 
-type ReportTab = 'dashboard' | 'workTime' | 'shiftType' | 'staffActivity' | 'management' | 'personal' | 'compliance';
+type ReportTab = 'dashboard' | 'workTime' | 'shiftType' | 'staffActivity' | 'management' | 'personal' | 'compliance' | 'archive';
 
 /**
  * Phase 42.1: 戻るボタン用アイコン
@@ -74,6 +76,9 @@ export function ReportPage(): React.ReactElement {
   const [complianceStaffSchedules, setComplianceStaffSchedules] = useState<StaffSchedule[] | null>(null);
   const [complianceStaffList, setComplianceStaffList] = useState<Staff[] | null>(null);
   const [complianceShiftSettings, setComplianceShiftSettings] = useState<FacilityShiftSettings | null>(null);
+
+  // Phase 61: 電子申請フロー案内モーダル
+  const [submissionGuideOpen, setSubmissionGuideOpen] = useState(false);
 
   // ユーザーの施設ロールを取得
   const getUserFacilityRole = useCallback((): FacilityRole | null => {
@@ -209,6 +214,9 @@ export function ReportPage(): React.ReactElement {
       case 'compliance':
         fetchComplianceData();
         break;
+      case 'archive':
+        // DocumentArchiveContent が自律的にデータを取得するため、ここでは何もしない
+        break;
     }
   }, [activeTab, selectedFacilityId, targetMonth, fetchMonthlyReport, fetchManagementReport, fetchPersonalReport, fetchComplianceData]);
 
@@ -269,6 +277,7 @@ export function ReportPage(): React.ReactElement {
     { id: 'management', label: '経営分析', visible: isManager },
     { id: 'personal', label: '個人レポート', visible: isStaff },
     { id: 'compliance', label: 'コンプライアンス', visible: isManager },
+    { id: 'archive', label: '書類アーカイブ', visible: isManager },
   ];
 
   // 施設未選択時の表示
@@ -423,11 +432,29 @@ export function ReportPage(): React.ReactElement {
                   shiftSettings={complianceShiftSettings}
                   facilityName={getFacilityName()}
                   targetMonth={targetMonth}
+                  facilityId={selectedFacilityId ?? undefined}
+                  userId={currentUser?.uid}
+                  onOpenSubmissionGuide={() => setSubmissionGuideOpen(true)}
                 />
               )}
+
+            {/* 書類アーカイブタブ（管理者専用） */}
+            {activeTab === 'archive' && selectedFacilityId && (
+              <DocumentArchiveContent
+                facilityId={selectedFacilityId}
+                facilityName={getFacilityName()}
+                onOpenSubmissionGuide={() => setSubmissionGuideOpen(true)}
+              />
+            )}
           </>
         )}
       </main>
+
+      {/* Phase 61: 電子申請フロー案内モーダル */}
+      <SubmissionGuideModal
+        isOpen={submissionGuideOpen}
+        onClose={() => setSubmissionGuideOpen(false)}
+      />
     </div>
   );
 }
