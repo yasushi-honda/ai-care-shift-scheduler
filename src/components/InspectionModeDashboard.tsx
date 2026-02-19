@@ -23,6 +23,7 @@ import type {
 import { runComplianceCheck } from '../services/complianceService';
 import { getDocumentArchives } from '../services/documentArchiveService';
 import { DEFAULT_STANDARD_WEEKLY_HOURS } from '../../constants';
+import { StandardFormViewer } from './StandardFormViewer';
 
 interface InspectionModeDashboardProps {
   facilityId: string;
@@ -55,27 +56,6 @@ function formatYearMonth(ym: string): string {
   return `${year}年${month}月`;
 }
 
-/** 当月の日数と日付リストを生成 */
-function getDaysInMonth(ym: string): number[] {
-  const [year, month] = ym.split('-').map(Number);
-  const daysCount = new Date(year, month, 0).getDate();
-  return Array.from({ length: daysCount }, (_, i) => i + 1);
-}
-
-/** スタッフのある日付のシフトタイプ名を取得 */
-function getShiftType(
-  schedule: StaffSchedule[],
-  staffId: string,
-  date: string,
-  useActual: boolean
-): string {
-  const staffSchedule = schedule.find((s) => s.staffId === staffId);
-  if (!staffSchedule) return '';
-  const shift = staffSchedule.monthlyShifts.find((s) => s.date === date);
-  if (!shift) return '';
-  if (useActual && shift.actualShiftType) return shift.actualShiftType;
-  return shift.plannedShiftType || '';
-}
 
 export function InspectionModeDashboard({
   facilityId,
@@ -123,19 +103,6 @@ export function InspectionModeDashboard({
 
   // 12ヶ月リスト
   const past12Months = useMemo(() => getPast12Months(targetMonth), [targetMonth]);
-
-  // 日付リスト（グリッド用）
-  const days = useMemo(() => getDaysInMonth(targetMonth), [targetMonth]);
-
-  // シフトタイプ → color マップ
-  const shiftColorMap = useMemo(() => {
-    const map = new Map<string, { bg: string; text: string }>();
-    for (const st of shiftSettings.shiftTypes) {
-      map.set(st.name, { bg: st.color.background, text: st.color.text });
-      map.set(st.id, { bg: st.color.background, text: st.color.text });
-    }
-    return map;
-  }, [shiftSettings]);
 
   // Level1（労基法）違反件数
   const level1Count = complianceResult?.violations.filter(
@@ -338,13 +305,13 @@ export function InspectionModeDashboard({
           </section>
         )}
 
-        {/* ===== セクション3: 当月シフトグリッド（Task 5.4） ===== */}
+        {/* ===== セクション3: 標準様式プレビュー（Phase 62 - Task 5.4置き換え） ===== */}
         <section className="print:break-before-page">
           <h2 className="text-lg font-bold text-gray-800 mb-3 flex items-center gap-2">
             <svg className="h-5 w-5 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
             </svg>
-            当月実績シフト一覧（{formatYearMonth(targetMonth)}）
+            勤務体制及び勤務形態一覧表 プレビュー（{formatYearMonth(targetMonth)}）
           </h2>
 
           {schedule.length === 0 ? (
@@ -352,51 +319,14 @@ export function InspectionModeDashboard({
               当月のシフトデータがありません
             </div>
           ) : (
-            <div className="bg-white border border-gray-200 rounded-lg overflow-x-auto">
-              <table className="text-xs border-collapse">
-                <thead>
-                  <tr className="bg-gray-50">
-                    <th className="border border-gray-200 px-3 py-1.5 text-left font-medium text-gray-600 whitespace-nowrap sticky left-0 bg-gray-50 min-w-24">
-                      スタッフ
-                    </th>
-                    {days.map((d) => (
-                      <th
-                        key={d}
-                        className="border border-gray-200 px-1.5 py-1.5 text-center font-medium text-gray-600 min-w-8"
-                      >
-                        {d}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {staffList.map((staff) => (
-                    <tr key={staff.id} className="hover:bg-gray-50">
-                      <td className="border border-gray-200 px-3 py-1 text-gray-800 font-medium whitespace-nowrap sticky left-0 bg-white">
-                        {staff.name}
-                      </td>
-                      {days.map((d) => {
-                        const date = `${targetMonth}-${String(d).padStart(2, '0')}`;
-                        const shiftType = getShiftType(schedule, staff.id, date, true);
-                        const color = shiftColorMap.get(shiftType);
-                        return (
-                          <td
-                            key={d}
-                            className={`border border-gray-200 px-1 py-1 text-center ${
-                              color ? `${color.bg} ${color.text}` : 'text-gray-400'
-                            }`}
-                          >
-                            {shiftType
-                              ? shiftType.slice(0, 2)
-                              : <span className="text-gray-200">-</span>}
-                          </td>
-                        );
-                      })}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <StandardFormViewer
+              staffSchedules={schedule}
+              staffList={staffList}
+              shiftSettings={shiftSettings}
+              facilityName={facilityName}
+              targetMonth={targetMonth}
+              standardWeeklyHours={DEFAULT_STANDARD_WEEKLY_HOURS}
+            />
           )}
         </section>
 

@@ -130,23 +130,30 @@ describe('createStandardFormWorkbook', () => {
     expect(titleCell.value).toContain('従業者の勤務の体制及び勤務形態一覧表');
   });
 
-  it('施設名・対象月がヘッダーに含まれる', async () => {
+  it('施設名・対象月がヘッダーに含まれる（Phase 62: 行3に移動）', async () => {
     const wb = await createStandardFormWorkbook(
       mockSchedules, mockStaff, mockShiftSettings, 'テスト施設', '2025-01'
     );
     const ws = wb.worksheets[0];
-    const row2 = ws.getRow(2);
-    expect(String(row2.getCell(2).value)).toContain('テスト施設');
-    expect(String(row2.getCell(5).value)).toContain('令和7年1月');
+    // Phase 62: 行2=事業所番号/サービス種類, 行3=施設名/対象月
+    const row3 = ws.getRow(3);
+    expect(String(row3.getCell(2).value)).toContain('テスト施設');
+    expect(String(row3.getCell(2).value)).toContain('令和7年1月');
   });
 
-  it('スタッフ名が正しく出力される', async () => {
+  it('スタッフ名が正しく出力される（Phase 62: 職種グループ行後のデータ行を検索）', async () => {
     const wb = await createStandardFormWorkbook(
       mockSchedules, mockStaff, mockShiftSettings, 'テスト施設', '2025-01'
     );
     const ws = wb.worksheets[0];
-    // 行5以降がスタッフデータ行
-    const staffNames = [ws.getRow(5).getCell(2).value, ws.getRow(6).getCell(2).value];
+    // Phase 62: 行6以降（グループヘッダー行を含む）。全行からスタッフ名セルを収集
+    const staffNames: string[] = [];
+    for (let r = 6; r <= 20; r++) {
+      const cellVal = ws.getRow(r).getCell(2).value;
+      if (cellVal && typeof cellVal === 'string' && !cellVal.startsWith('【')) {
+        staffNames.push(cellVal);
+      }
+    }
     expect(staffNames).toContain('田中太郎');
     expect(staffNames).toContain('佐藤花子');
   });
@@ -158,18 +165,18 @@ describe('createStandardFormWorkbook', () => {
     expect(wb).toBeDefined();
   });
 
-  it('1月（31日）の列数が正しい（固定5列 + 31日 + 集計2列 = 38列）', async () => {
+  it('1月（31日）の列数が正しい（Phase 62: 固定7列 + 31日 + 集計3列 = 41列）', async () => {
     const wb = await createStandardFormWorkbook(
       mockSchedules, mockStaff, mockShiftSettings, 'テスト施設', '2025-01'
     );
     const ws = wb.worksheets[0];
-    const headerRow = ws.getRow(4);
-    // COL_FTE = 6(DAY_START) + 31(days) + 1(totalHours) + 1(fte) = 39... 実際はCOL_TOTAL_HOURS=37, COL_FTE=38
-    // COL_DAYS_START=6, daysInMonth=31 → COL_TOTAL_HOURS=6+31=37, COL_FTE=38
-    expect(headerRow.getCell(38).value).toContain('換算');
+    // Phase 62: ヘッダーは行5に移動
+    // COL_DAYS_START=8, daysInMonth=31 → COL_TOTAL_HOURS=39, COL_WEEKLY_AVG=40, COL_FTE=41
+    const headerRow = ws.getRow(5);
+    expect(headerRow.getCell(41).value).toContain('換算');
   });
 
-  it('2月（28日）の列数が正しい（固定5列 + 28日 + 集計2列 = 35列）', async () => {
+  it('2月（28日）の列数が正しい（Phase 62: 固定7列 + 28日 + 集計3列 = 38列）', async () => {
     const schedFeb = [{
       staffId: 's1', staffName: '田中太郎',
       monthlyShifts: [{ date: '2025-02-01', plannedShiftType: '日勤' }],
@@ -178,9 +185,104 @@ describe('createStandardFormWorkbook', () => {
       schedFeb, mockStaff, mockShiftSettings, 'テスト施設', '2025-02'
     );
     const ws = wb.worksheets[0];
-    const headerRow = ws.getRow(4);
-    // COL_DAYS_START=6, daysInMonth=28 → COL_TOTAL_HOURS=6+28=34, COL_FTE=35
-    expect(headerRow.getCell(35).value).toContain('換算');
+    // Phase 62: ヘッダーは行5に移動
+    // COL_DAYS_START=8, daysInMonth=28 → COL_TOTAL_HOURS=36, COL_WEEKLY_AVG=37, COL_FTE=38
+    const headerRow = ws.getRow(5);
+    expect(headerRow.getCell(38).value).toContain('換算');
+  });
+});
+
+// ==================== Phase 62: 新規テスト ====================
+
+describe('Phase 62: createStandardFormWorkbook 拡張', () => {
+  it('後方互換性: 6引数での呼び出しが正常に動作する', async () => {
+    const wb = await createStandardFormWorkbook(
+      mockSchedules, mockStaff, mockShiftSettings, 'テスト施設', '2025-01', 40
+    );
+    expect(wb).toBeDefined();
+    expect(wb.worksheets[0].name).toBe('勤務形態一覧表');
+  });
+
+  it('事業所番号・サービス種類が行2に出力される', async () => {
+    const wb = await createStandardFormWorkbook(
+      mockSchedules, mockStaff, mockShiftSettings, 'テスト施設', '2025-01',
+      40, 'TEST0001234', '通所介護', 'テスト作成者'
+    );
+    const ws = wb.worksheets[0];
+    const row2Val = String(ws.getRow(2).getCell(2).value);
+    expect(row2Val).toContain('TEST0001234');
+    expect(row2Val).toContain('通所介護');
+  });
+
+  it('作成者名が行3に出力される', async () => {
+    const wb = await createStandardFormWorkbook(
+      mockSchedules, mockStaff, mockShiftSettings, 'テスト施設', '2025-01',
+      40, undefined, undefined, '山田管理者'
+    );
+    const ws = wb.worksheets[0];
+    const row3Val = String(ws.getRow(3).getCell(2).value);
+    expect(row3Val).toContain('山田管理者');
+  });
+
+  it('職種グループヘッダー行に「【」が含まれる', async () => {
+    const wb = await createStandardFormWorkbook(
+      mockSchedules, mockStaff, mockShiftSettings, 'テスト施設', '2025-01'
+    );
+    const ws = wb.worksheets[0];
+    // 行6以降を走査してグループヘッダー行を探す
+    let hasGroupHeader = false;
+    for (let r = 6; r <= 15; r++) {
+      const cellVal = ws.getRow(r).getCell(1).value;
+      if (typeof cellVal === 'string' && cellVal.includes('【')) {
+        hasGroupHeader = true;
+        break;
+      }
+    }
+    expect(hasGroupHeader).toBe(true);
+  });
+
+  it('小計行に「小計」が含まれる', async () => {
+    const wb = await createStandardFormWorkbook(
+      mockSchedules, mockStaff, mockShiftSettings, 'テスト施設', '2025-01'
+    );
+    const ws = wb.worksheets[0];
+    let hasSubtotalRow = false;
+    for (let r = 6; r <= 20; r++) {
+      const cellVal = ws.getRow(r).getCell(1).value;
+      if (typeof cellVal === 'string' && cellVal.includes('小計')) {
+        hasSubtotalRow = true;
+        break;
+      }
+    }
+    expect(hasSubtotalRow).toBe(true);
+  });
+
+  it('週平均時間列ヘッダーが行5に含まれる', async () => {
+    const wb = await createStandardFormWorkbook(
+      mockSchedules, mockStaff, mockShiftSettings, 'テスト施設', '2025-01'
+    );
+    const ws = wb.worksheets[0];
+    const headerRow = ws.getRow(5);
+    // COL_WEEKLY_AVG = 8 + 31 + 1 = 40
+    const weeklyAvgHeader = String(headerRow.getCell(40).value);
+    expect(weeklyAvgHeader).toContain('週平均');
+  });
+
+  it('有給計上注記が注記行に含まれる', async () => {
+    const wb = await createStandardFormWorkbook(
+      mockSchedules, mockStaff, mockShiftSettings, 'テスト施設', '2025-01'
+    );
+    const ws = wb.worksheets[0];
+    // 注記行を探す（下の方の行）
+    let hasNote = false;
+    for (let r = 1; r <= ws.rowCount; r++) {
+      const cellVal = String(ws.getRow(r).getCell(1).value ?? '');
+      if (cellVal.includes('有給休暇')) {
+        hasNote = true;
+        break;
+      }
+    }
+    expect(hasNote).toBe(true);
   });
 });
 
