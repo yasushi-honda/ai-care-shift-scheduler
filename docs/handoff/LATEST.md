@@ -1,8 +1,8 @@
 # ハンドオフメモ - 最新状態
 
-**更新日**: 2026-02-19（PR #96 標準様式プレビューA4横印刷最適化 マージ済み）
+**更新日**: 2026-02-19（PR #101 Phase 64 休暇残高管理 UX刷新 マージ済み）
 **フェーズ**: LLM→Solver完全移行 **本番稼働中** ✅
-**最新作業**: PR #96 標準様式プレビューのA4横印刷最適化（印刷スタイル改善）
+**最新作業**: PR #101 Phase 64 休暇残高管理 UX刷新（LeaveBalanceCompact/FullScreen等 新コンポーネント群）
 
 ---
 
@@ -60,31 +60,29 @@
 
 ## 直近の変更（最新5件）
 
-1. **PR #96マージ** (2026-02-19): 標準様式プレビューのA4横印刷最適化
-   - `StandardFormViewer.tsx` 印刷スタイル改善: A4横向き（297mm×210mm）対応、印刷時の余白・フォントサイズ最適化
+1. **PR #101マージ** (2026-02-19): Phase 64 休暇残高管理 UX刷新（leave-balance-ux-renewal）
+   - `LeaveBalanceCompact`: サイドバー用コンパクトサマリー（総スタッフ数/マイナス残高/時効近バッジ）
+   - `LeaveBalanceFullScreen`: 全画面ダッシュボード（フィルタ4種・カードグリッド・印刷対応）
+   - `LeaveBalanceStaffCard`: スタッフ個別残高カード（公休ProgressBar・有給信号機ドット・前借りボタン）
+   - `LeaveBalanceTimeline`: 3ヶ月推移バーチャート（What-if +/-シミュレーション）
+   - `PaidLeaveCountdown`: 有給時効カウントダウン（90/30/7日閾値・CircularProgressゲージ）
+   - `BorrowConfirmDialog`: 前借りワンクリックフロー（writeBatchアトミック書込）
+   - テスト: 279テスト全通過（+58増）
 
-2. **PR #95マージ** (2026-02-19): Phase 62 勤務体制一覧表 標準様式準拠（standard-form-compliance）
+2. **PR #96マージ** (2026-02-19): 標準様式プレビューのA4横印刷最適化
+   - `StandardFormViewer.tsx` 印刷スタイル改善: A4横向き（297mm×210mm）対応、余白・フォントサイズ最適化
+
+3. **PR #95マージ** (2026-02-19): Phase 62 勤務体制一覧表 標準様式準拠（standard-form-compliance）
    - `StandardFormViewer.tsx` 新規作成: 厚生労働省標準様式第1号の画面プレビューコンポーネント
-   - `exportExcel.ts` 列拡張: 常勤/非常勤・専従/兼務・雇用開始日・週平均時間、職種別グループ化・小計行
-   - `complianceService.ts` FTE計算改善: 常勤(A/B)の有給を所定労働時間として計上、`groupFTEByRole` 追加
-   - `InspectionModeDashboard.tsx`: シフトグリッドを StandardFormViewer に置き換え
-   - `ComplianceContent.tsx`: 折りたたみ式標準様式プレビューセクション追加
-   - テスト: Frontend 221テスト全通過（有給計上ルール・groupFTEByRole・Excel職種別小計を追加）
+   - `exportExcel.ts` 列拡張: 常勤/非常勤・専従/兼務・雇用開始日・週平均時間
+   - テスト: Frontend 221テスト全通過
 
-2. **PR #94マージ** (2026-02-19): Phase 61 運営指導モード・月別書類管理（administrative-compliance-ui）
+4. **PR #94マージ** (2026-02-19): Phase 61 運営指導モード・月別書類管理（administrative-compliance-ui）
    - 書類アーカイブ（Firestore保存・一覧・再DL・一括ZIP DL）
-   - 運営指導モードトグル（全画面ダッシュボード切替）
-   - 常勤換算値・人員配置基準ダッシュボード
-   - 電子申請フロー案内モーダル（4ステップ）
+   - 運営指導モードトグル・電子申請フロー案内モーダル（4ステップ）
 
-3. **PR #92マージ** (2026-02-19): demo-shift-removal 残工事完了・CLAUDE.md Spec一覧全件更新
-   - CLAUDE.md の Active Specifications テーブルに未登録Specを全件追加
-
-4. **PR #88マージ** (2026-02-19): シフト確定時に休暇残高を自動同期（Phase 25 #F）
+5. **PR #88マージ** (2026-02-19): シフト確定時に休暇残高を自動同期（Phase 25 #F）
    - `handleConfirmSchedule` 後に `updateLeaveUsage` でベストエフォート同期
-
-5. **PR #87マージ** (2026-02-19): コンプライアンスチェックUIを追加（Phase 25 #E）
-   - `ComplianceContent.tsx`: 常勤換算FTEテーブル・役職別FTE合計・違反一覧
 
 ---
 
@@ -110,6 +108,7 @@
 | **電子申請案内モーダル** | ✅ PR #94マージ済み | 4ステップ案内・印刷ボタン |
 | **標準様式第1号準拠Excel/プレビュー** | ✅ PR #95マージ済み | 職種別グループ・常勤/非常勤・FTE計算改善 |
 | **標準様式プレビューA4横印刷最適化** | ✅ PR #96マージ済み | A4横向き印刷スタイル改善 |
+| **休暇残高管理 UX刷新** | ✅ PR #101マージ済み | LeaveBalanceCompact/FullScreen/StaffCard/Timeline/PaidLeaveCountdown/BorrowConfirmDialog |
 
 ---
 
@@ -133,6 +132,7 @@
 
 ### B. 次フェーズ候補
 - Phase 63: 通知システム（未着手）
+- Phase 65以降: 休暇残高管理の運用検証・フィードバック収集
 - 標準様式準拠の運用検証・フィードバック収集
 
 ---
@@ -151,7 +151,7 @@
 
 - **Playwright**: UI自動テスト実装済み
 - **Solver**: 68/68テスト通過（単体15 + スケーラビリティ5 + PoC34 + A/B比較6 + 事前検証5 + 連勤最小化3）
-- **Frontend**: 221テスト通過（Phase 62 追加: 有給計上ルール + groupFTEByRole + Excel職種別小計 + 他）
+- **Frontend**: 279テスト通過（Phase 64 追加: LeaveBalanceCompact/StaffCard/leave-balance utils +58件）
 - **Backend**: 230テスト通過
 
 ---
@@ -189,10 +189,10 @@
 
 再開前に以下を確認:
 
-- [x] `git log` で最新コミット確認（PR #96 標準様式プレビューA4横印刷最適化 マージ済み）✅
+- [x] `git log` で最新コミット確認（PR #101 Phase 64 休暇残高管理 UX刷新 マージ済み）✅
 - [x] CI/CD ジョブ確認（Lighthouse CI / CI/CD Pipeline 実行中→成功見込み）
 - [x] LLM→Solver完全移行 本番稼働確認（solverUnifiedGenerate稼働中）✅
-- [x] テスト全通過確認（Frontend 221, Backend 230, Solver 68）✅
+- [x] テスト全通過確認（Frontend 279, Backend 230, Solver 68）✅
 - [x] ワーキングツリークリーン確認（未コミット変更なし）✅
 
 ---
