@@ -1,8 +1,8 @@
 # ハンドオフメモ - 最新状態
 
-**更新日**: 2026-02-19（PR #101 Phase 64 休暇残高管理 UX刷新 マージ済み）
+**更新日**: 2026-02-20（PR #105 Phase 63.2 残高不足アラート マージ済み）
 **フェーズ**: LLM→Solver完全移行 **本番稼働中** ✅
-**最新作業**: PR #101 Phase 64 休暇残高管理 UX刷新（LeaveBalanceCompact/FullScreen等 新コンポーネント群）
+**最新作業**: PR #105 Phase 63.2 残高不足アラート（公休マイナス残高・有給時効通知）
 
 ---
 
@@ -39,6 +39,10 @@
 | compliance-leave-management | 25 | ✅ 完了 |
 | shift-type-settings | 38 | ✅ 完了 |
 | leave-balance-management | 39 | ✅ 完了 |
+| leave-balance-ux-renewal | 64 | ✅ 完了 |
+| staffing-dashboard | 65 | ✅ 完了 |
+| standard-form-service-type | 66 | ✅ 完了 |
+| notification-system | 63 | ✅ 完了 |
 | double-click-shift-edit | 38.5 | ✅ 完了 |
 | arrow-key-navigation | - | ✅ 完了 |
 | ctrl-arrow-navigation | - | ✅ 完了 |
@@ -60,29 +64,21 @@
 
 ## 直近の変更（最新5件）
 
-1. **PR #101マージ** (2026-02-19): Phase 64 休暇残高管理 UX刷新（leave-balance-ux-renewal）
-   - `LeaveBalanceCompact`: サイドバー用コンパクトサマリー（総スタッフ数/マイナス残高/時効近バッジ）
-   - `LeaveBalanceFullScreen`: 全画面ダッシュボード（フィルタ4種・カードグリッド・印刷対応）
-   - `LeaveBalanceStaffCard`: スタッフ個別残高カード（公休ProgressBar・有給信号機ドット・前借りボタン）
-   - `LeaveBalanceTimeline`: 3ヶ月推移バーチャート（What-if +/-シミュレーション）
-   - `PaidLeaveCountdown`: 有給時効カウントダウン（90/30/7日閾値・CircularProgressゲージ）
-   - `BorrowConfirmDialog`: 前借りワンクリックフロー（writeBatchアトミック書込）
+1. **PR #105マージ** (2026-02-19): Phase 63.2 残高不足アラート
+   - 公休残高マイナス検出アラート
+   - 有給時効通知（期限切れ前アラート）
+
+2. **PR #104マージ** (2026-02-19): Phase 63 通知システム実装
+   - 通知センターUI（通知一覧・既読管理）
+   - シフト確定通知（スタッフへの自動通知）
+
+3. **PR #103マージ** (2026-02-19): Phase 66 勤務体制一覧表 サービス種別対応（standard-form-service-type）
+
+4. **PR #102マージ** (2026-02-19): Phase 65 人員配置基準ダッシュボード強化（staffing-dashboard）
+
+5. **PR #101マージ** (2026-02-19): Phase 64 休暇残高管理 UX刷新（leave-balance-ux-renewal）
+   - LeaveBalanceCompact/FullScreen/StaffCard/Timeline/PaidLeaveCountdown/BorrowConfirmDialog
    - テスト: 279テスト全通過（+58増）
-
-2. **PR #96マージ** (2026-02-19): 標準様式プレビューのA4横印刷最適化
-   - `StandardFormViewer.tsx` 印刷スタイル改善: A4横向き（297mm×210mm）対応、余白・フォントサイズ最適化
-
-3. **PR #95マージ** (2026-02-19): Phase 62 勤務体制一覧表 標準様式準拠（standard-form-compliance）
-   - `StandardFormViewer.tsx` 新規作成: 厚生労働省標準様式第1号の画面プレビューコンポーネント
-   - `exportExcel.ts` 列拡張: 常勤/非常勤・専従/兼務・雇用開始日・週平均時間
-   - テスト: Frontend 221テスト全通過
-
-4. **PR #94マージ** (2026-02-19): Phase 61 運営指導モード・月別書類管理（administrative-compliance-ui）
-   - 書類アーカイブ（Firestore保存・一覧・再DL・一括ZIP DL）
-   - 運営指導モードトグル・電子申請フロー案内モーダル（4ステップ）
-
-5. **PR #88マージ** (2026-02-19): シフト確定時に休暇残高を自動同期（Phase 25 #F）
-   - `handleConfirmSchedule` 後に `updateLeaveUsage` でベストエフォート同期
 
 ---
 
@@ -93,35 +89,11 @@
 | **統合Solver** | ✅ 本番デプロイ完了 | 単一CP-SATモデル、LLM完全廃止済み |
 | **CP-SAT Solver** | ✅ 本番稼働中 | 決定的スケジュール生成、100名対応 |
 | **評価システム** | ✅ 4段階評価 | Level 1-4対応、動的制約生成 |
-| **事前検証警告** | ✅ PR #79マージ済み | staffShortage/qualificationMissing警告 |
-| **警告UI表示** | ✅ PR #80マージ済み | EvaluationPanelにSolverWarningsSection追加 |
-| **希望休重複バリデーション** | ✅ PR #81マージ済み | 資格要件競合を診断フェーズで事前検出 |
-| **スタッフ設定UI改善** | ✅ PR #82マージ済み | 最大連続勤務日数フィールド追加 |
-| **連勤最小化ソフト制約** | ✅ PR #83マージ済み | `_add_consecutive_work_soft()` soft_limit=maxDays-1、重み4 |
-| **Phase 25 型定義** | ✅ PR #84マージ済み | employmentType・weeklyContractHours・standardWeeklyHours追加 |
-| **コンプライアンスサービス** | ✅ PR #85マージ済み | FTE計算・休憩時間チェック・インターバルチェック |
-| **Excelエクスポート** | ✅ PR #86マージ済み | 標準様式第1号・予実2段書き、ExcelJS動的import |
-| **コンプライアンスUI** | ✅ PR #87マージ済み | レポートページにコンプライアンスタブ追加 |
-| **シフト確定→休暇残高連動** | ✅ PR #88マージ済み | 確定後にupdateLeaveUsageでベストエフォート同期 |
-| **書類アーカイブ** | ✅ PR #94マージ済み | Firestore保存・一覧・再DL・一括ZIP DL |
-| **運営指導モード** | ✅ PR #94マージ済み | 全画面ダッシュボード・印刷対応 |
-| **電子申請案内モーダル** | ✅ PR #94マージ済み | 4ステップ案内・印刷ボタン |
-| **標準様式第1号準拠Excel/プレビュー** | ✅ PR #95マージ済み | 職種別グループ・常勤/非常勤・FTE計算改善 |
-| **標準様式プレビューA4横印刷最適化** | ✅ PR #96マージ済み | A4横向き印刷スタイル改善 |
-| **休暇残高管理 UX刷新** | ✅ PR #101マージ済み | LeaveBalanceCompact/FullScreen/StaffCard/Timeline/PaidLeaveCountdown/BorrowConfirmDialog |
-
----
-
-## A/B比較結果（Phase 3 統合Solver 完了）
-
-| 指標 | LLM版 | 統合Solver | 改善 |
-|------|-------|-----------|------|
-| 12名処理時間 | 90-400秒 | 0.22秒 | 99.8%削減 |
-| 50名処理時間 | タイムアウト | 0.89秒 | 対応不可→対応可 |
-| 100名処理時間 | 対応不可 | <30秒 | 新規対応 |
-| Level 1違反 | 0-5件 | 0件 | 数学的保証 |
-| 評価スコア | 72-100 | 100 | 安定的最適解 |
-| LLMコスト/回 | ~$0.15 | $0.00 | 100%削減 |
+| **休暇残高管理 UX刷新** | ✅ PR #101マージ済み | LeaveBalance系コンポーネント群 |
+| **人員配置基準ダッシュボード** | ✅ PR #102マージ済み | staffing-dashboard強化 |
+| **勤務体制一覧表 サービス種別対応** | ✅ PR #103マージ済み | standard-form-service-type |
+| **通知システム** | ✅ PR #104マージ済み | 通知センターUI + シフト確定通知 |
+| **残高不足アラート** | ✅ PR #105マージ済み | 公休マイナス残高・有給時効通知 |
 
 ---
 
@@ -129,11 +101,11 @@
 
 ### A. 既存バグ修正・UI/UX改善
 - 特になし（全PR マージ済み・ワーキングツリークリーン）
+- CI/CD Pipeline（PR #105）: 完了済み ✅（Lighthouse CI + CI/CD Pipeline 共にsuccess）
 
 ### B. 次フェーズ候補
-- Phase 63: 通知システム（未着手）
-- Phase 65以降: 休暇残高管理の運用検証・フィードバック収集
-- 標準様式準拠の運用検証・フィードバック収集
+- Phase 67以降: 次期機能検討
+- 各機能の運用検証・フィードバック収集
 
 ---
 
@@ -150,8 +122,8 @@
 ## E2Eテスト状況
 
 - **Playwright**: UI自動テスト実装済み
-- **Solver**: 68/68テスト通過（単体15 + スケーラビリティ5 + PoC34 + A/B比較6 + 事前検証5 + 連勤最小化3）
-- **Frontend**: 279テスト通過（Phase 64 追加: LeaveBalanceCompact/StaffCard/leave-balance utils +58件）
+- **Solver**: 68/68テスト通過
+- **Frontend**: 279テスト通過（Phase 64以降追加分含む）
 - **Backend**: 230テスト通過
 
 ---
@@ -159,18 +131,13 @@
 ## 重要な判断・制約
 
 1. **CP-SAT Solver**: LLMコード完全削除、Solver一本化
-   - 統合Solver: 単一CP-SATモデルで全制約を一括求解
-   - LLMフォールバックパス削除済み（useSolver/useUnifiedSolverフラグ廃止）
    - 参考: [ADR-0004](../adr/0004-hybrid-architecture-adoption.md)
 
 2. **4段階評価システム**: Level 1-4の制約評価
-   - Level 1（労基法）: 即0点
-   - Level 2（人員不足）: -12点/件
-   - Level 3（希望休）: -4点/件
-   - Level 4（推奨）: 0点
+   - Level 1（労基法）: 即0点 / Level 2（人員不足）: -12点/件
+   - Level 3（希望休）: -4点/件 / Level 4（推奨）: 0点
 
-3. **決定性の重要性**: ユーザー信頼性確保
-   - Solver: 完全決定的（同一入力→同一出力）
+3. **決定性の重要性**: Solver完全決定的（同一入力→同一出力）
 
 ---
 
@@ -189,8 +156,8 @@
 
 再開前に以下を確認:
 
-- [x] `git log` で最新コミット確認（PR #101 Phase 64 休暇残高管理 UX刷新 マージ済み）✅
-- [x] CI/CD ジョブ確認（Lighthouse CI / CI/CD Pipeline 実行中→成功見込み）
+- [x] `git log` で最新コミット確認（PR #105 Phase 63.2 残高不足アラート マージ済み）✅
+- [x] CI/CD Pipeline（PR #105）完了確認（Lighthouse CI + CI/CD Pipeline 共にsuccess）✅
 - [x] LLM→Solver完全移行 本番稼働確認（solverUnifiedGenerate稼働中）✅
 - [x] テスト全通過確認（Frontend 279, Backend 230, Solver 68）✅
 - [x] ワーキングツリークリーン確認（未コミット変更なし）✅
