@@ -1,6 +1,6 @@
 # Claude Code Spec-Driven Development
 
-**最終更新**: 2026-02-16（LLM→Solver完全移行完了 - LLMコード削除・UI表記統一）
+**最終更新**: 2026-02-19（Phase 61 administrative-compliance-ui 完了）
 
 Kiro-style Spec Driven Development implementation using claude code slash commands, hooks and agents.
 
@@ -55,7 +55,7 @@ Kiro-style Spec Driven Development implementation using claude code slash comman
 | mobile-touch-support | - | ✅ 完了 |
 | undo-functionality | - | ✅ 完了 |
 | redo-functionality | - | ✅ 完了 |
-| administrative-compliance-ui | 61 | 🔄 要件定義中 |
+| administrative-compliance-ui | 61 | ✅ 完了 |
 
 Use `/kiro:spec-status [feature-name]` to check progress.
 
