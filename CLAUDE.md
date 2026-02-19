@@ -21,46 +21,7 @@ Kiro-style Spec Driven Development implementation using claude code slash comman
 
 ## Active Specifications
 
-| Spec | Phase | Status |
-|------|-------|--------|
-| ai-shift-integration-test | - | ✅ 完了 |
-| auth-data-persistence | 0-12.5 | ✅ 完了 |
-| monthly-report-enhancement | 41 | ✅ 完了 |
-| ui-design-improvement | 42 | ✅ 完了 |
-| navigation-improvement | 42.1 | ✅ 完了 |
-| demo-login | 42.2 | ✅ 完了 |
-| demo-environment-improvements | 43 | ✅ 完了 |
-| ai-evaluation-feedback | 44 | ✅ 完了 |
-| ai-generation-progress | 45 | ✅ 完了 |
-| constraint-level-evaluation | 53 | ✅ 完了 |
-| evaluation-history-reevaluate | 54 | ✅ 完了 |
-| data-configuration-diagnosis | 55 | ✅ 完了 |
-| hybrid-solver-poc | 57 | ✅ 完了 |
-| solver-production-deploy | 58 | ✅ 完了 |
-| dependency-updates-p0-p3 | 59 | ✅ 完了 |
-| compliance-leave-management | 25 | ✅ 完了 |
-| shift-type-settings | 38 | ✅ 完了 |
-| leave-balance-management | 39 | ✅ 完了 |
-| leave-balance-ux-renewal | 64 | ✅ 完了 |
-| staffing-dashboard | 65 | ✅ 完了 |
-| standard-form-service-type | 66 | ✅ 完了 |
-| notification-system | 63 | ✅ 完了 |
-| double-click-shift-edit | 38.5 | ✅ 完了 |
-| arrow-key-navigation | - | ✅ 完了 |
-| ctrl-arrow-navigation | - | ✅ 完了 |
-| home-end-navigation | - | ✅ 完了 |
-| pageup-pagedown-navigation | - | ✅ 完了 |
-| keyboard-accessibility | - | ✅ 完了 |
-| keyboard-shortcut-help | - | ✅ 完了 |
-| ci-cd-e2e-integration | - | ✅ 完了 |
-| demo-data-improvement | - | ✅ 完了 |
-| demo-shift-removal | - | ✅ 完了 |
-| github-pages-optimization | - | ✅ 完了 |
-| mobile-touch-support | - | ✅ 完了 |
-| undo-functionality | - | ✅ 完了 |
-| redo-functionality | - | ✅ 完了 |
-| administrative-compliance-ui | 61 | ✅ 完了 |
-| standard-form-compliance | 62 | ✅ 完了 |
+全Spec（Phase 66まで）完了済み。詳細は **[docs/handoff/LATEST.md](docs/handoff/LATEST.md)** を参照。
 
 Use `/kiro:spec-status [feature-name]` to check progress.
 
@@ -252,6 +213,7 @@ gh pr diff <PR番号>  # 差分を確認してレビュー依頼
 | [documentation-standards.md](.kiro/steering/documentation-standards.md) | ドキュメント基準 |
 | [solver-generation-flow.md](.kiro/steering/solver-generation-flow.md) | Solverシフト生成フロー |
 | [solver-optimization-strategy.md](.kiro/steering/solver-optimization-strategy.md) | Solver最適化戦略 |
+| [dynamic-constraints.md](.kiro/steering/dynamic-constraints.md) | Solver動的制約生成 |
 | [care-compliance.md](.kiro/steering/care-compliance.md) | 介護報酬算定ガイドライン |
 | [deployment-troubleshooting.md](.kiro/steering/deployment-troubleshooting.md) | デプロイトラブルシューティング |
 | [implementation-log-index.md](.kiro/steering/implementation-log-index.md) | 実装ログインデックス |

@@ -2,7 +2,7 @@
 
 **日付**: 2026-02-14（フェーズ3更新: 2026-02-16）
 **ステータス**: 採用（フェーズ3完了）
-**関連**: [ai-shift-optimization-strategy.md](../../.kiro/steering/ai-shift-optimization-strategy.md) 戦略C、[ai-generation-flow.md](../../.kiro/steering/ai-generation-flow.md) セクション7.3
+**関連**: [solver-generation-flow.md](../../.kiro/steering/solver-generation-flow.md)、[solver-optimization-strategy.md](../../.kiro/steering/solver-optimization-strategy.md)
 
 ## コンテキスト
 
@@ -20,7 +20,7 @@
 
 ### Phase 3リバランスの成功実績
 
-Phase 3（後処理リバランス）は完全にアルゴリズムベースで実装済み。リバランスにより違反数を19→2に削減し、戦略A単体で目標スコアを達成した（[ai-shift-optimization-strategy.md](../../.kiro/steering/ai-shift-optimization-strategy.md) セクション7参照）。これはハイブリッド化の第一歩として位置付けられる。
+Phase 3（後処理リバランス）は完全にアルゴリズムベースで実装済み。リバランスにより違反数を19→2に削減し、戦略A単体で目標スコアを達成した。これはハイブリッド化の第一歩として位置付けられる。
 
 ### 業界ベストプラクティス調査（2026-02-14）
 
@@ -148,8 +148,8 @@ PoCで5名×31日のテストデータに対しCP-SAT SolverとLLM版のA/B比�
 ## 参照
 
 ### プロジェクト内ドキュメント
-- [ai-shift-optimization-strategy.md](../../.kiro/steering/ai-shift-optimization-strategy.md) - 戦略Cの定義と評価
-- [ai-generation-flow.md](../../.kiro/steering/ai-generation-flow.md) - 現在のAI生成フロー
+- [solver-generation-flow.md](../../.kiro/steering/solver-generation-flow.md) - Solverシフト生成フロー
+- [solver-optimization-strategy.md](../../.kiro/steering/solver-optimization-strategy.md) - Solver最適化戦略
 - [architecture.md](../../.kiro/steering/architecture.md) - システムアーキテクチャ
 
 ### 外部参照
