@@ -868,4 +868,67 @@ export type ReportError =
   | { code: 'PDF_GENERATION_FAILED'; message: string; reason: string }
   | { code: 'PERMISSION_DENIED'; message: string; requiredRole: FacilityRole }
   | { code: 'NETWORK_ERROR'; message: string; originalError: Error }
+
+// ============================================================
+// Phase 61: 行政対応UI（書類アーカイブ・運営指導モード）
+// ============================================================
+
+/**
+ * 書類種別
+ * standard_form: 標準様式第1号（勤務形態一覧表）
+ * actual_vs_plan: 予実2段書き
+ */
+export type DocType = 'standard_form' | 'actual_vs_plan';
+
+/**
+ * 書類メタデータ（Firestoreドキュメント内フィールド）
+ */
+export interface DocumentMeta {
+  createdAt: Timestamp;
+  createdBy: string;   // Firebase Auth UID
+  facilityName: string;
+}
+
+/**
+ * 書類アーカイブレコード（Firestoreドキュメント）
+ * パス: facilities/{facilityId}/documentArchive/{yearMonth}
+ */
+export interface DocumentArchiveRecord {
+  yearMonth: string;               // "YYYY-MM"
+  standard_form?: DocumentMeta;
+  actual_vs_plan?: DocumentMeta;
+}
+
+/**
+ * 一括ダウンロード進捗
+ */
+export interface BulkDownloadProgress {
+  completed: number;
+  total: number;
+}
+
+/**
+ * 一括ダウンロード結果
+ */
+export interface BulkDownloadResult {
+  skipped: Array<{ yearMonth: string; docType: DocType; reason: string }>;
+}
+
+/**
+ * 一括ダウンロードの選択エントリ
+ */
+export interface BulkDownloadSelection {
+  yearMonth: string;
+  docType: DocType;
+}
+
+/**
+ * 月別概要テーブル行（運営指導モード用）
+ */
+export interface MonthlyOverviewRow {
+  yearMonth: string;            // "YYYY-MM"
+  fteTotal: number;             // 常勤換算合計
+  isStaffingAdequate: boolean;  // 人員配置充足（true=○ / false=×）
+  hasDocumentArchive: boolean;  // 書類アーカイブ有無
+}
   | { code: 'STAFF_NOT_FOUND'; message: string; staffId: string };
