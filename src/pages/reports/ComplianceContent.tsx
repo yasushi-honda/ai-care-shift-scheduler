@@ -19,6 +19,7 @@ import type {
   FullTimeEquivalentEntry,
   DocType,
   StaffingStandardConfig,
+  CareServiceType,
 } from '../../../types';
 import {
   runComplianceCheck,
@@ -96,6 +97,11 @@ export function ComplianceContent({
   const [showPreview, setShowPreview] = useState(false);
   const [showFulfillmentDetail, setShowFulfillmentDetail] = useState(false);
 
+  // Phase 66: 標準様式プレビュー用サービス種別（タブ切替）
+  const [previewServiceType, setPreviewServiceType] = useState<CareServiceType>(
+    staffingConfig?.serviceType ?? '通所介護'
+  );
+
   // Phase 65: 月次充足率サマリー（メモ化）
   const fulfillmentSummary = useMemo(() => {
     if (!staffingConfig || staffSchedules.length === 0) return null;
@@ -144,7 +150,8 @@ export function ComplianceContent({
 
         if (docType === 'standard_form') {
           const wb = await createStandardFormWorkbook(
-            staffSchedules, staffList, shiftSettings, facilityName, targetMonth, standardWeeklyHours
+            staffSchedules, staffList, shiftSettings, facilityName, targetMonth, standardWeeklyHours,
+            undefined, previewServiceType
           );
           await downloadExcel(wb, generateStandardFormFilename(targetMonth));
         } else {
@@ -180,7 +187,7 @@ export function ComplianceContent({
         setIsExporting(null);
       }
     },
-    [staffSchedules, staffList, shiftSettings, facilityName, targetMonth, standardWeeklyHours, facilityId, userId, onOpenSubmissionGuide, showWarning, showWithAction, showSuccess, showError]
+    [staffSchedules, staffList, shiftSettings, facilityName, targetMonth, standardWeeklyHours, previewServiceType, facilityId, userId, onOpenSubmissionGuide, showWarning, showWithAction, showSuccess, showError]
   );
 
   // 役職別FTE合計テーブルの行
@@ -470,15 +477,38 @@ export function ComplianceContent({
           </svg>
         </button>
         {showPreview && (
-          <div className="border-t border-gray-200 p-4">
-            <StandardFormViewer
-              staffSchedules={staffSchedules}
-              staffList={staffList}
-              shiftSettings={shiftSettings}
-              facilityName={facilityName}
-              targetMonth={targetMonth}
-              standardWeeklyHours={standardWeeklyHours}
-            />
+          <div className="border-t border-gray-200">
+            {/* Phase 66: サービス種別タブ */}
+            <div className="flex border-b border-gray-200 bg-gray-50 px-4 pt-3 gap-1">
+              {(['通所介護', '訪問介護', '介護老人福祉施設'] as CareServiceType[]).map((st) => (
+                <button
+                  key={st}
+                  type="button"
+                  onClick={() => setPreviewServiceType(st)}
+                  className={`px-3 py-1.5 text-sm rounded-t border-b-2 transition-colors ${
+                    previewServiceType === st
+                      ? 'border-indigo-600 text-indigo-700 font-semibold bg-white'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-white'
+                  }`}
+                >
+                  {st}
+                </button>
+              ))}
+              <span className="ml-auto self-center text-xs text-gray-400">
+                ※ Excelエクスポートにも反映されます
+              </span>
+            </div>
+            <div className="p-4">
+              <StandardFormViewer
+                staffSchedules={staffSchedules}
+                staffList={staffList}
+                shiftSettings={shiftSettings}
+                facilityName={facilityName}
+                targetMonth={targetMonth}
+                standardWeeklyHours={standardWeeklyHours}
+                serviceType={previewServiceType}
+              />
+            </div>
           </div>
         )}
       </section>

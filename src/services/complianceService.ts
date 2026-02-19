@@ -560,3 +560,78 @@ export function calculateMonthlyFulfillmentSummary(
     byRole,
   };
 }
+
+// ==================== 夜間勤務時間計算（Phase 66） ====================
+
+/**
+ * 1シフトの夜間勤務時間（時間）を計算する
+ *
+ * 夜間帯: 22:00〜29:00（= 翌5:00）
+ *
+ * 日付跨ぎシフト（16:00〜09:00等）対応:
+ *   end < start の場合 end += 24*60 で翌日として計算
+ *
+ * 早朝シフト（00:00〜05:00）対応:
+ *   非日跨ぎだが夜間帯に含まれる → 独立して計上
+ */
+function calcNightHoursForShift(startTime: string, endTime: string): number {
+  const NIGHT_START = 22 * 60; // 1320 min（22:00）
+  const NIGHT_NEXT_END = 5 * 60; // 300 min（翌5:00）
+  const DAY_MINS = 24 * 60; // 1440
+
+  let s = timeToMinutes(startTime);
+  let e = timeToMinutes(endTime);
+  if (e <= s) e += DAY_MINS; // 日付跨ぎ補正
+
+  // 夜間帯拡張: [22:00, 29:00] = [1320, 1740]
+  const nightExtEnd = DAY_MINS + NIGHT_NEXT_END; // 1740
+  const mainNight = Math.max(0, Math.min(e, nightExtEnd) - Math.max(s, NIGHT_START));
+
+  // 早朝スタンドアロンシフト（00:00〜05:00 など、日跨ぎなし）
+  // 上記 mainNight では捕捉できないため個別計上
+  const earlyMorning =
+    s < NIGHT_NEXT_END && e <= NIGHT_START
+      ? Math.max(0, Math.min(e, NIGHT_NEXT_END) - s)
+      : 0;
+
+  return (mainNight + earlyMorning) / 60;
+}
+
+/**
+ * スタッフの月間夜間勤務時間合計を計算する（Phase 66: 特養用）
+ *
+ * 夜間帯: 22:00〜翌5:00（労基法上の深夜割増対象時間帯）
+ *
+ * @param staffSchedule - 対象スタッフの月間スケジュール
+ * @param shiftSettings - 施設シフト設定（シフト時間設定）
+ * @param useActual - true=実績ベース、false=予定ベース（デフォルト）
+ * @returns 月間夜間勤務時間（小数点1桁）
+ */
+export function calculateNightHours(
+  staffSchedule: StaffSchedule,
+  shiftSettings: FacilityShiftSettings,
+  useActual: boolean = false
+): number {
+  let totalNightHours = 0;
+
+  for (const shift of staffSchedule.monthlyShifts) {
+    const shiftTypeName =
+      useActual && shift.actualShiftType ? shift.actualShiftType : shift.plannedShiftType;
+    const startTime =
+      useActual && shift.actualStartTime ? shift.actualStartTime : shift.plannedStartTime;
+    const endTime =
+      useActual && shift.actualEndTime ? shift.actualEndTime : shift.plannedEndTime;
+
+    if (!shiftTypeName || REST_SHIFT_NAMES.has(shiftTypeName)) continue;
+
+    const config = findShiftConfig(shiftSettings, shiftTypeName);
+    const resolvedStart = startTime || config?.start;
+    const resolvedEnd = endTime || config?.end;
+
+    if (!resolvedStart || !resolvedEnd) continue;
+
+    totalNightHours += calcNightHoursForShift(resolvedStart, resolvedEnd);
+  }
+
+  return Math.round(totalNightHours * 10) / 10;
+}
