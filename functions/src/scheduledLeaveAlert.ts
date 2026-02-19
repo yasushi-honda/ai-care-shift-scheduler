@@ -40,14 +40,18 @@ export const scheduledLeaveAlert = onSchedule(
   },
   async (_event) => {
     const db = admin.firestore();
-    const now = new Date();
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+    // Cloud FunctionsはUTCで動作するため、JST（UTC+9）に変換して日付を判定する
+    const JST_OFFSET_MS = 9 * 60 * 60 * 1000;
+    const nowJst = new Date(Date.now() + JST_OFFSET_MS);
+    // JSTの年月日でDateオブジェクトを構築（日付計算の基準）
+    const today = new Date(nowJst.getUTCFullYear(), nowJst.getUTCMonth(), nowJst.getUTCDate());
     const dayOfMonth = today.getDate();
 
-    // 当月: YYYY-MM
+    // 当月: YYYY-MM（JST基準）
     const currentMonth = formatYearMonth(today);
 
-    // 前月: YYYY-MM
+    // 前月: YYYY-MM（JST基準）
     const prevDate = new Date(today.getFullYear(), today.getMonth() - 1, 1);
     const prevMonth = formatYearMonth(prevDate);
 
