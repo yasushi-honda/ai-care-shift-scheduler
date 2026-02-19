@@ -188,7 +188,7 @@ describe('LeaveBalanceCompact', () => {
   it('API失敗時もクラッシュしない', async () => {
     vi.mocked(getStaffLeaveBalances).mockResolvedValue({
       success: false,
-      error: { code: 'FETCH_ERROR', message: 'fetch failed' },
+      error: { code: 'FIRESTORE_ERROR', message: 'fetch failed' },
     });
 
     // エラーが発生しないことを確認
