@@ -39,6 +39,7 @@ Kiro-style Spec Driven Development implementation using claude code slash comman
 | solver-production-deploy | 58 | ✅ 完了 |
 | dependency-updates-p0-p3 | 59 | ✅ 完了 |
 | compliance-leave-management | 25 | ✅ 完了 |
+| administrative-compliance-ui | 61 | 🔄 要件定義中 |
 
 Use `/kiro:spec-status [feature-name]` to check progress.
 
