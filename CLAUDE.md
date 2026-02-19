@@ -55,6 +55,7 @@ Kiro-style Spec Driven Development implementation using claude code slash comman
 | mobile-touch-support | - | ✅ 完了 |
 | undo-functionality | - | ✅ 完了 |
 | redo-functionality | - | ✅ 完了 |
+| administrative-compliance-ui | 61 | 🔄 要件定義中 |
 
 Use `/kiro:spec-status [feature-name]` to check progress.
 
