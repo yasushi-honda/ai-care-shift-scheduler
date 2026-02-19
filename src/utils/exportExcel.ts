@@ -183,7 +183,8 @@ export async function createStandardFormWorkbook(
   });
 
   // ==================== 行1: タイトル ====================
-  const colName = fixedColNums['name'] ?? 1;
+  // タイトル行はNo.列（列1）から全列マージ
+  const colName = fixedColNums['no'] ?? 1;
   const titleRow = worksheet.getRow(1);
   const titleCell = titleRow.getCell(colName);
   titleCell.value = '従業者の勤務の体制及び勤務形態一覧表';
