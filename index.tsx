@@ -28,6 +28,7 @@ const SecurityAlerts = lazy(() => import('./src/pages/admin/SecurityAlerts').the
 const BackupManagement = lazy(() => import('./src/pages/admin/BackupManagement').then(m => ({ default: m.BackupManagement })));
 const UsageReports = lazy(() => import('./src/pages/admin/UsageReports').then(m => ({ default: m.UsageReports })));
 const ReportPage = lazy(() => import('./src/pages/reports/ReportPage').then(m => ({ default: m.ReportPage })));
+const HelpPage = lazy(() => import('./src/pages/HelpPage').then(m => ({ default: m.HelpPage })));
 
 const rootElement = document.getElementById('root');
 if (!rootElement) {
@@ -62,6 +63,16 @@ root.render(
                     element={
                       <ProtectedRoute>
                         <ReportPage />
+                      </ProtectedRoute>
+                    }
+                  />
+
+                  {/* ヘルプページ */}
+                  <Route
+                    path="/help"
+                    element={
+                      <ProtectedRoute>
+                        <HelpPage />
                       </ProtectedRoute>
                     }
                   />
