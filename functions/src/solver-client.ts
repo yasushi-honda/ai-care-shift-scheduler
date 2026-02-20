@@ -29,8 +29,16 @@ function expandRequirementsToDaily(requirements: ShiftRequirement): ShiftRequire
   const [year, month] = requirements.targetMonth.split('-').map(Number);
   const daysInMonth = new Date(year, month, 0).getDate();
 
+  // 夜勤施設かどうか判定（シフト名に「夜」が含まれる場合）
+  const isNightFacility = keys.some(k => k.includes('夜'));
+
   const expanded: Record<string, typeof requirements.requirements[string]> = {};
   for (let day = 1; day <= daysInMonth; day++) {
+    // デイサービス（非夜勤施設）の場合、日曜日をスキップ（非稼働日）
+    if (!isNightFacility) {
+      const date = new Date(year, month - 1, day);
+      if (date.getDay() === 0) continue;
+    }
     const dateStr = `${requirements.targetMonth}-${String(day).padStart(2, '0')}`;
     for (const [shiftName, dailyReq] of Object.entries(requirements.requirements)) {
       expanded[`${dateStr}_${shiftName}`] = dailyReq;

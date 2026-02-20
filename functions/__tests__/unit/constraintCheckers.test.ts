@@ -17,6 +17,7 @@ import {
   checkConsecutiveWorkViolation,
   checkNightRestViolation,
   checkQualificationMissing,
+  checkRoleMissing,
   checkLeaveRequestIgnored,
   checkTimeSlotPreferenceViolation,
 } from '../../src/evaluation/constraintCheckers';
@@ -313,6 +314,118 @@ describe('constraintCheckers', () => {
       const day3Violations = violations.filter(v => v.affectedDates?.includes('2025-11-03'));
       expect(day3Violations.length).toBe(1);
       expect(day3Violations[0].type).toBe('qualificationMissing');
+    });
+  });
+
+  describe('checkRoleMissing', () => {
+    const createStaffWithRole = (id: string, name: string, role: Role): Staff => ({
+      id,
+      name,
+      role,
+      qualifications: [],
+      weeklyWorkCount: { hope: 5, must: 4 },
+      maxConsecutiveWorkDays: 5,
+      availableWeekdays: [0, 1, 2, 3, 4, 5, 6],
+      unavailableDates: [],
+      timeSlotPreference: TimeSlotPreference.Any,
+      isNightShiftOnly: false,
+    });
+
+    it('ロール要件充足で違反なし', () => {
+      const staffList = [
+        createStaffWithRole('s1', '看護師A', Role.Nurse),
+        createStaffWithRole('s2', '介護職員B', Role.CareWorker),
+      ];
+      const schedule: StaffSchedule[] = [
+        { staffId: 's1', staffName: '看護師A', monthlyShifts: [{ date: '2025-11-03', shiftType: '日勤' }] },
+        { staffId: 's2', staffName: '介護職員B', monthlyShifts: [{ date: '2025-11-03', shiftType: '日勤' }] },
+      ];
+      const requirements: ShiftRequirement = {
+        targetMonth: '2025-11',
+        timeSlots: [{ name: '日勤', start: '09:00', end: '17:00', restHours: 1 }],
+        requirements: {
+          '日勤': {
+            totalStaff: 2,
+            requiredQualifications: [],
+            requiredRoles: [{ role: Role.Nurse, count: 1 }],
+          },
+        },
+      };
+
+      const violations = checkRoleMissing(schedule, staffList, requirements);
+      const day3Violations = violations.filter(v => v.affectedDates?.includes('2025-11-03'));
+      expect(day3Violations.length).toBe(0);
+    });
+
+    it('ロール要件不足で違反検出', () => {
+      const staffList = [
+        createStaffWithRole('s1', '介護職員A', Role.CareWorker),
+        createStaffWithRole('s2', '介護職員B', Role.CareWorker),
+      ];
+      const schedule: StaffSchedule[] = [
+        { staffId: 's1', staffName: '介護職員A', monthlyShifts: [{ date: '2025-11-03', shiftType: '日勤' }] },
+        { staffId: 's2', staffName: '介護職員B', monthlyShifts: [{ date: '2025-11-03', shiftType: '日勤' }] },
+      ];
+      const requirements: ShiftRequirement = {
+        targetMonth: '2025-11',
+        timeSlots: [{ name: '日勤', start: '09:00', end: '17:00', restHours: 1 }],
+        requirements: {
+          '日勤': {
+            totalStaff: 2,
+            requiredQualifications: [],
+            requiredRoles: [{ role: Role.Nurse, count: 1 }], // 看護師1名必要だが配置なし
+          },
+        },
+      };
+
+      const violations = checkRoleMissing(schedule, staffList, requirements);
+      const day3Violations = violations.filter(v => v.affectedDates?.includes('2025-11-03'));
+      expect(day3Violations.length).toBe(1);
+      expect(day3Violations[0].type).toBe('roleMissing');
+      expect(day3Violations[0].severity).toBe('error');
+      expect(day3Violations[0].description).toContain('看護職員');
+    });
+
+    it('日曜日（夜勤なし）はスキップされる', () => {
+      const staffList = [createStaffWithRole('s1', '介護職員A', Role.CareWorker)];
+      const schedule: StaffSchedule[] = [];
+      const requirements: ShiftRequirement = {
+        targetMonth: '2025-11',
+        timeSlots: [{ name: '日勤', start: '09:00', end: '17:00', restHours: 1 }],
+        requirements: {
+          '日勤': {
+            totalStaff: 1,
+            requiredQualifications: [],
+            requiredRoles: [{ role: Role.Nurse, count: 1 }],
+          },
+        },
+      };
+
+      const violations = checkRoleMissing(schedule, staffList, requirements);
+      // 2025-11-02は日曜日なのでスキップ
+      const sundayViolations = violations.filter(v => v.affectedDates?.includes('2025-11-02'));
+      expect(sundayViolations.length).toBe(0);
+    });
+
+    it('requiredRolesが空の場合は違反なし', () => {
+      const staffList = [createStaffWithRole('s1', '介護職員A', Role.CareWorker)];
+      const schedule: StaffSchedule[] = [
+        { staffId: 's1', staffName: '介護職員A', monthlyShifts: [{ date: '2025-11-03', shiftType: '日勤' }] },
+      ];
+      const requirements: ShiftRequirement = {
+        targetMonth: '2025-11',
+        timeSlots: [{ name: '日勤', start: '09:00', end: '17:00', restHours: 1 }],
+        requirements: {
+          '日勤': {
+            totalStaff: 1,
+            requiredQualifications: [],
+            requiredRoles: [], // ロール要件なし
+          },
+        },
+      };
+
+      const violations = checkRoleMissing(schedule, staffList, requirements);
+      expect(violations.length).toBe(0);
     });
   });
 

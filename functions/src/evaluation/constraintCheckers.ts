@@ -296,6 +296,64 @@ export function checkQualificationMissing(
 }
 
 /**
+ * ロール要件未充足を検出（看護師・ケアマネ等）
+ * @param schedule スケジュール
+ * @param staffList スタッフリスト
+ * @param requirements シフト要件
+ * @returns 制約違反リスト
+ */
+export function checkRoleMissing(
+  schedule: StaffSchedule[],
+  staffList: Staff[],
+  requirements: ShiftRequirement
+): ConstraintViolation[] {
+  const violations: ConstraintViolation[] = [];
+  const targetMonth = requirements.targetMonth;
+
+  const [year, month] = targetMonth.split('-').map(Number);
+  const daysInMonth = new Date(year, month, 0).getDate();
+
+  const shiftTypeNames = (requirements.timeSlots || []).map(t => t.name);
+  const hasNightShift = shiftTypeNames.some(name => name.includes('夜'));
+
+  for (let day = 1; day <= daysInMonth; day++) {
+    const date = `${targetMonth}-${String(day).padStart(2, '0')}`;
+
+    if (!isBusinessDay(date, hasNightShift)) {
+      continue;
+    }
+
+    for (const [shiftName, requirement] of Object.entries(requirements.requirements)) {
+      for (const roleReq of requirement.requiredRoles || []) {
+        let roleCount = 0;
+
+        for (const staffSchedule of schedule) {
+          const shift = staffSchedule.monthlyShifts.find(s => s.date === date);
+          if (shift && shift.shiftType === shiftName) {
+            const staff = staffList.find(s => s.id === staffSchedule.staffId);
+            if (staff?.role === roleReq.role) {
+              roleCount++;
+            }
+          }
+        }
+
+        if (roleCount < roleReq.count) {
+          violations.push({
+            type: 'roleMissing',
+            severity: 'error',
+            description: `${date}の${shiftName}で${roleReq.role}が${roleReq.count - roleCount}名不足`,
+            affectedDates: [date],
+            suggestion: `${roleReq.role}を追加配置してください`,
+          });
+        }
+      }
+    }
+  }
+
+  return violations;
+}
+
+/**
  * 休暇希望無視を検出
  * @param schedule スケジュール
  * @param leaveRequests 休暇希望

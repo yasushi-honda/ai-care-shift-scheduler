@@ -23,6 +23,7 @@ export const CONSTRAINT_LEVEL_MAPPING: Record<ConstraintViolationType, Constrain
   // レベル2（運営必須）: 人員・資格基準
   staffShortage: 2, // 人員不足
   qualificationMissing: 2, // 資格要件未充足
+  roleMissing: 2, // ロール要件未充足（看護師等）
 
   // レベル3（努力目標）: 希望・連勤
   consecutiveWork: 3, // 連勤超過

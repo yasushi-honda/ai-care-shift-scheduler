@@ -123,6 +123,7 @@ export type ConstraintViolationType =
   | 'consecutiveWork'      // 連勤超過
   | 'nightRestViolation'   // 夜勤後休息不足
   | 'qualificationMissing' // 資格要件未充足
+  | 'roleMissing'          // ロール要件未充足（看護師等）
   | 'leaveRequestIgnored'; // 休暇希望未反映
 
 /**
