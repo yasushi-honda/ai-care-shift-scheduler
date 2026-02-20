@@ -60,6 +60,14 @@ import { subscribeStaffingStandard } from './src/services/staffingStandardServic
 import { calculateDailyFulfillment } from './src/services/complianceService';
 // Phase 63: 通知システム
 import { NotificationBell } from './src/components/NotificationBell';
+// CSVインポート
+import { CsvImportModal } from './src/components/CsvImportModal';
+import {
+  generateStaffTemplate,
+  parseAndValidateStaffCSV,
+  downloadCSVTemplate,
+  type RowValidationResult,
+} from './src/utils/importCSV';
 
 type ViewMode = 'shift' | 'leaveRequest';
 
@@ -835,6 +843,62 @@ const App: React.FC = () => {
 
     setStaffToDelete(null);
   }, [staffToDelete, selectedFacilityId]);
+
+  // ==================== CSVインポート ====================
+  const [showCsvImportModal, setShowCsvImportModal] = useState(false);
+  const [csvValidationResults, setCsvValidationResults] = useState<RowValidationResult[] | null>(null);
+  const [csvImportData, setCsvImportData] = useState<Omit<Staff, 'id' | 'createdAt' | 'updatedAt'>[]>([]);
+  const [csvTotalRows, setCsvTotalRows] = useState(0);
+  const [csvValidRows, setCsvValidRows] = useState(0);
+  const [csvInvalidRows, setCsvInvalidRows] = useState(0);
+
+  const handleCsvImportOpen = useCallback(() => {
+    setCsvValidationResults(null);
+    setCsvImportData([]);
+    setCsvTotalRows(0);
+    setCsvValidRows(0);
+    setCsvInvalidRows(0);
+    setShowCsvImportModal(true);
+  }, []);
+
+  const handleCsvTemplateDownload = useCallback(() => {
+    const template = generateStaffTemplate();
+    downloadCSVTemplate(template, 'スタッフインポートテンプレート.csv');
+  }, []);
+
+  const handleCsvFileSelect = useCallback((csvContent: string) => {
+    try {
+      const result = parseAndValidateStaffCSV(csvContent);
+      setCsvValidationResults(result.results);
+      setCsvImportData(result.parsedData);
+      setCsvTotalRows(result.totalRows);
+      setCsvValidRows(result.validRows);
+      setCsvInvalidRows(result.invalidRows);
+    } catch (err: any) {
+      setError(err.message || 'CSVの解析に失敗しました');
+    }
+  }, []);
+
+  const handleCsvImport = useCallback(async () => {
+    if (!selectedFacilityId || csvImportData.length === 0) return;
+
+    let successCount = 0;
+    const errors: string[] = [];
+
+    for (const staffData of csvImportData) {
+      const result = await StaffService.createStaff(selectedFacilityId, staffData);
+      if (result.success) {
+        successCount++;
+      } else {
+        assertResultError(result);
+        errors.push(`${staffData.name}: ${result.error.message}`);
+      }
+    }
+
+    if (errors.length > 0) {
+      setError(`${successCount}件登録、${errors.length}件失敗: ${errors.join(', ')}`);
+    }
+  }, [selectedFacilityId, csvImportData]);
 
   const handleLeaveRequestChange = useCallback(async (staffId: string, date: string, leaveType: LeaveType | null) => {
     if (!selectedFacilityId) return;
@@ -1667,6 +1731,7 @@ const App: React.FC = () => {
                 onStaffChange={handleStaffChange}
                 onAddNewStaff={handleAddNewStaff}
                 onDeleteStaff={handleDeleteStaff}
+                onCsvImport={handleCsvImportOpen}
                 targetMonth={requirements.targetMonth}
                 openStaffId={openStaffId}
                 onOpenStaffChange={setOpenStaffId}
@@ -1910,6 +1975,29 @@ const App: React.FC = () => {
       <SubmissionGuideModal
         isOpen={submissionGuideOpen}
         onClose={() => setSubmissionGuideOpen(false)}
+      />
+
+      {/* CSVインポートモーダル */}
+      <CsvImportModal
+        isOpen={showCsvImportModal}
+        onClose={() => {
+          setShowCsvImportModal(false);
+          setCsvValidationResults(null);
+          setCsvImportData([]);
+          setCsvTotalRows(0);
+          setCsvValidRows(0);
+          setCsvInvalidRows(0);
+        }}
+        title="スタッフCSV一括インポート"
+        description="CSVファイルからスタッフを一括登録します"
+        onTemplateDownload={handleCsvTemplateDownload}
+        templateButtonLabel="スタッフテンプレートをダウンロード"
+        onFileSelect={handleCsvFileSelect}
+        validationResults={csvValidationResults}
+        onImport={handleCsvImport}
+        totalRows={csvTotalRows}
+        validRows={csvValidRows}
+        invalidRows={csvInvalidRows}
       />
       </div>
     </div>
