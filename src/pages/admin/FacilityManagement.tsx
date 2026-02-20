@@ -1,15 +1,23 @@
 import React, { useEffect, useState, useCallback, useMemo, memo } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
-import { Facility, assertResultError } from '../../../types';
+import { Facility, Staff, assertResultError } from '../../../types';
 import {
   getAllFacilities,
   createFacility,
   getFacilityStats,
   FacilityStats,
 } from '../../services/facilityService';
+import { StaffService } from '../../services/staffService';
 import { Button } from '../../components/Button';
 import { SkeletonLoader } from '../../components/SkeletonLoader';
+import { CsvImportModal } from '../../components/CsvImportModal';
+import {
+  generateStaffWithFacilityTemplate,
+  parseAndValidateStaffWithFacilityCSV,
+  downloadCSVTemplate,
+  type RowValidationResult,
+} from '../../utils/importCSV';
 
 /**
  * Helper function: 日付フォーマット
@@ -95,6 +103,14 @@ export function FacilityManagement(): React.ReactElement {
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
 
+  // CSVインポート状態
+  const [showCsvImportModal, setShowCsvImportModal] = useState(false);
+  const [csvValidationResults, setCsvValidationResults] = useState<RowValidationResult[] | null>(null);
+  const [csvImportData, setCsvImportData] = useState<(Omit<Staff, 'id' | 'createdAt' | 'updatedAt'> & { facilityName: string })[]>([]);
+  const [csvTotalRows, setCsvTotalRows] = useState(0);
+  const [csvValidRows, setCsvValidRows] = useState(0);
+  const [csvInvalidRows, setCsvInvalidRows] = useState(0);
+
   const loadStats = useCallback(async (facilityList: Facility[]) => {
     const statsMap = new Map<string, FacilityStats>();
 
@@ -158,6 +174,86 @@ export function FacilityManagement(): React.ReactElement {
 
     setCreating(false);
   }
+
+  // CSVインポートハンドラー
+  const handleCsvImportOpen = useCallback(() => {
+    setCsvValidationResults(null);
+    setCsvImportData([]);
+    setCsvTotalRows(0);
+    setCsvValidRows(0);
+    setCsvInvalidRows(0);
+    setShowCsvImportModal(true);
+  }, []);
+
+  const handleCsvTemplateDownload = useCallback(() => {
+    const csv = generateStaffWithFacilityTemplate();
+    downloadCSVTemplate(csv, '施設職員一括インポートテンプレート.csv');
+  }, []);
+
+  const handleCsvFileSelect = useCallback((csvContent: string) => {
+    // 施設名の存在チェックを行わない（空配列→スキップ）
+    // インポート時に既存施設を検索し、なければ自動作成
+    const result = parseAndValidateStaffWithFacilityCSV(csvContent, []);
+    setCsvValidationResults(result.results);
+    setCsvImportData(result.parsedData);
+    setCsvTotalRows(result.totalRows);
+    setCsvValidRows(result.validRows);
+    setCsvInvalidRows(result.invalidRows);
+  }, []);
+
+  const handleCsvImport = useCallback(async () => {
+    if (!currentUser || csvImportData.length === 0) return;
+
+    // 施設名でグループ化
+    const grouped = new Map<string, Omit<Staff, 'id' | 'createdAt' | 'updatedAt'>[]>();
+    for (const { facilityName, ...staffData } of csvImportData) {
+      if (!grouped.has(facilityName)) {
+        grouped.set(facilityName, []);
+      }
+      grouped.get(facilityName)!.push(staffData);
+    }
+
+    for (const [facilityName, staffList] of grouped) {
+      // 既存施設を検索
+      let facilityId: string | null = null;
+      const existingFacility = facilities.find(f => f.name === facilityName);
+
+      if (existingFacility) {
+        facilityId = existingFacility.facilityId;
+      } else {
+        // 施設を新規作成
+        const createResult = await createFacility(facilityName, currentUser.uid);
+        if (createResult.success) {
+          facilityId = createResult.data.facilityId;
+        } else {
+          assertResultError(createResult);
+          console.error(`施設「${facilityName}」の作成に失敗: ${createResult.error.message}`);
+          continue;
+        }
+      }
+
+      // スタッフを一括登録
+      for (const staff of staffList) {
+        const result = await StaffService.createStaff(facilityId, staff);
+        if (!result.success) {
+          assertResultError(result);
+          console.error(`スタッフ「${staff.name}」の登録に失敗: ${result.error.message}`);
+        }
+      }
+    }
+
+    // 施設一覧を再読み込み
+    await loadFacilities();
+  }, [currentUser, csvImportData, facilities, loadFacilities]);
+
+  const handleCsvImportClose = useCallback(() => {
+    setShowCsvImportModal(false);
+    setCsvValidationResults(null);
+    setCsvImportData([]);
+    setCsvTotalRows(0);
+    setCsvValidRows(0);
+    setCsvInvalidRows(0);
+  }, []);
 
   // Phase 19.1.5: useMemo()で統計計算をメモ化
   const totalFacilities = useMemo(() => facilities.length, [facilities.length]);
@@ -233,17 +329,28 @@ export function FacilityManagement(): React.ReactElement {
             全施設の管理と新規施設の作成
           </p>
         </div>
-        <Button
-          onClick={() => setShowCreateForm(true)}
-          variant="primary"
-          icon={
+        <div className="flex gap-2">
+          <button
+            onClick={handleCsvImportOpen}
+            className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+          >
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
             </svg>
-          }
-        >
-          新規施設作成
-        </Button>
+            CSV一括インポート
+          </button>
+          <Button
+            onClick={() => setShowCreateForm(true)}
+            variant="primary"
+            icon={
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+              </svg>
+            }
+          >
+            新規施設作成
+          </Button>
+        </div>
       </div>
 
       {/* 新規施設作成フォーム（モーダル） */}
@@ -394,6 +501,22 @@ export function FacilityManagement(): React.ReactElement {
           </div>
         </div>
       </div>
+
+      {/* 施設＋職員CSV一括インポートモーダル */}
+      <CsvImportModal
+        isOpen={showCsvImportModal}
+        onClose={handleCsvImportClose}
+        title="施設＋職員CSV一括インポート"
+        description="CSVファイルから施設とスタッフを一括登録します。存在しない施設名は自動作成されます。"
+        onTemplateDownload={handleCsvTemplateDownload}
+        templateButtonLabel="施設＋職員テンプレートをダウンロード"
+        onFileSelect={handleCsvFileSelect}
+        validationResults={csvValidationResults}
+        onImport={handleCsvImport}
+        totalRows={csvTotalRows}
+        validRows={csvValidRows}
+        invalidRows={csvInvalidRows}
+      />
     </div>
   );
 }

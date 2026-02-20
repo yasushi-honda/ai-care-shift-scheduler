@@ -10,6 +10,7 @@ interface StaffSettingsProps {
   onStaffChange: (staff: Staff) => void;
   onAddNewStaff: () => void;
   onDeleteStaff: (staffId: string) => void;
+  onCsvImport?: () => void;
   targetMonth: string;
   openStaffId: string | null;
   onOpenStaffChange: (staffId: string | null) => void;
@@ -27,11 +28,18 @@ const TrashIcon = () => (
     </svg>
 );
 
+const UploadIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+    <path strokeLinecap="round" strokeLinejoin="round" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+  </svg>
+);
+
 const StaffSettings: React.FC<StaffSettingsProps> = ({
   staffList,
   onStaffChange,
   onAddNewStaff,
   onDeleteStaff,
+  onCsvImport,
   targetMonth,
   openStaffId,
   onOpenStaffChange
@@ -66,7 +74,7 @@ const StaffSettings: React.FC<StaffSettingsProps> = ({
   
   return (
     <div className="space-y-2">
-      <div className="p-2">
+      <div className="p-2 space-y-2">
         <button
           onClick={onAddNewStaff}
           className="w-full flex items-center justify-center p-2 text-sm font-semibold text-care-secondary border-2 border-dashed border-care-secondary rounded-lg hover:bg-care-light transition-colors"
@@ -74,6 +82,15 @@ const StaffSettings: React.FC<StaffSettingsProps> = ({
           <PlusIcon />
           <span className="ml-2">新規スタッフを追加</span>
         </button>
+        {onCsvImport && (
+          <button
+            onClick={onCsvImport}
+            className="w-full flex items-center justify-center p-2 text-sm font-medium text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+          >
+            <UploadIcon />
+            <span className="ml-2">CSVで一括インポート</span>
+          </button>
+        )}
       </div>
       {staffList.map(staff => (
         <div
