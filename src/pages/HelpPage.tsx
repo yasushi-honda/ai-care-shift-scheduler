@@ -23,6 +23,7 @@ type SectionId =
   | 'reports'
   | 'export'
   | 'keyboard'
+  | 'admin'
   | 'faq';
 
 const NAV_SECTIONS: { id: SectionId; title: string; icon: string }[] = [
@@ -35,6 +36,7 @@ const NAV_SECTIONS: { id: SectionId; title: string; icon: string }[] = [
   { id: 'reports', title: 'レポート機能', icon: '📈' },
   { id: 'export', title: 'エクスポート', icon: '📤' },
   { id: 'keyboard', title: 'キーボード操作', icon: '⌨️' },
+  { id: 'admin', title: '管理者機能', icon: '🔧' },
   { id: 'faq', title: 'よくある質問', icon: '❓' },
 ];
 
@@ -1318,12 +1320,175 @@ export const HelpPage = () => {
           </div>
         </section>
 
-        {/* ──────── 10 FAQ ──────── */}
+        {/* ──────── 10 管理者機能 ──────── */}
+        <section style={{ marginBottom: '96px' }}>
+          <SectionHeader
+            id="admin"
+            title="管理者機能"
+            number="10"
+            subtitle="施設・スタッフデータの一括登録など、管理者専用の操作を解説します。"
+          />
+
+          {/* CSV一括インポート */}
+          <div
+            style={{
+              background: '#f8fafc',
+              border: '1.5px solid #e2e8f0',
+              borderRadius: '20px',
+              padding: '32px',
+              marginBottom: '24px',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
+              <span style={{ fontSize: '28px' }}>📥</span>
+              <h3 style={{ fontSize: '22px', fontWeight: 700, color: '#1e1b4b', margin: 0 }}>
+                CSV一括インポート
+              </h3>
+            </div>
+
+            <p style={{ fontSize: '16px', color: '#374151', lineHeight: 1.8, margin: '0 0 28px' }}>
+              管理画面（施設管理ページ）から、施設とスタッフを一括で登録できます。
+              多数の施設・スタッフを手入力なしで素早く登録したい場合に利用してください。
+            </p>
+
+            {/* ステップ */}
+            {[
+              {
+                step: '1',
+                color: '#6366f1',
+                bg: '#eef2ff',
+                border: '#c7d2fe',
+                title: 'テンプレートCSVをダウンロード',
+                desc: '管理画面右上の「CSV一括インポート」ボタンをクリックし、モーダル内の「テンプレートをダウンロード」ボタンを押します。サンプルデータ付きのCSVファイルが保存されます。',
+              },
+              {
+                step: '2',
+                color: '#0ea5e9',
+                bg: '#f0f9ff',
+                border: '#bae6fd',
+                title: 'テンプレートにデータを入力',
+                desc: 'ダウンロードしたCSVをExcelまたはスプレッドシートで開き、登録したい施設・スタッフの情報を入力します。1行目はヘッダー行のため変更しないでください。',
+              },
+              {
+                step: '3',
+                color: '#8b5cf6',
+                bg: '#f5f3ff',
+                border: '#ddd6fe',
+                title: 'CSVファイルをアップロード',
+                desc: 'モーダルのファイルアップロードエリアに、作成したCSVをドラッグ＆ドロップするか、クリックしてファイルを選択します。アップロード後、自動でバリデーションが実行されます。',
+              },
+              {
+                step: '4',
+                color: '#10b981',
+                bg: '#f0fdf4',
+                border: '#bbf7d0',
+                title: 'バリデーション結果を確認してインポート',
+                desc: '各行の検証結果が表でプレビュー表示されます。エラー行はスキップされ、有効行のみが登録対象になります。内容を確認後「○件をインポート」ボタンを押すと一括登録が完了します。',
+              },
+            ].map(({ step, color, bg, border, title, desc }) => (
+              <div
+                key={step}
+                style={{
+                  display: 'flex',
+                  gap: '20px',
+                  marginBottom: '20px',
+                  alignItems: 'flex-start',
+                }}
+              >
+                <div
+                  style={{
+                    flexShrink: 0,
+                    width: '36px',
+                    height: '36px',
+                    borderRadius: '50%',
+                    background: bg,
+                    border: `2px solid ${border}`,
+                    color,
+                    fontWeight: 700,
+                    fontSize: '15px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    marginTop: '2px',
+                  }}
+                >
+                  {step}
+                </div>
+                <div style={{ flex: 1 }}>
+                  <p style={{ fontWeight: 700, color: '#1e1b4b', fontSize: '17px', margin: '0 0 6px' }}>{title}</p>
+                  <p style={{ color: '#374151', fontSize: '15px', lineHeight: 1.8, margin: 0 }}>{desc}</p>
+                </div>
+              </div>
+            ))}
+
+            {/* CSV列の説明 */}
+            <div
+              style={{
+                marginTop: '28px',
+                background: '#fff',
+                border: '1px solid #e2e8f0',
+                borderRadius: '14px',
+                overflow: 'hidden',
+              }}
+            >
+              <div style={{ padding: '16px 20px', background: '#f1f5f9', borderBottom: '1px solid #e2e8f0' }}>
+                <p style={{ fontWeight: 700, color: '#1e1b4b', fontSize: '15px', margin: 0 }}>📋 CSVの主な列（施設＋スタッフ形式）</p>
+              </div>
+              <div style={{ padding: '16px 20px' }}>
+                {[
+                  { col: '施設名', desc: '登録する施設名。既存施設名を入力すると既存施設にスタッフを追加、新しい名前を入力すると施設も自動作成されます。' },
+                  { col: '名前', desc: 'スタッフの氏名。必須項目です。' },
+                  { col: '役職', desc: '「介護職員」「看護師」「ケアマネジャー」などの役職名。' },
+                  { col: '資格', desc: '「介護福祉士」「社会福祉士」など複数ある場合は「/」区切りで入力。' },
+                  { col: '夜勤専従', desc: '「true」または「false」で指定。省略時はfalse。' },
+                  { col: '最大連続勤務日数', desc: '1〜7の整数。省略時は5日。' },
+                ].map(({ col, desc }) => (
+                  <div
+                    key={col}
+                    style={{
+                      display: 'flex',
+                      gap: '16px',
+                      padding: '10px 0',
+                      borderBottom: '1px solid #f1f5f9',
+                      alignItems: 'flex-start',
+                    }}
+                  >
+                    <span
+                      style={{
+                        flexShrink: 0,
+                        background: '#eef2ff',
+                        color: '#6366f1',
+                        fontWeight: 700,
+                        fontSize: '13px',
+                        padding: '3px 10px',
+                        borderRadius: '6px',
+                        fontFamily: 'ui-monospace, monospace',
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
+                      {col}
+                    </span>
+                    <p style={{ color: '#374151', fontSize: '14px', lineHeight: 1.7, margin: 0 }}>{desc}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <TipBox variant="warning">
+            CSVファイルはUTF-8形式で保存してください。Excelで編集した場合は「CSV UTF-8（コンマ区切り）」形式で保存するとExcelでの文字化けが防げます。テンプレートをそのまま使えば文字コードの問題は発生しません。
+          </TipBox>
+          <TipBox>
+            エラーがある行はスキップされ、有効な行のみがインポートされます。インポート後にスキップされた行を確認し、データを修正して再度インポートすることができます。
+          </TipBox>
+        </section>
+
+        {/* ──────── 11 FAQ ──────── */}
         <section style={{ marginBottom: '48px' }}>
           <SectionHeader
             id="faq"
             title="よくある質問"
-            number="10"
+            number="11"
             subtitle={undefined}
           />
 
