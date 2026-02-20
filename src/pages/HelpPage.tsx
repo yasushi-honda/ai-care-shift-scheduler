@@ -1,12 +1,12 @@
 /**
- * HelpPage v2 - アプリケーション使い方ガイド（大幅リニューアル）
+ * HelpPage v2.1 - アプリケーション使い方ガイド
  *
  * 設計: "Interactive Visual Walkthrough"
- * - 大きい文字サイズ（本文16-18px、見出し28-36px）
- * - SVGフロー図（クイックスタート・生成フロー）
- * - IntersectionObserver + CSS transition によるスクロールアニメーション
- * - 評価スコアビジュアライザ（バーグラフ）
- * - Noto Serif JP 見出し + Noto Sans JP 本文
+ * v2.1 アニメーションバランス調整:
+ * - Hero: ページロードアニメーション維持 ✅
+ * - 図解コンポーネント (WorkflowDiagram/ScoreVisualizer/GenerationFlow): 独自アニメーション維持 ✅
+ * - コンテンツカード: スクロールFadeInUp削除 → ホバーマイクロインタラクションに置換
+ * - アクセシビリティ: prefers-reduced-motion 対応を図解アニメーションに追加
  */
 import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
@@ -73,12 +73,18 @@ const FAQ_ITEMS = [
   },
 ];
 
-// ─── Animation Hook ───────────────────────────────────────────
+// ─── Animation Hook（図解コンポーネント専用）────────────────
+// prefers-reduced-motion 対応: モーション設定が「減らす」の場合は即時表示
 
 const useInView = (threshold = 0.12) => {
   const ref = useRef<HTMLDivElement>(null);
   const [inView, setInView] = useState(false);
   useEffect(() => {
+    // アクセシビリティ: reduced-motion設定時は即時表示
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      setInView(true);
+      return;
+    }
     const obs = new IntersectionObserver(
       ([entry]) => { if (entry.isIntersecting) setInView(true); },
       { threshold }
@@ -89,7 +95,7 @@ const useInView = (threshold = 0.12) => {
   return { ref, inView };
 };
 
-// ─── Animated Card ────────────────────────────────────────────
+// ─── Hero アニメーション（ページロード時のみ使用）────────────
 
 const FadeInUp = ({
   children,
@@ -107,8 +113,8 @@ const FadeInUp = ({
       ref={ref}
       style={{
         opacity: inView ? 1 : 0,
-        transform: inView ? 'translateY(0)' : 'translateY(32px)',
-        transition: `opacity 0.65s ease ${delay}ms, transform 0.65s ease ${delay}ms`,
+        transform: inView ? 'translateY(0)' : 'translateY(24px)',
+        transition: `opacity 0.6s ease ${delay}ms, transform 0.6s ease ${delay}ms`,
         ...style,
       }}
     >
@@ -154,7 +160,7 @@ const TipBox = ({
     warning: { bg: '#fff7ed', border: '#fb923c', text: '#9a3412', icon: '⚠️', label: '注意' },
   }[variant];
   return (
-    <FadeInUp style={{ marginTop: '24px' }}>
+    <div style={{ marginTop: '24px' }}>
       <div
         style={{
           background: cfg.bg,
@@ -171,7 +177,7 @@ const TipBox = ({
           <p style={{ fontSize: '16px', color: cfg.text, lineHeight: 1.8, margin: 0 }}>{children}</p>
         </div>
       </div>
-    </FadeInUp>
+    </div>
   );
 };
 
@@ -224,7 +230,7 @@ const SectionHeader = ({
   </div>
 );
 
-// ─── Workflow Diagram SVG ─────────────────────────────────────
+// ─── Workflow Diagram（独自アニメーション）────────────────────
 
 const WorkflowDiagram = () => {
   const { ref, inView } = useInView(0.2);
@@ -325,7 +331,7 @@ const WorkflowDiagram = () => {
   );
 };
 
-// ─── Score Visualizer ─────────────────────────────────────────
+// ─── Score Visualizer（独自アニメーション）────────────────────
 
 const ScoreVisualizer = () => {
   const { ref, inView } = useInView(0.15);
@@ -401,7 +407,7 @@ const ScoreVisualizer = () => {
   );
 };
 
-// ─── Generation Flow Diagram ──────────────────────────────────
+// ─── Generation Flow Diagram（独自アニメーション）─────────────
 
 const GenerationFlow = () => {
   const { ref, inView } = useInView(0.15);
@@ -488,6 +494,16 @@ export const HelpPage = () => {
   const scrollTo = (id: string) => {
     document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     setActiveSection(id as SectionId);
+  };
+
+  // カードホバー効果ヘルパー
+  const cardHoverOn = (e: React.MouseEvent<HTMLDivElement>) => {
+    e.currentTarget.style.transform = 'translateY(-2px)';
+    e.currentTarget.style.boxShadow = '0 8px 24px rgba(0,0,0,0.09)';
+  };
+  const cardHoverOff = (e: React.MouseEvent<HTMLDivElement>, defaultShadow = '0 2px 8px rgba(0,0,0,0.04)') => {
+    e.currentTarget.style.transform = '';
+    e.currentTarget.style.boxShadow = defaultShadow;
   };
 
   return (
@@ -589,7 +605,7 @@ export const HelpPage = () => {
       {/* ── Main ── */}
       <main style={{ flex: 1, padding: '64px 72px 120px 72px', maxWidth: '900px' }}>
 
-        {/* Hero */}
+        {/* Hero: ページロード時アニメーション（FadeInUp はここのみ使用）*/}
         <FadeInUp>
           <div
             style={{
@@ -640,21 +656,17 @@ export const HelpPage = () => {
 
         {/* ──────── 01 Quick Start ──────── */}
         <section style={{ marginBottom: '96px' }}>
-          <FadeInUp>
-            <SectionHeader
-              id="quickstart"
-              title="クイックスタート"
-              number="01"
-              subtitle="初めてお使いの方は、以下の5ステップでシフト作成を始められます。"
-            />
-          </FadeInUp>
+          <SectionHeader
+            id="quickstart"
+            title="クイックスタート"
+            number="01"
+            subtitle="初めてお使いの方は、以下の5ステップでシフト作成を始められます。"
+          />
 
-          {/* Workflow diagram */}
-          <FadeInUp delay={100}>
-            <div style={{ marginBottom: '40px' }}>
-              <WorkflowDiagram />
-            </div>
-          </FadeInUp>
+          {/* Workflow diagram（独自アニメーションを持つ）*/}
+          <div style={{ marginBottom: '40px' }}>
+            <WorkflowDiagram />
+          </div>
 
           {/* Step cards */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
@@ -694,57 +706,58 @@ export const HelpPage = () => {
                 color: '#10b981',
                 bg: '#f0fdf4',
               },
-            ].map(({ step, title, desc, color, bg }, i) => (
-              <FadeInUp key={step} delay={i * 80}>
+            ].map(({ step, title, desc, color, bg }) => (
+              <div
+                key={step}
+                style={{
+                  display: 'flex',
+                  gap: '20px',
+                  padding: '24px 28px',
+                  background: '#fff',
+                  borderRadius: '16px',
+                  border: '1px solid #e8e6e0',
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
+                  transition: 'transform 0.2s ease, box-shadow 0.2s ease',
+                  cursor: 'default',
+                }}
+                onMouseEnter={cardHoverOn}
+                onMouseLeave={cardHoverOff}
+              >
                 <div
                   style={{
+                    flexShrink: 0,
+                    width: '48px',
+                    height: '48px',
+                    background: bg,
+                    border: `2px solid ${color}`,
+                    color: color,
+                    borderRadius: '50%',
                     display: 'flex',
-                    gap: '20px',
-                    padding: '24px 28px',
-                    background: '#fff',
-                    borderRadius: '16px',
-                    border: '1px solid #e8e6e0',
-                    boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontWeight: 800,
+                    fontSize: '18px',
                   }}
                 >
-                  <div
-                    style={{
-                      flexShrink: 0,
-                      width: '48px',
-                      height: '48px',
-                      background: bg,
-                      border: `2px solid ${color}`,
-                      color: color,
-                      borderRadius: '50%',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      fontWeight: 800,
-                      fontSize: '18px',
-                    }}
-                  >
-                    {step}
-                  </div>
-                  <div style={{ paddingTop: '4px' }}>
-                    <p style={{ fontWeight: 700, color: '#111827', fontSize: '18px', margin: '0 0 8px' }}>{title}</p>
-                    <p style={{ color: '#6b7280', fontSize: '16px', lineHeight: 1.8, margin: 0 }}>{desc}</p>
-                  </div>
+                  {step}
                 </div>
-              </FadeInUp>
+                <div style={{ paddingTop: '4px' }}>
+                  <p style={{ fontWeight: 700, color: '#111827', fontSize: '18px', margin: '0 0 8px' }}>{title}</p>
+                  <p style={{ color: '#6b7280', fontSize: '16px', lineHeight: 1.8, margin: 0 }}>{desc}</p>
+                </div>
+              </div>
             ))}
           </div>
         </section>
 
         {/* ──────── 02 Staff ──────── */}
         <section style={{ marginBottom: '96px' }}>
-          <FadeInUp>
-            <SectionHeader
-              id="staff"
-              title="スタッフ設定"
-              number="02"
-              subtitle="スタッフ情報を正確に設定することで、最適なシフト生成が可能になります。"
-            />
-          </FadeInUp>
+          <SectionHeader
+            id="staff"
+            title="スタッフ設定"
+            number="02"
+            subtitle="スタッフ情報を正確に設定することで、最適なシフト生成が可能になります。"
+          />
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '24px' }}>
             {[
@@ -772,39 +785,48 @@ export const HelpPage = () => {
                   '希望休日（曜日・特定日指定）',
                 ],
               },
-            ].map(({ label, emoji, bg, border, color, items }, i) => (
-              <FadeInUp key={label} delay={i * 100}>
-                <div
-                  style={{
-                    background: bg,
-                    border: `1.5px solid ${border}`,
-                    borderRadius: '18px',
-                    padding: '28px 24px',
-                  }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px' }}>
-                    <span style={{ fontSize: '28px' }}>{emoji}</span>
-                    <p style={{ fontWeight: 700, color: '#1e1b4b', fontSize: '17px', margin: 0 }}>{label}</p>
-                  </div>
-                  <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                    {items.map((item) => (
-                      <li key={item} style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', fontSize: '15px', color: '#374151', lineHeight: 1.6 }}>
-                        <div
-                          style={{
-                            width: '8px',
-                            height: '8px',
-                            borderRadius: '50%',
-                            background: color,
-                            flexShrink: 0,
-                            marginTop: '7px',
-                          }}
-                        />
-                        {item}
-                      </li>
-                    ))}
-                  </ul>
+            ].map(({ label, emoji, bg, border, color, items }) => (
+              <div
+                key={label}
+                style={{
+                  background: bg,
+                  border: `1.5px solid ${border}`,
+                  borderRadius: '18px',
+                  padding: '28px 24px',
+                  transition: 'transform 0.2s ease, box-shadow 0.2s ease',
+                  cursor: 'default',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.transform = 'translateY(-2px)';
+                  e.currentTarget.style.boxShadow = '0 8px 24px rgba(0,0,0,0.08)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = '';
+                  e.currentTarget.style.boxShadow = '';
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px' }}>
+                  <span style={{ fontSize: '28px' }}>{emoji}</span>
+                  <p style={{ fontWeight: 700, color: '#1e1b4b', fontSize: '17px', margin: 0 }}>{label}</p>
                 </div>
-              </FadeInUp>
+                <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  {items.map((item) => (
+                    <li key={item} style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', fontSize: '15px', color: '#374151', lineHeight: 1.6 }}>
+                      <div
+                        style={{
+                          width: '8px',
+                          height: '8px',
+                          borderRadius: '50%',
+                          background: color,
+                          flexShrink: 0,
+                          marginTop: '7px',
+                        }}
+                      />
+                      {item}
+                    </li>
+                  ))}
+                </ul>
+              </div>
             ))}
           </div>
 
@@ -816,14 +838,12 @@ export const HelpPage = () => {
 
         {/* ──────── 03 Requirements ──────── */}
         <section style={{ marginBottom: '96px' }}>
-          <FadeInUp>
-            <SectionHeader
-              id="requirements"
-              title="シフト要件設定"
-              number="03"
-              subtitle="各シフトの必要人員数・資格要件・ロール要件を設定します。これらがシフト自動生成の制約条件になります。"
-            />
-          </FadeInUp>
+          <SectionHeader
+            id="requirements"
+            title="シフト要件設定"
+            number="03"
+            subtitle="各シフトの必要人員数・資格要件・ロール要件を設定します。これらがシフト自動生成の制約条件になります。"
+          />
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
             {[
@@ -851,105 +871,103 @@ export const HelpPage = () => {
                 emoji: '🌅',
                 color: '#f59e0b',
               },
-            ].map(({ title, desc, emoji, color }, i) => (
-              <FadeInUp key={title} delay={i * 80}>
+            ].map(({ title, desc, emoji, color }) => (
+              <div
+                key={title}
+                style={{
+                  display: 'flex',
+                  gap: '20px',
+                  padding: '22px 24px',
+                  background: '#fff',
+                  borderRadius: '16px',
+                  border: '1px solid #e8e6e0',
+                  boxShadow: '0 1px 6px rgba(0,0,0,0.04)',
+                  transition: 'transform 0.2s ease, box-shadow 0.2s ease',
+                  cursor: 'default',
+                }}
+                onMouseEnter={cardHoverOn}
+                onMouseLeave={(e) => cardHoverOff(e, '0 1px 6px rgba(0,0,0,0.04)')}
+              >
                 <div
                   style={{
+                    flexShrink: 0,
+                    width: '52px',
+                    height: '52px',
+                    borderRadius: '14px',
+                    background: `${color}15`,
                     display: 'flex',
-                    gap: '20px',
-                    padding: '22px 24px',
-                    background: '#fff',
-                    borderRadius: '16px',
-                    border: '1px solid #e8e6e0',
-                    boxShadow: '0 1px 6px rgba(0,0,0,0.04)',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: '26px',
                   }}
                 >
-                  <div
-                    style={{
-                      flexShrink: 0,
-                      width: '52px',
-                      height: '52px',
-                      borderRadius: '14px',
-                      background: `${color}15`,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      fontSize: '26px',
-                    }}
-                  >
-                    {emoji}
-                  </div>
-                  <div>
-                    <p style={{ fontWeight: 700, color: '#1e1b4b', fontSize: '17px', margin: '0 0 8px' }}>{title}</p>
-                    <p style={{ color: '#6b7280', fontSize: '16px', lineHeight: 1.8, margin: 0 }}>{desc}</p>
-                  </div>
+                  {emoji}
                 </div>
-              </FadeInUp>
+                <div>
+                  <p style={{ fontWeight: 700, color: '#1e1b4b', fontSize: '17px', margin: '0 0 8px' }}>{title}</p>
+                  <p style={{ color: '#6b7280', fontSize: '16px', lineHeight: 1.8, margin: 0 }}>{desc}</p>
+                </div>
+              </div>
             ))}
           </div>
         </section>
 
         {/* ──────── 04 Generation ──────── */}
         <section style={{ marginBottom: '96px' }}>
-          <FadeInUp>
-            <SectionHeader
-              id="generation"
-              title="AI自動生成"
-              number="04"
-              subtitle="CP-SAT（制約充足ソルバー）を使用し、すべての制約を満たす最適なシフトを自動生成します。"
-            />
-          </FadeInUp>
+          <SectionHeader
+            id="generation"
+            title="AI自動生成"
+            number="04"
+            subtitle="CP-SAT（制約充足ソルバー）を使用し、すべての制約を満たす最適なシフトを自動生成します。"
+          />
 
-          <FadeInUp delay={100}>
-            <div style={{ marginBottom: '24px' }}>
-              <GenerationFlow />
-            </div>
-          </FadeInUp>
+          {/* GenerationFlow は独自アニメーションを持つ */}
+          <div style={{ marginBottom: '24px' }}>
+            <GenerationFlow />
+          </div>
 
-          <FadeInUp delay={200}>
-            <div
-              style={{
-                background: '#fff',
-                borderRadius: '18px',
-                border: '1px solid #e8e6e0',
-                padding: '28px 32px',
-                marginBottom: '16px',
-              }}
-            >
-              <p style={{ fontWeight: 700, color: '#1e1b4b', fontSize: '18px', margin: '0 0 20px' }}>
-                ✅ 生成前の確認チェックリスト
-              </p>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                {[
-                  'スタッフが1名以上登録されている',
-                  'シフト種別ごとの必要人員数が設定されている',
-                  '対象年月が正しく選択されている',
-                  '「データ設定診断」でエラーが出ていない',
-                ].map((item, i) => (
-                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-                    <div
-                      style={{
-                        width: '28px',
-                        height: '28px',
-                        borderRadius: '8px',
-                        background: '#4f46e5',
-                        color: '#fff',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        fontSize: '14px',
-                        fontWeight: 700,
-                        flexShrink: 0,
-                      }}
-                    >
-                      ✓
-                    </div>
-                    <p style={{ fontSize: '16px', color: '#374151', margin: 0 }}>{item}</p>
+          <div
+            style={{
+              background: '#fff',
+              borderRadius: '18px',
+              border: '1px solid #e8e6e0',
+              padding: '28px 32px',
+              marginBottom: '16px',
+            }}
+          >
+            <p style={{ fontWeight: 700, color: '#1e1b4b', fontSize: '18px', margin: '0 0 20px' }}>
+              ✅ 生成前の確認チェックリスト
+            </p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              {[
+                'スタッフが1名以上登録されている',
+                'シフト種別ごとの必要人員数が設定されている',
+                '対象年月が正しく選択されている',
+                '「データ設定診断」でエラーが出ていない',
+              ].map((item, i) => (
+                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                  <div
+                    style={{
+                      width: '28px',
+                      height: '28px',
+                      borderRadius: '8px',
+                      background: '#4f46e5',
+                      color: '#fff',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: '14px',
+                      fontWeight: 700,
+                      flexShrink: 0,
+                    }}
+                  >
+                    ✓
                   </div>
-                ))}
-              </div>
+                  <p style={{ fontSize: '16px', color: '#374151', margin: 0 }}>{item}</p>
+                </div>
+              ))}
             </div>
-          </FadeInUp>
+          </div>
 
           <TipBox variant="warning">
             生成中はページを離れないでください。通常10〜60秒で完了します。スタッフ数が多い場合や制約が複雑な場合はさらに時間がかかることがあります。
@@ -958,21 +976,18 @@ export const HelpPage = () => {
 
         {/* ──────── 05 Evaluation ──────── */}
         <section style={{ marginBottom: '96px' }}>
-          <FadeInUp>
-            <SectionHeader
-              id="evaluation"
-              title="評価・改善提案"
-              number="05"
-              subtitle="シフト生成後に自動で評価が実行されます。制約違反の内容と改善提案が右パネルに表示されます。"
-            />
-          </FadeInUp>
+          <SectionHeader
+            id="evaluation"
+            title="評価・改善提案"
+            number="05"
+            subtitle="シフト生成後に自動で評価が実行されます。制約違反の内容と改善提案が右パネルに表示されます。"
+          />
 
-          <FadeInUp delay={80}>
-            <p style={{ fontWeight: 700, color: '#1e1b4b', fontSize: '19px', margin: '0 0 20px' }}>
-              制約レベルとスコアへの影響
-            </p>
-          </FadeInUp>
+          <p style={{ fontWeight: 700, color: '#1e1b4b', fontSize: '19px', margin: '0 0 20px' }}>
+            制約レベルとスコアへの影響
+          </p>
 
+          {/* ScoreVisualizer は独自アニメーションを持つ */}
           <ScoreVisualizer />
 
           <TipBox>
@@ -983,14 +998,12 @@ export const HelpPage = () => {
 
         {/* ──────── 06 Leave ──────── */}
         <section style={{ marginBottom: '96px' }}>
-          <FadeInUp>
-            <SectionHeader
-              id="leave"
-              title="休暇管理"
-              number="06"
-              subtitle="スタッフの休暇希望入力と有給休暇残高を一元管理します。"
-            />
-          </FadeInUp>
+          <SectionHeader
+            id="leave"
+            title="休暇管理"
+            number="06"
+            subtitle="スタッフの休暇希望入力と有給休暇残高を一元管理します。"
+          />
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '24px' }}>
             {[
@@ -1022,80 +1035,79 @@ export const HelpPage = () => {
                 color: '#10b981',
                 bg: '#f0fdf4',
               },
-            ].map(({ title, icon, desc, color, bg }, i) => (
-              <FadeInUp key={title} delay={i * 80}>
+            ].map(({ title, icon, desc, color, bg }) => (
+              <div
+                key={title}
+                style={{
+                  background: '#fff',
+                  borderRadius: '18px',
+                  border: '1px solid #e8e6e0',
+                  padding: '28px 24px',
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
+                  height: '100%',
+                  transition: 'transform 0.2s ease, box-shadow 0.2s ease',
+                  cursor: 'default',
+                }}
+                onMouseEnter={cardHoverOn}
+                onMouseLeave={cardHoverOff}
+              >
                 <div
                   style={{
-                    background: '#fff',
-                    borderRadius: '18px',
-                    border: '1px solid #e8e6e0',
-                    padding: '28px 24px',
-                    boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
-                    height: '100%',
+                    width: '56px',
+                    height: '56px',
+                    borderRadius: '14px',
+                    background: bg,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: '28px',
+                    marginBottom: '16px',
+                    border: `1px solid ${color}30`,
                   }}
                 >
-                  <div
-                    style={{
-                      width: '56px',
-                      height: '56px',
-                      borderRadius: '14px',
-                      background: bg,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      fontSize: '28px',
-                      marginBottom: '16px',
-                      border: `1px solid ${color}30`,
-                    }}
-                  >
-                    {icon}
-                  </div>
-                  <p style={{ fontWeight: 700, color: '#111827', fontSize: '17px', margin: '0 0 10px' }}>{title}</p>
-                  <p style={{ color: '#6b7280', fontSize: '15px', lineHeight: 1.8, margin: 0 }}>{desc}</p>
+                  {icon}
                 </div>
-              </FadeInUp>
+                <p style={{ fontWeight: 700, color: '#111827', fontSize: '17px', margin: '0 0 10px' }}>{title}</p>
+                <p style={{ color: '#6b7280', fontSize: '15px', lineHeight: 1.8, margin: 0 }}>{desc}</p>
+              </div>
             ))}
           </div>
 
-          <FadeInUp>
-            <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '18px', padding: '24px 28px' }}>
-              <p style={{ fontWeight: 700, color: '#1e40af', fontSize: '16px', margin: '0 0 16px' }}>
-                📋 対応している休暇種別
-              </p>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                {[
-                  '有給休暇', '特別休暇', '介護休暇', '子の看護休暇',
-                  '産前・産後休暇', '育児休業', '病気休暇', '慶弔休暇',
-                ].map((type) => (
-                  <span
-                    key={type}
-                    style={{
-                      background: '#dbeafe',
-                      color: '#1e40af',
-                      fontSize: '14px',
-                      padding: '5px 14px',
-                      borderRadius: '20px',
-                      fontWeight: 500,
-                    }}
-                  >
-                    {type}
-                  </span>
-                ))}
-              </div>
+          <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '18px', padding: '24px 28px' }}>
+            <p style={{ fontWeight: 700, color: '#1e40af', fontSize: '16px', margin: '0 0 16px' }}>
+              📋 対応している休暇種別
+            </p>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+              {[
+                '有給休暇', '特別休暇', '介護休暇', '子の看護休暇',
+                '産前・産後休暇', '育児休業', '病気休暇', '慶弔休暇',
+              ].map((type) => (
+                <span
+                  key={type}
+                  style={{
+                    background: '#dbeafe',
+                    color: '#1e40af',
+                    fontSize: '14px',
+                    padding: '5px 14px',
+                    borderRadius: '20px',
+                    fontWeight: 500,
+                  }}
+                >
+                  {type}
+                </span>
+              ))}
             </div>
-          </FadeInUp>
+          </div>
         </section>
 
         {/* ──────── 07 Reports ──────── */}
         <section style={{ marginBottom: '96px' }}>
-          <FadeInUp>
-            <SectionHeader
-              id="reports"
-              title="レポート機能"
-              number="07"
-              subtitle="上部ナビゲーションの「レポート」から月次レポートページへ遷移できます。多角的なデータ分析・出力が可能です。"
-            />
-          </FadeInUp>
+          <SectionHeader
+            id="reports"
+            title="レポート機能"
+            number="07"
+            subtitle="上部ナビゲーションの「レポート」から月次レポートページへ遷移できます。多角的なデータ分析・出力が可能です。"
+          />
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
             {[
@@ -1106,41 +1118,42 @@ export const HelpPage = () => {
               { name: 'シフトタイプ分析', desc: '日勤・夜勤など種別ごとの充足率推移をグラフで表示します。', emoji: '📉' },
               { name: '勤務時間分析', desc: '月間労働時間の集計と可視化。法定労働時間超過のスタッフを検出します。', emoji: '🕐' },
               { name: 'ドキュメントアーカイブ', desc: '過去の確定シフトをPDF形式で出力・保存できます。', emoji: '📁' },
-            ].map(({ name, desc, emoji }, i) => (
-              <FadeInUp key={name} delay={i * 60}>
-                <div
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '18px',
-                    padding: '20px 24px',
-                    background: '#fff',
-                    borderRadius: '14px',
-                    border: '1px solid #e8e6e0',
-                    boxShadow: '0 1px 4px rgba(0,0,0,0.04)',
-                  }}
-                >
-                  <span style={{ fontSize: '28px', flexShrink: 0 }}>{emoji}</span>
-                  <div>
-                    <p style={{ fontWeight: 700, color: '#1e1b4b', fontSize: '16px', margin: '0 0 4px' }}>{name}</p>
-                    <p style={{ color: '#6b7280', fontSize: '15px', lineHeight: 1.7, margin: 0 }}>{desc}</p>
-                  </div>
+            ].map(({ name, desc, emoji }) => (
+              <div
+                key={name}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '18px',
+                  padding: '20px 24px',
+                  background: '#fff',
+                  borderRadius: '14px',
+                  border: '1px solid #e8e6e0',
+                  boxShadow: '0 1px 4px rgba(0,0,0,0.04)',
+                  transition: 'transform 0.2s ease, box-shadow 0.2s ease',
+                  cursor: 'default',
+                }}
+                onMouseEnter={cardHoverOn}
+                onMouseLeave={(e) => cardHoverOff(e, '0 1px 4px rgba(0,0,0,0.04)')}
+              >
+                <span style={{ fontSize: '28px', flexShrink: 0 }}>{emoji}</span>
+                <div>
+                  <p style={{ fontWeight: 700, color: '#1e1b4b', fontSize: '16px', margin: '0 0 4px' }}>{name}</p>
+                  <p style={{ color: '#6b7280', fontSize: '15px', lineHeight: 1.7, margin: 0 }}>{desc}</p>
                 </div>
-              </FadeInUp>
+              </div>
             ))}
           </div>
         </section>
 
         {/* ──────── 08 Export ──────── */}
         <section style={{ marginBottom: '96px' }}>
-          <FadeInUp>
-            <SectionHeader
-              id="export"
-              title="エクスポート"
-              number="08"
-              subtitle="シフト表を複数のファイル形式でダウンロードできます。"
-            />
-          </FadeInUp>
+          <SectionHeader
+            id="export"
+            title="エクスポート"
+            number="08"
+            subtitle="シフト表を複数のファイル形式でダウンロードできます。"
+          />
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', marginBottom: '20px' }}>
             {[
@@ -1168,56 +1181,61 @@ export const HelpPage = () => {
                 border: '#93c5fd',
                 color: '#2563eb',
               },
-            ].map(({ format, icon, desc, bg, border, color }, i) => (
-              <FadeInUp key={format} delay={i * 100}>
-                <div
+            ].map(({ format, icon, desc, bg, border, color }) => (
+              <div
+                key={format}
+                style={{
+                  background: bg,
+                  border: `2px solid ${border}`,
+                  borderRadius: '18px',
+                  padding: '28px 22px',
+                  transition: 'transform 0.2s ease, box-shadow 0.2s ease',
+                  cursor: 'default',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.transform = 'translateY(-2px)';
+                  e.currentTarget.style.boxShadow = '0 8px 24px rgba(0,0,0,0.08)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = '';
+                  e.currentTarget.style.boxShadow = '';
+                }}
+              >
+                <div style={{ fontSize: '36px', marginBottom: '16px' }}>{icon}</div>
+                <p
                   style={{
-                    background: bg,
-                    border: `2px solid ${border}`,
-                    borderRadius: '18px',
-                    padding: '28px 22px',
+                    fontWeight: 800,
+                    color: color,
+                    fontSize: '22px',
+                    margin: '0 0 10px',
+                    fontFamily: 'ui-monospace, monospace',
                   }}
                 >
-                  <div style={{ fontSize: '36px', marginBottom: '16px' }}>{icon}</div>
-                  <p
-                    style={{
-                      fontWeight: 800,
-                      color: color,
-                      fontSize: '22px',
-                      margin: '0 0 10px',
-                      fontFamily: 'ui-monospace, monospace',
-                    }}
-                  >
-                    {format}
-                  </p>
-                  <p style={{ color: '#374151', fontSize: '15px', lineHeight: 1.8, margin: 0 }}>{desc}</p>
-                </div>
-              </FadeInUp>
+                  {format}
+                </p>
+                <p style={{ color: '#374151', fontSize: '15px', lineHeight: 1.8, margin: 0 }}>{desc}</p>
+              </div>
             ))}
           </div>
 
-          <FadeInUp>
-            <div style={{ padding: '18px 22px', background: '#f9fafb', borderRadius: '14px', border: '1px solid #e5e7eb' }}>
-              <p style={{ fontSize: '16px', color: '#6b7280', margin: 0, lineHeight: 1.7 }}>
-                💡 エクスポートボタンはシフト表上部ツールバーの <strong style={{ color: '#374151' }}>「エクスポート」</strong> から実行できます。確定前のドラフト状態でもエクスポート可能です。
-              </p>
-            </div>
-          </FadeInUp>
+          <div style={{ padding: '18px 22px', background: '#f9fafb', borderRadius: '14px', border: '1px solid #e5e7eb' }}>
+            <p style={{ fontSize: '16px', color: '#6b7280', margin: 0, lineHeight: 1.7 }}>
+              💡 エクスポートボタンはシフト表上部ツールバーの <strong style={{ color: '#374151' }}>「エクスポート」</strong> から実行できます。確定前のドラフト状態でもエクスポート可能です。
+            </p>
+          </div>
         </section>
 
         {/* ──────── 09 Keyboard ──────── */}
         <section style={{ marginBottom: '96px' }}>
-          <FadeInUp>
-            <SectionHeader
-              id="keyboard"
-              title="キーボード操作"
-              number="09"
-              subtitle={undefined}
-            />
-            <p style={{ fontSize: '17px', color: '#6b7280', lineHeight: 1.8, margin: '-16px 0 32px' }}>
-              シフト表はキーボードで効率よく操作できます。シフト表にフォーカスした状態で <Kbd>?</Kbd> を押すとヘルプが表示されます。
-            </p>
-          </FadeInUp>
+          <SectionHeader
+            id="keyboard"
+            title="キーボード操作"
+            number="09"
+            subtitle={undefined}
+          />
+          <p style={{ fontSize: '17px', color: '#6b7280', lineHeight: 1.8, margin: '-16px 0 32px' }}>
+            シフト表はキーボードで効率よく操作できます。シフト表にフォーカスした状態で <Kbd>?</Kbd> を押すとヘルプが表示されます。
+          </p>
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
             {[
@@ -1261,190 +1279,188 @@ export const HelpPage = () => {
                   { keys: ['?'], desc: 'キーボードヘルプを表示' },
                 ],
               },
-            ].map(({ category, emoji, shortcuts }, i) => (
-              <FadeInUp key={category} delay={i * 80}>
-                <div
-                  style={{
-                    background: '#fff',
-                    borderRadius: '18px',
-                    border: '1px solid #e8e6e0',
-                    padding: '24px 22px',
-                    boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
-                  }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px' }}>
-                    <span style={{ fontSize: '22px' }}>{emoji}</span>
-                    <p style={{ fontWeight: 700, color: '#1e1b4b', fontSize: '16px', margin: 0 }}>{category}</p>
-                  </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                    {shortcuts.map(({ keys, desc }) => (
-                      <div key={desc} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
-                        <span style={{ color: '#6b7280', fontSize: '15px', flex: 1 }}>{desc}</span>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0 }}>
-                          {keys.map((key, ki) => (
-                            <span key={ki} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                              <Kbd>{key}</Kbd>
-                              {ki < keys.length - 1 && <span style={{ color: '#9ca3af', fontSize: '12px' }}>+</span>}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
+            ].map(({ category, emoji, shortcuts }) => (
+              <div
+                key={category}
+                style={{
+                  background: '#fff',
+                  borderRadius: '18px',
+                  border: '1px solid #e8e6e0',
+                  padding: '24px 22px',
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
+                  transition: 'transform 0.2s ease, box-shadow 0.2s ease',
+                  cursor: 'default',
+                }}
+                onMouseEnter={cardHoverOn}
+                onMouseLeave={cardHoverOff}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px' }}>
+                  <span style={{ fontSize: '22px' }}>{emoji}</span>
+                  <p style={{ fontWeight: 700, color: '#1e1b4b', fontSize: '16px', margin: 0 }}>{category}</p>
                 </div>
-              </FadeInUp>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  {shortcuts.map(({ keys, desc }) => (
+                    <div key={desc} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+                      <span style={{ color: '#6b7280', fontSize: '15px', flex: 1 }}>{desc}</span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0 }}>
+                        {keys.map((key, ki) => (
+                          <span key={ki} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                            <Kbd>{key}</Kbd>
+                            {ki < keys.length - 1 && <span style={{ color: '#9ca3af', fontSize: '12px' }}>+</span>}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
             ))}
           </div>
         </section>
 
         {/* ──────── 10 FAQ ──────── */}
         <section style={{ marginBottom: '48px' }}>
-          <FadeInUp>
-            <SectionHeader
-              id="faq"
-              title="よくある質問"
-              number="10"
-              subtitle={undefined}
-            />
-          </FadeInUp>
+          <SectionHeader
+            id="faq"
+            title="よくある質問"
+            number="10"
+            subtitle={undefined}
+          />
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
             {FAQ_ITEMS.map(({ q, a }, index) => (
-              <FadeInUp key={index} delay={index * 50}>
-                <div
+              <div
+                key={index}
+                style={{
+                  background: '#fff',
+                  borderRadius: '16px',
+                  border: `1.5px solid ${openFAQ === index ? '#c7d2fe' : '#e8e6e0'}`,
+                  overflow: 'hidden',
+                  boxShadow: openFAQ === index ? '0 4px 16px rgba(99,102,241,0.1)' : '0 1px 4px rgba(0,0,0,0.04)',
+                  transition: 'border-color 0.2s, box-shadow 0.2s',
+                }}
+              >
+                <button
+                  onClick={() => setOpenFAQ(openFAQ === index ? null : index)}
                   style={{
-                    background: '#fff',
-                    borderRadius: '16px',
-                    border: `1.5px solid ${openFAQ === index ? '#c7d2fe' : '#e8e6e0'}`,
-                    overflow: 'hidden',
-                    boxShadow: openFAQ === index ? '0 4px 16px rgba(99,102,241,0.1)' : '0 1px 4px rgba(0,0,0,0.04)',
-                    transition: 'border-color 0.2s, box-shadow 0.2s',
+                    width: '100%',
+                    textAlign: 'left',
+                    padding: '22px 26px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    background: 'none',
+                    border: 'none',
+                    cursor: 'pointer',
+                    gap: '20px',
+                    fontFamily: 'inherit',
                   }}
                 >
-                  <button
-                    onClick={() => setOpenFAQ(openFAQ === index ? null : index)}
+                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: '14px', flex: 1 }}>
+                    <span
+                      style={{
+                        flexShrink: 0,
+                        width: '28px',
+                        height: '28px',
+                        borderRadius: '50%',
+                        background: '#eef2ff',
+                        color: '#6366f1',
+                        fontWeight: 700,
+                        fontSize: '13px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        marginTop: '2px',
+                      }}
+                    >
+                      Q
+                    </span>
+                    <span style={{ fontWeight: 600, color: '#111827', fontSize: '17px', flex: 1, lineHeight: 1.6 }}>
+                      {q}
+                    </span>
+                  </div>
+                  <span
                     style={{
-                      width: '100%',
-                      textAlign: 'left',
-                      padding: '22px 26px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      background: 'none',
-                      border: 'none',
-                      cursor: 'pointer',
-                      gap: '20px',
-                      fontFamily: 'inherit',
+                      color: '#6366f1',
+                      flexShrink: 0,
+                      fontSize: '14px',
+                      display: 'inline-block',
+                      transform: openFAQ === index ? 'rotate(180deg)' : 'none',
+                      transition: 'transform 0.25s ease',
                     }}
                   >
-                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: '14px', flex: 1 }}>
+                    ▼
+                  </span>
+                </button>
+
+                <div
+                  style={{
+                    maxHeight: openFAQ === index ? '400px' : '0',
+                    overflow: 'hidden',
+                    transition: 'max-height 0.35s cubic-bezier(0.4, 0, 0.2, 1)',
+                  }}
+                >
+                  <div style={{ padding: '0 26px 24px 26px', borderTop: '1px solid #f0f0f0' }}>
+                    <div style={{ display: 'flex', gap: '14px', marginTop: '18px' }}>
                       <span
                         style={{
                           flexShrink: 0,
                           width: '28px',
                           height: '28px',
                           borderRadius: '50%',
-                          background: '#eef2ff',
-                          color: '#6366f1',
+                          background: '#f0fdf4',
+                          color: '#16a34a',
                           fontWeight: 700,
                           fontSize: '13px',
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center',
-                          marginTop: '2px',
                         }}
                       >
-                        Q
+                        A
                       </span>
-                      <span style={{ fontWeight: 600, color: '#111827', fontSize: '17px', flex: 1, lineHeight: 1.6 }}>
-                        {q}
-                      </span>
-                    </div>
-                    <span
-                      style={{
-                        color: '#6366f1',
-                        flexShrink: 0,
-                        fontSize: '14px',
-                        display: 'inline-block',
-                        transform: openFAQ === index ? 'rotate(180deg)' : 'none',
-                        transition: 'transform 0.25s ease',
-                      }}
-                    >
-                      ▼
-                    </span>
-                  </button>
-
-                  <div
-                    style={{
-                      maxHeight: openFAQ === index ? '400px' : '0',
-                      overflow: 'hidden',
-                      transition: 'max-height 0.35s cubic-bezier(0.4, 0, 0.2, 1)',
-                    }}
-                  >
-                    <div style={{ padding: '0 26px 24px 26px', borderTop: '1px solid #f0f0f0' }}>
-                      <div style={{ display: 'flex', gap: '14px', marginTop: '18px' }}>
-                        <span
-                          style={{
-                            flexShrink: 0,
-                            width: '28px',
-                            height: '28px',
-                            borderRadius: '50%',
-                            background: '#f0fdf4',
-                            color: '#16a34a',
-                            fontWeight: 700,
-                            fontSize: '13px',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                          }}
-                        >
-                          A
-                        </span>
-                        <p style={{ color: '#374151', fontSize: '16px', lineHeight: 1.9, margin: 0, flex: 1 }}>{a}</p>
-                      </div>
+                      <p style={{ color: '#374151', fontSize: '16px', lineHeight: 1.9, margin: 0, flex: 1 }}>{a}</p>
                     </div>
                   </div>
                 </div>
-              </FadeInUp>
+              </div>
             ))}
           </div>
         </section>
 
         {/* Footer */}
-        <FadeInUp>
-          <div
+        <div
+          style={{
+            marginTop: '64px',
+            paddingTop: '40px',
+            borderTop: '1px solid #e5e7eb',
+            textAlign: 'center',
+          }}
+        >
+          <p style={{ color: '#9ca3af', fontSize: '16px', margin: '0 0 20px', lineHeight: 1.7 }}>
+            ご不明な点は施設管理者またはシステム担当者にお問い合わせください。
+          </p>
+          <Link
+            to="/"
             style={{
-              marginTop: '64px',
-              paddingTop: '40px',
-              borderTop: '1px solid #e5e7eb',
-              textAlign: 'center',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '8px',
+              color: '#6366f1',
+              textDecoration: 'none',
+              fontSize: '16px',
+              fontWeight: 600,
+              padding: '12px 24px',
+              background: '#eef2ff',
+              borderRadius: '12px',
+              transition: 'background 0.15s',
             }}
+            onMouseEnter={(e) => (e.currentTarget.style.background = '#e0e7ff')}
+            onMouseLeave={(e) => (e.currentTarget.style.background = '#eef2ff')}
           >
-            <p style={{ color: '#9ca3af', fontSize: '16px', margin: '0 0 20px', lineHeight: 1.7 }}>
-              ご不明な点は施設管理者またはシステム担当者にお問い合わせください。
-            </p>
-            <Link
-              to="/"
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '8px',
-                color: '#6366f1',
-                textDecoration: 'none',
-                fontSize: '16px',
-                fontWeight: 600,
-                padding: '12px 24px',
-                background: '#eef2ff',
-                borderRadius: '12px',
-                transition: 'background 0.15s',
-              }}
-              onMouseEnter={(e) => (e.currentTarget.style.background = '#e0e7ff')}
-              onMouseLeave={(e) => (e.currentTarget.style.background = '#eef2ff')}
-            >
-              ← アプリケーションに戻る
-            </Link>
-          </div>
-        </FadeInUp>
+            ← アプリケーションに戻る
+          </Link>
+        </div>
       </main>
     </div>
   );
