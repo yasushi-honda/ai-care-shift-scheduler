@@ -1,8 +1,8 @@
 # ハンドオフメモ - 最新状態
 
-**更新日**: 2026-02-20（PR #105 Phase 63.2 残高不足アラート マージ済み）
+**更新日**: 2026-02-20（PR #111 Solver警告偽陽性修正 + roleMissing評価チェック追加 マージ済み）
 **フェーズ**: LLM→Solver完全移行 **本番稼働中** ✅
-**最新作業**: PR #105 Phase 63.2 残高不足アラート（公休マイナス残高・有給時効通知）
+**最新作業**: PR #111 Solver警告偽陽性修正 + roleMissing評価チェック追加（#108, #109）
 
 ---
 
@@ -64,21 +64,21 @@
 
 ## 直近の変更（最新5件）
 
-1. **PR #105マージ** (2026-02-19): Phase 63.2 残高不足アラート
+1. **PR #111マージ** (2026-02-20): Solver警告偽陽性修正 + roleMissing評価チェック追加（#108, #109）
+   - Solver警告の偽陽性を修正
+   - roleMissing評価チェック追加
+
+2. **PR #107マージ** (2026-02-20): staffingStandards Firestoreセキュリティルール追加（Phase 65漏れ）
+
+3. **PR #105マージ** (2026-02-19): Phase 63.2 残高不足アラート
    - 公休残高マイナス検出アラート
    - 有給時効通知（期限切れ前アラート）
 
-2. **PR #104マージ** (2026-02-19): Phase 63 通知システム実装
+4. **PR #104マージ** (2026-02-19): Phase 63 通知システム実装
    - 通知センターUI（通知一覧・既読管理）
    - シフト確定通知（スタッフへの自動通知）
 
-3. **PR #103マージ** (2026-02-19): Phase 66 勤務体制一覧表 サービス種別対応（standard-form-service-type）
-
-4. **PR #102マージ** (2026-02-19): Phase 65 人員配置基準ダッシュボード強化（staffing-dashboard）
-
-5. **PR #101マージ** (2026-02-19): Phase 64 休暇残高管理 UX刷新（leave-balance-ux-renewal）
-   - LeaveBalanceCompact/FullScreen/StaffCard/Timeline/PaidLeaveCountdown/BorrowConfirmDialog
-   - テスト: 279テスト全通過（+58増）
+5. **PR #103マージ** (2026-02-19): Phase 66 勤務体制一覧表 サービス種別対応（standard-form-service-type）
 
 ---
 
@@ -156,8 +156,8 @@
 
 再開前に以下を確認:
 
-- [x] `git log` で最新コミット確認（PR #105 Phase 63.2 残高不足アラート マージ済み）✅
-- [x] CI/CD Pipeline（PR #105）完了確認（Lighthouse CI + CI/CD Pipeline 共にsuccess）✅
+- [x] `git log` で最新コミット確認（PR #111 Solver警告偽陽性修正 + roleMissing評価チェック追加 マージ済み）✅
+- [x] CI/CD Pipeline（PR #111）完了確認（Lighthouse CI + CI/CD Pipeline 共にsuccess）✅
 - [x] LLM→Solver完全移行 本番稼働確認（solverUnifiedGenerate稼働中）✅
 - [x] テスト全通過確認（Frontend 279, Backend 230, Solver 68）✅
 - [x] ワーキングツリークリーン確認（未コミット変更なし）✅
