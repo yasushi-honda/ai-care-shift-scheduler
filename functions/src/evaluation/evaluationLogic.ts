@@ -25,6 +25,7 @@ import {
   checkConsecutiveWorkViolation as checkConsecutiveWorkViolationFn,
   checkNightRestViolation as checkNightRestViolationFn,
   checkQualificationMissing as checkQualificationMissingFn,
+  checkRoleMissing as checkRoleMissingFn,
   checkLeaveRequestIgnored as checkLeaveRequestIgnoredFn,
   checkTimeSlotPreferenceViolation as checkTimeSlotPreferenceViolationFn,
 } from './constraintCheckers';
@@ -76,6 +77,13 @@ export class EvaluationService {
     violations.push(...this.checkNightRestViolation(input.schedule));
     violations.push(
       ...this.checkQualificationMissing(
+        input.schedule,
+        input.staffList,
+        input.requirements
+      )
+    );
+    violations.push(
+      ...this.checkRoleMissing(
         input.schedule,
         input.staffList,
         input.requirements
@@ -254,6 +262,19 @@ export class EvaluationService {
   ): ConstraintViolation[] {
     // 抽出した関数に委譲
     return checkQualificationMissingFn(schedule, staffList, requirements);
+  }
+
+  /**
+   * ロール要件未充足を検出（看護師・ケアマネ等）
+   * 注: デイサービス（夜勤なし）の場合、日曜日は営業外としてスキップ
+   */
+  checkRoleMissing(
+    schedule: StaffSchedule[],
+    staffList: Staff[],
+    requirements: ShiftRequirement
+  ): ConstraintViolation[] {
+    // 抽出した関数に委譲
+    return checkRoleMissingFn(schedule, staffList, requirements);
   }
 
   /**
