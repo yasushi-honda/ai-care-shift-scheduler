@@ -1613,8 +1613,9 @@ const App: React.FC = () => {
             // LocalStorageのドラフトキャッシュを削除
             const draftKey = `draft-schedule-${selectedFacilityId}-${requirements.targetMonth}`;
             localStorage.removeItem(draftKey);
-            // 画面上のスケジュールを即座にクリア
+            // 画面上のスケジュール・評価を即座にクリア
             setSchedule([]);
+            setEvaluation(null);
             // Firestoreの再フェッチをトリガー
             setScheduleRetryTrigger(prev => prev + 1);
           }}
