@@ -1,6 +1,6 @@
 # Claude Code Spec-Driven Development
 
-**最終更新**: 2026-02-20（PR #105 Phase 63.2 残高不足アラート 完了）
+**最終更新**: 2026-02-25（評価システム Level 2 減点値を -5点/件 に修正）
 
 Kiro-style Spec Driven Development implementation using claude code slash commands, hooks and agents.
 
@@ -191,7 +191,7 @@ gh pr diff <PR番号>  # 差分を確認してレビュー依頼
 | Level | 名称 | 減点 |
 |-------|------|------|
 | 1 | 絶対必須（労基法） | 即0点 |
-| 2 | 運営必須（人員不足） | -12点/件 |
+| 2 | 運営必須（人員不足） | -5点/件 |
 | 3 | 努力目標（希望休） | -4点/件 |
 | 4 | 推奨 | 0点 |
 
