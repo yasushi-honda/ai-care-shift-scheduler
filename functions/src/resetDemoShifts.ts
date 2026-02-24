@@ -2,7 +2,8 @@
  * デモシフトリセット Cloud Function
  *
  * デモ環境で生成済みシフトを月単位でリセットする
- * - 対象: facilities/demo-facility-001/shifts（指定月）
+ * - 対象: facilities/demo-facility-001/schedules（指定月）
+ * - 対象: facilities/demo-facility-001/aiGenerationHistory（指定月）
  * - セキュリティ: デモ施設固定、POSTメソッドのみ
  */
 
@@ -43,31 +44,30 @@ export const resetDemoShifts = onRequest({
 
   try {
     const db = admin.firestore();
-    const shiftsRef = db
-      .collection('facilities')
-      .doc(DEMO_FACILITY_ID)
-      .collection('schedules');
+    const facilityRef = db.collection('facilities').doc(DEMO_FACILITY_ID);
 
-    // 指定月のシフトを検索
-    const snapshot = await shiftsRef
-      .where('targetMonth', '==', targetMonth)
-      .get();
+    // 指定月のシフト（schedules）と評価履歴（aiGenerationHistory）を並行取得
+    const [schedulesSnapshot, historySnapshot] = await Promise.all([
+      facilityRef.collection('schedules').where('targetMonth', '==', targetMonth).get(),
+      facilityRef.collection('aiGenerationHistory').where('targetMonth', '==', targetMonth).get(),
+    ]);
 
-    if (snapshot.empty) {
-      console.log(`✅ resetDemoShifts: ${targetMonth} のシフトは存在しません`);
+    const totalCount = schedulesSnapshot.size + historySnapshot.size;
+
+    if (totalCount === 0) {
+      console.log(`✅ resetDemoShifts: ${targetMonth} のデータは存在しません`);
       res.status(200).json({ success: true, deletedCount: 0 });
       return;
     }
 
-    // バッチ削除
+    // バッチ削除（schedules + aiGenerationHistory）
     const batch = db.batch();
-    snapshot.docs.forEach(doc => {
-      batch.delete(doc.ref);
-    });
+    schedulesSnapshot.docs.forEach(doc => batch.delete(doc.ref));
+    historySnapshot.docs.forEach(doc => batch.delete(doc.ref));
     await batch.commit();
 
-    console.log(`✅ resetDemoShifts: ${targetMonth} のシフト ${snapshot.size} 件を削除しました`);
-    res.status(200).json({ success: true, deletedCount: snapshot.size });
+    console.log(`✅ resetDemoShifts: ${targetMonth} のシフト ${schedulesSnapshot.size} 件・評価履歴 ${historySnapshot.size} 件を削除しました`);
+    res.status(200).json({ success: true, deletedCount: schedulesSnapshot.size });
   } catch (error: any) {
     console.error('❌ resetDemoShifts エラー:', error);
     res.status(500).json({
