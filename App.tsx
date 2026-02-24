@@ -1605,8 +1605,13 @@ const App: React.FC = () => {
 
   return (
     <div className="flex flex-col h-screen bg-slate-100 font-sans text-slate-800">
-      {/* Phase 43: デモ環境バナー */}
-      {isDemoEnvironment && <DemoBanner />}
+      {/* Phase 43: デモ環境バナー（デモシフトリセット機能付き） */}
+      {isDemoEnvironment && (
+        <DemoBanner
+          targetMonth={requirements.targetMonth}
+          onResetComplete={() => setScheduleRetryTrigger(prev => prev + 1)}
+        />
+      )}
 
       {/* Phase 43: ロック競合モーダル */}
       <LockStatusModal

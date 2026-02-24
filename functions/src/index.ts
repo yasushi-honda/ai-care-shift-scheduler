@@ -31,6 +31,8 @@ export { scheduledMonthlyReport, generateMonthlyReport } from './generateMonthly
 
 // Phase 42.2: デモログイン機能
 export { demoSignIn } from './demoSignIn';
+// デモシフトリセット機能
+export { resetDemoShifts } from './resetDemoShifts';
 
 // Phase 54: シフト再評価機能
 export { reevaluateShift } from './reevaluateShift';
