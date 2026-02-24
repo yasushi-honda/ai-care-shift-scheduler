@@ -1609,7 +1609,15 @@ const App: React.FC = () => {
       {isDemoEnvironment && (
         <DemoBanner
           targetMonth={requirements.targetMonth}
-          onResetComplete={() => setScheduleRetryTrigger(prev => prev + 1)}
+          onResetComplete={() => {
+            // LocalStorageのドラフトキャッシュを削除
+            const draftKey = `draft-schedule-${selectedFacilityId}-${requirements.targetMonth}`;
+            localStorage.removeItem(draftKey);
+            // 画面上のスケジュールを即座にクリア
+            setSchedule([]);
+            // Firestoreの再フェッチをトリガー
+            setScheduleRetryTrigger(prev => prev + 1);
+          }}
         />
       )}
 
