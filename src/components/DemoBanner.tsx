@@ -31,8 +31,10 @@ interface DemoBannerProps {
 export function DemoBanner({ className = '', targetMonth, onResetComplete }: DemoBannerProps) {
   const [confirming, setConfirming] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [resetError, setResetError] = useState<string | null>(null);
 
   const handleResetClick = () => {
+    setResetError(null);
     setConfirming(true);
   };
 
@@ -44,14 +46,15 @@ export function DemoBanner({ className = '', targetMonth, onResetComplete }: Dem
     if (!targetMonth) return;
     setLoading(true);
     setConfirming(false);
+    setResetError(null);
 
     const { error } = await resetDemoShifts(targetMonth);
 
     setLoading(false);
 
     if (error) {
-      // エラーはコンソールに残しつつ、ユーザーにはシンプルに通知
       console.error('[DemoBanner] リセットエラー:', error);
+      setResetError('リセットに失敗しました。再度お試しください。');
       return;
     }
 
@@ -80,6 +83,11 @@ export function DemoBanner({ className = '', targetMonth, onResetComplete }: Dem
           サンプル施設でシステムを体験中です
         </span>
       </div>
+
+      {/* エラーメッセージ */}
+      {resetError && (
+        <span className="text-xs text-red-600 font-medium">{resetError}</span>
+      )}
 
       {/* 右: リセットボタン or 確認ダイアログ */}
       {targetMonth && (
