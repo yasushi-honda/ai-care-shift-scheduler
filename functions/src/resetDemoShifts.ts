@@ -46,7 +46,7 @@ export const resetDemoShifts = onRequest({
     const shiftsRef = db
       .collection('facilities')
       .doc(DEMO_FACILITY_ID)
-      .collection('shifts');
+      .collection('schedules');
 
     // 指定月のシフトを検索
     const snapshot = await shiftsRef
