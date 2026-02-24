@@ -48,19 +48,15 @@ export function DemoBanner({ className = '', targetMonth, onResetComplete }: Dem
     setConfirming(false);
     setResetError(null);
 
-    console.log('[DemoBanner] 🔄 リセット開始:', targetMonth);
-
     const { deletedCount, error } = await resetDemoShifts(targetMonth);
 
     setLoading(false);
 
     if (error) {
-      console.error('[DemoBanner] ❌ リセットエラー:', error);
       setResetError('リセットに失敗しました。再度お試しください。');
       return;
     }
 
-    console.log('[DemoBanner] ✅ リセット完了: 削除件数 =', deletedCount);
     onResetComplete?.();
   };
 

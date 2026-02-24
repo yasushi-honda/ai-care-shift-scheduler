@@ -20,8 +20,6 @@ export async function resetDemoShifts(
 ): Promise<{ deletedCount: number; error: string | null }> {
   const url = `${FUNCTION_BASE_URL}/resetDemoShifts`;
 
-  console.log('[demoResetService] POST', url, { targetMonth });
-
   try {
     const response = await fetch(url, {
       method: 'POST',
@@ -29,16 +27,12 @@ export async function resetDemoShifts(
       body: JSON.stringify({ targetMonth }),
     });
 
-    console.log('[demoResetService] レスポンス:', response.status, response.ok);
-
     if (!response.ok) {
       const errorText = await response.text();
       return { deletedCount: 0, error: `リセットに失敗しました (${response.status}): ${errorText}` };
     }
 
     const data = await response.json() as { success: boolean; deletedCount: number; error?: string };
-
-    console.log('[demoResetService] レスポンスデータ:', data);
 
     if (!data.success) {
       return { deletedCount: 0, error: data.error || 'リセットに失敗しました' };
