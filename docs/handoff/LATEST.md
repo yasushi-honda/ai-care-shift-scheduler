@@ -8,7 +8,7 @@
 
 ## 2026-07-25 セッション記録（調査のみ・コード変更なし）
 
-- **GCP課金調査**: 2026年2月頃の課金増は、旧シフト生成（Vertex AI Gemini 2.5 Pro / Thinking常時ON、ADR-0001）による従量課金と特定。2/16 の PR #76/#78 で廃止済み。現在のGCP利用（Firestore 6.5MB / Cloud Run実行ほぼゼロ / GCS 11.75MB）は全て無料枠内・月額ほぼ0円を Cloud Monitoring API で実測確認（課金アカウント 014C99-EAFA84-82AE4C、Vertex AI呼び出しは2025-11以降ゼロ）
+- **GCP課金調査**: 2026年2月頃の課金増は、旧シフト生成（Vertex AI Gemini 2.5 Pro / Thinking常時ON、ADR-0001）による従量課金と特定。2/16 の PR #76/#78 で廃止済み。現在のGCP利用（Firestore 6.5MB / Cloud Run実行ほぼゼロ / GCS 11.75MB）は全て無料枠内・月額ほぼ0円を Cloud Monitoring API で実測確認（Vertex AI呼び出しは2025-11以降ゼロ）
 - **クライアント向け説明ドラフト**（ノンエンジニア向け・利用料の経緯と現状）を作成し、decision-maker が送付済み
 - **残オプション（指示待ち）**: `aiplatform.googleapis.com` / `generativelanguage.googleapis.com` の API 無効化（アプリ未使用のため恒久的な再発防止になる。現状のままでも実害なし）
 
